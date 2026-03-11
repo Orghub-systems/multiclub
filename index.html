@@ -3259,9 +3259,9 @@ async function submitSetupAndActivateClub() {
       return;
     }
 
-    const link = (r && (r.clubLink || r.link))
+     const link = (r && (r.clubLink || r.link))
       ? (r.clubLink || r.link)
-      : ("https://orghub-systems.github.io/app/?clubId=" + encodeURIComponent(String(clubId || "").trim()));
+      : ("https://multiclub.pages.dev/?clubId=" + encodeURIComponent(String(clubId || "").trim()));
 
     if (msg) msg.textContent = "✅ Gotowe. Klub aktywowany. Link poniżej.";
 
@@ -3325,8 +3325,6 @@ async function submitSetupAndActivateClub() {
     if (btn) btn.classList.remove("loading");
   }
 }
-
-window.submitSetupAndActivateClub = submitSetupAndActivateClub;
 
 window.submitSetupAndActivateClub = submitSetupAndActivateClub;
 
