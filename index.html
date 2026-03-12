@@ -10,7 +10,7 @@
 <script>
 (function () {
   try {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(location.search)
     const clubId = (params.get("clubId") || "").trim();
     const link = document.getElementById("pwaManifestLink");
     if (!link) return;
@@ -874,72 +874,68 @@ input[type="number"] {
 <div id="manualPushView" class="container hidden">
   <h1>Powiadomienia</h1>
 
-  <div class="card" style="max-width:360px; margin:12px auto; padding:16px; text-align:left;">
+<div class="card" style="max-width:360px; margin:12px auto; padding:16px; text-align:left;">
 
-    <div style="font-weight:800; margin-bottom:8px;">Wyślij do</div>
+  <div style="font-weight:800; margin-bottom:8px;">Wyślij do</div>
 
-    <select id="manualPushMode" class="select-like-input" onchange="manualPushModeChanged()">
-      <option value="single">Jeden zawodnik</option>
-      <option value="group">Grupa</option>
-      <option value="all">Cały klub</option>
-    </select>
+  <select id="manualPushMode" class="select-like-input" onchange="manualPushModeChanged()">
+    <option value="single">Jeden zawodnik</option>
+    <option value="group">Grupy</option>
+    <option value="all">Cały klub</option>
+  </select>
 
-    <div id="manualPushNumerWrap">
-      <div style="font-weight:700; margin:10px 0 6px 0;">Zawodnik nr</div>
-      <input id="manualPushNumer" type="text" placeholder="Np. 12">
-    </div>
-
-    <div id="manualPushGroupWrap" class="hidden">
-      <div style="font-weight:700; margin:10px 0 6px 0;">Grupa</div>
-      <select id="manualPushGroup" class="select-like-input">
-        <option value="">— wybierz grupę —</option>
-        <option value="G1">G1</option>
-        <option value="G2">G2</option>
-        <option value="G3">G3</option>
-        <option value="G4">G4</option>
-        <option value="G5">G5</option>
-        <option value="G6">G6</option>
-        <option value="G7">G7</option>
-        <option value="G8">G8</option>
-        <option value="G9">G9</option>
-        <option value="G10">G10</option>
-      </select>
-    </div>
-
-    <div>
-      <div style="font-weight:700; margin:10px 0 6px 0;">Klub</div>
-      <input id="manualPushClub" type="text" readonly>
-    </div>
-
-    <div>
-      <div style="font-weight:700; margin:10px 0 6px 0;">Treść</div>
-      <textarea
-        id="manualPushBody"
-        placeholder="Wpisz treść powiadomienia"
-        style="
-          width:100%;
-          min-height:120px;
-          box-sizing:border-box;
-          padding:10px;
-          border-radius:12px;
-          border:1px solid #333;
-          background:#111;
-          color:#fff;
-          resize:vertical;
-          font-family:inherit;
-          font-size:14px;
-        "
-      ></textarea>
-    </div>
-
-    <div style="margin-top:14px;">
-      <button class="full-btn" type="button" onclick="sendManualPush()">Wyślij</button>
-      <button class="full-btn alt" type="button" onclick="closeManualPushView()">⬅ Powrót</button>
-    </div>
-
-    <p id="manualPushMsg" style="margin-top:10px; min-height:1.2em;"></p>
+  <div id="manualPushNumerWrap">
+    <div style="font-weight:700; margin:10px 0 6px 0;">Zawodnik nr</div>
+    <input id="manualPushNumer" class="select-like-input" type="text" placeholder="Np. 12">
   </div>
-</div>
+
+  <div id="manualPushGroupWrap" class="hidden">
+    <div style="font-weight:700; margin:10px 0 6px 0;">Grupy</div>
+    <button
+      id="btnManualPushGroups"
+      class="full-btn alt"
+      type="button"
+      onclick="openManualPushGroupsPopup()"
+      style="margin:0;"
+    >
+      Wybierz grupy
+    </button>
+
+    <div
+      id="manualPushGroupsPreview"
+      style="
+        margin-top:8px;
+        font-size:13px;
+        opacity:.85;
+        line-height:1.35;
+        min-height:18px;
+      "
+    ></div>
+  </div>
+
+  <div>
+    <div style="font-weight:700; margin:10px 0 6px 0;">Klub</div>
+    <input id="manualPushClub" class="select-like-input" type="text" readonly>
+  </div>
+
+  <div>
+    <div style="font-weight:700; margin:10px 0 6px 0;">Treść</div>
+    <textarea
+      id="manualPushBody"
+      placeholder="Wpisz treść powiadomienia"
+      class="select-like-input"
+      style="min-height:120px; resize:vertical; font-family:inherit;"
+    ></textarea>
+  </div>
+
+  <div style="margin-top:14px;">
+    <button class="full-btn" type="button" onclick="sendManualPush()">Wyślij</button>
+    <button class="full-btn alt" type="button" onclick="closeManualPushView()">⬅ Powrót</button>
+  </div>
+
+  <p id="manualPushMsg" style="margin-top:10px; min-height:1.2em;"></p>
+    </div>  
+  </div>
 
 <!-- 25. SYSTEM PRZELEWY (ADMIN) -->
 <div id="adminSystemPrzelewyView" class="view hidden">
@@ -1492,6 +1488,24 @@ input[type="number"] {
     </div>
 
     <p id="adminPayConfirmMsg" style="margin-top:10px;"></p>
+  </div>
+</div>
+
+<!-- POPUP GRUPY — RĘCZNE POWIADOMIENIA -->
+<div id="manualPushGroupsPopup" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  display:flex; justify-content:center; align-items:center;
+  z-index:3006; padding:18px;
+">
+  <div class="card" style="max-width:320px;width:100%; text-align:left;">
+    <div style="font-weight:800; font-size:16px; margin-bottom:10px;">Wybierz grupy</div>
+
+    <div id="manualPushGroupsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="full-btn alt" style="flex:1;" type="button" onclick="closeManualPushGroupsPopup()">Anuluj</button>
+      <button class="full-btn" style="flex:1;" type="button" onclick="applyManualPushGroupsPopup()">Zapisz</button>
+    </div>
   </div>
 </div>
   
@@ -6751,15 +6765,20 @@ function openManualPushView(role) {
 
   const modeEl = document.getElementById("manualPushMode");
   const numerEl = document.getElementById("manualPushNumer");
-  const groupEl = document.getElementById("manualPushGroup");
   const bodyEl = document.getElementById("manualPushBody");
   const msgEl = document.getElementById("manualPushMsg");
-
+  const previewEl = document.getElementById("manualPushGroupsPreview");
+  const btnGroupsEl = document.getElementById("btnManualPushGroups");
+  
   if (modeEl) modeEl.value = "single";
   if (numerEl) numerEl.value = "";
-  if (groupEl) groupEl.value = "";
   if (bodyEl) bodyEl.value = "";
   if (msgEl) msgEl.textContent = "";
+
+window.__manualPushGroups = [];
+
+if (previewEl) previewEl.textContent = "";
+if (btnGroupsEl) btnGroupsEl.textContent = "Wybierz grupy";
 
   manualPushModeChanged();
   goToView("manualPushView");
@@ -6786,6 +6805,59 @@ function manualPushModeChanged() {
   }
 
   if (msgEl) msgEl.textContent = "";
+}
+
+window.__manualPushGroups = [];
+
+function openManualPushGroupsPopup() {
+  const popup = document.getElementById("manualPushGroupsPopup");
+  const list = document.getElementById("manualPushGroupsList");
+  if (!popup || !list) return;
+
+  const groups = ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"];
+
+  list.innerHTML = groups.map(g => {
+    const checked = window.__manualPushGroups.includes(g) ? "checked" : "";
+    return `
+      <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+        <input type="checkbox" class="manualPushGroupChk" value="${g}" ${checked}
+               style="transform:scale(1.2);">
+        <span>${g}</span>
+      </label>
+    `;
+  }).join("");
+
+  popup.classList.remove("hidden");
+}
+
+function closeManualPushGroupsPopup() {
+  const popup = document.getElementById("manualPushGroupsPopup");
+  if (popup) popup.classList.add("hidden");
+}
+
+function applyManualPushGroupsPopup() {
+  const checked = Array.from(document.querySelectorAll(".manualPushGroupChk:checked"))
+    .map(el => String(el.value || "").trim())
+    .filter(Boolean);
+
+  window.__manualPushGroups = checked;
+
+  const preview = document.getElementById("manualPushGroupsPreview");
+  const btn = document.getElementById("btnManualPushGroups");
+
+  if (preview) {
+    preview.textContent = checked.length
+      ? "Wybrane: " + checked.join(", ")
+      : "Nie wybrano żadnej grupy";
+  }
+
+  if (btn) {
+    btn.textContent = checked.length
+      ? "Grupy: " + checked.join(", ")
+      : "Wybierz grupy";
+  }
+
+  closeManualPushGroupsPopup();
 }
   
 </script>
