@@ -330,7 +330,7 @@ input[type="number"] {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js', { scope: '/app/' })
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
       .then((r) => {
         console.log("✅ SW zarejestrowany:", r);
       })
