@@ -1680,7 +1680,7 @@ if (!saveRes.ok || saveJson?.success === false) {
 try {
   const cache = await caches.open("orghub-push-meta");
   await cache.put(
-    "/app/push-meta.json",
+    "/push-meta.json",
     new Response(
       JSON.stringify({
         clubId: String(cid),
