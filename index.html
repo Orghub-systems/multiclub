@@ -322,7 +322,7 @@ input[type="number"] {
   
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.APP_BUILD = 'BETA APP v2.01';
+  window.APP_BUILD = 'BETA APP v2.02';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.APP_BUILD) {
@@ -6897,7 +6897,7 @@ function applyManualPushGroupsPopup() {
       clubId: clubIdValue,
       title: "OrgHub",
       body,
-      url: `https://${clubIdValue}.orghub.pl`,
+      url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}`,
       tag: `orghub-${clubIdValue}`
     };
 
