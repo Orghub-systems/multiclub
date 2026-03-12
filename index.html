@@ -3261,7 +3261,7 @@ async function submitSetupAndActivateClub() {
 
      const link = (r && (r.clubLink || r.link))
       ? (r.clubLink || r.link)
-      : ("https://multiclub.pages.dev/?clubId=" + encodeURIComponent(String(clubId || "").trim()));
+      : ("https://" + encodeURIComponent(String(clubId || "").trim()) + ".orghub.pl");
 
     if (msg) msg.textContent = "✅ Gotowe. Klub aktywowany. Link poniżej.";
 
