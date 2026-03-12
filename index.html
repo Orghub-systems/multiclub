@@ -6417,8 +6417,6 @@ function adminRaportyOpenRezerwacja() {
   adminLoadRaportRezerwacja_();
 }
 
-/* =================== RAPORT: TRENERZY =================== */
-
 /* =================== RAPORT: TRENERZY (NOWE: bloki MIESIĄC:) =================== */
 
 async function adminLoadRaportTrenerzy_() {
@@ -6728,6 +6726,68 @@ window.addEventListener('load', () => {
   }
 });
 
+/* =================== POWIADOMIENIA PUSH =================== */
+
+window.__manualPushReturnView = "adminPanelView";
+window.__manualPushRole = "admin";
+
+function openManualPushView(role) {
+  window.__manualPushRole = String(role || "admin");
+
+  if (window.__manualPushRole === "trainer") {
+    window.__manualPushReturnView = "trainerPanelView";
+  } else {
+    window.__manualPushReturnView = "adminPanelView";
+  }
+
+  const clubInput = document.getElementById("manualPushClub");
+  if (clubInput) {
+    clubInput.value =
+      (typeof getClubIdFromUrl_ === "function" && getClubIdFromUrl_()) ||
+      localStorage.getItem("clubId") ||
+      sessionStorage.getItem("clubId") ||
+      "";
+  }
+
+  const modeEl = document.getElementById("manualPushMode");
+  const numerEl = document.getElementById("manualPushNumer");
+  const groupEl = document.getElementById("manualPushGroup");
+  const bodyEl = document.getElementById("manualPushBody");
+  const msgEl = document.getElementById("manualPushMsg");
+
+  if (modeEl) modeEl.value = "single";
+  if (numerEl) numerEl.value = "";
+  if (groupEl) groupEl.value = "";
+  if (bodyEl) bodyEl.value = "";
+  if (msgEl) msgEl.textContent = "";
+
+  manualPushModeChanged();
+  goToView("manualPushView");
+}
+
+function closeManualPushView() {
+  goToView(window.__manualPushReturnView || "adminPanelView");
+}
+
+function manualPushModeChanged() {
+  const mode = (document.getElementById("manualPushMode")?.value || "single").trim();
+
+  const numerWrap = document.getElementById("manualPushNumerWrap");
+  const groupWrap = document.getElementById("manualPushGroupWrap");
+  const msgEl = document.getElementById("manualPushMsg");
+
+  if (numerWrap) numerWrap.classList.add("hidden");
+  if (groupWrap) groupWrap.classList.add("hidden");
+
+  if (mode === "single") {
+    if (numerWrap) numerWrap.classList.remove("hidden");
+  } else if (mode === "group") {
+    if (groupWrap) groupWrap.classList.remove("hidden");
+  }
+
+  if (msgEl) msgEl.textContent = "";
+}
+  
 </script>
 </body>
 </html>
