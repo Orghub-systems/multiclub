@@ -1419,42 +1419,68 @@ input[type="number"] {
   display: none;
   align-items: center;
   justify-content: center;
+  padding: 18px;
 ">
   <div class="popup-card" style="max-width:420px;width:100%; text-align:left;">
-    <p style="margin:0 0 12px 0;"><b>Ręczne przypisanie przelewu</b></p>
+    <p style="margin:0 0 14px 0; font-size:18px;"><b>Ręczne przypisanie przelewu</b></p>
 
-    <div style="font-size:13px; opacity:.85;">Wiersz</div>
-    <div id="adminSystemPrzelewManualRow" style="font-size:16px; font-weight:700; margin-top:4px;">—</div>
+    <div style="font-weight:700; margin:10px 0 6px 0;">Wiersz</div>
+    <div
+      id="adminSystemPrzelewManualRow"
+      class="select-like-input"
+      style="margin:0; font-weight:700; opacity:.95;"
+    >—</div>
 
-    <div style="height:1px; background:#333; margin:12px 0;"></div>
+    <div style="font-weight:700; margin:12px 0 6px 0;">Tytuł przelewu</div>
+    <div
+      id="adminSystemPrzelewManualTitle"
+      class="select-like-input"
+      style="margin:0; font-weight:700; line-height:1.35; word-break:break-word;"
+    >—</div>
 
-    <div style="font-size:13px; opacity:.85;">Tytuł przelewu</div>
-    <div id="adminSystemPrzelewManualTitle" style="font-size:15px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
-
-    <div style="height:1px; background:#333; margin:12px 0;"></div>
-
-    <div style="font-size:13px; opacity:.85;">Zawodnik</div>
-    <select id="adminSystemPrzelewManualPlayerSelect" class="full-input" style="margin-top:6px;">
+    <div style="font-weight:700; margin:12px 0 6px 0;">Zawodnik</div>
+    <select
+      id="adminSystemPrzelewManualPlayerSelect"
+      class="select-like-input"
+      style="margin:0;"
+    >
       <option value="">— wybierz zawodnika —</option>
     </select>
 
-    <div id="adminSystemPrzelewManualPlayerHint" style="margin-top:6px; font-size:12px; opacity:.75;"></div>
+    <div
+      id="adminSystemPrzelewManualPlayerHint"
+      style="margin-top:8px; font-size:12px; opacity:.75; min-height:1.2em;"
+    ></div>
 
-    <div style="margin-top:12px; font-size:13px; opacity:.85;">Typ płatności</div>
-    <select id="adminSystemPrzelewManualKind" class="full-input" style="margin-top:6px;">
+    <div style="font-weight:700; margin:12px 0 6px 0;">Typ płatności</div>
+    <select
+      id="adminSystemPrzelewManualKind"
+      class="select-like-input"
+      style="margin:0;"
+    >
       <option value="">— wybierz —</option>
       <option value="S">Składka</option>
       <option value="Z">Zajęcia dodatkowe</option>
     </select>
 
-    <div style="margin-top:12px; font-size:13px; opacity:.85;">Okres (YYYYMM)</div>
-    <input id="adminSystemPrzelewManualPeriod" type="text" class="full-input" style="margin-top:6px;" placeholder="Np. 202602">
+    <div style="font-weight:700; margin:12px 0 6px 0;">Okres (YYYYMM)</div>
+    <input
+      id="adminSystemPrzelewManualPeriod"
+      type="text"
+      class="select-like-input"
+      style="margin:0;"
+      placeholder="Np. 202602"
+    >
 
-    <p id="adminSystemPrzelewManualMsg" style="margin-top:10px; min-height:1.2em;"></p>
+    <p id="adminSystemPrzelewManualMsg" style="margin-top:12px; min-height:1.2em;"></p>
 
-    <div style="margin-top:12px;">
-      <button class="full-btn" id="adminSystemPrzelewManualSaveBtn" type="button" onclick="adminSaveManualSystemPrzelew()">Zatwierdź ręcznie</button>
-      <button class="full-btn alt" type="button" style="margin-top:8px;" onclick="adminCloseManualSystemPrzelew()">Anuluj</button>
+    <div style="margin-top:14px;">
+      <button class="full-btn" id="adminSystemPrzelewManualSaveBtn" type="button" onclick="adminSaveManualSystemPrzelew()">
+        Zatwierdź ręcznie
+      </button>
+      <button class="full-btn alt" type="button" style="margin-top:8px;" onclick="adminCloseManualSystemPrzelew()">
+        Anuluj
+      </button>
     </div>
   </div>
 </div>
