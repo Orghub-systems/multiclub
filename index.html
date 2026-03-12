@@ -4287,15 +4287,19 @@ function renderAdminSystemPrzelewTile_(p) {
     }
   }
 
-  if (status === "UNMATCHED") {
-    manualBtn = `
-      <button class="full-btn alt"
-        style="margin-top:10px;"
-        onclick="adminOpenManualSystemPrzelew(${rowNo}, decodeURIComponent('${titleData}'), '${suggestedNo}', '${kind}', '${period}')">
-        Przypisz ręcznie
-      </button>
-    `;
-  }
+    if (
+      status === "UNMATCHED" ||
+      status === "MATCH_CANDIDATE" ||
+      status === "MIXED_REVIEW"
+    ) {
+      manualBtn = `
+        <button class="full-btn alt"
+          style="margin-top:10px;"
+          onclick="adminOpenManualSystemPrzelew(${rowNo}, decodeURIComponent('${titleData}'), '${suggestedNo}', '${kind}', '${period}')">
+          Przypisz ręcznie
+        </button>
+      `;
+    }
 
   if (status === "MIXED_REVIEW" && suggestedNo && suggestedParts.length) {
     splitBtn = `
