@@ -1537,6 +1537,7 @@ function hideModal(id) {
   
   const APP_BUILD = window.APP_BUILD;
   const CORE_URL = "https://orghubmulticlub.orghubsystems.workers.dev";
+  
 
 // ===== DEBUG: pokaż błąd JS na ekranie (żeby nie stało "w ciszy") =====
 window.addEventListener("error", (ev) => {
@@ -6858,6 +6859,119 @@ function applyManualPushGroupsPopup() {
   }
 
   closeManualPushGroupsPopup();
+}
+
+  async function sendManualPush() {
+  const mode = (document.getElementById("manualPushMode")?.value || "single").trim();
+  const numer = (document.getElementById("manualPushNumer")?.value || "").trim();
+  const clubIdValue = (document.getElementById("manualPushClub")?.value || "").trim();
+  const body = (document.getElementById("manualPushBody")?.value || "").trim();
+  const msgEl = document.getElementById("manualPushMsg");
+
+  if (msgEl) msgEl.textContent = "";
+
+  if (!clubIdValue) {
+    if (msgEl) msgEl.textContent = "Brak clubId";
+    return;
+  }
+
+  if (!body) {
+    if (msgEl) msgEl.textContent = "Podaj treść powiadomienia";
+    return;
+  }
+
+  if (mode === "single" && !numer) {
+    if (msgEl) msgEl.textContent = "Podaj numer zawodnika";
+    return;
+  }
+
+  if (mode === "group" && (!window.__manualPushGroups || !window.__manualPushGroups.length)) {
+    if (msgEl) msgEl.textContent = "Wybierz przynajmniej jedną grupę";
+    return;
+  }
+
+  try {
+    if (msgEl) msgEl.textContent = "Wysyłanie...";
+
+    const basePayload = {
+      clubId: clubIdValue,
+      title: "OrgHub",
+      body,
+      url: `https://${clubIdValue}.orghub.pl`,
+      tag: `orghub-${clubIdValue}`
+    };
+
+    if (mode === "single") {
+      const res = await fetch(PUSH_WORKER_URL + "/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...basePayload,
+          mode: "single",
+          numer: numer
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.error || ("HTTP " + res.status));
+      }
+    }
+
+    else if (mode === "group") {
+      const groups = Array.isArray(window.__manualPushGroups) ? window.__manualPushGroups : [];
+
+      for (const group of groups) {
+        const res = await fetch(PUSH_WORKER_URL + "/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...basePayload,
+            mode: "group",
+            group: group
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data?.success === false) {
+          throw new Error(data?.error || ("Błąd dla grupy " + group));
+        }
+      }
+    }
+
+    else {
+      const res = await fetch(PUSH_WORKER_URL + "/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...basePayload,
+          mode: "all"
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.error || ("HTTP " + res.status));
+      }
+    }
+
+    if (msgEl) {
+      if (mode === "group") {
+        msgEl.textContent = "✅ Powiadomienie wysłane do wybranych grup";
+      } else if (mode === "single") {
+        msgEl.textContent = "✅ Powiadomienie wysłane do zawodnika";
+      } else {
+        msgEl.textContent = "✅ Powiadomienie wysłane do całego klubu";
+      }
+    }
+
+    const bodyEl = document.getElementById("manualPushBody");
+    if (bodyEl) bodyEl.value = "";
+
+  } catch (err) {
+    console.error("sendManualPush error:", err);
+    if (msgEl) msgEl.textContent = "❌ " + (err?.message || "Błąd wysyłki");
+  }
 }
   
 </script>
