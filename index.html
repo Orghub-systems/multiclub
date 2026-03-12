@@ -322,7 +322,7 @@ input[type="number"] {
   
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.APP_BUILD = 'BETA APP v2.02';
+  window.APP_BUILD = 'BETA APP v2.03';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.APP_BUILD) {
@@ -4721,8 +4721,17 @@ function adminSendBankFileToServer(file) {
       });
 
       if (response && response.success) {
-      showImportResultPopup(response.added || 0, response.duplicates || 0);
-    }
+        showImportResultPopup({
+          added: response.added || 0,
+          duplicates: response.duplicates || 0,
+          autoConfirmed: response.autoConfirmed || 0,
+          autoConfirmErrors: response.autoConfirmErrors || 0,
+          matchedAuto: response.matchedAuto || 0,
+          matchCandidate: response.matchCandidate || 0,
+          mixedReview: response.mixedReview || 0,
+          unmatched: response.unmatched || 0
+        });
+      }
 
       console.log("SYSTEM_PRZELEWY upload response:", response);   
 
@@ -4767,11 +4776,27 @@ function adminSendBankFileToServer(file) {
 
   reader.readAsDataURL(file);
 }
+function showImportResultPopup(summary) {
+  summary = summary || {};
 
-  function showImportResultPopup(added, duplicates) {
+  const added = Number(summary.added || 0);
+  const duplicates = Number(summary.duplicates || 0);
+  const autoConfirmed = Number(summary.autoConfirmed || 0);
+  const autoConfirmErrors = Number(summary.autoConfirmErrors || 0);
+  const matchedAuto = Number(summary.matchedAuto || 0);
+  const matchCandidate = Number(summary.matchCandidate || 0);
+  const mixedReview = Number(summary.mixedReview || 0);
+  const unmatched = Number(summary.unmatched || 0);
+
   const txt =
     "Dodano: " + added + "\n" +
-    "Duplikaty: " + duplicates;
+    "Duplikaty: " + duplicates + "\n" +
+    "Zaksięgowano automatycznie: " + autoConfirmed + "\n" +
+    "Błędy auto-księgowania: " + autoConfirmErrors + "\n" +
+    "MATCHED_AUTO: " + matchedAuto + "\n" +
+    "MATCH_CANDIDATE: " + matchCandidate + "\n" +
+    "MIXED_REVIEW: " + mixedReview + "\n" +
+    "UNMATCHED: " + unmatched;
 
   const popup = document.getElementById("importResultPopup");
   const text = document.getElementById("importResultText");
