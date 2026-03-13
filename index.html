@@ -538,7 +538,7 @@ input[type="number"] {
     <div id="registerZawodnikView" class="container hidden">
       <h1>Rejestracja zawodnika</h1>
       <div class="login-box">
-        <input id="regNumer" type="number" placeholder="Numer zawodnika">
+        <input id="regNumer" type="text" placeholder="Numer zawodnika" readonly onclick="openFreeNumbersPopup()">
         <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
         <input id="regEmail" type="email" placeholder="Adres email">
         <input id="regHaslo" type="password" placeholder="Ustaw hasło">
@@ -1566,6 +1566,37 @@ input[type="number"] {
     </div>
 
     <p id="resetPasswordPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
+  </div>
+</div>
+
+<!-- =================== WOLNE NUMERY: POPUP =================== -->
+<div id="freeNumbersPopup" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3011;
+  padding: 18px;
+">
+  <div class="popup-card" style="max-width:420px;width:100%; text-align:left;">
+    <p style="margin:0 0 14px 0; text-align:center;"><b>Wybierz wolny numer</b></p>
+
+    <div id="freeNumbersPopupBody" style="
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      max-height:320px;
+      overflow:auto;
+    ">
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="full-btn alt" type="button" onclick="closeFreeNumbersPopup()">Anuluj</button>
+    </div>
+
+    <p id="freeNumbersPopupMsg" style="margin-top:10px; min-height:1.2em; text-align:center;"></p>
   </div>
 </div>
   
@@ -5077,6 +5108,62 @@ async function sendResetPasswordRequest() {
     msg.textContent = "⏳ Funkcja resetu hasła będzie podłączona w następnym kroku.";
   }
 }  
+
+  async function openFreeNumbersPopup() {
+  const popup = document.getElementById("freeNumbersPopup");
+  const body = document.getElementById("freeNumbersPopupBody");
+  const msg = document.getElementById("freeNumbersPopupMsg");
+
+  if (!popup || !body) return;
+
+  body.innerHTML = "";
+  if (msg) msg.textContent = "⏳ Ładowanie wolnych numerów...";
+
+  popup.style.display = "flex";
+
+  try {
+    const data = await apiClubPost({ mode: "wolneNumery" });
+
+    if (!data || !data.ok) {
+      if (msg) msg.textContent = "❌ " + (data?.error || data?.message || "Nie udało się pobrać numerów.");
+      return;
+    }
+
+    const items = Array.isArray(data.numbers) ? data.numbers : [];
+
+    if (!items.length) {
+      if (msg) msg.textContent = "Brak wolnych numerów.";
+      return;
+    }
+
+    body.innerHTML = items.map(n => `
+      <button
+        type="button"
+        class="full-btn alt"
+        style="margin:0; padding:10px 8px;"
+        onclick="pickFreeNumber('${String(n)}')"
+      >
+        ${String(n)}
+      </button>
+    `).join("");
+
+    if (msg) msg.textContent = "";
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+
+function closeFreeNumbersPopup() {
+  const popup = document.getElementById("freeNumbersPopup");
+  if (popup) popup.style.display = "none";
+}
+
+function pickFreeNumber(numer) {
+  const input = document.getElementById("regNumer");
+  if (input) input.value = String(numer || "").trim();
+  closeFreeNumbersPopup();
+}
   
 /* =================== 80 ZAWODNIK: TRENINGI / ZAPISY =================== */
 
