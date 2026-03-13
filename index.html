@@ -5612,25 +5612,19 @@ function renderStatystyki(lista) {
     return;
   }
 
-  // Kolejność sezonowa: Wrzesień -> Sierpień
-  const seasonOrder = ["Wrzesień","Październik","Listopad","Grudzień","Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień"];
-  const orderIdx = Object.fromEntries(seasonOrder.map((m, i) => [m.toLowerCase(), i]));
+  // ✅ Zostawiamy dokładnie kolejność z backendu / arkusza (kolumny C → N)
+  const ordered = [...lista];
 
-  const sorted = [...lista].sort((a, b) => {
-    const ai = orderIdx[String(a.miesiac || "").toLowerCase()];
-    const bi = orderIdx[String(b.miesiac || "").toLowerCase()];
-    const aIdx = (ai == null ? 999 : ai);
-    const bIdx = (bi == null ? 999 : bi);
-    return aIdx - bIdx;
-  });
-
-  const suma = sorted.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
+  const suma = ordered.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
 
   const now = new Date();
-  const currentMonthName = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"][now.getMonth()];
+  const currentMonthName = [
+    "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
+    "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
+  ][now.getMonth()];
 
   div.innerHTML =
-    sorted.map(s => {
+    ordered.map(s => {
       const miesiac = String(s.miesiac || "").trim();
       const treningi = Number(s.treningi) || 0;
       const isCurrent = miesiac.toLowerCase() === currentMonthName.toLowerCase();
