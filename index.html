@@ -532,13 +532,14 @@ input[type="number"] {
       <button class="full-btn" onclick="pokazRejestracjaTrener()">Trener</button>
       <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
     </div>
-
+    
     <!-- 6. REJESTRACJA ZAWODNIKA -->
     <div id="registerZawodnikView" class="container hidden">
       <h1>Rejestracja zawodnika</h1>
       <div class="login-box">
         <input id="regNumer" type="number" placeholder="Numer zawodnika">
         <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
+        <input id="regEmail" type="email" placeholder="Adres email">
         <input id="regHaslo" type="password" placeholder="Ustaw hasło">
         <button class="full-btn" onclick="wyslijRejestracje()">Zarejestruj</button>
       </div>
@@ -551,6 +552,7 @@ input[type="number"] {
       <h1>Rejestracja trenera</h1>
       <div class="login-box">
         <input id="regNazwiskoTrener" type="text" placeholder="Imię i nazwisko">
+        <input id="regEmailTrener" type="email" placeholder="Adres email">
         <input id="regHasloTrener" type="password" placeholder="Ustaw hasło">
         <button class="full-btn" onclick="wyslijRejestracjeTrener()">Zarejestruj</button>
         <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
@@ -4896,22 +4898,31 @@ function startPrefetchForPlayer_() {
 async function wyslijRejestracje() {
   const numer = document.getElementById("regNumer").value.trim();
   const nazwisko = document.getElementById("regNazwisko").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
   const haslo = document.getElementById("regHaslo").value.trim();
   const msg = document.getElementById("regMsg");
 
-  if (!numer || !nazwisko || !haslo) {
+  if (!numer || !nazwisko || !email || !haslo) {
     msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
 
   msg.innerText = "⏳ Rejestracja...";
   try {
-    const data = await apiClubPost({ mode: "rejestracja", numer, nazwisko, haslo });
+    const data = await apiClubPost({
+      mode: "rejestracja",
+      numer,
+      nazwisko,
+      email,
+      haslo
+    });
 
     if (data && data.ok) {
       document.getElementById("regNumer").value = "";
       document.getElementById("regNazwisko").value = "";
+      document.getElementById("regEmail").value = "";
       document.getElementById("regHaslo").value = "";
+
       msg.innerText = "✅ Rejestracja zakończona!";
       setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
     } else {
@@ -4924,13 +4935,15 @@ async function wyslijRejestracje() {
 
 async function wyslijRejestracjeTrener() {
   const poleNazw = document.getElementById("regNazwiskoTrener");
+  const poleEmail = document.getElementById("regEmailTrener");
   const poleHaslo = document.getElementById("regHasloTrener");
   const msg = document.getElementById("regMsgTrener");
 
   const nazwisko = poleNazw.value.trim();
+  const email = poleEmail.value.trim();
   const haslo = poleHaslo.value.trim();
 
-  if (!nazwisko || !haslo) {
+  if (!nazwisko || !email || !haslo) {
     msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
@@ -4941,6 +4954,7 @@ async function wyslijRejestracjeTrener() {
     const data = await apiClubPost({
       mode: "rejestracjaTrener",
       nazwisko,
+      email,
       haslo
     });
 
@@ -4963,6 +4977,7 @@ async function wyslijRejestracjeTrener() {
       `;
 
       poleNazw.value = "";
+      poleEmail.value = "";
       poleHaslo.value = "";
 
       const btnCopy = document.getElementById("btnCopyInic");
@@ -4998,8 +5013,6 @@ async function wyslijRejestracjeTrener() {
     msg.innerText = "❌ " + (e?.message || e);
   }
 }
-
-
 
 /* =================== 80 ZAWODNIK: TRENINGI / ZAPISY =================== */
 
