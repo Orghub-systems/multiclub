@@ -5094,20 +5094,47 @@ function closeResetPasswordPopup() {
 }
 
 async function sendResetPasswordRequest() {
+
   const input = document.getElementById("resetPasswordEmailInput");
   const msg = document.getElementById("resetPasswordPopupMsg");
 
   const email = String(input?.value || "").trim();
 
   if (!email) {
-    if (msg) msg.textContent = "❌ Podaj adres email.";
+    msg.textContent = "❌ Podaj adres email.";
     return;
   }
 
-  if (msg) {
-    msg.textContent = "⏳ Funkcja resetu hasła będzie podłączona w następnym kroku.";
+  msg.textContent = "⏳ Resetowanie...";
+
+  try {
+
+    const data = await apiClubPost({
+      mode: "resetHasla",
+      email
+    });
+
+    if (data && data.ok) {
+
+      msg.textContent =
+        "✅ Jeśli email istnieje w systemie, wysłaliśmy instrukcję resetu.";
+
+      setTimeout(() => {
+        closeResetPasswordPopup();
+      }, 2000);
+
+    } else {
+
+      msg.textContent = "❌ " + (data?.error || "Błąd resetu.");
+
+    }
+
+  } catch (e) {
+
+    msg.textContent = "❌ " + (e?.message || e);
+
   }
-}  
+} 
 
   async function openFreeNumbersPopup() {
   const popup = document.getElementById("freeNumbersPopup");
