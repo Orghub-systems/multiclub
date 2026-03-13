@@ -2812,8 +2812,10 @@ function goToConfig2() {
     sezonEnd: "",
     months: [],
     fees: {},
-    singleTrainingPrice: ""
+    singleTrainingPrice: "",
+    email: String(cfgDraft?.email || "").trim()
   };
+
   renderSetupUI_();
   goToView("clubSetupView");
   updateSetupPaymentsState_();
@@ -3357,7 +3359,8 @@ async function submitSetupAndActivateClub() {
       singleTrainingPrice,
       membershipLimit,
       bankReceiver,
-      bankAccount
+      bankAccount,
+      email: setupDraft.email
     });
 
     if (!r || (r.success !== true && r.ok !== true)) {
