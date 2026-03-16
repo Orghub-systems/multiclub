@@ -335,7 +335,7 @@ input[type="number"] {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+    navigator.serviceWorker.register('/service-worker.js?v=' + encodeURIComponent(window.APP_BUILD), { scope: '/' })
       .then(async (r) => {
         console.log("✅ SW zarejestrowany:", r);
 
