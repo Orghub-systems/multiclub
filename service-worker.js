@@ -3,7 +3,7 @@
 const CORE = "https://orghubmulticlub.orghubsystems.workers.dev";
 const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
-const CACHE_NAME = "orghub-static-v3";
+const CACHE_NAME = "orghub-static-v4";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -21,20 +21,27 @@ self.addEventListener("install", (e) => {
 });
 
 self.addEventListener("activate", (e) => {
-  e.waitUntil(self.clients.claim());
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => key !== CACHE_NAME)
+        .map((key) => caches.delete(key))
+    );
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
-  // Cache-first dla statyków z tego origin, network dla reszty
+  // cache-first dla statyków z tego origin, network dla reszty
   e.respondWith(
     caches.match(e.request).then((cached) => {
       if (cached) return cached;
 
       return fetch(e.request)
         .then((resp) => {
-          // cache tylko zasoby z tej samej domeny
           if (url.origin === self.location.origin && resp && resp.status === 200) {
             const copy = resp.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
