@@ -3,7 +3,7 @@
 const CORE = "https://orghubmulticlub.orghubsystems.workers.dev";
 const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
-const CACHE_NAME = "orghub-static-v4";
+const CACHE_NAME = "orghub-static";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
