@@ -326,7 +326,7 @@ input[type="number"] {
   
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.APP_BUILD = 'BETA APP v2.04';
+  window.APP_BUILD = 'BETA APP v2.05';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.APP_BUILD) {
@@ -5472,9 +5472,52 @@ function powrotDoPlatnosci() {
   
 function renderTreningi(lista) {
   const div = document.getElementById('listaTreningow');
-  if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
+  if (!lista?.length) {
+    div.innerHTML = "<p>Brak wydarzeń</p>";
+    return;
+  }
 
-  div.innerHTML = lista.map(t => `
+  function parseEventDateTime_(t) {
+    const dataStr = String(t?.data || "").trim();
+    const godzStr = String(t?.godzStart || "00:00").trim();
+
+    // obsługa najczęstszych formatów:
+    // dd.mm.yyyy
+    // dd-mm-yyyy
+    // yyyy-mm-dd
+    // yyyy.mm.dd
+    let y = 0, m = 0, d = 0;
+
+    if (/^\d{4}[-.]\d{2}[-.]\d{2}$/.test(dataStr)) {
+      const parts = dataStr.split(/[-.]/);
+      y = Number(parts[0]);
+      m = Number(parts[1]);
+      d = Number(parts[2]);
+    } else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(dataStr)) {
+      const parts = dataStr.split(/[.-]/);
+      d = Number(parts[0]);
+      m = Number(parts[1]);
+      y = Number(parts[2]);
+    } else {
+      // fallback: jeśli format jest nietypowy, zostaw na końcu listy
+      return new Date(9999, 11, 31, 23, 59, 59).getTime();
+    }
+
+    let hh = 0, mm = 0;
+    if (/^\d{1,2}:\d{2}$/.test(godzStr)) {
+      const timeParts = godzStr.split(":");
+      hh = Number(timeParts[0]);
+      mm = Number(timeParts[1]);
+    }
+
+    return new Date(y, m - 1, d, hh, mm, 0).getTime();
+  }
+
+  const posortowanaLista = [...lista].sort((a, b) => {
+    return parseEventDateTime_(a) - parseEventDateTime_(b);
+  });
+
+  div.innerHTML = posortowanaLista.map(t => `
     <div class="card">
       <p>
         <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
@@ -5483,7 +5526,11 @@ function renderTreningi(lista) {
       </p>
 
       <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-        <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="zapiszSie('${t.id}')">
+        <button 
+          id="btn-${t.id}" 
+          ${t.zapisany ? 'disabled' : ''} 
+          style="background:${t.zapisany ? '#2e7d32' : '#c62828'};color:white;border:none;"
+          onclick="zapiszSie('${t.id}')">
           ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
         </button>
         <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#444;" onclick="wypiszSie('${t.id}')">
@@ -5692,7 +5739,7 @@ function renderTreningiTrainer(lista) {
   // ✅ Globalna mapa eventów dla popupu edycji
   window.__trainerEventsByKey = {};
 
-  // lokalny parser "dd.mm.yyyy" albo "dd-mm-yyyy" -> "yyyy-mm-dd"
+  // parser "dd.mm.yyyy" albo "dd-mm-yyyy" -> "yyyy-mm-dd"
   function toISO_(dataTxt) {
     const s = String(dataTxt || "").trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
@@ -5705,11 +5752,23 @@ function renderTreningiTrainer(lista) {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  div.innerHTML = lista.map(t => {
+  // ✅ SORTOWANIE wydarzeń po dacie i godzinie
+  const sortedLista = [...lista].sort((a, b) => {
+    const da = toISO_(a.data);
+    const db = toISO_(b.data);
+
+    if (da !== db) return da.localeCompare(db);
+
+    const ha = String(a.godzStart || "00:00");
+    const hb = String(b.godzStart || "00:00");
+
+    return ha.localeCompare(hb);
+  });
+
+  div.innerHTML = sortedLista.map(t => {
     const key = `${t.miesiac}-${t.czasCol}`;
     const dataISO = toISO_(t.data);
 
-    // ✅ zapisz dane do edycji (bez wrzucania obiektów do onclick)
     window.__trainerEventsByKey[key] = {
       key,
       miesiac: t.miesiac,
