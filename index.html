@@ -5472,34 +5472,28 @@ function powrotDoPlatnosci() {
   
 function renderTreningi(lista) {
   const div = document.getElementById('listaTreningow');
-  if (!lista?.length) {
-    div.innerHTML = "<p>Brak wydarzeń</p>";
-    return;
-  }
+  if (!div) return;
 
   function parseEventDateTime_(t) {
     const dataStr = String(t?.data || "").trim();
     const godzStr = String(t?.godzStart || "00:00").trim();
 
-    // obsługa najczęstszych formatów:
-    // dd.mm.yyyy
-    // dd-mm-yyyy
-    // yyyy-mm-dd
-    // yyyy.mm.dd
     let y = 0, m = 0, d = 0;
 
+    // yyyy-mm-dd / yyyy.mm.dd
     if (/^\d{4}[-.]\d{2}[-.]\d{2}$/.test(dataStr)) {
       const parts = dataStr.split(/[-.]/);
       y = Number(parts[0]);
       m = Number(parts[1]);
       d = Number(parts[2]);
-    } else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(dataStr)) {
+    }
+    // dd.mm.yyyy / dd-mm-yyyy
+    else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(dataStr)) {
       const parts = dataStr.split(/[.-]/);
       d = Number(parts[0]);
       m = Number(parts[1]);
       y = Number(parts[2]);
     } else {
-      // fallback: jeśli format jest nietypowy, zostaw na końcu listy
       return new Date(9999, 11, 31, 23, 59, 59).getTime();
     }
 
@@ -5513,16 +5507,44 @@ function renderTreningi(lista) {
     return new Date(y, m - 1, d, hh, mm, 0).getTime();
   }
 
-  const posortowanaLista = [...lista].sort((a, b) => {
-    return parseEventDateTime_(a) - parseEventDateTime_(b);
-  });
+  function isVisibleInApp_(t) {
+    // jeśli backend daje którąś z tych flag, respektujemy ją
+    if (typeof t?.widocznoscWApce !== "undefined") return !!t.widocznoscWApce;
+    if (typeof t?.widocznyWApce !== "undefined") return !!t.widocznyWApce;
+    if (typeof t?.visible !== "undefined") return !!t.visible;
+    if (typeof t?.appVisible !== "undefined") return !!t.appVisible;
 
-  div.innerHTML = posortowanaLista.map(t => `
+    // jeśli brak flagi w danych, nie blokujemy renderu
+    return true;
+  }
+
+  const terazTs = Date.now();
+
+  const listaPoFiltrowaniu = (Array.isArray(lista) ? lista : [])
+    .filter(t => {
+      // 1) checkbox "Widoczność w apce"
+      if (!isVisibleInApp_(t)) return false;
+
+      // 2) ukrycie wydarzenia po godzinie startu
+      const startTs = parseEventDateTime_(t);
+      if (!Number.isFinite(startTs)) return false;
+      if (startTs < terazTs) return false;
+
+      return true;
+    })
+    .sort((a, b) => parseEventDateTime_(a) - parseEventDateTime_(b));
+
+  if (!listaPoFiltrowaniu.length) {
+    div.innerHTML = "<p>Brak wydarzeń</p>";
+    return;
+  }
+
+  div.innerHTML = listaPoFiltrowaniu.map(t => `
     <div class="card">
       <p>
-        <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
-        Godzina: <b>${t.godzStart}</b> – <b>${t.godzKoniec}</b><br>
-        Trener: <b>${t.trener}</b> &nbsp;&nbsp; Zapisanych: ${t.zapisanych}
+        <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
+        Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+        Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; Zapisanych: ${t.zapisanych ?? 0}
       </p>
 
       <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
@@ -5533,17 +5555,26 @@ function renderTreningi(lista) {
           onclick="zapiszSie('${t.id}')">
           ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
         </button>
-        <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#444;" onclick="wypiszSie('${t.id}')">
+
+        <button 
+          id="wypisz-${t.id}" 
+          ${t.zapisany ? '' : 'disabled'} 
+          style="background:#444;" 
+          onclick="wypiszSie('${t.id}')">
           Wypisz się
         </button>
-        <button style="background:#333;" onclick="toggleZapisani('${t.id}')">👥 Zapisani</button>
+
+        <button 
+          style="background:#333;" 
+          onclick="toggleZapisani('${t.id}')">
+          👥 Zapisani
+        </button>
       </div>
 
       <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
     </div>
   `).join('');
 }
-
 async function toggleZapisani(id) {
   const box = document.getElementById(`zapisani-${id}`);
   if (!box) return;
