@@ -4968,9 +4968,15 @@ async function zaloguj() {
 
       // ✅ NOWA LOGIKA: po loginie zawsze menu
       goToView("playerMenuView");
-      loadClubAd();
+      
+      renderClubAd({
+        enabled: true,
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Hockey_stick_and_puck.svg/1024px-Hockey_stick_and_puck.svg.png",
+        linkUrl: "https://google.com",
+        alt: "Test reklamy"
+      });
+      
       return;
-    }
 
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
