@@ -5046,53 +5046,56 @@ function startPrefetchForPlayer_() {
   window.__prefetch.treningiP  = apiClubGet("treningi",  { grupa: grupaZalogowanego, numer: numerZalogowanego });
   window.__prefetch.statystykiP= apiClubGet("statystyki",{ numer: numerZalogowanego });
 }
-
+  
 function renderClubAd(ad) {
   const container = document.getElementById("clubAdContainer");
-  const box = document.getElementById("clubAdBox");
   const link = document.getElementById("clubAdLink");
+  const box = document.getElementById("clubAdBox");
   const fallback = document.getElementById("clubAdFallbackText");
 
-  if (!container || !box || !link || !fallback) return;
+  if (!container || !link || !box || !fallback) return;
 
   // reset
   container.style.display = "none";
-  box.style.backgroundImage = "";
   link.removeAttribute("href");
-  link.style.pointerEvents = "none";
+  box.style.backgroundImage = "";
   fallback.style.display = "flex";
-  fallback.textContent = "Test reklamy";
+  fallback.textContent = "Partner klubu";
 
-  if (!ad || !ad.enabled || !ad.imageUrl) return;
+  // brak reklamy
+  if (!ad || !ad.enabled || !ad.imageUrl) {
+    return;
+  }
 
-  const testImg = new Image();
+  // ładujemy obraz testowo
+  const img = new Image();
 
-  testImg.onload = function () {
+  img.onload = function () {
     box.style.backgroundImage = `url("${ad.imageUrl}")`;
     fallback.style.display = "none";
 
     if (ad.linkUrl) {
       link.href = ad.linkUrl;
-      link.style.pointerEvents = "auto";
+    } else {
+      link.href = "#";
     }
 
     container.style.display = "block";
   };
 
-  testImg.onerror = function () {
+  img.onerror = function () {
     box.style.backgroundImage = "";
     fallback.style.display = "flex";
-    fallback.textContent = ad.alt || "Reklama niedostępna";
+    fallback.textContent = ad.alt || "Partner klubu";
     container.style.display = "block";
-    link.style.pointerEvents = "none";
-    link.removeAttribute("href");
     console.error("Nie udało się wczytać reklamy:", ad.imageUrl);
   };
 
-  testImg.src = ad.imageUrl;
+  img.src = ad.imageUrl;
 }
   
 /* =================== 75 REJESTRACJA =================== */
+  
 async function wyslijRejestracje() {
   const numer = document.getElementById("regNumer").value.trim();
   const nazwisko = document.getElementById("regNazwisko").value.trim();
