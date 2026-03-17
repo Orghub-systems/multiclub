@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.08';
+  window.APP_BUILD = 'BETA APP v2.09';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   const buildChanged = poprzednia !== window.APP_BUILD;
@@ -690,6 +690,9 @@ input[type="number"] {
   <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
   <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
 </div>
+
+<p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
+
 <!-- 🔥 REKLAMA / PARTNER KLUBU -->
 <div id="clubAdContainer" style="display:none; margin-top:20px;">
 
@@ -723,10 +726,7 @@ input[type="number"] {
     ">
       Partner klubu
     </div>
-
-  </div>
-
-<p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
+  </div>  
 </div>
 
     
