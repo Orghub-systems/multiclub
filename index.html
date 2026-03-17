@@ -4959,37 +4959,41 @@ async function zaloguj() {
       numerZalogowanego = data.login;
       grupaZalogowanego = data.grupa || "";
 
-      // (opcjonalnie) preload płatności do cache — menu sobie to potem wykorzysta
       try {
         window.__platnosciCache = await apiClubGet("platnosci", { numer: numerZalogowanego });
       } catch (e) {
         window.__platnosciCache = null;
       }
 
-      if (data.role === "zawodnik") {
-        // ✅ NOWA LOGIKA: po loginie zawsze menu
-        goToView("playerMenuView");
-      
-        renderClubAd({
-          enabled: true,
-          imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Hockey_stick_and_puck.svg/1024px-Hockey_stick_and_puck.svg.png",
-          linkUrl: "https://google.com",
-          alt: "Test reklamy"
-        });
-      
-        return;
-      }
-      
-      if (data.role === "trener") {
-        window.grupyTrenera = data.grupa || "";
-        goToView("trainerPanelView");
-        return;
-      }
-      
-      if (data.role === "admin") {
-        goToView("adminPanelView");
-        return;
-      }
+      goToView("playerMenuView");
+
+      renderClubAd({
+        enabled: true,
+        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Hockey_stick_and_puck.svg/1024px-Hockey_stick_and_puck.svg.png",
+        linkUrl: "https://google.com",
+        alt: "Test reklamy"
+      });
+
+      return;
+    }
+
+    if (data.role === "trener") {
+      window.grupyTrenera = data.grupa || "";
+      goToView("trainerPanelView");
+      return;
+    }
+
+    if (data.role === "admin") {
+      goToView("adminPanelView");
+      return;
+    }
+
+    komunikat.innerText = "❌ Nieznana rola użytkownika.";
+
+  } catch (e) {
+    komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
+  }
+}
 
 /******************** PREFETCH (MENU) ********************/
 
