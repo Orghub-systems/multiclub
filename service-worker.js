@@ -7,12 +7,11 @@ const CACHE_NAME = "orghub-static";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/service-worker.js",
   "/icon-192.png",
   "/icon-512.png",
 ];
 
-// install: cache minimalnych statyków
+// install
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).catch(() => {})
@@ -20,6 +19,7 @@ self.addEventListener("install", (e) => {
   self.skipWaiting();
 });
 
+// activate
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
@@ -32,25 +32,44 @@ self.addEventListener("activate", (e) => {
   })());
 });
 
+// fetch
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
-  // cache-first dla statyków z tego origin, network dla reszty
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
+  const isStaticSameOrigin =
+    url.origin === self.location.origin &&
+    (
+      url.pathname === "/" ||
+      url.pathname.endsWith(".html") ||
+      url.pathname.endsWith(".js") ||
+      url.pathname.endsWith(".css") ||
+      url.pathname.endsWith(".png") ||
+      url.pathname.endsWith(".jpg") ||
+      url.pathname.endsWith(".jpeg") ||
+      url.pathname.endsWith(".webp") ||
+      url.pathname.endsWith(".svg")
+    );
 
-      return fetch(e.request)
-        .then((resp) => {
-          if (url.origin === self.location.origin && resp && resp.status === 200) {
-            const copy = resp.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
-          }
-          return resp;
-        })
-        .catch(() => cached);
-    })
-  );
+  if (isStaticSameOrigin) {
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+
+        return fetch(e.request)
+          .then((resp) => {
+            if (resp && resp.status === 200) {
+              const copy = resp.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
+            }
+            return resp;
+          });
+      })
+    );
+    return;
+  }
+
+  // wszystko inne zawsze z sieci
+  e.respondWith(fetch(e.request));
 });
 
 /******************** PUSH: odbiór i kliknięcie ********************/
