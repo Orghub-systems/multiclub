@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.07';
+  window.APP_BUILD = 'BETA APP v2.08';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   const buildChanged = poprzednia !== window.APP_BUILD;
@@ -690,39 +690,41 @@ input[type="number"] {
   <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
   <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
 </div>
-
 <!-- 🔥 REKLAMA / PARTNER KLUBU -->
-<div id="clubAdContainer" style="margin:25px 0 10px 0; display:none;">
-  <a id="clubAdLink" href="#" target="_blank" style="text-decoration:none;">
-    <div style="
-      width:100%;
-      height:110px;
-      border-radius:14px;
-      overflow:hidden;
-      background:#111;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 6px 20px rgba(0,0,0,0.2);
-    ">
-      <img 
-        id="clubAdImg"
-        src=""
-        alt="Partner klubu"
-        style="width:100%; height:100%; object-fit:cover;"
-      />
-    </div>
-  </a>
+<div id="clubAdContainer" style="display:none; margin-top:20px;">
 
-  <div style="
-    font-size:11px;
-    opacity:.5;
-    margin-top:6px;
-    text-align:right;
-  ">
-    Partner klubu
+  <div style="width:100%; max-width:260px; margin:0 auto;">
+    
+    <a id="clubAdLink" href="#" target="_blank" style="text-decoration:none;">
+      
+      <div style="
+        width:100%;
+        height:80px;
+        border-radius:12px;
+        overflow:hidden;
+        background:#222;
+        box-shadow:0 4px 12px rgba(0,0,0,0.4);
+      ">
+        <img 
+          id="clubAdImg"
+          src=""
+          alt="Partner klubu"
+          style="width:100%; height:100%; object-fit:cover; display:block;"
+        />
+      </div>
+
+    </a>
+
+    <div style="
+      font-size:10px;
+      opacity:.5;
+      margin-top:6px;
+      text-align:center;
+    ">
+      Partner klubu
+    </div>
+
   </div>
-</div>
 
 <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 </div>
