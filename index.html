@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.12';
+  window.APP_BUILD = 'BETA APP v2.13';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   const buildChanged = poprzednia !== window.APP_BUILD;
@@ -728,10 +728,11 @@ input[type="number"] {
       text-align:center;
     ">
       Partner klubu
-    </div>
+        </div>
 
+      </div>
+    </div>
   </div>
-</div>
     
 <!-- II USTAWIENIA -->
 <div id="playerSettingsView" class="container hidden">
@@ -5018,47 +5019,51 @@ function startPrefetchForPlayer_() {
 }
 
 function renderClubAd(ad) {
-  const container = document.getElementById("clubAdContainer");
-  const img = document.getElementById("clubAdImg");
-  const link = document.getElementById("clubAdLink");
+  setTimeout(() => {
+    const container = document.getElementById("clubAdContainer");
+    const img = document.getElementById("clubAdImg");
+    const link = document.getElementById("clubAdLink");
 
-  if (!container || !img || !link) return;
+    console.log("renderClubAd:", {
+      hasContainer: !!container,
+      hasImg: !!img,
+      hasLink: !!link,
+      ad
+    });
 
-  if (!ad || !ad.enabled || !ad.imageUrl) {
-    container.style.display = "none";
-    img.removeAttribute("src");
-    link.removeAttribute("href");
-    return;
-  }
+    if (!container || !img || !link) return;
 
-  img.onload = () => {
-    container.style.display = "block";
-  };
+    if (!ad || !ad.enabled || !ad.imageUrl) {
+      container.style.display = "none";
+      img.removeAttribute("src");
+      link.removeAttribute("href");
+      return;
+    }
 
-  img.onerror = () => {
-    container.style.display = "none";
-    img.removeAttribute("src");
-    link.removeAttribute("href");
-    console.error("Nie udało się wczytać grafiki reklamy:", ad.imageUrl);
-  };
+    img.onload = () => {
+      container.style.display = "block";
+      console.log("Reklama załadowana OK");
+    };
 
-  img.src = ad.imageUrl;
-  img.alt = ad.alt || "Partner klubu";
+    img.onerror = () => {
+      container.style.display = "none";
+      img.removeAttribute("src");
+      link.removeAttribute("href");
+      console.error("Nie udało się wczytać grafiki reklamy:", ad.imageUrl);
+    };
 
-  if (ad.linkUrl) {
-    link.href = ad.linkUrl;
-    link.style.pointerEvents = "auto";
-  } else {
-    link.href = "#";
-    link.style.pointerEvents = "none";
-  }
+    img.src = ad.imageUrl;
+    img.alt = ad.alt || "Partner klubu";
+
+    if (ad.linkUrl) {
+      link.href = ad.linkUrl;
+      link.style.pointerEvents = "auto";
+    } else {
+      link.href = "#";
+      link.style.pointerEvents = "none";
+    }
+  }, 100);
 }
-
-renderClubAd({
-  enabled: true,
-  imageUrl: "https://via.placeholder.com/800x1200",
-  linkUrl: "https://google.com"
-});
   
 /* =================== 75 REJESTRACJA =================== */
 async function wyslijRejestracje() {
