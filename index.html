@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.10';
+  window.APP_BUILD = 'BETA APP v2.11';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   const buildChanged = poprzednia !== window.APP_BUILD;
@@ -4968,8 +4968,8 @@ async function zaloguj() {
 
       // ✅ NOWA LOGIKA: po loginie zawsze menu
       goToView("playerMenuView");
+      loadClubAd();
       return;
-    }
 
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
