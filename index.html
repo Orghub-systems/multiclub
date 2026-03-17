@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.13';
+  window.APP_BUILD = 'BETA APP v2.14';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   const buildChanged = poprzednia !== window.APP_BUILD;
@@ -684,55 +684,69 @@ input[type="number"] {
 
   <h1 style="margin:0 0 25px 0;">Panel zawodnika</h1>
 
-<div class="login-box">
-  <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
-  <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
-  <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-  <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
-</div>
+  <div class="login-box">
+    <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
+    <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
+    <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
+    <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
+  </div>
 
-<p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
+  <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
-<!-- REKLAMA / PARTNER KLUBU -->
-<div id="clubAdContainer" style="display:none; margin-top:18px;">
-  <div style="width:100%; max-width:360px; margin:0 auto;">
+  <!-- REKLAMA / PARTNER KLUBU -->
+  <div id="clubAdContainer" style="display:none; margin-top:18px;">
+    <div style="width:100%; max-width:360px; margin:0 auto;">
 
-    <a id="clubAdLink" href="#" target="_blank" style="text-decoration:none; display:block;">
-      <div style="
-        width:100%;
-        height:310px;
-        border-radius:18px;
-        overflow:hidden;
-        background:linear-gradient(180deg,#232323 0%, #171717 100%);
-        box-shadow:0 10px 28px rgba(0,0,0,.45);
-        position:relative;
-      ">
-        <img
-          id="clubAdImg"
-          src=""
-          alt="Partner klubu"
+      <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
+        <div
+          id="clubAdBox"
           style="
             width:100%;
-            height:100%;
-            object-fit:cover;
-            display:block;
+            height:310px;
+            border-radius:18px;
+            overflow:hidden;
+            background:
+              linear-gradient(180deg,#232323 0%, #171717 100%);
+            background-size:cover;
+            background-position:center;
+            background-repeat:no-repeat;
+            box-shadow:0 10px 28px rgba(0,0,0,.45);
+            position:relative;
           "
-        />
-      </div>
-    </a>
-
-    <div style="
-      font-size:12px;
-      opacity:.55;
-      margin-top:8px;
-      text-align:center;
-    ">
-      Partner klubu
+        >
+          <div
+            id="clubAdFallbackText"
+            style="
+              position:absolute;
+              inset:0;
+              display:flex;
+              align-items:flex-start;
+              justify-content:center;
+              padding-top:16px;
+              color:#fff;
+              font-size:14px;
+              font-weight:700;
+              text-align:center;
+            "
+          >
+            Test reklamy
+          </div>
         </div>
+      </a>
 
+      <div style="
+        font-size:12px;
+        opacity:.55;
+        margin-top:8px;
+        text-align:center;
+      ">
+        Partner klubu
       </div>
+
     </div>
   </div>
+
+</div>
     
 <!-- II USTAWIENIA -->
 <div id="playerSettingsView" class="container hidden">
@@ -4956,27 +4970,27 @@ async function zaloguj() {
 
     komunikat.innerText = "✅ Zalogowano";
 
-    if (data.role === "zawodnik") {
-      numerZalogowanego = data.login;
-      grupaZalogowanego = data.grupa || "";
-
-      try {
-        window.__platnosciCache = await apiClubGet("platnosci", { numer: numerZalogowanego });
-      } catch (e) {
-        window.__platnosciCache = null;
+      if (data.role === "zawodnik") {
+        numerZalogowanego = data.login;
+        grupaZalogowanego = data.grupa || "";
+      
+        try {
+          window.__platnosciCache = await apiClubGet("platnosci", { numer: numerZalogowanego });
+        } catch (e) {
+          window.__platnosciCache = null;
+        }
+      
+        goToView("playerMenuView");
+      
+        renderClubAd({
+          enabled: true,
+          imageUrl: "https://picsum.photos/400/600",
+          linkUrl: "https://google.com",
+          alt: "Test reklamy"
+        });
+      
+        return;
       }
-
-      goToView("playerMenuView");
-
-      renderClubAd({
-        enabled: true,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Hockey_stick_and_puck.svg/1024px-Hockey_stick_and_puck.svg.png",
-        linkUrl: "https://google.com",
-        alt: "Test reklamy"
-      });
-
-      return;
-    }
 
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
@@ -5019,50 +5033,48 @@ function startPrefetchForPlayer_() {
 }
 
 function renderClubAd(ad) {
-  setTimeout(() => {
-    const container = document.getElementById("clubAdContainer");
-    const img = document.getElementById("clubAdImg");
-    const link = document.getElementById("clubAdLink");
+  const container = document.getElementById("clubAdContainer");
+  const box = document.getElementById("clubAdBox");
+  const link = document.getElementById("clubAdLink");
+  const fallback = document.getElementById("clubAdFallbackText");
 
-    console.log("renderClubAd START", ad);
+  if (!container || !box || !link || !fallback) return;
 
-    if (!container || !img || !link) {
-      console.log("renderClubAd EXIT: brak elementów DOM");
-      return;
-    }
+  // reset
+  container.style.display = "none";
+  box.style.backgroundImage = "";
+  link.removeAttribute("href");
+  link.style.pointerEvents = "none";
+  fallback.style.display = "flex";
+  fallback.textContent = "Test reklamy";
 
-    if (!ad || !ad.enabled || !ad.imageUrl) {
-      console.log("renderClubAd EXIT: brak danych reklamy");
-      container.style.display = "none";
-      img.removeAttribute("src");
-      link.removeAttribute("href");
-      return;
-    }
+  if (!ad || !ad.enabled || !ad.imageUrl) return;
 
-    img.onload = () => {
-      console.log("renderClubAd IMG OK", ad.imageUrl);
-      container.style.display = "block";
-    };
+  const testImg = new Image();
 
-    img.onerror = () => {
-      console.log("renderClubAd IMG ERROR", ad.imageUrl);
-      container.style.display = "block"; // specjalnie zostawiamy box widoczny do testu
-      link.removeAttribute("href");
-    };
-
-    img.src = ad.imageUrl;
-    img.alt = ad.alt || "Partner klubu";
+  testImg.onload = function () {
+    box.style.backgroundImage = `url("${ad.imageUrl}")`;
+    fallback.style.display = "none";
 
     if (ad.linkUrl) {
       link.href = ad.linkUrl;
       link.style.pointerEvents = "auto";
-    } else {
-      link.href = "#";
-      link.style.pointerEvents = "none";
     }
 
     container.style.display = "block";
-  }, 100);
+  };
+
+  testImg.onerror = function () {
+    box.style.backgroundImage = "";
+    fallback.style.display = "flex";
+    fallback.textContent = ad.alt || "Reklama niedostępna";
+    container.style.display = "block";
+    link.style.pointerEvents = "none";
+    link.removeAttribute("href");
+    console.error("Nie udało się wczytać reklamy:", ad.imageUrl);
+  };
+
+  testImg.src = ad.imageUrl;
 }
   
 /* =================== 75 REJESTRACJA =================== */
