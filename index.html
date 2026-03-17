@@ -694,7 +694,7 @@ input[type="number"] {
 <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
 <!-- REKLAMA / PARTNER KLUBU -->
-<div id="clubAdContainer" style="display:block; margin-top:18px; background:red; min-height:200px;">
+<div id="clubAdContainer" style="display:none; margin-top:18px;">
   <div style="width:100%; max-width:360px; margin:0 auto;">
 
     <a id="clubAdLink" href="#" target="_blank" style="text-decoration:none; display:block;">
@@ -5024,16 +5024,15 @@ function renderClubAd(ad) {
     const img = document.getElementById("clubAdImg");
     const link = document.getElementById("clubAdLink");
 
-    console.log("renderClubAd:", {
-      hasContainer: !!container,
-      hasImg: !!img,
-      hasLink: !!link,
-      ad
-    });
+    console.log("renderClubAd START", ad);
 
-    if (!container || !img || !link) return;
+    if (!container || !img || !link) {
+      console.log("renderClubAd EXIT: brak elementów DOM");
+      return;
+    }
 
     if (!ad || !ad.enabled || !ad.imageUrl) {
+      console.log("renderClubAd EXIT: brak danych reklamy");
       container.style.display = "none";
       img.removeAttribute("src");
       link.removeAttribute("href");
@@ -5041,15 +5040,14 @@ function renderClubAd(ad) {
     }
 
     img.onload = () => {
+      console.log("renderClubAd IMG OK", ad.imageUrl);
       container.style.display = "block";
-      console.log("Reklama załadowana OK");
     };
 
     img.onerror = () => {
-      container.style.display = "none";
-      img.removeAttribute("src");
+      console.log("renderClubAd IMG ERROR", ad.imageUrl);
+      container.style.display = "block"; // specjalnie zostawiamy box widoczny do testu
       link.removeAttribute("href");
-      console.error("Nie udało się wczytać grafiki reklamy:", ad.imageUrl);
     };
 
     img.src = ad.imageUrl;
@@ -5062,6 +5060,8 @@ function renderClubAd(ad) {
       link.href = "#";
       link.style.pointerEvents = "none";
     }
+
+    container.style.display = "block";
   }, 100);
 }
   
