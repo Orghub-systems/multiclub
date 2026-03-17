@@ -1738,6 +1738,30 @@ let currentView = "loginView";
 window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
 
+  async function preloadClubAd() {
+  try {
+    const clubId = getClubIdFromUrl_();
+    if (!clubId) return;
+
+    const res = await fetch(`${CORE_URL}?action=club_ad&clubId=${encodeURIComponent(clubId)}`);
+    const data = await res.json();
+
+    if (!data || !data.enabled || !data.imageUrl) {
+      window.__clubAdData = null;
+      return;
+    }
+
+    window.__clubAdData = data;
+
+    const img = new Image();
+    img.src = data.imageUrl;
+
+  } catch (e) {
+    console.error("Błąd preload reklamy:", e);
+    window.__clubAdData = null;
+  }
+}
+
   /******************** PUSH ********************/
   
 const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
@@ -2418,6 +2442,8 @@ function applyTheme_(theme) {
 async function startApp_() {
 const clubFromUrl = getClubIdFromUrl_();
 
+preloadClubAd();
+  
 // jeśli NIE ma clubId w URL → to jest link ogólny: reset + odblokuj konfigurację
 if (!clubFromUrl) {
   saveClubId_("");
@@ -5005,24 +5031,13 @@ async function zaloguj() {
   }
 }
 
-  async function loadClubAd() {
-  try {
-    const clubId = getClubIdFromUrl_();
-
-    if (!clubId) {
-      renderClubAd(null);
-      return;
-    }
-
-    const res = await fetch(`${CORE_URL}?action=club_ad&clubId=${encodeURIComponent(clubId)}`);
-    const data = await res.json();
-
-    renderClubAd(data);
-
-  } catch (e) {
-    console.error("Błąd ładowania reklamy:", e);
-    renderClubAd(null);
+function loadClubAd() {
+  if (window.__clubAdData && window.__clubAdData.enabled && window.__clubAdData.imageUrl) {
+    renderClubAd(window.__clubAdData);
+    return;
   }
+
+  renderClubAd(null);
 }
 
 /******************** PREFETCH (MENU) ********************/
