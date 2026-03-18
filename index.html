@@ -325,13 +325,15 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.17';
+  window.APP_BUILD = 'BETA APP v2.18';
 
-  const poprzednia = localStorage.getItem('wersjaApki');
+  const APP_BUILD_KEY = 'wersjaApki';
+
+  const poprzednia = localStorage.getItem(APP_BUILD_KEY);
   const buildChanged = poprzednia !== window.APP_BUILD;
 
   if (buildChanged) {
-    localStorage.setItem('wersjaApki', window.APP_BUILD);
+    localStorage.setItem(APP_BUILD_KEY, window.APP_BUILD);
   }
 
   if ('serviceWorker' in navigator) {
