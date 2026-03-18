@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.19';
+  window.APP_BUILD = 'BETA APP v2.20';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -696,51 +696,23 @@ input[type="number"] {
   <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
 <!-- REKLAMA / PARTNER KLUBU -->
-<div id="clubAdContainer" style="display:none; margin-top:18px;">
+<!-- REKLAMA TEST 100% NA SZTYWNO -->
+<div style="margin-top:18px;">
   <div style="width:100%; max-width:360px; margin:0 auto;">
-
-    <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
-      <div
+    <a href="https://google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
+      <img
+        src="https://ads.orghub.pl/warriors/ad-main.jpg"
+        alt="Partner klubu"
         style="
           width:100%;
           height:310px;
+          object-fit:cover;
+          display:block;
           border-radius:18px;
-          overflow:hidden;
-          background:linear-gradient(180deg,#232323 0%, #171717 100%);
+          background:#222;
           box-shadow:0 10px 28px rgba(0,0,0,.45);
-          position:relative;
         "
-      >
-        <img
-          id="clubAdImg"
-          src=""
-          alt="Partner klubu"
-          style="
-            width:100%;
-            height:100%;
-            object-fit:cover;
-            display:none;
-          "
-        />
-
-        <div
-          id="clubAdFallbackText"
-          style="
-            position:absolute;
-            inset:0;
-            display:flex;
-            align-items:flex-start;
-            justify-content:center;
-            padding-top:16px;
-            color:#fff;
-            font-size:14px;
-            font-weight:700;
-            text-align:center;
-          "
-        >
-          Partner klubu
-        </div>
-      </div>
+      />
     </a>
 
     <div style="
@@ -751,7 +723,6 @@ input[type="number"] {
     ">
       Partner klubu
     </div>
-
   </div>
 </div>
 
