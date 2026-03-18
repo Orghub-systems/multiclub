@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.20';
+  window.APP_BUILD = 'BETA APP v2.21';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -696,23 +696,44 @@ input[type="number"] {
   <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
 <!-- REKLAMA / PARTNER KLUBU -->
-<!-- REKLAMA TEST 100% NA SZTYWNO -->
-<div style="margin-top:18px;">
+<div id="clubAdContainer" style="display:none; margin-top:18px;">
   <div style="width:100%; max-width:360px; margin:0 auto;">
-    <a href="https://google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
-      <img
-        src="https://ads.orghub.pl/warriors/ad-main.jpg"
-        alt="Partner klubu"
+
+    <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
+      <div
+        id="clubAdBox"
         style="
           width:100%;
           height:310px;
-          object-fit:cover;
-          display:block;
           border-radius:18px;
-          background:#222;
+          overflow:hidden;
+          background:
+            linear-gradient(180deg,#232323 0%, #171717 100%);
+          background-size:cover;
+          background-position:center;
+          background-repeat:no-repeat;
           box-shadow:0 10px 28px rgba(0,0,0,.45);
+          position:relative;
         "
-      />
+      >
+        <div
+          id="clubAdFallbackText"
+          style="
+            position:absolute;
+            inset:0;
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            padding-top:16px;
+            color:#fff;
+            font-size:14px;
+            font-weight:700;
+            text-align:center;
+          "
+        >
+          Partner klubu
+        </div>
+      </div>
     </a>
 
     <div style="
@@ -723,6 +744,7 @@ input[type="number"] {
     ">
       Partner klubu
     </div>
+
   </div>
 </div>
 
@@ -5044,26 +5066,26 @@ function startPrefetchForPlayer_() {
   
 function renderClubAd(ad) {
   const container = document.getElementById("clubAdContainer");
+  const box = document.getElementById("clubAdBox");
   const link = document.getElementById("clubAdLink");
-  const img = document.getElementById("clubAdImg");
   const fallback = document.getElementById("clubAdFallbackText");
 
-  if (!container || !link || !img || !fallback) return;
+  if (!container || !box || !link || !fallback) return;
 
   // reset
   container.style.display = "none";
-  img.style.display = "none";
-  img.removeAttribute("src");
-  img.alt = "Partner klubu";
+  box.style.backgroundImage = "";
   fallback.style.display = "flex";
   fallback.textContent = "Partner klubu";
   link.removeAttribute("href");
 
   if (!ad || !ad.enabled || !ad.imageUrl) return;
 
+  const img = new Image();
+
   img.onload = function () {
+    box.style.backgroundImage = `url("${ad.imageUrl}")`;
     fallback.style.display = "none";
-    img.style.display = "block";
     container.style.display = "block";
   };
 
@@ -5075,7 +5097,6 @@ function renderClubAd(ad) {
   };
 
   img.src = ad.imageUrl;
-  img.alt = ad.alt || "Partner klubu";
 
   if (ad.linkUrl) {
     link.href = ad.linkUrl;
