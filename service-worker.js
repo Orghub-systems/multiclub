@@ -3,7 +3,7 @@
 const CORE = "https://orghubmulticlub.orghubsystems.workers.dev";
 const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
-const SW_VERSION = "2.17";
+const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE_NAME = "orghub-static-v" + SW_VERSION;
 
 const STATIC_ASSETS = [
