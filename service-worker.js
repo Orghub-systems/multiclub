@@ -3,7 +3,9 @@
 const CORE = "https://orghubmulticlub.orghubsystems.workers.dev";
 const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
-const CACHE_NAME = "orghub-static";
+const SW_VERSION = "2.17";
+const CACHE_NAME = "orghub-static-v" + SW_VERSION;
+
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -36,13 +38,20 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
-  const isStaticSameOrigin =
-    url.origin === self.location.origin &&
+  const isSameOrigin = url.origin === self.location.origin;
+
+  const isAppShell =
+    isSameOrigin &&
     (
       url.pathname === "/" ||
       url.pathname.endsWith(".html") ||
       url.pathname.endsWith(".js") ||
-      url.pathname.endsWith(".css") ||
+      url.pathname.endsWith(".css")
+    );
+
+  const isImageAsset =
+    isSameOrigin &&
+    (
       url.pathname.endsWith(".png") ||
       url.pathname.endsWith(".jpg") ||
       url.pathname.endsWith(".jpeg") ||
@@ -50,21 +59,38 @@ self.addEventListener("fetch", (e) => {
       url.pathname.endsWith(".svg")
     );
 
-  if (isStaticSameOrigin) {
-    e.respondWith(
-      caches.match(e.request).then((cached) => {
+  // HTML / JS / CSS -> network first
+  if (isAppShell) {
+    e.respondWith((async () => {
+      try {
+        const resp = await fetch(e.request);
+        if (resp && resp.status === 200) {
+          const copy = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
+        }
+        return resp;
+      } catch (err) {
+        const cached = await caches.match(e.request);
         if (cached) return cached;
+        throw err;
+      }
+    })());
+    return;
+  }
 
-        return fetch(e.request)
-          .then((resp) => {
-            if (resp && resp.status === 200) {
-              const copy = resp.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
-            }
-            return resp;
-          });
-      })
-    );
+  // obrazki / ikony -> cache first
+  if (isImageAsset) {
+    e.respondWith((async () => {
+      const cached = await caches.match(e.request);
+      if (cached) return cached;
+
+      const resp = await fetch(e.request);
+      if (resp && resp.status === 200) {
+        const copy = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
+      }
+      return resp;
+    })());
     return;
   }
 
