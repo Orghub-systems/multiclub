@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.22';
+  window.APP_BUILD = 'BETA APP v2.23';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1748,16 +1748,18 @@ async function preloadClubAd() {
     const res = await fetch(`${CORE_URL}?action=club_ad&clubId=${encodeURIComponent(clubId)}`);
     const data = await res.json();
 
-    if (!data || !data.enabled || !data.imageUrl) {
+    if (!data || !data.enabled || !data.assetPath) {
       window.__clubAdData = null;
       return;
     }
 
+    data.assetUrl = `${location.origin}/__ads/${data.assetPath}`;
     window.__clubAdData = data;
 
-    const img = new Image();
-    img.src = data.imageUrl;
-
+    if (data.type === "image") {
+      const img = new Image();
+      img.src = data.assetUrl;
+    }
   } catch (e) {
     console.error("Błąd preload reklamy:", e);
     window.__clubAdData = null;
@@ -5034,7 +5036,7 @@ async function zaloguj() {
 }
 
 function loadClubAd() {
-  if (window.__clubAdData && window.__clubAdData.enabled && window.__clubAdData.imageUrl) {
+  if (window.__clubAdData && window.__clubAdData.enabled && window.__clubAdData.assetUrl) {
     renderClubAd(window.__clubAdData);
     return;
   }
@@ -5066,25 +5068,24 @@ function startPrefetchForPlayer_() {
   
 function renderClubAd(ad) {
   const container = document.getElementById("clubAdContainer");
-  const box = document.getElementById("clubAdBox");
   const link = document.getElementById("clubAdLink");
+  const box = document.getElementById("clubAdBox");
   const fallback = document.getElementById("clubAdFallbackText");
 
-  if (!container || !box || !link || !fallback) return;
+  if (!container || !link || !box || !fallback) return;
 
-  // reset
   container.style.display = "none";
   box.style.backgroundImage = "";
   fallback.style.display = "flex";
   fallback.textContent = "Partner klubu";
   link.removeAttribute("href");
 
-  if (!ad || !ad.enabled || !ad.imageUrl) return;
+  if (!ad || !ad.enabled || !ad.assetUrl || ad.type !== "image") return;
 
   const img = new Image();
 
   img.onload = function () {
-    box.style.backgroundImage = `url("${ad.imageUrl}")`;
+    box.style.backgroundImage = `url("${ad.assetUrl}")`;
     fallback.style.display = "none";
     container.style.display = "block";
   };
@@ -5093,10 +5094,10 @@ function renderClubAd(ad) {
     fallback.style.display = "flex";
     fallback.textContent = ad.alt || "Partner klubu";
     container.style.display = "block";
-    console.error("Nie udało się wczytać reklamy:", ad.imageUrl);
+    console.error("Nie udało się wczytać reklamy:", ad.assetUrl);
   };
 
-  img.src = ad.imageUrl;
+  img.src = ad.assetUrl;
 
   if (ad.linkUrl) {
     link.href = ad.linkUrl;
