@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.24';
+  window.APP_BUILD = 'BETA APP v2.25';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4121,7 +4121,7 @@ function renderPaymentsSection_(title, arr) {
     ${arr.map(renderPaymentTile_).join("")}
   `;
 }
-
+  
 function renderPaymentTile_(p) {
   const isZwolniony = !!p.zwolniony;
   const paid = !!p.zaplacono && !isZwolniony;
@@ -4138,6 +4138,7 @@ function renderPaymentTile_(p) {
         : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`);
 
   const colNum = Number(p.col);
+  const typTxt = String(p.typ || "").trim();
 
   // Bezpieczny tekst do HTML
   const labelTxt = String(p.label || p.nazwa || "");
@@ -4152,13 +4153,19 @@ function renderPaymentTile_(p) {
 
   // Bezpieczny tekst do dataset
   const labelData = encodeURIComponent(labelTxt);
+  const typData = encodeURIComponent(typTxt);
 
   const btn = (!paid && !isZwolniony)
     ? `<button class="full-btn adminPayBtn"
             style="margin-top:10px;"
             data-col="${Number.isFinite(colNum) ? colNum : ""}"
             data-label="${labelData}"
-            onclick="adminConfirmPayment(Number(this.dataset.col), decodeURIComponent(this.dataset.label || ''))">
+            data-typ="${typData}"
+            onclick="adminConfirmPayment(
+              Number(this.dataset.col),
+              decodeURIComponent(this.dataset.label || ''),
+              decodeURIComponent(this.dataset.typ || '')
+            )">
            Zarejestruj płatność
          </button>`
     : "";
@@ -4184,35 +4191,79 @@ function renderPaymentTile_(p) {
 window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
   
-function adminConfirmPayment(colNum, label) {
-  console.log("adminConfirmPayment CLICK", { colNum, label, selectedNr: window.__adminSelectedNr });
+function adminConfirmPayment(colNum, label, typ) {
+  console.log("adminConfirmPayment CLICK", {
+    colNum,
+    label,
+    typ,
+    selectedNr: window.__adminSelectedNr
+  });
+
   const nr  = String(window.__adminSelectedNr || "").trim();
   const col = Number(colNum);
+  const payType = String(typ || "").trim().toLowerCase();
 
-  
-  if (!nr) { alert("❌ Brak wybranego zawodnika."); return; }
-  if (!Number.isFinite(col) || col < 1) { alert("❌ Brak poprawnej kolumny płatności."); return; }
+  if (!nr) {
+    alert("❌ Brak wybranego zawodnika.");
+    return;
+  }
+
+  if (!Number.isFinite(col) || col < 1) {
+    alert("❌ Brak poprawnej kolumny płatności.");
+    return;
+  }
+
+  if (payType !== "skladka" && payType !== "zajecia") {
+    alert("❌ Nieznany typ płatności.");
+    return;
+  }
 
   window.__adminPendingPayCol = col;
   window.__adminPendingPayLabel = String(label || "");
-  console.log("STEP 1 after pending values");
+  window.__adminPendingPayType = payType;
 
-  const modal = document.getElementById("adminPayConfirmModal");
-  const text  = document.getElementById("adminPayConfirmText");
-  const msg   = document.getElementById("adminPayConfirmMsg");
-  const yes   = document.getElementById("adminPayConfirmYesBtn");
-  const no    = document.getElementById("adminPayConfirmNoBtn");
+  // Domyślnie: stary modal
+  let modalId = "adminPayConfirmModal";
+  let textId  = "adminPayConfirmText";
+  let msgId   = "adminPayConfirmMsg";
+  let yesId   = "adminPayConfirmYesBtn";
+  let noId    = "adminPayConfirmNoBtn";
+
+  // Jeśli to składka i nowy modal już istnieje → użyj nowego
+  if (payType === "skladka") {
+    const skladkaModal = document.getElementById("adminPayConfirmSkladkaModal");
+    const skladkaText  = document.getElementById("adminPayConfirmSkladkaText");
+    const skladkaYes   = document.getElementById("adminPayConfirmSkladkaYesBtn");
+    const skladkaNo    = document.getElementById("adminPayConfirmSkladkaNoBtn");
+
+    if (skladkaModal && skladkaText && skladkaYes && skladkaNo) {
+      modalId = "adminPayConfirmSkladkaModal";
+      textId  = "adminPayConfirmSkladkaText";
+      msgId   = "adminPayConfirmSkladkaMsg";
+      yesId   = "adminPayConfirmSkladkaYesBtn";
+      noId    = "adminPayConfirmSkladkaNoBtn";
+    }
+  }
+
+  window.__adminActivePayModal = modalId;
+
+  const modal = document.getElementById(modalId);
+  const text  = document.getElementById(textId);
+  const msg   = document.getElementById(msgId);
+  const yes   = document.getElementById(yesId);
+  const no    = document.getElementById(noId);
 
   console.log("STEP 2 modal elems", {
-  modal: !!modal,
-  text: !!text,
-  msg: !!msg,
-  yes: !!yes,
-  no: !!no
-});
+    modalId,
+    modal: !!modal,
+    text: !!text,
+    msg: !!msg,
+    yes: !!yes,
+    no: !!no
+  });
 
   if (!modal || !text || !yes || !no) {
-    alert("❌ Brak elementów modala #adminPayConfirmModal w HTML.");
+    alert("❌ Brak elementów modala potwierdzenia płatności w HTML.");
     return;
   }
 
@@ -4222,32 +4273,56 @@ function adminConfirmPayment(colNum, label) {
 
   if (msg) msg.textContent = "";
 
-  // akcje
   yes.onclick = adminDoConfirmPayment;
   no.onclick  = adminCancelConfirmPayment;
-  
-  console.log("STEP 3 before open modal");
-    
+
+  console.log("STEP 3 before open modal", {
+    modalId,
+    payType
+  });
+
   modal.classList.remove("hidden");
   modal.style.display = "flex";
   modal.style.visibility = "visible";
   modal.style.opacity = "1";
-  
+
   console.log("STEP 4 modal style", {
+    modalId,
     className: modal.className,
     display: getComputedStyle(modal).display,
     visibility: getComputedStyle(modal).visibility,
     opacity: getComputedStyle(modal).opacity
   });
-  }
+}
 
 async function adminDoConfirmPayment() {
-  const yes = document.getElementById("adminPayConfirmYesBtn");
-  const no  = document.getElementById("adminPayConfirmNoBtn");
-  const msg = document.getElementById("adminPayConfirmMsg");
+  const activeModal = String(window.__adminActivePayModal || "adminPayConfirmModal");
+  const payType = String(window.__adminPendingPayType || "").trim().toLowerCase();
 
-  if (yes) { yes.disabled = true; yes.style.opacity = "0.65"; yes.textContent = "⏳ Zapisuję…"; }
-  if (no)  { no.disabled = true;  no.style.opacity  = "0.65"; }
+  let yesId = "adminPayConfirmYesBtn";
+  let noId  = "adminPayConfirmNoBtn";
+  let msgId = "adminPayConfirmMsg";
+
+  if (activeModal === "adminPayConfirmSkladkaModal" || payType === "skladka") {
+    yesId = "adminPayConfirmSkladkaYesBtn";
+    noId  = "adminPayConfirmSkladkaNoBtn";
+    msgId = "adminPayConfirmSkladkaMsg";
+  }
+
+  const yes = document.getElementById(yesId);
+  const no  = document.getElementById(noId);
+  const msg = document.getElementById(msgId);
+
+  if (yes) {
+    yes.disabled = true;
+    yes.style.opacity = "0.65";
+    yes.textContent = "⏳ Zapisuję…";
+  }
+
+  if (no) {
+    no.disabled = true;
+    no.style.opacity = "0.65";
+  }
 
   const col = Number(window.__adminPendingPayCol);
   const nr  = String(window.__adminSelectedNr || "").trim();
@@ -4264,17 +4339,27 @@ async function adminDoConfirmPayment() {
       return;
     }
 
-    adminCancelConfirmPayment();   // zamknij modal
-    await adminOpenPayments();      // odśwież widok płatności
+    adminCancelConfirmPayment();
+    await adminOpenPayments();
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   } finally {
-    // reset przycisków
-    if (yes) { yes.disabled = false; yes.style.opacity = "1"; yes.textContent = "TAK"; }
-    if (no)  { no.disabled = false;  no.style.opacity  = "1"; }
+    if (yes) {
+      yes.disabled = false;
+      yes.style.opacity = "1";
+      yes.textContent = "TAK";
+    }
+
+    if (no) {
+      no.disabled = false;
+      no.style.opacity = "1";
+    }
+
     window.__adminPendingPayCol = null;
     window.__adminPendingPayLabel = "";
+    window.__adminPendingPayType = "";
+    window.__adminActivePayModal = "";
   }
 }
 
