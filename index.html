@@ -4103,11 +4103,7 @@ function renderAdminPayments_(res) {
   }
 
   const skladki = items.filter(x => x.typ === "skladka");
-  const zajecia = items.filter(x =>
-    x.typ === "zajecia" &&
-    x.kwota !== null && x.kwota !== undefined && String(x.kwota).trim() !== "" &&
-    Number(x.kwota) > 0
-  );
+  const zajecia = items.filter(x => x.typ === "zajecia");
 
   // ===== PRZYCISK ROZLICZANIA (NAD "Składki") =====
   const kod = String(window.__adminRozliczKod || "S").toUpperCase();
