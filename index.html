@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.25';
+  window.APP_BUILD = 'BETA APP v2.26';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1569,7 +1569,7 @@ input[type="number"] {
   </div>
 </div>
 
-    <!-- =================== ADMIN: MODAL POTWIERDZENIA PŁATNOŚCI =================== -->
+    <!-- =================== ADMIN: MODAL POTWIERDZENIA PŁATNOŚCI - ZAJECIA DODATKOWE =================== -->
 <div id="adminPayConfirmModal" class="modal hidden">
   <div class="modal-card">
     <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
@@ -1586,6 +1586,27 @@ input[type="number"] {
     </div>
 
     <p id="adminPayConfirmMsg" style="margin-top:10px;"></p>
+  </div>
+</div>
+
+  <!-- =================== ADMIN: MODAL POTWIERDZENIA PŁATNOŚCI - SKŁADKA =================== -->
+<div id="adminPayConfirmSkladkaModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
+
+    <div id="adminPayConfirmSkladkaText" style="opacity:0.9; line-height:1.35;">
+      Potwierdzam zapłatę
+    </div>
+
+    <div style="height:10px;"></div>
+
+    <div class="modal-actions" style="display:flex; flex-direction:column; gap:10px;">
+      <button class="full-btn green" id="adminPayConfirmSkladkaYesBtn">TAK</button>
+      <button class="full-btn alt" id="adminPayConfirmSkladkaNoBtn">NIE</button>
+      <button class="full-btn" id="adminPayConfirmSkladkaZwBtn">ZWOLNIONY Z OPŁATY</button>
+    </div>
+
+    <p id="adminPayConfirmSkladkaMsg" style="margin-top:10px;"></p>
   </div>
 </div>
 
@@ -4364,10 +4385,67 @@ async function adminDoConfirmPayment() {
 }
 
 function adminCancelConfirmPayment() {
-  const modal = document.getElementById("adminPayConfirmModal");
-  if (!modal) return;
-  modal.classList.add("hidden");
-  modal.style.display = "none";
+  const modalIds = [
+    "adminPayConfirmModal",
+    "adminPayConfirmSkladkaModal"
+  ];
+
+  modalIds.forEach(id => {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+    modal.style.visibility = "";
+    modal.style.opacity = "";
+  });
+
+  const msgIds = [
+    "adminPayConfirmMsg",
+    "adminPayConfirmSkladkaMsg"
+  ];
+
+  msgIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "";
+  });
+
+  const yesBtnIds = [
+    "adminPayConfirmYesBtn",
+    "adminPayConfirmSkladkaYesBtn"
+  ];
+
+  yesBtnIds.forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.textContent = "TAK";
+  });
+
+  const noBtnIds = [
+    "adminPayConfirmNoBtn",
+    "adminPayConfirmSkladkaNoBtn"
+  ];
+
+  noBtnIds.forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  });
+
+  const zwBtn = document.getElementById("adminPayConfirmSkladkaZwBtn");
+  if (zwBtn) {
+    zwBtn.disabled = false;
+    zwBtn.style.opacity = "1";
+    zwBtn.textContent = "ZWOLNIONY Z OPŁATY";
+  }
+
+  window.__adminPendingPayCol = null;
+  window.__adminPendingPayLabel = "";
+  window.__adminPendingPayType = "";
+  window.__adminActivePayModal = "";
 }
 
 // =================== SYSTEM PRZELEWY ===================
