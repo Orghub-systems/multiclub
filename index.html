@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.26';
+  window.APP_BUILD = 'BETA APP v2.27';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5455,7 +5455,7 @@ async function sendResetPasswordRequest() {
   }
 } 
 
-  async function openFreeNumbersPopup() {
+async function openFreeNumbersPopup() {
   const popup = document.getElementById("freeNumbersPopup");
   const body = document.getElementById("freeNumbersPopupBody");
   const msg = document.getElementById("freeNumbersPopupMsg");
@@ -5477,23 +5477,63 @@ async function sendResetPasswordRequest() {
 
     const items = Array.isArray(data.numbers) ? data.numbers : [];
 
-    if (!items.length) {
+    // pokazujemy tylko:
+    // 1) naprawdę wolne numery: brak nazwiska, hasła i emaila
+    // 2) numery po resecie hasła: jest nazwisko i email, ale brak hasła
+    const visibleItems = items.filter(n => {
+      const nazwisko = String(n?.nazwisko || "").trim();
+      const haslo = String(n?.haslo || "").trim();
+      const email = String(n?.email || "").trim();
+
+      const isCompletelyFree = !nazwisko && !haslo && !email;
+      const isRecovery = !!nazwisko && !haslo && !!email;
+
+      return isCompletelyFree || isRecovery;
+    });
+
+    if (!visibleItems.length) {
       if (msg) msg.textContent = "Brak wolnych numerów.";
       return;
     }
 
-    body.innerHTML = items.map(n => `
-      <button
-        type="button"
-        class="full-btn alt"
-        style="margin:0; padding:10px 8px;"
-        onclick="pickFreeNumber('${String(n)}')"
-      >
-        ${String(n)}
-      </button>
-    `).join("");
+    body.innerHTML = visibleItems.map(n => {
+      const numer = String(n?.numer || "").trim();
+      const nazwisko = String(n?.nazwisko || "").trim();
+      const haslo = String(n?.haslo || "").trim();
+      const email = String(n?.email || "").trim();
 
-    if (msg) msg.textContent = "";
+      const isCompletelyFree = !nazwisko && !haslo && !email;
+      const isRecovery = !!nazwisko && !haslo && !!email;
+
+      const textColor = isRecovery ? "#ff4d4f" : "#ffffff";
+      const fontWeight = isRecovery ? "800" : "400";
+      const border = isRecovery ? "2px solid #ff4d4f" : "1px solid rgba(255,255,255,0.18)";
+      const title = isRecovery
+        ? `Numer do odzyskania konta: ${nazwisko}`
+        : `Wolny numer: ${numer}`;
+
+      return `
+        <button
+          type="button"
+          class="full-btn alt"
+          title="${title.replace(/"/g, "&quot;")}"
+          style="
+            margin:0;
+            padding:10px 8px;
+            color:${textColor};
+            font-weight:${fontWeight};
+            border:${border};
+          "
+          onclick="pickFreeNumber('${numer.replace(/'/g, "\\'")}')"
+        >
+          ${numer}
+        </button>
+      `;
+    }).join("");
+
+    if (msg) {
+      msg.textContent = "Białe = wolne, czerwone = numer z odzyskiwaniem konta.";
+    }
 
   } catch (e) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
