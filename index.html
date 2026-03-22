@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.28';
+  window.APP_BUILD = 'BETA APP v2.29';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3603,6 +3603,8 @@ async function adminPokazZawodnikow() {
       const nr = String(z.nr || "").trim();
       const nazwSafe = String(z.nazwisko || "").replace(/'/g, "\\'");
       const nazw = String(z.nazwisko || "");
+      const joinDate = String(z.joinDate || "");
+      const joinDateSafe = joinDate.replace(/'/g, "\\'");
 
       const access = (z.dostepDoApki !== undefined) ? !!z.dostepDoApki
                    : (z.access !== undefined) ? !!z.access
@@ -3610,7 +3612,7 @@ async function adminPokazZawodnikow() {
 
       return `
         <div class="card" style="text-align:left; cursor:pointer;"
-             onclick="adminOpenZawodnik('${nr}','${nazwSafe}')">
+             onclick="adminOpenZawodnik('${nr}','${nazwSafe}','${joinDateSafe}')">
 
           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
             <div style="min-width:0;">
@@ -3771,22 +3773,36 @@ async function adminSaveGrupy(nr, selectedSetOrArray) {
   /* =================== 66 ADMIN: POPUP ZAWODNIK + GRUPY/STATY/PŁATNOŚCI =================== */
 
 // ---- Otwarcie okna zawodnika (wywołasz z listy zawodników) ----
-function adminOpenZawodnik(nr, nazwisko) {
+function adminOpenZawodnik(nr, nazwisko, joinDate) {
   // kontekst zawodnika dla admina
   window.__adminSelectedNr = String(nr || "").trim();
   window.__adminSelectedNazwisko = String(nazwisko || "").trim();
+  window.__adminSelectedJoinDate = String(joinDate || "").trim();
 
   // przełącz na widok (NOWE OKNO)
   goToView("adminZawodnikView");
 
-  // ustaw tytuł w tym widoku (jeśli masz te elementy)
+  // ustaw tytuł w tym widoku
   const title = document.getElementById("adminZawodnikTitle");
-  if (title) title.textContent = `Zawodnik #${window.__adminSelectedNr} — ${window.__adminSelectedNazwisko || "—"}`;
+  if (title) {
+    title.textContent = `Zawodnik #${window.__adminSelectedNr} — ${window.__adminSelectedNazwisko || "—"}`;
 
-  // (opcjonalnie) wyczyść komunikaty / boxy, jeśli istnieją
+    let joinEl = document.getElementById("adminZawodnikJoinDate");
+    if (!joinEl) {
+      joinEl = document.createElement("p");
+      joinEl.id = "adminZawodnikJoinDate";
+      joinEl.style.margin = "6px 0 14px 0";
+      joinEl.style.opacity = "0.9";
+      joinEl.style.fontSize = "14px";
+      title.insertAdjacentElement("afterend", joinEl);
+    }
+
+    joinEl.textContent = `Dołączył: ${window.__adminSelectedJoinDate || "—"}`;
+  }
+
+  // wyczyść komunikaty / boxy, jeśli istnieją
   const msg = document.getElementById("adminZawodnikMsg");
   if (msg) msg.textContent = "";
-
 
   // =================== PREFETCH ADMIN (cache w RAM) ===================
   if (!window.__adminCache) window.__adminCache = {};
@@ -3814,7 +3830,6 @@ function adminOpenZawodnik(nr, nazwisko) {
         window.__adminCache[nr2].platnosci = await apiClubGet("platnosciAdmin", { numer: nr2 });
       }
 
-      // (opcjonalnie) debug:
       // console.log("✅ Prefetch done:", nr2, window.__adminCache[nr2]);
 
     } catch (e) {
@@ -3822,7 +3837,6 @@ function adminOpenZawodnik(nr, nazwisko) {
     }
   })();
 }
-
 // =================== GRUPY ===================
 let __adminGroupsSet = new Set();
 
