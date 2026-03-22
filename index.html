@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.27';
+  window.APP_BUILD = 'BETA APP v2.28';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4245,6 +4245,7 @@ function adminConfirmPayment(colNum, label, typ) {
   let msgId   = "adminPayConfirmMsg";
   let yesId   = "adminPayConfirmYesBtn";
   let noId    = "adminPayConfirmNoBtn";
+  let zwId    = "";
 
   // Jeśli to składka i nowy modal już istnieje → użyj nowego
   if (payType === "skladka") {
@@ -4252,13 +4253,15 @@ function adminConfirmPayment(colNum, label, typ) {
     const skladkaText  = document.getElementById("adminPayConfirmSkladkaText");
     const skladkaYes   = document.getElementById("adminPayConfirmSkladkaYesBtn");
     const skladkaNo    = document.getElementById("adminPayConfirmSkladkaNoBtn");
+    const skladkaZw    = document.getElementById("adminPayConfirmSkladkaZwBtn");
 
-    if (skladkaModal && skladkaText && skladkaYes && skladkaNo) {
+    if (skladkaModal && skladkaText && skladkaYes && skladkaNo && skladkaZw) {
       modalId = "adminPayConfirmSkladkaModal";
       textId  = "adminPayConfirmSkladkaText";
       msgId   = "adminPayConfirmSkladkaMsg";
       yesId   = "adminPayConfirmSkladkaYesBtn";
       noId    = "adminPayConfirmSkladkaNoBtn";
+      zwId    = "adminPayConfirmSkladkaZwBtn";
     }
   }
 
@@ -4269,6 +4272,7 @@ function adminConfirmPayment(colNum, label, typ) {
   const msg   = document.getElementById(msgId);
   const yes   = document.getElementById(yesId);
   const no    = document.getElementById(noId);
+  const zw    = zwId ? document.getElementById(zwId) : null;
 
   console.log("STEP 2 modal elems", {
     modalId,
@@ -4276,7 +4280,8 @@ function adminConfirmPayment(colNum, label, typ) {
     text: !!text,
     msg: !!msg,
     yes: !!yes,
-    no: !!no
+    no: !!no,
+    zw: !!zw
   });
 
   if (!modal || !text || !yes || !no) {
@@ -4292,6 +4297,13 @@ function adminConfirmPayment(colNum, label, typ) {
 
   yes.onclick = adminDoConfirmPayment;
   no.onclick  = adminCancelConfirmPayment;
+
+  if (zw) {
+    zw.onclick = adminMarkPaymentAsZW;
+    zw.disabled = false;
+    zw.style.opacity = "1";
+    zw.textContent = "ZWOLNIONY Z OPŁATY";
+  }
 
   console.log("STEP 3 before open modal", {
     modalId,
@@ -4380,6 +4392,76 @@ async function adminDoConfirmPayment() {
   }
 }
 
+async function adminMarkPaymentAsZW() {
+  const yes = document.getElementById("adminPayConfirmSkladkaYesBtn");
+  const no  = document.getElementById("adminPayConfirmSkladkaNoBtn");
+  const zw  = document.getElementById("adminPayConfirmSkladkaZwBtn");
+  const msg = document.getElementById("adminPayConfirmSkladkaMsg");
+
+  if (yes) {
+    yes.disabled = true;
+    yes.style.opacity = "0.65";
+  }
+
+  if (no) {
+    no.disabled = true;
+    no.style.opacity = "0.65";
+  }
+
+  if (zw) {
+    zw.disabled = true;
+    zw.style.opacity = "0.65";
+    zw.textContent = "⏳ Zapisuję…";
+  }
+
+  const col = Number(window.__adminPendingPayCol);
+  const nr  = String(window.__adminSelectedNr || "").trim();
+  const payType = String(window.__adminPendingPayType || "").trim().toLowerCase();
+
+  if (payType !== "skladka") {
+    if (msg) msg.textContent = "❌ ZWOLNIONY Z OPŁATY można ustawić tylko dla składki.";
+    if (yes) { yes.disabled = false; yes.style.opacity = "1"; }
+    if (no)  { no.disabled = false;  no.style.opacity = "1"; }
+    if (zw)  { zw.disabled = false;  zw.style.opacity = "1"; zw.textContent = "ZWOLNIONY Z OPŁATY"; }
+    return;
+  }
+
+  try {
+    const r = await apiClubPost({
+      action: "adminMarkZwolnionyPlatnosc",
+      numer: nr,
+      col: col
+    });
+
+    if (!r || !(r.success || r.ok)) {
+      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
+      return;
+    }
+
+    adminCancelConfirmPayment();
+    await adminOpenPayments();
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
+  } finally {
+    if (yes) {
+      yes.disabled = false;
+      yes.style.opacity = "1";
+    }
+
+    if (no) {
+      no.disabled = false;
+      no.style.opacity = "1";
+    }
+
+    if (zw) {
+      zw.disabled = false;
+      zw.style.opacity = "1";
+      zw.textContent = "ZWOLNIONY Z OPŁATY";
+    }
+  }
+}
+  
 function adminCancelConfirmPayment() {
   const modalIds = [
     "adminPayConfirmModal",
