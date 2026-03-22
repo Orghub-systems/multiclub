@@ -3791,9 +3791,11 @@ function adminOpenZawodnik(nr, nazwisko, joinDate) {
     if (!joinEl) {
       joinEl = document.createElement("p");
       joinEl.id = "adminZawodnikJoinDate";
-      joinEl.style.margin = "6px 0 14px 0";
-      joinEl.style.opacity = "0.9";
-      joinEl.style.fontSize = "14px";
+      joinEl.style.margin = "10px 0 18px 0";
+      joinEl.style.opacity = "0.95";
+      joinEl.style.fontSize = "18px";
+      joinEl.style.fontWeight = "700";
+      joinEl.style.textAlign = "center";
       title.insertAdjacentElement("afterend", joinEl);
     }
 
