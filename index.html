@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.23';
+  window.APP_BUILD = 'BETA APP v2.24';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4123,27 +4123,37 @@ function renderPaymentsSection_(title, arr) {
 }
 
 function renderPaymentTile_(p) {
-  const paid = !!p.zaplacono;
+  const isZwolniony = !!p.zwolniony;
+  const paid = !!p.zaplacono && !isZwolniony;
   const kw = Number(p.kwota || 0);
 
-  const bg = paid ? "#123a1a" : "#3a1414";
-  const badge = paid
-    ? `<span style="color:#7CFF7C; font-weight:700;">ZAPŁACONE</span>`
-    : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`;
+  const bg = isZwolniony
+    ? "#2f2410"
+    : (paid ? "#123a1a" : "#3a1414");
+
+  const badge = isZwolniony
+    ? ""
+    : (paid
+        ? `<span style="color:#7CFF7C; font-weight:700;">ZAPŁACONE</span>`
+        : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`);
 
   const colNum = Number(p.col);
 
-  // Bezpieczny tekst do HTML (wyświetlanie)
+  // Bezpieczny tekst do HTML
   const labelTxt = String(p.label || p.nazwa || "");
   const labelHtml = labelTxt
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Bezpieczny tekst do dataset (klik) — percent-encoding (zero apostrofów / cudzysłowów / newlines problemów)
+  const kwotaTxt = isZwolniony
+    ? String(p.kwotaLabel || "ZWOLNIONY Z WPŁATY")
+    : `${kw} zł`;
+
+  // Bezpieczny tekst do dataset
   const labelData = encodeURIComponent(labelTxt);
 
-  const btn = (!paid)
+  const btn = (!paid && !isZwolniony)
     ? `<button class="full-btn adminPayBtn"
             style="margin-top:10px;"
             data-col="${Number.isFinite(colNum) ? colNum : ""}"
@@ -4161,7 +4171,7 @@ function renderPaymentTile_(p) {
           <div style="font-size:18px; font-weight:800;">${labelHtml}</div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:18px; font-weight:800;">${kw} zł</div>
+          <div style="font-size:18px; font-weight:800;">${kwotaTxt}</div>
           <div style="margin-top:2px;">${badge}</div>
         </div>
       </div>
