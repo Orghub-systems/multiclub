@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.31';
+  window.APP_BUILD = 'BETA APP v2.32';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2518,22 +2518,78 @@ function isAnyPaymentModalOpen_() {
     return !el.classList.contains("hidden") && getComputedStyle(el).display !== "none";
   });
 }
+
+  function isTrainerEditHistoryModal_(modalName) {
+  try {
+    return !!(history.state && String(history.state.modal || "") === String(modalName || ""));
+  } catch (e) {
+    return false;
+  }
+}
+
+function syncTrainerEditPopupsToHistoryState_(state) {
+  const modal = String(state?.modal || "").trim();
+
+  const mainPop = document.getElementById("trainerEditPopup");
+  const groupsPop = document.getElementById("editGroupsPopup");
+  const trenerzyPop = document.getElementById("editTrenerzyPopup");
+
+  const wantsMain =
+    modal === "trainerEditPopup" ||
+    modal === "editGroupsPopup" ||
+    modal === "editTrenerzyPopup";
+
+  // jeśli historia nie wskazuje już żadnego popupu edycji -> schowaj wszystko
+  if (!wantsMain) {
+    if (trenerzyPop) trenerzyPop.classList.add("hidden");
+    if (groupsPop) groupsPop.classList.add("hidden");
+    if (mainPop) mainPop.style.display = "none";
+
+    editMiesiac = null;
+    editCol5 = null;
+
+    const msg = document.getElementById("editEventMsg");
+    if (msg) msg.textContent = "";
+
+    const trenerzyMsg = document.getElementById("editTrenerzyMsg");
+    if (trenerzyMsg) trenerzyMsg.textContent = "";
+
+    return;
+  }
+
+  // główny popup ma zostać
+  if (mainPop) mainPop.style.display = "flex";
+
+  // popup grup
+  if (groupsPop) {
+    if (modal === "editGroupsPopup") groupsPop.classList.remove("hidden");
+    else groupsPop.classList.add("hidden");
+  }
+
+  // popup trenerów
+  if (trenerzyPop) {
+    if (modal === "editTrenerzyPopup") trenerzyPop.classList.remove("hidden");
+    else trenerzyPop.classList.add("hidden");
+  }
+}
   
 window.addEventListener("popstate", (event) => {
   const state = event.state;
   const fallbackView = getRootViewId_();
-
-  // jeśli modal płatności jest otwarty, a stan historii nie mówi już o modalu,
-  // to najpierw zamykamy modal zamiast zostawiać go na wierzchu
-  if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
-    adminCancelConfirmPayment();
-  }
 
   if (state && state.view) {
     showViewFromHistory(state.view, state);
   } else {
     showViewFromHistory(fallbackView, { view: fallbackView, appStack: [fallbackView] });
   }
+
+  // modale płatności
+  if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
+    adminCancelConfirmPayment();
+  }
+
+  // popupy edycji wydarzenia
+  syncTrainerEditPopupsToHistoryState_(state);
 });
 
 function refreshClubBadge_() {
@@ -2602,7 +2658,6 @@ if (!clubFromUrl) {
 
   }
 
- 
     // --- ROUTER ---
     refreshClubBadge_();
     const effectiveClubId = (clubFromUrl || clubId || "").trim();
@@ -6394,7 +6449,6 @@ function renderTreningiTrainer(lista) {
   }).join('');
 }
 
-
 async function trainerToggleZapisani(id) {
   const box = document.getElementById(`trainer-zapisani-${id}`);
   if (!box) return;
@@ -6531,11 +6585,21 @@ function renderEditGroupsList_() {
 
 function openEditGroupsPopup() {
   renderEditGroupsList_();
+
   const pop = document.getElementById("editGroupsPopup");
   if (pop) pop.classList.remove("hidden");
+
+  pushPaymentModalHistoryState_("editGroupsPopup");
 }
 
 function closeEditGroupsPopup() {
+  // jeśli aktualny wpis historii dotyczy popupu grup,
+  // zamykamy go przez cofnięcie historii
+  if (isHistoryModal_("editGroupsPopup")) {
+    history.back();
+    return;
+  }
+
   const pop = document.getElementById("editGroupsPopup");
   if (pop) pop.classList.add("hidden");
 }
@@ -6560,11 +6624,20 @@ function openEditTrenerzyPopup() {
   copySelectValue_("editTrener3", "pickEditTrener3");
   copySelectValue_("editTrener4", "pickEditTrener4");
 
-  // pokaż popup (flex, bo tak jest zrobiony overlay)
+  // pokaż popup
   pop.classList.remove("hidden");
+
+  pushPaymentModalHistoryState_("editTrenerzyPopup");
 }
 
 function closeEditTrenerzyPopup() {
+  // jeśli aktualny wpis historii dotyczy popupu trenerów,
+  // zamykamy go przez cofnięcie historii
+  if (isHistoryModal_("editTrenerzyPopup")) {
+    history.back();
+    return;
+  }
+
   const pop = document.getElementById("editTrenerzyPopup");
   if (!pop) return;
   pop.classList.add("hidden");
@@ -6808,6 +6881,14 @@ async function trainerConfirmDeleteYes() {
 let editMiesiac = null;
 let editCol5 = null;
 
+function isHistoryModal_(modalId) {
+  try {
+    return !!(history.state && String(history.state.modal || "") === String(modalId || ""));
+  } catch (e) {
+    return false;
+  }
+}
+  
 // otwarcie popupu + wypełnienie pól + dociągnięcie trenerów i grup (bez psucia startu apki)
 async function trainerShowEditPopup(miesiac, col5) {
   editMiesiac = String(miesiac || "");
@@ -6838,9 +6919,12 @@ async function trainerShowEditPopup(miesiac, col5) {
   // 3) pokaż popup od razu, ale z komunikatem "ładuję"
   if (pop) pop.style.display = "flex";
 
-  // ✅ zawsze podepnij klik do przycisku w tym popupie (unikamy duplikatów ID w innych miejscach)
-const saveBtn = pop ? pop.querySelector("#btnEditSave") : null;
-if (saveBtn) saveBtn.onclick = trainerSaveEditEvent;
+  // ✅ zawsze podepnij klik do przycisku w tym popupie
+  const saveBtn = pop ? pop.querySelector("#btnEditSave") : null;
+  if (saveBtn) saveBtn.onclick = trainerSaveEditEvent;
+
+  // ✅ nowy wpis historii dla głównego popupu edycji
+  pushPaymentModalHistoryState_("trainerEditPopup");
 
   // 4) załaduj opcje trenerów do selectów
   await zaladujListeTrenerowDoEdycji();
@@ -6850,22 +6934,22 @@ if (saveBtn) saveBtn.onclick = trainerSaveEditEvent;
     const treningId = `${editMiesiac}-${editCol5}`;
     const details = await apiClubGet("wydarzenieDetails", { treningId });
 
-if (details?.success) {
-  const trenerArr = normalizeTrenerzy_(details?.trenerzy);
-  const grupyArr  = normalizeGrupy_(details?.grupy);
+    if (details?.success) {
+      const trenerArr = normalizeTrenerzy_(details?.trenerzy);
+      const grupyArr  = normalizeGrupy_(details?.grupy);
 
-  setEditTrenerzy_(trenerArr);
-  updateEditTrenerzySummary_(); 
-  setEditGroups_(grupyArr);
+      setEditTrenerzy_(trenerArr);
+      updateEditTrenerzySummary_();
+      setEditGroups_(grupyArr);
 
-  // === NOWE: ustaw checkboxy z backendu ===
-  const chkStat = document.getElementById("editEventStat");
-  const chkRez  = document.getElementById("editEventRez");
+      // === ustaw checkboxy z backendu ===
+      const chkStat = document.getElementById("editEventStat");
+      const chkRez  = document.getElementById("editEventRez");
 
-  if (chkStat) chkStat.checked = !!details.liczDoStatystyk;
-  if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
+      if (chkStat) chkStat.checked = !!details.liczDoStatystyk;
+      if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
 
-  if (msg) msg.textContent = ""; // gotowe
+      if (msg) msg.textContent = "";
 
     } else {
       if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów i grup.";
@@ -6873,18 +6957,35 @@ if (details?.success) {
     }
   } catch (err) {
     if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów i grup.";
-    
   }
 }
 
 function trainerHideEditPopup() {
+  // jeśli aktualny wpis historii dotyczy tego popupu,
+  // to zamykamy go przez cofnięcie historii, a nie "na sucho"
+  if (isHistoryModal_("trainerEditPopup")) {
+    history.back();
+    return;
+  }
+
   const pop = document.getElementById("trainerEditPopup");
   if (pop) pop.style.display = "none";
+
+  // na wszelki wypadek schowaj też popupy wewnętrzne
+  const groupsPop = document.getElementById("editGroupsPopup");
+  if (groupsPop) groupsPop.classList.add("hidden");
+
+  const trenerzyPop = document.getElementById("editTrenerzyPopup");
+  if (trenerzyPop) trenerzyPop.classList.add("hidden");
+
   editMiesiac = null;
   editCol5 = null;
 
   const msg = document.getElementById("editEventMsg");
   if (msg) msg.textContent = "";
+
+  const trenerzyMsg = document.getElementById("editTrenerzyMsg");
+  if (trenerzyMsg) trenerzyMsg.textContent = "";
 }
 
 function validHour_(hhmm) { return /^\d{2}:\d{2}$/.test(String(hhmm || "")); }
