@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.32';
+  window.APP_BUILD = 'BETA APP v2.33';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2572,6 +2572,12 @@ function syncTrainerEditPopupsToHistoryState_(state) {
     else trenerzyPop.classList.add("hidden");
   }
 }
+
+  function isTrainerDeletePopupOpen_() {
+  const el = document.getElementById("trainerDeletePopup");
+  if (!el) return false;
+  return el.classList.contains("show");
+}
   
 window.addEventListener("popstate", (event) => {
   const state = event.state;
@@ -2586,6 +2592,12 @@ window.addEventListener("popstate", (event) => {
   // modale płatności
   if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
     adminCancelConfirmPayment();
+  }
+
+  // popup usuwania wydarzenia
+  if (isTrainerDeletePopupOpen_() && !(state && state.modal === "trainerDeletePopup")) {
+    const pop = document.getElementById("trainerDeletePopup");
+    if (pop) pop.classList.remove("show");
   }
 
   // popupy edycji wydarzenia
@@ -6850,28 +6862,50 @@ function initEventPickers_() {
 function trainerShowDeletePopup(miesiac, czasCol) {
   deleteMiesiac = miesiac;
   deleteCzasCol = czasCol;
-  document.getElementById("trainerDeletePopup").classList.add("show");
+
+  const pop = document.getElementById("trainerDeletePopup");
+  if (pop) pop.classList.add("show");
+
+  pushPaymentModalHistoryState_("trainerDeletePopup");
 }
+  
 function trainerHideDeletePopup() {
-  document.getElementById("trainerDeletePopup").classList.remove("show");
+  if (isHistoryModal_("trainerDeletePopup")) {
+    history.back();
+    return;
+  }
+
+  const pop = document.getElementById("trainerDeletePopup");
+  if (pop) pop.classList.remove("show");
 }
+  
 async function trainerConfirmDeleteYes() {
+  // zamknij popup usuwania w sposób zgodny z historią
   trainerHideDeletePopup();
 
   const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
   const card = document.querySelector(`[data-event-id='${treningId}']`);
-  if (card) card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
+  if (card) {
+    card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
+  }
 
   try {
     const data = await apiClubGet("usunWydarzenie", { treningId });
+
     if (data.success) {
-      if (card) card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
+      if (card) {
+        card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
+      }
       setTimeout(() => trainerPokazWydarzenia(), 800);
     } else {
-      if (card) card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${data.error || "Błąd"}</div>`;
+      if (card) {
+        card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${data.error || "Błąd"}</div>`;
+      }
     }
   } catch (err) {
-    if (card) card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
+    if (card) {
+      card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
+    }
   }
 }
   
