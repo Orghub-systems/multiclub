@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.30';
+  window.APP_BUILD = 'BETA APP v2.31';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2509,9 +2509,25 @@ function appBack() {
   history.back();
 }
 
+function isAnyPaymentModalOpen_() {
+  const ids = ["adminPayConfirmModal", "adminPayConfirmSkladkaModal"];
+
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    return !el.classList.contains("hidden") && getComputedStyle(el).display !== "none";
+  });
+}
+  
 window.addEventListener("popstate", (event) => {
   const state = event.state;
   const fallbackView = getRootViewId_();
+
+  // jeśli modal płatności jest otwarty, a stan historii nie mówi już o modalu,
+  // to najpierw zamykamy modal zamiast zostawiać go na wierzchu
+  if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
+    adminCancelConfirmPayment();
+  }
 
   if (state && state.view) {
     showViewFromHistory(state.view, state);
@@ -4300,6 +4316,24 @@ function renderPaymentTile_(p) {
 // =================== ADMIN: CONFIRM PŁATNOŚCI (używamy WYŁĄCZNIE #adminPayConfirmModal) ===================
 window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
+
+function pushPaymentModalHistoryState_(modalId) {
+  try {
+    const safeView = String(currentView || getRootViewId_()).trim() || getRootViewId_();
+    const safeStack = Array.isArray(window.__appViewStack) && window.__appViewStack.length
+      ? [...window.__appViewStack]
+      : [safeView];
+
+    const state = {
+      view: safeView,
+      appStack: safeStack,
+      modal: String(modalId || "").trim()
+    };
+
+    const urlKeep = location.pathname + location.search;
+    history.pushState(state, "", urlKeep);
+  } catch (e) {}
+}
   
 function adminConfirmPayment(colNum, label, typ) {
   console.log("adminConfirmPayment CLICK", {
@@ -4402,11 +4436,13 @@ function adminConfirmPayment(colNum, label, typ) {
     modalId,
     payType
   });
-
+  
   modal.classList.remove("hidden");
   modal.style.display = "flex";
   modal.style.visibility = "visible";
   modal.style.opacity = "1";
+
+  pushPaymentModalHistoryState_(modalId);
 
   console.log("STEP 4 modal style", {
     modalId,
