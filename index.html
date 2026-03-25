@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.29';
+  window.APP_BUILD = 'BETA APP v2.30';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2398,8 +2398,15 @@ function ukryjWszystkie() {
   });
 }
 
+  function getRootViewId_() {
+  return (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView";
+}
+
 function goToView(viewId, options = {}) {
-  const { replace = false } = options;
+  const { replace = false, fromHistory = false } = options;
+
+  const prevView = String(currentView || "").trim();
+
   ukryjWszystkie();
   hideBusy();
 
@@ -2412,15 +2419,72 @@ function goToView(viewId, options = {}) {
   if (viewId === "playerMenuView") {
     const lbl = document.getElementById("playerNumerLabel");
     if (lbl) lbl.textContent = String(numerZalogowanego || "");
-    startPrefetchForPlayer_(); // <-- start równoległego pobierania
+    startPrefetchForPlayer_();
   }
 
-  const state = { view: viewId };
-  try {
-    const urlKeep = location.pathname + location.search; // ✅ zostawia ?clubId=...
-    if (replace) history.replaceState(state, "", urlKeep);
-    else history.pushState(state, "", urlKeep);
-  } catch (e) {}
+  hookPushButton_();
+
+  if (viewId === "playerSettingsView") {
+    refreshPushButtonState_();
+  }
+
+  // =================== APP STACK ===================
+  if (!window.__appViewStack) window.__appViewStack = [];
+
+  if (!fromHistory) {
+    if (replace) {
+      if (window.__appViewStack.length === 0) {
+        window.__appViewStack = [viewId];
+      } else {
+        window.__appViewStack[window.__appViewStack.length - 1] = viewId;
+      }
+    } else {
+      if (!prevView) {
+        window.__appViewStack = [viewId];
+      } else if (prevView !== viewId) {
+        window.__appViewStack.push(viewId);
+      } else if (window.__appViewStack.length === 0) {
+        window.__appViewStack = [viewId];
+      }
+    }
+
+    const state = {
+      view: viewId,
+      appStack: [...window.__appViewStack]
+    };
+
+    try {
+      const urlKeep = location.pathname + location.search; // zostawia ?clubId=...
+      if (replace) history.replaceState(state, "", urlKeep);
+      else history.pushState(state, "", urlKeep);
+    } catch (e) {}
+  }
+}
+
+function showViewFromHistory(viewId, state = null) {
+  ukryjWszystkie();
+  hideBusy();
+
+  const el = document.getElementById(viewId);
+  if (el) el.classList.remove("hidden");
+
+  currentView = viewId;
+
+  if (!window.__appViewStack) window.__appViewStack = [];
+
+  if (state && Array.isArray(state.appStack) && state.appStack.length) {
+    window.__appViewStack = [...state.appStack];
+  } else {
+    window.__appViewStack = [viewId];
+  }
+
+  // zachowujemy te same efekty UI co przy normalnym wejściu
+  if (viewId === "playerMenuView") {
+    const lbl = document.getElementById("playerNumerLabel");
+    if (lbl) lbl.textContent = String(numerZalogowanego || "");
+    startPrefetchForPlayer_();
+  }
+
   hookPushButton_();
 
   if (viewId === "playerSettingsView") {
@@ -2428,19 +2492,32 @@ function goToView(viewId, options = {}) {
   }
 }
 
-function showViewFromHistory(viewId) {
-  ukryjWszystkie();
-  const el = document.getElementById(viewId);
-  if (el) el.classList.remove("hidden");
-  currentView = viewId;
-}
+function appBack() {
+  const rootView = getRootViewId_();
 
-function appBack() { history.back(); }
+  if (!window.__appViewStack || !window.__appViewStack.length) {
+    goToView(rootView, { replace: true });
+    return;
+  }
+
+  // jeśli jesteśmy już na ekranie głównym aplikacji, nie cofamy dalej "webowo"
+  if (window.__appViewStack.length <= 1) {
+    goToView(rootView, { replace: true });
+    return;
+  }
+
+  history.back();
+}
 
 window.addEventListener("popstate", (event) => {
   const state = event.state;
-  if (state && state.view) showViewFromHistory(state.view);
-  else showViewFromHistory((clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView");
+  const fallbackView = getRootViewId_();
+
+  if (state && state.view) {
+    showViewFromHistory(state.view, state);
+  } else {
+    showViewFromHistory(fallbackView, { view: fallbackView, appStack: [fallbackView] });
+  }
 });
 
 function refreshClubBadge_() {
