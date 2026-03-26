@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.34';
+  window.APP_BUILD = 'BETA APP v2.35';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -748,10 +748,40 @@ input[type="number"] {
 
 <!-- =========================================================
      TRAINER VIEWS
-     Ekrany i formularze używane przez trenera
+     Główne ekrany panelu trenera
 ========================================================= -->
     
-<!-- TRAINER ADD EVENT VIEW
+<!-- TRAINER PANEL VIEW
+     Główne menu trenera -->
+    
+    <div id="trainerPanelView" class="container hidden">
+      <h1>Panel trenera</h1>
+      <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
+      <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
+      <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
+      <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
+    </div>
+
+<!-- TRAINER PLAYERS VIEW
+     Lista zawodników dostępna dla trenera -->
+    
+    <div id="trainerZawodnicyView" class="container hidden">
+      <h1>Lista zawodników</h1>
+      <div id="trainerListaZawodnikow">Ładowanie...</div>
+      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+    </div>
+
+<!-- TRAINER EVENTS VIEW
+     Lista wydarzeń zarządzanych przez trenera -->
+    
+    <div id="trainerWydarzeniaView" class="container hidden">
+      <h1>Wydarzenia</h1>
+      <div id="trainerListaWydarzen">Ładowanie...</div>
+      <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
+      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+    </div>
+
+    <!-- TRAINER ADD EVENT VIEW
      Ekran dodawania nowego wydarzenia przez trenera -->
     
 <div id="trainerDodajWydarzenieView" class="container hidden">
@@ -831,22 +861,6 @@ input[type="number"] {
     </div>
   </div>
 </div>
-
-<!-- =========================================================
-     TRAINER VIEWS
-     Główne ekrany panelu trenera
-========================================================= -->
-    
-<!-- TRAINER PANEL VIEW
-     Główne menu trenera -->
-    
-    <div id="trainerPanelView" class="container hidden">
-      <h1>Panel trenera</h1>
-      <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
-      <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
-      <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
-      <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
-    </div>
 
 <!-- =========================================================
      ADMIN VIEWS
@@ -1022,24 +1036,7 @@ input[type="number"] {
   <p id="adminPaymentsMsg" style="margin-top:10px;"></p>
 </div>
 
-<!-- TRAINER PLAYERS VIEW
-     Lista zawodników dostępna dla trenera -->
-    
-    <div id="trainerZawodnicyView" class="container hidden">
-      <h1>Lista zawodników</h1>
-      <div id="trainerListaZawodnikow">Ładowanie...</div>
-      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
-    </div>
 
-<!-- TRAINER EVENTS VIEW
-     Lista wydarzeń zarządzanych przez trenera -->
-    
-    <div id="trainerWydarzeniaView" class="container hidden">
-      <h1>Wydarzenia</h1>
-      <div id="trainerListaWydarzen">Ładowanie...</div>
-      <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
-      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
-    </div>
 
 <!-- =========================================================
      SHARED VIEWS
