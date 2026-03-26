@@ -621,6 +621,132 @@ input[type="number"] {
     </div>
 
 <!-- =========================================================
+     PLAYER VIEWS
+     Ekrany dostępne dla zawodnika po zalogowaniu
+========================================================= -->
+
+<!-- PLAYER MENU VIEW
+     Główne menu zawodnika po zalogowaniu -->
+    
+<div id="playerMenuView" class="container hidden">
+  
+  <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
+    <div id="clubIdBadge_menu" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
+  </div>
+
+  <h1 style="margin:0 0 25px 0;">Panel zawodnika</h1>
+
+  <div class="login-box">
+    <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
+    <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
+    <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
+    <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
+  </div>
+
+  <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
+
+<!-- REKLAMA / PARTNER KLUBU -->
+<div id="clubAdContainer" style="display:none; margin-top:18px;">
+  <div style="width:100%; max-width:360px; margin:0 auto;">
+
+    <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
+      <div
+        id="clubAdBox"
+        style="
+          width:100%;
+          height:310px;
+          border-radius:18px;
+          overflow:hidden;
+          background:
+            linear-gradient(180deg,#232323 0%, #171717 100%);
+          background-size:cover;
+          background-position:center;
+          background-repeat:no-repeat;
+          box-shadow:0 10px 28px rgba(0,0,0,.45);
+          position:relative;
+        "
+      >
+        <div
+          id="clubAdFallbackText"
+          style="
+            position:absolute;
+            inset:0;
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            padding-top:16px;
+            color:#fff;
+            font-size:14px;
+            font-weight:700;
+            text-align:center;
+          "
+        >
+          Partner klubu
+        </div>
+      </div>
+    </a>
+
+    <div style="
+      font-size:12px;
+      opacity:.55;
+      margin-top:8px;
+      text-align:center;
+    ">
+      Partner klubu
+    </div>
+
+  </div>
+</div>
+
+</div>
+    
+<!-- PLAYER PAYMENTS VIEW
+     Lista płatności zawodnika -->
+    
+    <div id="platnosciView" class="container hidden">
+      <h1>Płatności</h1>
+      <div id="listaPlatnosci">Ładowanie...</div>
+      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+    </div>
+
+<!-- PLAYER EVENTS VIEW
+     Lista wydarzeń i treningów zawodnika -->
+    
+    <div id="homeView" class="container hidden">
+      <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
+      <div id="listaTreningow">Ładowanie...</div>
+      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+    </div>
+
+<!-- PLAYER STATS VIEW
+     Statystyki zawodnika -->
+    
+    <div id="statsView" class="container hidden">
+      <h1>Statystyki</h1>
+      <div id="listaStatystyk">Ładowanie...</div>
+      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+    </div>
+
+<!-- PLAYER SETTINGS VIEW
+     Ustawienia zawodnika i obsługa powiadomień push -->
+    
+<div id="playerSettingsView" class="container hidden">
+
+  <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
+    <div id="clubIdBadge_settings" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
+  </div>
+
+  <h1 style="margin:0 0 25px 0;">Ustawienia</h1>
+
+  <div class="login-box">
+    <button id="btnEnablePush" class="full-btn">🔔 Włącz powiadomienia</button>
+    <button class="full-btn alt" onclick="goToView('playerMenuView')"> ⬅ Powrót do menu </button>
+  </div>
+
+  <p id="pushStatus" style="margin-top:15px;"></p>
+</div>
+
+<!-- =========================================================
      TRAINER VIEWS
      Ekrany i formularze używane przez trenera
 ========================================================= -->
@@ -704,132 +830,6 @@ input[type="number"] {
       <p id="eventMsg" style="margin-top:10px;"></p>
     </div>
   </div>
-</div>
-
-<!-- =========================================================
-     PLAYER VIEWS
-     Ekrany dostępne dla zawodnika po zalogowaniu
-========================================================= -->
-    
-<!-- PLAYER PAYMENTS VIEW
-     Lista płatności zawodnika -->
-    
-    <div id="platnosciView" class="container hidden">
-      <h1>Płatności</h1>
-      <div id="listaPlatnosci">Ładowanie...</div>
-      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
-    </div>
-
-<!-- PLAYER EVENTS VIEW
-     Lista wydarzeń i treningów zawodnika -->
-    
-    <div id="homeView" class="container hidden">
-      <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
-      <div id="listaTreningow">Ładowanie...</div>
-      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
-    </div>
-
-<!-- PLAYER STATS VIEW
-     Statystyki zawodnika -->
-    
-    <div id="statsView" class="container hidden">
-      <h1>Statystyki</h1>
-      <div id="listaStatystyk">Ładowanie...</div>
-      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
-    </div>
-
-<!-- PLAYER MENU VIEW
-     Główne menu zawodnika po zalogowaniu -->
-    
-<div id="playerMenuView" class="container hidden">
-  
-  <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
-    <div id="clubIdBadge_menu" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
-  </div>
-
-  <h1 style="margin:0 0 25px 0;">Panel zawodnika</h1>
-
-  <div class="login-box">
-    <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
-    <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
-    <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-    <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
-  </div>
-
-  <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
-
-<!-- REKLAMA / PARTNER KLUBU -->
-<div id="clubAdContainer" style="display:none; margin-top:18px;">
-  <div style="width:100%; max-width:360px; margin:0 auto;">
-
-    <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
-      <div
-        id="clubAdBox"
-        style="
-          width:100%;
-          height:310px;
-          border-radius:18px;
-          overflow:hidden;
-          background:
-            linear-gradient(180deg,#232323 0%, #171717 100%);
-          background-size:cover;
-          background-position:center;
-          background-repeat:no-repeat;
-          box-shadow:0 10px 28px rgba(0,0,0,.45);
-          position:relative;
-        "
-      >
-        <div
-          id="clubAdFallbackText"
-          style="
-            position:absolute;
-            inset:0;
-            display:flex;
-            align-items:flex-start;
-            justify-content:center;
-            padding-top:16px;
-            color:#fff;
-            font-size:14px;
-            font-weight:700;
-            text-align:center;
-          "
-        >
-          Partner klubu
-        </div>
-      </div>
-    </a>
-
-    <div style="
-      font-size:12px;
-      opacity:.55;
-      margin-top:8px;
-      text-align:center;
-    ">
-      Partner klubu
-    </div>
-
-  </div>
-</div>
-
-</div>
-    
-<!-- PLAYER SETTINGS VIEW
-     Ustawienia zawodnika i obsługa powiadomień push -->
-    
-<div id="playerSettingsView" class="container hidden">
-
-  <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
-    <div id="clubIdBadge_settings" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
-  </div>
-
-  <h1 style="margin:0 0 25px 0;">Ustawienia</h1>
-
-  <div class="login-box">
-    <button id="btnEnablePush" class="full-btn">🔔 Włącz powiadomienia</button>
-    <button class="full-btn alt" onclick="goToView('playerMenuView')"> ⬅ Powrót do menu </button>
-  </div>
-
-  <p id="pushStatus" style="margin-top:15px;"></p>
 </div>
 
 <!-- =========================================================
