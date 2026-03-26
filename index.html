@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.37';
+  window.APP_BUILD = 'BETA APP v2.38';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1277,6 +1277,39 @@ input[type="number"] {
   </div>
 </div>
 
+  <!-- RESET PASSWORD POPUP
+     Formularz resetu hasła po adresie email -->
+  
+<div id="resetPasswordPopup" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3010;
+  padding: 18px;
+">
+  <div class="popup-card" style="max-width:360px;width:100%; text-align:center;">
+    <p style="margin:0 0 14px 0;"><b>Reset hasła</b></p>
+
+    <div class="login-box" style="margin-top:10px;">
+      <div style="margin-bottom:10px; text-align:center; font-weight:700;">
+        Podaj adres email użyty przy rejestracji
+      </div>
+
+      <input id="resetPasswordEmailInput" type="email" placeholder="Adres email">
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="full-btn" type="button" onclick="sendResetPasswordRequest()">Resetuj hasło</button>
+      <button class="full-btn alt" style="margin-top:8px;" type="button" onclick="closeResetPasswordPopup()">Anuluj</button>
+    </div>
+
+    <p id="resetPasswordPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
+  </div>
+</div>
+
 <!-- =========================================================
      OVERLAYS: SHARED
      Popupy pomocnicze współdzielone przez różne moduły
@@ -1791,38 +1824,7 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- RESET PASSWORD POPUP
-     Formularz resetu hasła po adresie email -->
-  
-<div id="resetPasswordPopup" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 3010;
-  padding: 18px;
-">
-  <div class="popup-card" style="max-width:360px;width:100%; text-align:center;">
-    <p style="margin:0 0 14px 0;"><b>Reset hasła</b></p>
 
-    <div class="login-box" style="margin-top:10px;">
-      <div style="margin-bottom:10px; text-align:center; font-weight:700;">
-        Podaj adres email użyty przy rejestracji
-      </div>
-
-      <input id="resetPasswordEmailInput" type="email" placeholder="Adres email">
-    </div>
-
-    <div style="margin-top:12px;">
-      <button class="full-btn" type="button" onclick="sendResetPasswordRequest()">Resetuj hasło</button>
-      <button class="full-btn alt" style="margin-top:8px;" type="button" onclick="closeResetPasswordPopup()">Anuluj</button>
-    </div>
-
-    <p id="resetPasswordPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
-  </div>
-</div>
 
 <!-- FREE NUMBERS POPUP
      Wybór wolnego numeru zawodnika przy rejestracji -->
