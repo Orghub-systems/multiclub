@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.41';
+  window.APP_BUILD = 'BETA APP v2.42';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1528,7 +1528,39 @@ input[type="number"] {
         Wybierz grupy
       </button>
 
-<!-- TRAINER EDIT GROUPS POPUP
+<label class="full-btn alt" for="editEventRez">
+  <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+    <span style="flex:0 0 auto;">
+      <input id="editEventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
+    </span>
+    <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+      Rezerwacja obiektu
+    </span>
+  </span>
+</label>
+
+<label class="full-btn alt" for="editEventStat">
+  <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+    <span style="flex:0 0 auto;">
+      <input id="editEventStat" type="checkbox" style="transform:scale(1.35); margin:0;">
+    </span>
+    <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+      Liczyć do statystyk
+    </span>
+  </span>
+</label>
+    
+    <div style="margin-top:10px;">
+     <button class="full-btn" id="btnEditSave">💾 Zapisz zmiany</button>
+      <button class="full-btn alt" onclick="trainerHideEditPopup()">Anuluj</button>
+    </div>
+
+    <p id="editEventMsg" style="margin-top:10px;"></p>
+  </div>
+ </div>
+</div>
+
+  <!-- TRAINER EDIT GROUPS POPUP
      Pomocniczy popup wyboru grup w trakcie edycji wydarzenia -->
       
     <div id="editGroupsPopup" class="hidden" style="
@@ -1548,7 +1580,7 @@ input[type="number"] {
       </div>
     </div>
 
-<!-- TRAINER EDIT TRAINERS POPUP
+  <!-- TRAINER EDIT TRAINERS POPUP
      Pomocniczy popup wyboru trenerów w trakcie edycji wydarzenia -->
       
 <div id="editTrenerzyPopup" class="hidden" style="
@@ -1597,41 +1629,7 @@ input[type="number"] {
     <div id="editTrenerzyMsg" style="margin-top:10px; opacity:.9;"></div>
   </div>
 </div>
-      
-<label class="full-btn alt" for="editEventRez">
-  <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
-    <span style="flex:0 0 auto;">
-      <input id="editEventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
-    </span>
-    <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
-      Rezerwacja obiektu
-    </span>
-  </span>
-</label>
 
-<label class="full-btn alt" for="editEventStat">
-  <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
-    <span style="flex:0 0 auto;">
-      <input id="editEventStat" type="checkbox" style="transform:scale(1.35); margin:0;">
-    </span>
-    <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
-      Liczyć do statystyk
-    </span>
-  </span>
-</label>
-    
-    <div style="margin-top:10px;">
-     <button class="full-btn" id="btnEditSave">💾 Zapisz zmiany</button>
-      <button class="full-btn alt" onclick="trainerHideEditPopup()">Anuluj</button>
-    </div>
-
-    <p id="editEventMsg" style="margin-top:10px;"></p>
-  </div>
- </div>
-</div>
-
-  
-  
 <!-- =========================================================
      OVERLAYS: ADMIN
      Popupy i modale administratora
@@ -1674,7 +1672,6 @@ input[type="number"] {
     </div>
   </div>
 </div>
-
 
 <!-- ADMIN GROUPS POPUP
      Popup szybkiej edycji grup zawodnika -->
@@ -1724,8 +1721,6 @@ input[type="number"] {
     </div>
   </div>
 </div>
-
-
 
 <!-- ADMIN MANUAL TRANSFER ASSIGN MODAL
      Ręczne przypisanie przelewu do zawodnika i okresu -->
@@ -1862,12 +1857,6 @@ input[type="number"] {
   </div>
 </div>
 
-
-
-
-
-
-  
 <script>
 
   
