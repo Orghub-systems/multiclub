@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.39';
+  window.APP_BUILD = 'BETA APP v2.40';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1387,48 +1387,92 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =========================================================
-     OVERLAYS: ADMIN
-     Popupy i modale administratora
+  <!-- =========================================================
+     OVERLAYS: PLAYER
+     Popupy używane przez zawodnika
 ========================================================= -->
   
-<!-- ADMIN DELETE PLAYER MODAL
-     Potwierdzenie usunięcia zawodnika -->
+<!-- PLAYER PAYMENT POPUP
+     Popup płatności zawodnika: kwota, QR, odbiorca, konto i tytuł -->
   
-<div id="adminDeletePopup" class="modal hidden">
-  <div class="modal-card" onclick="event.stopPropagation();">
-    <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
+<div id="playerPaymentPopup" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 2200;
+  display: none;
+">
+  <div class="popup-card" style="max-width:360px;width:100%; text-align:left;">
+    <p style="margin:0 0 10px 0;"><b>Zapłać teraz</b></p>
 
-    <div id="adminDeletePopupText" style="opacity:0.9; line-height:1.35;">
-      Czy napewno chcesz usunąć zawodnika?
+    <div class="card" style="background:#111; text-align:left;">
+
+      <div style="opacity:.9; font-size:14px;">Płatność</div>
+      <div id="playerPaymentPopupName" style="font-size:18px; font-weight:800; margin-top:4px;">—</div>
+
+      <div style="height:1px; background:#333; margin:12px 0;"></div>
+
+      <div style="opacity:.9; font-size:14px;">Kwota</div>
+      <div id="playerPaymentPopupAmount" style="font-size:18px; font-weight:800; margin-top:4px;">—</div>
+
+      <div style="height:1px; background:#333; margin:12px 0;"></div>
+
+      <div style="opacity:.9; font-size:14px;">Kod QR</div>
+      <div style="margin-top:8px; display:flex; justify-content:center;">
+        <div style="
+          background:#fff;
+          border-radius:14px;
+          padding:10px;
+          width:190px;
+          min-height:190px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          box-sizing:border-box;
+        ">
+          <img
+            id="playerPaymentPopupQr"
+            alt="Kod QR przelewu"
+            style="display:none; width:170px; height:170px; object-fit:contain;"
+          >
+          <div
+            id="playerPaymentPopupQrPlaceholder"
+            style="font-size:13px; color:#666; text-align:center; line-height:1.35;"
+          >
+            Ładowanie QR...
+          </div>
+        </div>
+      </div>
+
+      <div style="height:1px; background:#333; margin:12px 0;"></div>
+
+      <div style="opacity:.9; font-size:14px;">Odbiorca</div>
+      <div id="playerPaymentPopupReceiver" style="font-size:16px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
+      <button class="full-btn alt" id="playerPaymentCopyReceiverBtn" type="button" style="margin-top:8px;">Kopiuj odbiorcę</button>
+
+      <div style="height:1px; background:#333; margin:12px 0;"></div>
+
+      <div style="opacity:.9; font-size:14px;">Numer konta</div>
+      <div id="playerPaymentPopupAccount" style="font-size:16px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
+      <button class="full-btn alt" id="playerPaymentCopyAccountBtn" type="button" style="margin-top:8px;">Kopiuj numer konta</button>
+
+      <div style="height:1px; background:#333; margin:12px 0;"></div>
+
+      <div style="opacity:.9; font-size:14px;">Tytuł przelewu</div>
+      <div id="playerPaymentPopupTitle" style="font-size:16px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
     </div>
 
-    <div style="height:10px;"></div>
-
-    <div class="modal-actions">
-      <button class="full-btn green" type="button" onclick="adminDoDeletePlayer()">TAK</button>
-      <button class="full-btn alt" type="button" onclick="adminCloseDeletePopup()">NIE</button>
+    <div style="margin-top:10px;">
+      <button class="full-btn" id="playerPaymentCopyTitleBtn" type="button">Kopiuj tytuł</button>
+      <button class="full-btn alt" type="button" onclick="closePlayerPaymentPopup()">Anuluj</button>
     </div>
+
+    <p id="playerPaymentPopupMsg" style="margin-top:10px;"></p>
   </div>
 </div>
-  
-<!-- ADMIN BILLING MODE MODAL
-     Wybór sposobu rozliczania zawodnika -->
-  
-<div id="adminRozliczModal" class="modal hidden">
-  <div class="modal-card">
-    <h2 style="margin:0 0 8px 0;">Sposób rozliczania</h2>
 
-    <p id="adminRozliczMsg" style="margin:0 0 10px 0; opacity:0.9;"></p>
-
-    <div class="modal-actions" style="flex-direction:column; gap:8px;">
-      <button class="full-btn" onclick="adminSetRozlicz('S')">Składka członkowska</button>
-      <button class="full-btn" onclick="adminSetRozlicz('O')">Uczestnik okazjonalny</button>
-      <button class="full-btn" onclick="adminSetRozlicz('B')">Uczestnik bezpłatny</button>
-      <button class="full-btn alt" onclick="adminCloseRozliczPopup()">Anuluj</button>
-    </div>
-  </div>
-</div>
 
 <!-- =========================================================
      OVERLAYS: TRAINER
@@ -1586,6 +1630,52 @@ input[type="number"] {
  </div>
 </div>
 
+  
+  
+<!-- =========================================================
+     OVERLAYS: ADMIN
+     Popupy i modale administratora
+========================================================= -->
+  
+<!-- ADMIN DELETE PLAYER MODAL
+     Potwierdzenie usunięcia zawodnika -->
+  
+<div id="adminDeletePopup" class="modal hidden">
+  <div class="modal-card" onclick="event.stopPropagation();">
+    <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
+
+    <div id="adminDeletePopupText" style="opacity:0.9; line-height:1.35;">
+      Czy napewno chcesz usunąć zawodnika?
+    </div>
+
+    <div style="height:10px;"></div>
+
+    <div class="modal-actions">
+      <button class="full-btn green" type="button" onclick="adminDoDeletePlayer()">TAK</button>
+      <button class="full-btn alt" type="button" onclick="adminCloseDeletePopup()">NIE</button>
+    </div>
+  </div>
+</div>
+  
+<!-- ADMIN BILLING MODE MODAL
+     Wybór sposobu rozliczania zawodnika -->
+  
+<div id="adminRozliczModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 style="margin:0 0 8px 0;">Sposób rozliczania</h2>
+
+    <p id="adminRozliczMsg" style="margin:0 0 10px 0; opacity:0.9;"></p>
+
+    <div class="modal-actions" style="flex-direction:column; gap:8px;">
+      <button class="full-btn" onclick="adminSetRozlicz('S')">Składka członkowska</button>
+      <button class="full-btn" onclick="adminSetRozlicz('O')">Uczestnik okazjonalny</button>
+      <button class="full-btn" onclick="adminSetRozlicz('B')">Uczestnik bezpłatny</button>
+      <button class="full-btn alt" onclick="adminCloseRozliczPopup()">Anuluj</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- ADMIN GROUPS POPUP
      Popup szybkiej edycji grup zawodnika -->
   
@@ -1635,91 +1725,7 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =========================================================
-     OVERLAYS: PLAYER
-     Popupy używane przez zawodnika
-========================================================= -->
-  
-<!-- PLAYER PAYMENT POPUP
-     Popup płatności zawodnika: kwota, QR, odbiorca, konto i tytuł -->
-  
-<div id="playerPaymentPopup" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  justify-content: center;
-  align-items: center;
-  z-index: 2200;
-  display: none;
-">
-  <div class="popup-card" style="max-width:360px;width:100%; text-align:left;">
-    <p style="margin:0 0 10px 0;"><b>Zapłać teraz</b></p>
 
-    <div class="card" style="background:#111; text-align:left;">
-
-      <div style="opacity:.9; font-size:14px;">Płatność</div>
-      <div id="playerPaymentPopupName" style="font-size:18px; font-weight:800; margin-top:4px;">—</div>
-
-      <div style="height:1px; background:#333; margin:12px 0;"></div>
-
-      <div style="opacity:.9; font-size:14px;">Kwota</div>
-      <div id="playerPaymentPopupAmount" style="font-size:18px; font-weight:800; margin-top:4px;">—</div>
-
-      <div style="height:1px; background:#333; margin:12px 0;"></div>
-
-      <div style="opacity:.9; font-size:14px;">Kod QR</div>
-      <div style="margin-top:8px; display:flex; justify-content:center;">
-        <div style="
-          background:#fff;
-          border-radius:14px;
-          padding:10px;
-          width:190px;
-          min-height:190px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          box-sizing:border-box;
-        ">
-          <img
-            id="playerPaymentPopupQr"
-            alt="Kod QR przelewu"
-            style="display:none; width:170px; height:170px; object-fit:contain;"
-          >
-          <div
-            id="playerPaymentPopupQrPlaceholder"
-            style="font-size:13px; color:#666; text-align:center; line-height:1.35;"
-          >
-            Ładowanie QR...
-          </div>
-        </div>
-      </div>
-
-      <div style="height:1px; background:#333; margin:12px 0;"></div>
-
-      <div style="opacity:.9; font-size:14px;">Odbiorca</div>
-      <div id="playerPaymentPopupReceiver" style="font-size:16px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
-      <button class="full-btn alt" id="playerPaymentCopyReceiverBtn" type="button" style="margin-top:8px;">Kopiuj odbiorcę</button>
-
-      <div style="height:1px; background:#333; margin:12px 0;"></div>
-
-      <div style="opacity:.9; font-size:14px;">Numer konta</div>
-      <div id="playerPaymentPopupAccount" style="font-size:16px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
-      <button class="full-btn alt" id="playerPaymentCopyAccountBtn" type="button" style="margin-top:8px;">Kopiuj numer konta</button>
-
-      <div style="height:1px; background:#333; margin:12px 0;"></div>
-
-      <div style="opacity:.9; font-size:14px;">Tytuł przelewu</div>
-      <div id="playerPaymentPopupTitle" style="font-size:16px; font-weight:700; margin-top:4px; word-break:break-word;">—</div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <button class="full-btn" id="playerPaymentCopyTitleBtn" type="button">Kopiuj tytuł</button>
-      <button class="full-btn alt" type="button" onclick="closePlayerPaymentPopup()">Anuluj</button>
-    </div>
-
-    <p id="playerPaymentPopupMsg" style="margin-top:10px;"></p>
-  </div>
-</div>
 
 <!-- ADMIN MANUAL TRANSFER ASSIGN MODAL
      Ręczne przypisanie przelewu do zawodnika i okresu -->
