@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.35';
+  window.APP_BUILD = 'BETA APP v2.36';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1035,8 +1035,51 @@ input[type="number"] {
 
   <p id="adminPaymentsMsg" style="margin-top:10px;"></p>
 </div>
+    
+<!-- ADMIN BANK TRANSFERS VIEW
+     Moduł importu, podglądu i obsługi przelewów -->
+    
+<div id="adminSystemPrzelewyView" class="view hidden">
+  <div class="topbar">
+    <button class="full-btn alt" onclick="appBack()">  ← Powrót  </button>
+    
+    <!-- IMPORT WYCIĄGU (kafel w ekranie)  -->
+<div style="margin:12px 0 16px 0;">
 
+  <button class="btn-green"
+          onclick="adminUploadBankFile()"
+          style="width:100%;">
+    Wgraj wyciąg bankowy
+  </button>
 
+  <input
+    id="adminBankFileInput"
+    type="file"
+    accept=".xls,.xlsx,.csv"
+    style="display:none"
+    onchange="adminHandleBankFileSelect(event)"
+  >
+
+  <div id="adminBankImportMsg"
+       style="
+         margin-top:8px;
+         font-size:13px;
+         color:#aaa;
+         text-align:center;
+       ">
+  </div>
+
+</div>
+
+    <div class="topbar-title">System przelewy</div>
+    <div style="width:40px;"></div>
+  </div>
+
+  <div class="page-wrap">
+    <div id="adminSystemPrzelewyMsg" style="margin-bottom:10px;"></div>
+    <div id="adminSystemPrzelewyBody"></div>
+  </div>
+</div>
 
 <!-- =========================================================
      SHARED VIEWS
@@ -1112,57 +1155,7 @@ input[type="number"] {
     </div>  
   </div>
 
-<!-- =========================================================
-     ADMIN VIEWS
-     Moduły administracyjne specjalne
-========================================================= -->
-    
-<!-- ADMIN BANK TRANSFERS VIEW
-     Moduł importu, podglądu i obsługi przelewów -->
-    
-<div id="adminSystemPrzelewyView" class="view hidden">
-  <div class="topbar">
-    <button class="full-btn alt" onclick="appBack()">  ← Powrót  </button>
-    
-    <!-- IMPORT WYCIĄGU (kafel w ekranie)  -->
-<div style="margin:12px 0 16px 0;">
 
-  <button class="btn-green"
-          onclick="adminUploadBankFile()"
-          style="width:100%;">
-    Wgraj wyciąg bankowy
-  </button>
-
-  <input
-    id="adminBankFileInput"
-    type="file"
-    accept=".xls,.xlsx,.csv"
-    style="display:none"
-    onchange="adminHandleBankFileSelect(event)"
-  >
-
-  <div id="adminBankImportMsg"
-       style="
-         margin-top:8px;
-         font-size:13px;
-         color:#aaa;
-         text-align:center;
-       ">
-  </div>
-
-</div>
-
-<!-- ================================================ -->
-    <div class="topbar-title">System przelewy</div>
-    <div style="width:40px;"></div>
-  </div>
-
-  <div class="page-wrap">
-    <div id="adminSystemPrzelewyMsg" style="margin-bottom:10px;"></div>
-    <div id="adminSystemPrzelewyBody"></div>
-  </div>
-</div>
-    
     </div><!-- /app -->
 
 <!-- =========================================================
