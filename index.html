@@ -358,9 +358,19 @@ input[type="number"] {
 
 <body>
 
+<!-- =========================================================
+     APP CHROME / GLOBAL
+     Elementy globalne aplikacji: numer wersji, busy overlay, splash
+========================================================= -->
+
+<!-- APP VERSION BADGE
+     Stały znacznik wersji aplikacji w prawym górnym rogu -->
+  
   <div id="wersjaApki"><span id="wersjaNum"></span></div>
 
-  <!-- BUSY OVERLAY (jeden, zgodny z JS: busyText) -->
+<!-- BUSY OVERLAY
+     Globalna warstwa blokująca UI podczas dłuższych operacji -->
+  
   <div id="busyOverlay" class="hidden">
     <div style="font-size:20px; margin-bottom:12px;">⏳ Przygotowuję aplikację…</div>
     <div id="busyText" style="opacity:.85; max-width:320px; line-height:1.4;">
@@ -368,7 +378,9 @@ input[type="number"] {
     </div>
   </div>
 
-  <!-- Splash -->
+<!-- SPLASH SCREEN
+     Ekran startowy aplikacji wyświetlany podczas inicjalizacji -->
+  
 <div id="splash">
   <div style="text-align:center;">
     <div style="
@@ -391,10 +403,24 @@ input[type="number"] {
   </div>
 </div>
 
-  <!-- Główna aplikacja -->
+<!-- =========================================================
+     MAIN APP ROOT
+     Główny kontener wszystkich pełnych widoków aplikacji
+========================================================= -->
+  
+<!-- MAIN APP CONTAINER
+     Główny kontener wszystkich pełnych widoków aplikacji -->
+  
   <div id="app" class="hidden">
 
-    <!-- 1. LANDING ORGHUB -->
+<!-- =========================================================
+     PUBLIC / ONBOARDING VIEWS
+     Ekrany startowe i konfiguracja klubu przed logowaniem
+========================================================= -->  
+
+<!-- LANDING VIEW
+     Ekran startowy ORGHUB z wejściem do konfiguracji klubu -->
+    
     <div id="orgHubLandingView" class="container hidden">
 <h1 style="margin-bottom:6px;color:#000;">Witamy w aplikacji</h1>
 <div style="font-size:28px;font-weight:800;letter-spacing:2px;margin-bottom:18px;color:#000;">
@@ -404,7 +430,9 @@ input[type="number"] {
       <button class="full-btn" onclick="goToConfig()">Skonfiguruj klub</button>
     </div>
 
-    <!-- 2. KONFIGURACJA KLUBU -->
+<!-- CLUB CONFIG VIEW
+     Pierwszy etap konfiguracji klubu: logo, nazwa, kolor i email -->
+    
     <div id="clubConfigView" class="container hidden">
       <h1>Konfiguracja klubu</h1>
 
@@ -454,7 +482,9 @@ input[type="number"] {
       </div>
     </div>
 
-      <!-- 3. PANEL 2 - UZUPEŁNIENIE DANYCH KLUBU -->
+<!-- CLUB SETUP VIEW
+     Drugi etap konfiguracji klubu: sezon, płatności, hasło admina i dane bankowe -->
+    
 <div id="clubSetupView" class="container hidden">
   <h1>Uzupełnij dane klubu</h1>
   <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
@@ -509,8 +539,15 @@ input[type="number"] {
     <div id="setupErrorBox" class="hidden" style="margin-top:10px; padding:8px; border:1px solid #933; border-radius:6px; background:#2b1111; color:#ffb3b3; font-size:0.9rem; text-align:left;"></div>
   </div>
   </div>
+
+<!-- =========================================================
+     AUTH VIEWS
+     Logowanie oraz rejestracja użytkowników
+========================================================= -->
     
-      <!-- 4. LOGOWANIE -->
+<!-- LOGIN VIEW
+     Główny ekran logowania zawodnika, trenera i administratora -->
+    
       <div id="loginView" class="container hidden">
       <img src="icon-512.png" class="logo" style="width:200px;margin-bottom:15px;" alt="Logo">
       
@@ -542,7 +579,9 @@ input[type="number"] {
       <p id="komunikat"></p>
       </div>
 
-    <!-- 5. WYBÓR TYP REJESTRACJI -->
+<!-- REGISTER SELECT VIEW
+     Wybór typu rejestracji: zawodnik albo trener -->
+    
     <div id="registerSelectView" class="container hidden">
       <h1>Rejestracja</h1>
       <button class="full-btn" onclick="pokazRejestracjaZawodnik()">Zawodnik</button>
@@ -550,7 +589,9 @@ input[type="number"] {
       <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
     </div>
     
-    <!-- 6. REJESTRACJA ZAWODNIKA -->
+<!-- REGISTER PLAYER VIEW
+     Rejestracja nowego zawodnika -->
+    
     <div id="registerZawodnikView" class="container hidden">
       <h1>Rejestracja zawodnika</h1>
       <div class="login-box">
@@ -564,7 +605,9 @@ input[type="number"] {
       <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
     </div>
 
-    <!-- 7. REJESTRACJA TRENERA -->
+<!-- REGISTER TRAINER VIEW
+     Rejestracja nowego trenera -->
+    
     <div id="rejestracjaTrenerView" class="container hidden">
       <h1>Rejestracja trenera</h1>
       <div class="login-box">
@@ -577,7 +620,14 @@ input[type="number"] {
       <p id="regMsgTrener"></p>
     </div>
 
-<!-- 8. DODAJ WYDARZENIE (TRENER) -->
+<!-- =========================================================
+     TRAINER VIEWS
+     Ekrany i formularze używane przez trenera
+========================================================= -->
+    
+<!-- TRAINER ADD EVENT VIEW
+     Ekran dodawania nowego wydarzenia przez trenera -->
+    
 <div id="trainerDodajWydarzenieView" class="container hidden">
   <h1>Dodaj wydarzenie</h1>
 
@@ -656,28 +706,41 @@ input[type="number"] {
   </div>
 </div>
 
-    <!-- 9. PŁATNOŚCI -->
+<!-- =========================================================
+     PLAYER VIEWS
+     Ekrany dostępne dla zawodnika po zalogowaniu
+========================================================= -->
+    
+<!-- PLAYER PAYMENTS VIEW
+     Lista płatności zawodnika -->
+    
     <div id="platnosciView" class="container hidden">
       <h1>Płatności</h1>
       <div id="listaPlatnosci">Ładowanie...</div>
       <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
 
-    <!-- 10. WYDARZENIA (ZAWODNIK) -->
+<!-- PLAYER EVENTS VIEW
+     Lista wydarzeń i treningów zawodnika -->
+    
     <div id="homeView" class="container hidden">
       <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
       <div id="listaTreningow">Ładowanie...</div>
       <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
 
-    <!-- 11. STATYSTYKI -->
+<!-- PLAYER STATS VIEW
+     Statystyki zawodnika -->
+    
     <div id="statsView" class="container hidden">
       <h1>Statystyki</h1>
       <div id="listaStatystyk">Ładowanie...</div>
       <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
 
-<!-- I MENU ZAWODNIKA -->
+<!-- PLAYER MENU VIEW
+     Główne menu zawodnika po zalogowaniu -->
+    
 <div id="playerMenuView" class="container hidden">
   
   <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
@@ -750,7 +813,9 @@ input[type="number"] {
 
 </div>
     
-<!-- II USTAWIENIA -->
+<!-- PLAYER SETTINGS VIEW
+     Ustawienia zawodnika i obsługa powiadomień push -->
+    
 <div id="playerSettingsView" class="container hidden">
 
   <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
@@ -766,8 +831,15 @@ input[type="number"] {
 
   <p id="pushStatus" style="margin-top:15px;"></p>
 </div>
+
+<!-- =========================================================
+     TRAINER VIEWS
+     Główne ekrany panelu trenera
+========================================================= -->
     
-    <!-- 12. PANEL TRENERA -->
+<!-- TRAINER PANEL VIEW
+     Główne menu trenera -->
+    
     <div id="trainerPanelView" class="container hidden">
       <h1>Panel trenera</h1>
       <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
@@ -776,7 +848,14 @@ input[type="number"] {
       <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
     </div>
 
-    <!-- 13. PANEL ADMINISTRATORA -->
+<!-- =========================================================
+     ADMIN VIEWS
+     Ekrany administratora klubu
+========================================================= -->
+    
+<!-- ADMIN PANEL VIEW
+     Główne menu administratora -->
+    
     <div id="adminPanelView" class="container hidden">
       <h1>Panel administratora</h1>
     
@@ -787,7 +866,9 @@ input[type="number"] {
       <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
     </div>
 
-      <!-- 14. ADMIN: RAPORTY (MENU) -->
+<!-- ADMIN REPORTS MENU VIEW
+     Menu raportów administratora -->
+    
 <div id="adminRaportyView" class="container hidden">
   <h1>Raporty</h1>
 
@@ -798,7 +879,9 @@ input[type="number"] {
   <button class="full-btn alt" onclick="goToView('adminPanelView')">⬅ Powrót</button>
 </div>
 
-    <!-- 15. ADMIN: RAPORT WYDARZEŃ -->
+<!-- ADMIN REPORT EVENTS VIEW
+     Raport wydarzeń -->
+    
 <div id="adminRaportWydarzeniaView" class="container hidden">
   <h1>Raport wydarzeń</h1>
 
@@ -811,7 +894,9 @@ input[type="number"] {
   <button class="full-btn alt" onclick="goToView('adminRaportyView')">⬅ Powrót</button>
 </div>
 
-    <!-- 16. ADMIN: RAPORT TRENERZY -->
+<!-- ADMIN REPORT TRAINERS VIEW
+     Raport trenerów -->
+    
 <div id="adminRaportTrenerzyView" class="container hidden">
   <h1>Raport trenerzy</h1>
 
@@ -824,7 +909,9 @@ input[type="number"] {
   <button class="full-btn alt" onclick="goToView('adminRaportyView')">⬅ Powrót</button>
 </div>
 
-<!-- 17. ADMIN: RAPORT REZERWACJA -->
+<!-- ADMIN REPORT RESERVATION VIEW
+     Raport rezerwacji obiektu -->
+    
 <div id="adminRaportRezerwacjaView" class="container hidden">
   <h1>Raport rezerwacja obiektu</h1>
 
@@ -837,14 +924,18 @@ input[type="number"] {
   <button class="full-btn alt" onclick="goToView('adminRaportyView')">⬅ Powrót</button>
 </div>
 
-<!-- 18. LISTA ZAWODNIKÓW (ADMIN) -->
+<!-- ADMIN PLAYERS VIEW
+     Lista zawodników administratora -->
+    
 <div id="adminZawodnicyView" class="container hidden">
   <h1>Lista zawodników</h1>
   <div id="adminListaZawodnikow">Ładowanie...</div>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
-   <!-- 19. KARTA ZAWODNIKA (ADMIN) -->
+<!-- ADMIN PLAYER CARD VIEW
+     Karta pojedynczego zawodnika -->
+    
 <div id="adminZawodnikView" class="container hidden">
   <h1 id="adminZawodnikTitle">Zawodnik</h1>
 
@@ -857,7 +948,9 @@ input[type="number"] {
   <p id="adminZawodnikMsg" style="margin-top:10px;"></p>
 </div>
     
-<!-- 20. ADMIN: GRUPY (EKRAN) -->
+<!-- ADMIN GROUPS VIEW
+     Ekran edycji grup przypisanych do zawodnika -->
+    
 <div id="adminGrupyView" class="container hidden">
   <h1 id="adminGrupyTitle">Grupy</h1>
 
@@ -899,7 +992,8 @@ input[type="number"] {
   <p id="adminGrupyMsg" style="margin-top:10px;"></p>
 </div>
 
-    <!-- 21. ADMIN: STATYSTYKI (EKRAN) -->
+<!-- ADMIN STATS VIEW
+     Ekran statystyk wybranego zawodnika -->
     
     <div id="adminStatsView" class="container hidden">
   <h1 id="adminStatsTitle">Statystyki</h1>
@@ -913,7 +1007,8 @@ input[type="number"] {
   <p id="adminStatsMsg" style="margin-top:10px;"></p>
 </div>
     
-    <!-- 22. ADMIN: PŁATNOŚCI ZAWODNIKA -->
+<!-- ADMIN PAYMENTS VIEW
+     Ekran płatności wybranego zawodnika -->
 
     <div id="adminPaymentsView" class="container hidden">
   <h1 id="adminPaymentsTitle">Płatności</h1>
@@ -927,14 +1022,18 @@ input[type="number"] {
   <p id="adminPaymentsMsg" style="margin-top:10px;"></p>
 </div>
 
-    <!-- 23. LISTA ZAWODNIKÓW (TRENER) -->
+<!-- TRAINER PLAYERS VIEW
+     Lista zawodników dostępna dla trenera -->
+    
     <div id="trainerZawodnicyView" class="container hidden">
       <h1>Lista zawodników</h1>
       <div id="trainerListaZawodnikow">Ładowanie...</div>
       <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
     </div>
 
-    <!-- 24. WYDARZENIA (TRENER) -->
+<!-- TRAINER EVENTS VIEW
+     Lista wydarzeń zarządzanych przez trenera -->
+    
     <div id="trainerWydarzeniaView" class="container hidden">
       <h1>Wydarzenia</h1>
       <div id="trainerListaWydarzen">Ładowanie...</div>
@@ -942,7 +1041,14 @@ input[type="number"] {
       <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
     </div>
 
-    <!-- 24A. RĘCZNE POWIADOMIENIA (ADMIN / TRENER) -->
+<!-- =========================================================
+     SHARED VIEWS
+     Ekrany współdzielone przez admina i trenera
+========================================================= -->
+    
+<!-- MANUAL PUSH VIEW
+     Ręczne wysyłanie powiadomień przez admina lub trenera -->
+    
 <div id="manualPushView" class="container hidden">
   <h1>Powiadomienia</h1>
 
@@ -1009,7 +1115,14 @@ input[type="number"] {
     </div>  
   </div>
 
-<!-- 25. SYSTEM PRZELEWY (ADMIN) -->
+<!-- =========================================================
+     ADMIN VIEWS
+     Moduły administracyjne specjalne
+========================================================= -->
+    
+<!-- ADMIN BANK TRANSFERS VIEW
+     Moduł importu, podglądu i obsługi przelewów -->
+    
 <div id="adminSystemPrzelewyView" class="view hidden">
   <div class="topbar">
     <button class="full-btn alt" onclick="appBack()">  ← Powrót  </button>
@@ -1055,7 +1168,14 @@ input[type="number"] {
     
     </div><!-- /app -->
 
-<!-- 101. POPUP: HASŁO ADMINA -->
+<!-- =========================================================
+     OVERLAYS: SETUP / ACCOUNT
+     Popupy konfiguracji klubu oraz operacji konta
+========================================================= -->
+  
+<!-- ADMIN PASSWORD POPUP
+     Ustawienie hasła administratora podczas konfiguracji klubu -->
+  
 <div id="adminPassPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1084,7 +1204,9 @@ input[type="number"] {
   </div>
 </div>
     
-  <!-- 102. POPUP PŁATNOŚCI -->
+<!-- PAYMENTS SETUP POPUP
+     Ustawienia składek, ceny treningu i limitu treningów -->
+  
 <div id="paymentsPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1131,8 +1253,15 @@ input[type="number"] {
     <p id="paymentsMsg" style="margin-top:12px; min-height:1.2em;"></p>
   </div>
 </div>
+
+<!-- =========================================================
+     OVERLAYS: SHARED
+     Popupy pomocnicze współdzielone przez różne moduły
+========================================================= -->
   
-<!-- 103. GRUPY: popup -->
+<!-- GROUPS PICKER POPUP
+     Wspólny popup wyboru grup przy tworzeniu wydarzenia -->
+  
 <div id="groupsPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1149,8 +1278,15 @@ input[type="number"] {
     </div>
   </div>
 </div>
-    
-<!-- =================== ADMIN: MODAL USUWANIA ZAWODNIKA (spójny z płatnościami) =================== -->
+
+<!-- =========================================================
+     OVERLAYS: ADMIN
+     Popupy i modale administratora
+========================================================= -->
+  
+<!-- ADMIN DELETE PLAYER MODAL
+     Potwierdzenie usunięcia zawodnika -->
+  
 <div id="adminDeletePopup" class="modal hidden">
   <div class="modal-card" onclick="event.stopPropagation();">
     <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
@@ -1168,7 +1304,9 @@ input[type="number"] {
   </div>
 </div>
   
-<!-- ADMIN: MODAL SPOSÓB ROZLICZANIA  -->
+<!-- ADMIN BILLING MODE MODAL
+     Wybór sposobu rozliczania zawodnika -->
+  
 <div id="adminRozliczModal" class="modal hidden">
   <div class="modal-card">
     <h2 style="margin:0 0 8px 0;">Sposób rozliczania</h2>
@@ -1183,8 +1321,15 @@ input[type="number"] {
     </div>
   </div>
 </div>
+
+<!-- =========================================================
+     OVERLAYS: TRAINER
+     Popupy trenera do zarządzania wydarzeniami
+========================================================= -->
   
-    <!-- Popup potwierdzenia usunięcia -->
+<!-- TRAINER DELETE EVENT POPUP
+     Potwierdzenie usunięcia wydarzenia -->
+  
     <div id="trainerDeletePopup">
       <div class="popup-card">
         <p style="margin-bottom:15px;">Czy napewno chcesz usunąć wydarzenie ?</p>
@@ -1193,7 +1338,9 @@ input[type="number"] {
       </div>
     </div>
 
-    <!-- Popup edycji wydarzenia -->
+<!-- TRAINER EDIT EVENT POPUP
+     Główne okno edycji wydarzenia -->
+  
 <div id="trainerEditPopup" style="
   position: fixed;
   inset: 0;
@@ -1229,7 +1376,9 @@ input[type="number"] {
         Wybierz grupy
       </button>
 
-    <!-- POPUP GRUP (edycja) -->
+<!-- TRAINER EDIT GROUPS POPUP
+     Pomocniczy popup wyboru grup w trakcie edycji wydarzenia -->
+      
     <div id="editGroupsPopup" class="hidden" style="
       position:fixed; inset:0; background:rgba(0,0,0,0.7);
       display:flex; justify-content:center; align-items:center;
@@ -1247,7 +1396,9 @@ input[type="number"] {
       </div>
     </div>
 
-    <!-- POPUP TRENERZY (edycja) -->
+<!-- TRAINER EDIT TRAINERS POPUP
+     Pomocniczy popup wyboru trenerów w trakcie edycji wydarzenia -->
+      
 <div id="editTrenerzyPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1327,7 +1478,9 @@ input[type="number"] {
  </div>
 </div>
 
-<!-- =================== ADMIN: POPUP GRUP (2 rzędy po 5) =================== -->
+<!-- ADMIN GROUPS POPUP
+     Popup szybkiej edycji grup zawodnika -->
+  
 <div id="adminGroupsPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1353,7 +1506,9 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =================== ADMIN: POPUP STATYSTYKI =================== -->
+<!-- ADMIN STATS POPUP
+     Popup podglądu statystyk zawodnika -->
+  
 <div id="adminStatsPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1371,8 +1526,15 @@ input[type="number"] {
     </div>
   </div>
 </div>
+
+<!-- =========================================================
+     OVERLAYS: PLAYER
+     Popupy używane przez zawodnika
+========================================================= -->
   
-<!-- ====================== Popup przelewu zawodnika ============================ -->
+<!-- PLAYER PAYMENT POPUP
+     Popup płatności zawodnika: kwota, QR, odbiorca, konto i tytuł -->
+  
 <div id="playerPaymentPopup" style="
   position: fixed;
   inset: 0;
@@ -1451,7 +1613,9 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- Popup danych klubu do odbioru wpłat -->
+<!-- BANK DATA POPUP
+     Dane klubu do odbioru wpłat: odbiorca i numer konta -->
+  
 <div id="bankDataPopup" style="
   position: fixed;
   inset: 0;
@@ -1482,7 +1646,9 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =================== ADMIN: SYSTEM PRZELEWY — ręczne przypisanie =================== -->
+<!-- ADMIN MANUAL TRANSFER ASSIGN MODAL
+     Ręczne przypisanie przelewu do zawodnika i okresu -->
+  
 <div id="adminSystemPrzelewManualModal" class="hidden" style="
   position: fixed;
   inset: 0;
@@ -1557,7 +1723,8 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =================== ADMIN: SYSTEM PRZELEWY — popup potwierdzenia załadowania pliku =================== -->
+<!-- IMPORT RESULT MODAL
+     Wynik importu pliku bankowego -->
 
   <div id="importResultPopup" class="modal hidden">
   <div class="card" style="width:min(420px,90%); margin:0 auto; padding:24px;">
@@ -1569,7 +1736,9 @@ input[type="number"] {
   </div>
 </div>
 
-    <!-- =================== ADMIN: MODAL POTWIERDZENIA PŁATNOŚCI - ZAJECIA DODATKOWE =================== -->
+<!-- ADMIN PAYMENT CONFIRM MODAL
+     Potwierdzenie ręcznego zaksięgowania płatności -->
+  
 <div id="adminPayConfirmModal" class="modal hidden">
   <div class="modal-card">
     <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
@@ -1589,7 +1758,9 @@ input[type="number"] {
   </div>
 </div>
 
-  <!-- =================== ADMIN: MODAL POTWIERDZENIA PŁATNOŚCI - SKŁADKA =================== -->
+<!-- ADMIN MEMBERSHIP CONFIRM MODAL
+     Potwierdzenie składki z opcją zwolnienia z opłaty -->
+  
 <div id="adminPayConfirmSkladkaModal" class="modal hidden">
   <div class="modal-card">
     <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
@@ -1610,7 +1781,9 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- POPUP GRUPY — RĘCZNE POWIADOMIENIA -->
+<!-- MANUAL PUSH GROUPS POPUP
+     Wybór grup odbiorców dla ręcznych powiadomień -->
+  
 <div id="manualPushGroupsPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
   display:flex; justify-content:center; align-items:center;
@@ -1628,7 +1801,9 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =================== RESET HASŁA: POPUP =================== -->
+<!-- RESET PASSWORD POPUP
+     Formularz resetu hasła po adresie email -->
+  
 <div id="resetPasswordPopup" style="
   position: fixed;
   inset: 0;
@@ -1659,7 +1834,9 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- =================== WOLNE NUMERY: POPUP =================== -->
+<!-- FREE NUMBERS POPUP
+     Wybór wolnego numeru zawodnika przy rejestracji -->
+  
 <div id="freeNumbersPopup" style="
   position: fixed;
   inset: 0;
