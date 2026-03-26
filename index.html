@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.36';
+  window.APP_BUILD = 'BETA APP v2.37';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1244,6 +1244,39 @@ input[type="number"] {
   </div>
 </div>
 
+  <!-- BANK DATA POPUP
+     Dane klubu do odbioru wpłat: odbiorca i numer konta -->
+  
+<div id="bankDataPopup" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3005;
+  padding: 18px;
+">
+  <div class="popup-card" style="max-width:360px;width:100%; text-align:center;">
+    <p style="margin:0 0 14px 0;"><b>Dane klubu do odbioru wpłat</b></p>
+
+    <div class="login-box" style="margin-top:10px;">
+      <div style="margin-bottom:10px; text-align:center; font-weight:700;">Odbiorca</div>
+      <input id="bankReceiverInput" type="text" placeholder="Np. Klub Sportowy Warriors Sosnowiec">
+
+      <div style="margin:14px 0 10px 0; text-align:center; font-weight:700;">Numer konta</div>
+      <input id="bankAccountInput" type="text" placeholder="26 cyfr lub z odstępami">
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="full-btn" type="button" onclick="saveBankDataPopup()">Zapisz</button>
+      <button class="full-btn alt" style="margin-top:8px;" type="button" onclick="closeBankDataPopup()">Anuluj</button>
+    </div>
+
+    <p id="bankDataPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
+  </div>
+</div>
+
 <!-- =========================================================
      OVERLAYS: SHARED
      Popupy pomocnicze współdzielone przez różne moduły
@@ -1600,39 +1633,6 @@ input[type="number"] {
     </div>
 
     <p id="playerPaymentPopupMsg" style="margin-top:10px;"></p>
-  </div>
-</div>
-
-<!-- BANK DATA POPUP
-     Dane klubu do odbioru wpłat: odbiorca i numer konta -->
-  
-<div id="bankDataPopup" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 3005;
-  padding: 18px;
-">
-  <div class="popup-card" style="max-width:360px;width:100%; text-align:center;">
-    <p style="margin:0 0 14px 0;"><b>Dane klubu do odbioru wpłat</b></p>
-
-    <div class="login-box" style="margin-top:10px;">
-      <div style="margin-bottom:10px; text-align:center; font-weight:700;">Odbiorca</div>
-      <input id="bankReceiverInput" type="text" placeholder="Np. Klub Sportowy Warriors Sosnowiec">
-
-      <div style="margin:14px 0 10px 0; text-align:center; font-weight:700;">Numer konta</div>
-      <input id="bankAccountInput" type="text" placeholder="26 cyfr lub z odstępami">
-    </div>
-
-    <div style="margin-top:12px;">
-      <button class="full-btn" type="button" onclick="saveBankDataPopup()">Zapisz</button>
-      <button class="full-btn alt" style="margin-top:8px;" type="button" onclick="closeBankDataPopup()">Anuluj</button>
-    </div>
-
-    <p id="bankDataPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
   </div>
 </div>
 
