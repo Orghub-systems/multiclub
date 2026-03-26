@@ -325,7 +325,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.38';
+  window.APP_BUILD = 'BETA APP v2.39';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1310,6 +1310,39 @@ input[type="number"] {
   </div>
 </div>
 
+  <!-- FREE NUMBERS POPUP
+     Wybór wolnego numeru zawodnika przy rejestracji -->
+  
+<div id="freeNumbersPopup" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3011;
+  padding: 18px;
+">
+  <div class="popup-card" style="max-width:420px;width:100%; text-align:left;">
+    <p style="margin:0 0 14px 0; text-align:center;"><b>Wybierz wolny numer</b></p>
+
+    <div id="freeNumbersPopupBody" style="
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      max-height:320px;
+      overflow:auto;
+    ">
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="full-btn alt" type="button" onclick="closeFreeNumbersPopup()">Anuluj</button>
+    </div>
+
+    <p id="freeNumbersPopupMsg" style="margin-top:10px; min-height:1.2em; text-align:center;"></p>
+  </div>
+</div>
+
 <!-- =========================================================
      OVERLAYS: SHARED
      Popupy pomocnicze współdzielone przez różne moduły
@@ -1331,6 +1364,26 @@ input[type="number"] {
     <div style="display:flex; gap:8px; margin-top:14px;">
       <button class="full-btn alt" style="flex:1;" onclick="closeGroupsPopup()">Anuluj</button>
       <button class="full-btn" style="flex:1;" onclick="applyGroupsPopup()">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+  <!-- MANUAL PUSH GROUPS POPUP
+     Wybór grup odbiorców dla ręcznych powiadomień -->
+  
+<div id="manualPushGroupsPopup" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  display:flex; justify-content:center; align-items:center;
+  z-index:3006; padding:18px;
+">
+  <div class="card" style="max-width:320px;width:100%; text-align:left;">
+    <div style="font-weight:800; font-size:16px; margin-bottom:10px;">Wybierz grupy</div>
+
+    <div id="manualPushGroupsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="full-btn alt" style="flex:1;" type="button" onclick="closeManualPushGroupsPopup()">Anuluj</button>
+      <button class="full-btn" style="flex:1;" type="button" onclick="applyManualPushGroupsPopup()">Zapisz</button>
     </div>
   </div>
 </div>
@@ -1804,60 +1857,11 @@ input[type="number"] {
   </div>
 </div>
 
-<!-- MANUAL PUSH GROUPS POPUP
-     Wybór grup odbiorców dla ręcznych powiadomień -->
-  
-<div id="manualPushGroupsPopup" class="hidden" style="
-  position:fixed; inset:0; background:rgba(0,0,0,0.7);
-  display:flex; justify-content:center; align-items:center;
-  z-index:3006; padding:18px;
-">
-  <div class="card" style="max-width:320px;width:100%; text-align:left;">
-    <div style="font-weight:800; font-size:16px; margin-bottom:10px;">Wybierz grupy</div>
-
-    <div id="manualPushGroupsList" style="display:flex; flex-direction:column; gap:8px;"></div>
-
-    <div style="display:flex; gap:8px; margin-top:14px;">
-      <button class="full-btn alt" style="flex:1;" type="button" onclick="closeManualPushGroupsPopup()">Anuluj</button>
-      <button class="full-btn" style="flex:1;" type="button" onclick="applyManualPushGroupsPopup()">Zapisz</button>
-    </div>
-  </div>
-</div>
 
 
 
-<!-- FREE NUMBERS POPUP
-     Wybór wolnego numeru zawodnika przy rejestracji -->
-  
-<div id="freeNumbersPopup" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 3011;
-  padding: 18px;
-">
-  <div class="popup-card" style="max-width:420px;width:100%; text-align:left;">
-    <p style="margin:0 0 14px 0; text-align:center;"><b>Wybierz wolny numer</b></p>
 
-    <div id="freeNumbersPopupBody" style="
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:10px;
-      max-height:320px;
-      overflow:auto;
-    ">
-    </div>
 
-    <div style="margin-top:12px;">
-      <button class="full-btn alt" type="button" onclick="closeFreeNumbersPopup()">Anuluj</button>
-    </div>
-
-    <p id="freeNumbersPopupMsg" style="margin-top:10px; min-height:1.2em; text-align:center;"></p>
-  </div>
-</div>
   
 <script>
 
