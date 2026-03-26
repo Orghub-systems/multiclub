@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.43';
+  window.APP_BUILD = 'BETA APP v2.44';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5710,76 +5710,7 @@ async function zaloguj() {
   }
 }
 
-function loadClubAd() {
-  if (window.__clubAdData && window.__clubAdData.enabled && window.__clubAdData.assetUrl) {
-    renderClubAd(window.__clubAdData);
-    return;
-  }
 
-  renderClubAd(null);
-}
-
-/******************** PREFETCH (MENU) ********************/
-
-function startPrefetchForPlayer_() {
-  // cache na promisy + timestamp, żeby nie walić API co sekundę
-  window.__prefetch = window.__prefetch || { t: 0, platnosciP: null, treningiP: null, statystykiP: null };
-
-  // warunki minimalne
-  if (!numerZalogowanego) return;
-  if (!clubId) return;
-
-  const now = Date.now();
-  // jeśli odpalone w ostatnich 30s, nie odpalaj ponownie
-  if (window.__prefetch.t && (now - window.__prefetch.t) < 30000) return;
-
-  window.__prefetch.t = now;
-
-  // odpal równolegle — bez await
-  window.__prefetch.platnosciP = apiClubGet("platnosci", { numer: numerZalogowanego });
-  window.__prefetch.treningiP  = apiClubGet("treningi",  { grupa: grupaZalogowanego, numer: numerZalogowanego });
-  window.__prefetch.statystykiP= apiClubGet("statystyki",{ numer: numerZalogowanego });
-}
-  
-function renderClubAd(ad) {
-  const container = document.getElementById("clubAdContainer");
-  const link = document.getElementById("clubAdLink");
-  const box = document.getElementById("clubAdBox");
-  const fallback = document.getElementById("clubAdFallbackText");
-
-  if (!container || !link || !box || !fallback) return;
-
-  container.style.display = "none";
-  box.style.backgroundImage = "";
-  fallback.style.display = "flex";
-  fallback.textContent = "Partner klubu";
-  link.removeAttribute("href");
-
-  if (!ad || !ad.enabled || !ad.assetUrl || ad.type !== "image") return;
-
-  const img = new Image();
-
-  img.onload = function () {
-    box.style.backgroundImage = `url("${ad.assetUrl}")`;
-    fallback.style.display = "none";
-    container.style.display = "block";
-  };
-
-  img.onerror = function () {
-    fallback.style.display = "flex";
-    fallback.textContent = ad.alt || "Partner klubu";
-    container.style.display = "block";
-    console.error("Nie udało się wczytać reklamy:", ad.assetUrl);
-  };
-
-  img.src = ad.assetUrl;
-
-  if (ad.linkUrl) {
-    link.href = ad.linkUrl;
-  } else {
-    link.href = "#";
-  }
-}
   
 /* =================== 75 REJESTRACJA =================== */
   
@@ -6056,6 +5987,79 @@ function pickFreeNumber(numer) {
   if (input) input.value = String(numer || "").trim();
   closeFreeNumbersPopup();
 }
+
+/* =================== 78 PLAYER MENU HELPERS / CLUB AD / PREFETCH =================== */
+  
+  function loadClubAd() {
+  if (window.__clubAdData && window.__clubAdData.enabled && window.__clubAdData.assetUrl) {
+    renderClubAd(window.__clubAdData);
+    return;
+  }
+
+  renderClubAd(null);
+}
+
+/******************** PREFETCH (MENU) ********************/
+
+function startPrefetchForPlayer_() {
+  // cache na promisy + timestamp, żeby nie walić API co sekundę
+  window.__prefetch = window.__prefetch || { t: 0, platnosciP: null, treningiP: null, statystykiP: null };
+
+  // warunki minimalne
+  if (!numerZalogowanego) return;
+  if (!clubId) return;
+
+  const now = Date.now();
+  // jeśli odpalone w ostatnich 30s, nie odpalaj ponownie
+  if (window.__prefetch.t && (now - window.__prefetch.t) < 30000) return;
+
+  window.__prefetch.t = now;
+
+  // odpal równolegle — bez await
+  window.__prefetch.platnosciP = apiClubGet("platnosci", { numer: numerZalogowanego });
+  window.__prefetch.treningiP  = apiClubGet("treningi",  { grupa: grupaZalogowanego, numer: numerZalogowanego });
+  window.__prefetch.statystykiP= apiClubGet("statystyki",{ numer: numerZalogowanego });
+}
+  
+function renderClubAd(ad) {
+  const container = document.getElementById("clubAdContainer");
+  const link = document.getElementById("clubAdLink");
+  const box = document.getElementById("clubAdBox");
+  const fallback = document.getElementById("clubAdFallbackText");
+
+  if (!container || !link || !box || !fallback) return;
+
+  container.style.display = "none";
+  box.style.backgroundImage = "";
+  fallback.style.display = "flex";
+  fallback.textContent = "Partner klubu";
+  link.removeAttribute("href");
+
+  if (!ad || !ad.enabled || !ad.assetUrl || ad.type !== "image") return;
+
+  const img = new Image();
+
+  img.onload = function () {
+    box.style.backgroundImage = `url("${ad.assetUrl}")`;
+    fallback.style.display = "none";
+    container.style.display = "block";
+  };
+
+  img.onerror = function () {
+    fallback.style.display = "flex";
+    fallback.textContent = ad.alt || "Partner klubu";
+    container.style.display = "block";
+    console.error("Nie udało się wczytać reklamy:", ad.assetUrl);
+  };
+
+  img.src = ad.assetUrl;
+
+  if (ad.linkUrl) {
+    link.href = ad.linkUrl;
+  } else {
+    link.href = "#";
+  }
+}
   
 /* =================== 80 ZAWODNIK: TRENINGI / ZAPISY =================== */
 
@@ -6249,8 +6253,6 @@ function renderPlatnosci(lista) {
     .replace(/^Zajęcia dodatkowe\s*/i, "Zajęcia ");
 }
 
-
-  
 /* ===================== TRENINGI ======================-- */
   
 async function pokazTreningi() {
