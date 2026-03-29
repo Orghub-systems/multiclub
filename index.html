@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.44';
+  window.APP_BUILD = 'BETA APP v2.45';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1870,24 +1870,28 @@ function odtworzIntroSound() {
 }
 
 /* =================== 10 KONFIG / GLOBALNE =================== */
-  
+
+// Pokazanie modala po id  
 function showModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.remove("hidden");
 }
 
+// Ukrycie modala po id
 function hideModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.add("hidden");
 }
-  
+
+// Stała wersja buildu aplikacji  
   const APP_BUILD = window.APP_BUILD;
+
+// Główny adres CORE / API  
   const CORE_URL = "https://orghubmulticlub.orghubsystems.workers.dev";
   
-
-// ===== DEBUG: pokaż błąd JS na ekranie (żeby nie stało "w ciszy") =====
+// Globalny handler błędów JS na ekranie
 window.addEventListener("error", (ev) => {
   try {
     const splash = document.getElementById("splash");
@@ -1914,19 +1918,36 @@ window.addEventListener("error", (ev) => {
   } catch (e) {}
 });
 
+// Globalny handler błędów Promise  
 window.addEventListener("unhandledrejection", (ev) => {
   try { alert("Unhandled Promise Rejection: " + (ev?.reason?.message || ev?.reason || ev)); } catch (e) {}
 });
 
-// stan aplikacji
+// Globalny stan aktywnego klubu
 let clubId = localStorage.getItem("orghub_clubId") || "";
+
+// Numer aktualnie zalogowanego zawodnika  
 let numerZalogowanego = null;
+
+// Grupa aktualnie zalogowanego zawodnika  
 let grupaZalogowanego = null;
+
+// Grupy aktualnie zalogowanego trenera  
 window.grupyTrenera = "";
+
+// Id aktualnego widoku  
 let currentView = "loginView";
 
+// Kolumna oczekującej płatności administratora  
 window.__adminPendingPayCol = null;
+
+// Label oczekującej płatności administratora  
 window.__adminPendingPayLabel = "";
+
+/* =================== KONIEC SEKTORA 10 =================== */
+
+
+  
 
 async function preloadClubAd() {
   try {
