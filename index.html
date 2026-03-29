@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.46';
+  window.APP_BUILD = 'BETA APP v2.47';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2065,6 +2065,46 @@ function getClubIdFromUrl_() {
 }
 
 /* =================== KONIEC SEKTORA 20 =================== */
+/* =================== 30 BUSY OVERLAY =================== */
+
+// Pokazanie globalnego busy overlaya  
+function showBusy(text) {
+  const ov = document.getElementById("busyOverlay");
+  const bt = document.getElementById("busyText");
+  if (bt && text) bt.textContent = text;
+  if (ov) ov.classList.remove("hidden");
+}
+
+// Ukrycie globalnego busy overlaya  
+function hideBusy() {
+  const ov = document.getElementById("busyOverlay");
+  if (ov) ov.classList.add("hidden");
+}
+
+// Odświeżenie badge z nazwą klubu  
+function refreshClubBadge_() {
+  const el = document.getElementById("clubIdBadge");
+  if (!el) return;
+
+  const name = (clubId || "")
+    .replace(/_/g, " ")   // zamiana _ na spację
+    .toUpperCase();
+
+  el.textContent = name;
+}
+
+// Zastosowanie motywu i logo klubu  
+function applyTheme_(theme) {
+  try {
+    if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
+
+    const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
+    if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
+
+  } catch (e) {}
+}
+  
+/* =================== KONIEC SEKTORA 30 =================== */
 
 
   
@@ -2594,17 +2634,7 @@ function closePlayerPaymentPopup() {
   
 
 
-/* =================== 30 BUSY OVERLAY =================== */
-function showBusy(text) {
-  const ov = document.getElementById("busyOverlay");
-  const bt = document.getElementById("busyText");
-  if (bt && text) bt.textContent = text;
-  if (ov) ov.classList.remove("hidden");
-}
-function hideBusy() {
-  const ov = document.getElementById("busyOverlay");
-  if (ov) ov.classList.add("hidden");
-}
+
 
 /* =================== 40 NAWIGACJA / ROUTER =================== */
 function ukryjWszystkie() {
@@ -2820,26 +2850,7 @@ window.addEventListener("popstate", (event) => {
   syncTrainerEditPopupsToHistoryState_(state);
 });
 
-function refreshClubBadge_() {
-  const el = document.getElementById("clubIdBadge");
-  if (!el) return;
 
-  const name = (clubId || "")
-    .replace(/_/g, " ")   // zamiana _ na spację
-    .toUpperCase();
-
-  el.textContent = name;
-}
-
-function applyTheme_(theme) {
-  try {
-    if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
-
-    const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
-    if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
-
-  } catch (e) {}
-}
 
 async function startApp_() {
 const clubFromUrl = getClubIdFromUrl_();
