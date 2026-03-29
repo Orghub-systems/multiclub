@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.51';
+  window.APP_BUILD = 'BETA APP v2.52';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3553,10 +3553,10 @@ async function submitSetupAndActivateClub() {
 }
 
 window.submitSetupAndActivateClub = submitSetupAndActivateClub;
-
-  /* =================== KONIEC SEKTORA 70 =================== */    
   
-  /******************** PUSH ********************/
+/* =================== KONIEC SEKTORA 70 =================== */    
+  
+/* =================== 80 PUSH / POWIADOMIENIA =================== */
   
 const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 let __pushBtnBound = false;
@@ -3778,6 +3778,363 @@ function urlBase64ToUint8Array_(base64String) {
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
+
+/* =================== KONIEC SEKTORA 80 =================== */  
+
+/* =================== 90 LOGOWANIE / REJESTRACJA =================== */
+  
+function pokazLogowanie() {
+  numerZalogowanego = null;
+  grupaZalogowanego = null;
+  window.grupyTrenera = "";
+  refreshClubBadge_();
+  goToView("loginView");
+}
+function pokazRejestracjaSelect() { goToView("registerSelectView"); }
+function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
+function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
+  
+
+async function zaloguj() {
+  const login = document.getElementById("numer").value.trim();
+  const haslo = document.getElementById("haslo").value.trim();
+  const komunikat = document.getElementById("komunikat");
+
+  if (!clubId) {
+    komunikat.innerText = "Najpierw skonfiguruj klub.";
+    goToView("orgHubLandingView");
+    return;
+  }
+  if (!login || !haslo) {
+    komunikat.innerText = "Podaj login i hasło.";
+    return;
+  }
+
+  komunikat.innerText = "Trwa logowanie...";
+
+  try {
+    const data = await apiClubPost({ mode: "login", numer: login, haslo });
+
+    if (!data.success) {
+      const err = data?.error || data?.message || "Błąd logowania";
+      komunikat.innerText = "❌ " + err;
+      return;
+    }
+
+    komunikat.innerText = "✅ Zalogowano";
+
+      if (data.role === "zawodnik") {
+        numerZalogowanego = data.login;
+        grupaZalogowanego = data.grupa || "";
+      
+        try {
+          window.__platnosciCache = await apiClubGet("platnosci", { numer: numerZalogowanego });
+        } catch (e) {
+          window.__platnosciCache = null;
+        }
+      
+        goToView("playerMenuView");
+      
+        loadClubAd();
+      
+        return;
+      }
+
+    if (data.role === "trener") {
+      window.grupyTrenera = data.grupa || "";
+      goToView("trainerPanelView");
+      return;
+    }
+
+    if (data.role === "admin") {
+      goToView("adminPanelView");
+      return;
+    }
+
+    komunikat.innerText = "❌ Nieznana rola użytkownika.";
+
+  } catch (e) {
+    komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
+  }
+}
+
+/* =================== 91 REJESTRACJA =================== */
+  
+async function wyslijRejestracje() {
+  const numer = document.getElementById("regNumer").value.trim();
+  const nazwisko = document.getElementById("regNazwisko").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const haslo = document.getElementById("regHaslo").value.trim();
+  const msg = document.getElementById("regMsg");
+
+  if (!numer || !nazwisko || !email || !haslo) {
+    msg.innerText = "Wypełnij wszystkie pola.";
+    return;
+  }
+
+  msg.innerText = "⏳ Rejestracja...";
+  try {
+    const data = await apiClubPost({
+      mode: "rejestracja",
+      numer,
+      nazwisko,
+      email,
+      haslo
+    });
+
+    if (data && data.ok) {
+      document.getElementById("regNumer").value = "";
+      document.getElementById("regNazwisko").value = "";
+      document.getElementById("regEmail").value = "";
+      document.getElementById("regHaslo").value = "";
+
+      msg.innerText = "✅ Rejestracja zakończona!";
+      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
+    } else {
+      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+    }
+  } catch (e) {
+    msg.innerText = "❌ " + (e?.message || e);
+  }
+}
+
+async function wyslijRejestracjeTrener() {
+  const poleNazw = document.getElementById("regNazwiskoTrener");
+  const poleEmail = document.getElementById("regEmailTrener");
+  const poleHaslo = document.getElementById("regHasloTrener");
+  const msg = document.getElementById("regMsgTrener");
+
+  const nazwisko = poleNazw.value.trim();
+  const email = poleEmail.value.trim();
+  const haslo = poleHaslo.value.trim();
+
+  if (!nazwisko || !email || !haslo) {
+    msg.innerText = "Wypełnij wszystkie pola.";
+    return;
+  }
+
+  msg.innerText = "⏳ Rejestracja...";
+
+  try {
+    const data = await apiClubPost({
+      mode: "rejestracjaTrener",
+      nazwisko,
+      email,
+      haslo
+    });
+
+    if (data && data.ok) {
+      const inic = String(data.inic || "").toUpperCase() || "(?)";
+
+      msg.innerHTML = `
+        ✅ <b>Zarejestrowano trenera!</b><br>
+        Login do systemu:<br>
+        <div style="font-size:22px;font-weight:800;letter-spacing:2px;margin:10px 0 14px 0;">
+          ${inic}
+        </div>
+
+        <button class="full-btn" id="btnCopyInic">📋 Skopiuj login</button>
+        <button class="full-btn alt" id="btnGoLogin" disabled>
+          ➡️ Przejdź do logowania
+        </button>
+
+        <div id="copyInfo" style="opacity:.8;margin-top:10px;font-size:13px;"></div>
+      `;
+
+      poleNazw.value = "";
+      poleEmail.value = "";
+      poleHaslo.value = "";
+
+      const btnCopy = document.getElementById("btnCopyInic");
+      const btnGo = document.getElementById("btnGoLogin");
+      const info = document.getElementById("copyInfo");
+
+      if (btnCopy) {
+        btnCopy.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(inic);
+            btnCopy.textContent = "✅ Skopiowano";
+            if (info) info.textContent = "Możesz teraz przejść do logowania.";
+            if (btnGo) btnGo.disabled = false;
+          } catch (e) {
+            if (info) {
+              info.textContent =
+                "❌ Nie udało się skopiować. Zaznacz login ręcznie: " + inic;
+            }
+          }
+        };
+      }
+
+      if (btnGo) {
+        btnGo.onclick = () => pokazLogowanie();
+      }
+
+    } else {
+      msg.innerText =
+        "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+    }
+
+  } catch (e) {
+    msg.innerText = "❌ " + (e?.message || e);
+  }
+}
+
+function openResetPasswordPopup() {
+  const popup = document.getElementById("resetPasswordPopup");
+  const input = document.getElementById("resetPasswordEmailInput");
+  const msg = document.getElementById("resetPasswordPopupMsg");
+
+  if (msg) msg.textContent = "";
+  if (input) input.value = "";
+
+  if (popup) popup.style.display = "flex";
+}
+
+function closeResetPasswordPopup() {
+  const popup = document.getElementById("resetPasswordPopup");
+  if (popup) popup.style.display = "none";
+}
+
+async function sendResetPasswordRequest() {
+
+  const input = document.getElementById("resetPasswordEmailInput");
+  const msg = document.getElementById("resetPasswordPopupMsg");
+
+  const email = String(input?.value || "").trim();
+
+  if (!email) {
+    msg.textContent = "❌ Podaj adres email.";
+    return;
+  }
+
+  msg.textContent = "⏳ Resetowanie...";
+
+  try {
+
+    const data = await apiClubPost({
+      mode: "resetHasla",
+      email
+    });
+
+    if (data && data.ok) {
+
+      msg.textContent =
+        "✅ Jeśli email istnieje w systemie, wysłaliśmy instrukcję resetu.";
+
+      setTimeout(() => {
+        closeResetPasswordPopup();
+      }, 2000);
+
+    } else {
+
+      msg.textContent = "❌ " + (data?.error || "Błąd resetu.");
+
+    }
+
+  } catch (e) {
+
+    msg.textContent = "❌ " + (e?.message || e);
+
+  }
+} 
+
+async function openFreeNumbersPopup() {
+  const popup = document.getElementById("freeNumbersPopup");
+  const body = document.getElementById("freeNumbersPopupBody");
+  const msg = document.getElementById("freeNumbersPopupMsg");
+
+  if (!popup || !body) return;
+
+  body.innerHTML = "";
+  if (msg) msg.textContent = "⏳ Ładowanie wolnych numerów...";
+
+  popup.style.display = "flex";
+
+  try {
+    const data = await apiClubPost({ mode: "wolneNumery" });
+
+    if (!data || !data.ok) {
+      if (msg) msg.textContent = "❌ " + (data?.error || data?.message || "Nie udało się pobrać numerów.");
+      return;
+    }
+
+    const items = Array.isArray(data.numbers) ? data.numbers : [];
+
+    // pokazujemy tylko:
+    // 1) naprawdę wolne numery: brak nazwiska, hasła i emaila
+    // 2) numery po resecie hasła: jest nazwisko i email, ale brak hasła
+    const visibleItems = items.filter(n => {
+      const nazwisko = String(n?.nazwisko || "").trim();
+      const haslo = String(n?.haslo || "").trim();
+      const email = String(n?.email || "").trim();
+
+      const isCompletelyFree = !nazwisko && !haslo && !email;
+      const isRecovery = !!nazwisko && !haslo && !!email;
+
+      return isCompletelyFree || isRecovery;
+    });
+
+    if (!visibleItems.length) {
+      if (msg) msg.textContent = "Brak wolnych numerów.";
+      return;
+    }
+
+    body.innerHTML = visibleItems.map(n => {
+      const numer = String(n?.numer || "").trim();
+      const nazwisko = String(n?.nazwisko || "").trim();
+      const haslo = String(n?.haslo || "").trim();
+      const email = String(n?.email || "").trim();
+
+      const isCompletelyFree = !nazwisko && !haslo && !email;
+      const isRecovery = !!nazwisko && !haslo && !!email;
+
+      const textColor = isRecovery ? "#ff4d4f" : "#ffffff";
+      const fontWeight = isRecovery ? "800" : "400";
+      const border = isRecovery ? "2px solid #ff4d4f" : "1px solid rgba(255,255,255,0.18)";
+      const title = isRecovery
+        ? `Numer do odzyskania konta: ${nazwisko}`
+        : `Wolny numer: ${numer}`;
+
+      return `
+        <button
+          type="button"
+          class="full-btn alt"
+          title="${title.replace(/"/g, "&quot;")}"
+          style="
+            margin:0;
+            padding:10px 8px;
+            color:${textColor};
+            font-weight:${fontWeight};
+            border:${border};
+          "
+          onclick="pickFreeNumber('${numer.replace(/'/g, "\\'")}')"
+        >
+          ${numer}
+        </button>
+      `;
+    }).join("");
+
+    if (msg) {
+      msg.textContent = "Białe = wolne, czerwone = numer z odzyskiwaniem konta.";
+    }
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+
+function closeFreeNumbersPopup() {
+  const popup = document.getElementById("freeNumbersPopup");
+  if (popup) popup.style.display = "none";
+}
+
+function pickFreeNumber(numer) {
+  const input = document.getElementById("regNumer");
+  if (input) input.value = String(numer || "").trim();
+  closeFreeNumbersPopup();
+}
+
+/* =================== KONIEC SEKCJI 90 =================== */  
 
 /* =================== Generator do przelewów =================== */
   
@@ -5724,361 +6081,9 @@ function adminOpenRaporty() {
   }
 }
   
-  /* =================== 70 LOGOWANIE / REJESTRACJA =================== */
-function pokazLogowanie() {
-  numerZalogowanego = null;
-  grupaZalogowanego = null;
-  window.grupyTrenera = "";
-  refreshClubBadge_();
-  goToView("loginView");
-}
-function pokazRejestracjaSelect() { goToView("registerSelectView"); }
-function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
-function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
-  
-
-async function zaloguj() {
-  const login = document.getElementById("numer").value.trim();
-  const haslo = document.getElementById("haslo").value.trim();
-  const komunikat = document.getElementById("komunikat");
-
-  if (!clubId) {
-    komunikat.innerText = "Najpierw skonfiguruj klub.";
-    goToView("orgHubLandingView");
-    return;
-  }
-  if (!login || !haslo) {
-    komunikat.innerText = "Podaj login i hasło.";
-    return;
-  }
-
-  komunikat.innerText = "Trwa logowanie...";
-
-  try {
-    const data = await apiClubPost({ mode: "login", numer: login, haslo });
-
-    if (!data.success) {
-      const err = data?.error || data?.message || "Błąd logowania";
-      komunikat.innerText = "❌ " + err;
-      return;
-    }
-
-    komunikat.innerText = "✅ Zalogowano";
-
-      if (data.role === "zawodnik") {
-        numerZalogowanego = data.login;
-        grupaZalogowanego = data.grupa || "";
-      
-        try {
-          window.__platnosciCache = await apiClubGet("platnosci", { numer: numerZalogowanego });
-        } catch (e) {
-          window.__platnosciCache = null;
-        }
-      
-        goToView("playerMenuView");
-      
-        loadClubAd();
-      
-        return;
-      }
-
-    if (data.role === "trener") {
-      window.grupyTrenera = data.grupa || "";
-      goToView("trainerPanelView");
-      return;
-    }
-
-    if (data.role === "admin") {
-      goToView("adminPanelView");
-      return;
-    }
-
-    komunikat.innerText = "❌ Nieznana rola użytkownika.";
-
-  } catch (e) {
-    komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
-  }
-}
-
 
   
-/* =================== 75 REJESTRACJA =================== */
-  
-async function wyslijRejestracje() {
-  const numer = document.getElementById("regNumer").value.trim();
-  const nazwisko = document.getElementById("regNazwisko").value.trim();
-  const email = document.getElementById("regEmail").value.trim();
-  const haslo = document.getElementById("regHaslo").value.trim();
-  const msg = document.getElementById("regMsg");
-
-  if (!numer || !nazwisko || !email || !haslo) {
-    msg.innerText = "Wypełnij wszystkie pola.";
-    return;
-  }
-
-  msg.innerText = "⏳ Rejestracja...";
-  try {
-    const data = await apiClubPost({
-      mode: "rejestracja",
-      numer,
-      nazwisko,
-      email,
-      haslo
-    });
-
-    if (data && data.ok) {
-      document.getElementById("regNumer").value = "";
-      document.getElementById("regNazwisko").value = "";
-      document.getElementById("regEmail").value = "";
-      document.getElementById("regHaslo").value = "";
-
-      msg.innerText = "✅ Rejestracja zakończona!";
-      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
-    } else {
-      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
-    }
-  } catch (e) {
-    msg.innerText = "❌ " + (e?.message || e);
-  }
-}
-
-async function wyslijRejestracjeTrener() {
-  const poleNazw = document.getElementById("regNazwiskoTrener");
-  const poleEmail = document.getElementById("regEmailTrener");
-  const poleHaslo = document.getElementById("regHasloTrener");
-  const msg = document.getElementById("regMsgTrener");
-
-  const nazwisko = poleNazw.value.trim();
-  const email = poleEmail.value.trim();
-  const haslo = poleHaslo.value.trim();
-
-  if (!nazwisko || !email || !haslo) {
-    msg.innerText = "Wypełnij wszystkie pola.";
-    return;
-  }
-
-  msg.innerText = "⏳ Rejestracja...";
-
-  try {
-    const data = await apiClubPost({
-      mode: "rejestracjaTrener",
-      nazwisko,
-      email,
-      haslo
-    });
-
-    if (data && data.ok) {
-      const inic = String(data.inic || "").toUpperCase() || "(?)";
-
-      msg.innerHTML = `
-        ✅ <b>Zarejestrowano trenera!</b><br>
-        Login do systemu:<br>
-        <div style="font-size:22px;font-weight:800;letter-spacing:2px;margin:10px 0 14px 0;">
-          ${inic}
-        </div>
-
-        <button class="full-btn" id="btnCopyInic">📋 Skopiuj login</button>
-        <button class="full-btn alt" id="btnGoLogin" disabled>
-          ➡️ Przejdź do logowania
-        </button>
-
-        <div id="copyInfo" style="opacity:.8;margin-top:10px;font-size:13px;"></div>
-      `;
-
-      poleNazw.value = "";
-      poleEmail.value = "";
-      poleHaslo.value = "";
-
-      const btnCopy = document.getElementById("btnCopyInic");
-      const btnGo = document.getElementById("btnGoLogin");
-      const info = document.getElementById("copyInfo");
-
-      if (btnCopy) {
-        btnCopy.onclick = async () => {
-          try {
-            await navigator.clipboard.writeText(inic);
-            btnCopy.textContent = "✅ Skopiowano";
-            if (info) info.textContent = "Możesz teraz przejść do logowania.";
-            if (btnGo) btnGo.disabled = false;
-          } catch (e) {
-            if (info) {
-              info.textContent =
-                "❌ Nie udało się skopiować. Zaznacz login ręcznie: " + inic;
-            }
-          }
-        };
-      }
-
-      if (btnGo) {
-        btnGo.onclick = () => pokazLogowanie();
-      }
-
-    } else {
-      msg.innerText =
-        "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
-    }
-
-  } catch (e) {
-    msg.innerText = "❌ " + (e?.message || e);
-  }
-}
-
-function openResetPasswordPopup() {
-  const popup = document.getElementById("resetPasswordPopup");
-  const input = document.getElementById("resetPasswordEmailInput");
-  const msg = document.getElementById("resetPasswordPopupMsg");
-
-  if (msg) msg.textContent = "";
-  if (input) input.value = "";
-
-  if (popup) popup.style.display = "flex";
-}
-
-function closeResetPasswordPopup() {
-  const popup = document.getElementById("resetPasswordPopup");
-  if (popup) popup.style.display = "none";
-}
-
-async function sendResetPasswordRequest() {
-
-  const input = document.getElementById("resetPasswordEmailInput");
-  const msg = document.getElementById("resetPasswordPopupMsg");
-
-  const email = String(input?.value || "").trim();
-
-  if (!email) {
-    msg.textContent = "❌ Podaj adres email.";
-    return;
-  }
-
-  msg.textContent = "⏳ Resetowanie...";
-
-  try {
-
-    const data = await apiClubPost({
-      mode: "resetHasla",
-      email
-    });
-
-    if (data && data.ok) {
-
-      msg.textContent =
-        "✅ Jeśli email istnieje w systemie, wysłaliśmy instrukcję resetu.";
-
-      setTimeout(() => {
-        closeResetPasswordPopup();
-      }, 2000);
-
-    } else {
-
-      msg.textContent = "❌ " + (data?.error || "Błąd resetu.");
-
-    }
-
-  } catch (e) {
-
-    msg.textContent = "❌ " + (e?.message || e);
-
-  }
-} 
-
-async function openFreeNumbersPopup() {
-  const popup = document.getElementById("freeNumbersPopup");
-  const body = document.getElementById("freeNumbersPopupBody");
-  const msg = document.getElementById("freeNumbersPopupMsg");
-
-  if (!popup || !body) return;
-
-  body.innerHTML = "";
-  if (msg) msg.textContent = "⏳ Ładowanie wolnych numerów...";
-
-  popup.style.display = "flex";
-
-  try {
-    const data = await apiClubPost({ mode: "wolneNumery" });
-
-    if (!data || !data.ok) {
-      if (msg) msg.textContent = "❌ " + (data?.error || data?.message || "Nie udało się pobrać numerów.");
-      return;
-    }
-
-    const items = Array.isArray(data.numbers) ? data.numbers : [];
-
-    // pokazujemy tylko:
-    // 1) naprawdę wolne numery: brak nazwiska, hasła i emaila
-    // 2) numery po resecie hasła: jest nazwisko i email, ale brak hasła
-    const visibleItems = items.filter(n => {
-      const nazwisko = String(n?.nazwisko || "").trim();
-      const haslo = String(n?.haslo || "").trim();
-      const email = String(n?.email || "").trim();
-
-      const isCompletelyFree = !nazwisko && !haslo && !email;
-      const isRecovery = !!nazwisko && !haslo && !!email;
-
-      return isCompletelyFree || isRecovery;
-    });
-
-    if (!visibleItems.length) {
-      if (msg) msg.textContent = "Brak wolnych numerów.";
-      return;
-    }
-
-    body.innerHTML = visibleItems.map(n => {
-      const numer = String(n?.numer || "").trim();
-      const nazwisko = String(n?.nazwisko || "").trim();
-      const haslo = String(n?.haslo || "").trim();
-      const email = String(n?.email || "").trim();
-
-      const isCompletelyFree = !nazwisko && !haslo && !email;
-      const isRecovery = !!nazwisko && !haslo && !!email;
-
-      const textColor = isRecovery ? "#ff4d4f" : "#ffffff";
-      const fontWeight = isRecovery ? "800" : "400";
-      const border = isRecovery ? "2px solid #ff4d4f" : "1px solid rgba(255,255,255,0.18)";
-      const title = isRecovery
-        ? `Numer do odzyskania konta: ${nazwisko}`
-        : `Wolny numer: ${numer}`;
-
-      return `
-        <button
-          type="button"
-          class="full-btn alt"
-          title="${title.replace(/"/g, "&quot;")}"
-          style="
-            margin:0;
-            padding:10px 8px;
-            color:${textColor};
-            font-weight:${fontWeight};
-            border:${border};
-          "
-          onclick="pickFreeNumber('${numer.replace(/'/g, "\\'")}')"
-        >
-          ${numer}
-        </button>
-      `;
-    }).join("");
-
-    if (msg) {
-      msg.textContent = "Białe = wolne, czerwone = numer z odzyskiwaniem konta.";
-    }
-
-  } catch (e) {
-    if (msg) msg.textContent = "❌ " + (e?.message || e);
-  }
-}
-
-function closeFreeNumbersPopup() {
-  const popup = document.getElementById("freeNumbersPopup");
-  if (popup) popup.style.display = "none";
-}
-
-function pickFreeNumber(numer) {
-  const input = document.getElementById("regNumer");
-  if (input) input.value = String(numer || "").trim();
-  closeFreeNumbersPopup();
-}
-
-/* =================== 78 PLAYER MENU HELPERS / CLUB AD / PREFETCH =================== */
+/* =================== 100 PLAYER MENU HELPERS / CLUB AD / PREFETCH =================== */
   
   function loadClubAd() {
   if (window.__clubAdData && window.__clubAdData.enabled && window.__clubAdData.assetUrl) {
@@ -6088,8 +6093,6 @@ function pickFreeNumber(numer) {
 
   renderClubAd(null);
 }
-
-/******************** PREFETCH (MENU) ********************/
 
 function startPrefetchForPlayer_() {
   // cache na promisy + timestamp, żeby nie walić API co sekundę
