@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.53';
+  window.APP_BUILD = 'BETA APP v2.54';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4209,6 +4209,7 @@ function renderClubAd(ad) {
 
 /* =================== KONIEC SEKTORA 100 =================== */  
 
+/* =================== 110 PLAYER PAYMENT POPUP / QR / PRZELEWY =================== */  
 /* =================== Generator do przelewów =================== */
   
 async function playerPayNow(nazwa, kwota) {
@@ -4484,9 +4485,477 @@ function closePlayerPaymentPopup() {
   }
 }
   
+ /* =================== KONIEC SEKTORA 110 =================== */
 
+/* =================== 120 PLAYER / PAYMENTS / EVENTS / STATS =================== */
 
+async function pokazPlatnosci() {
+  goToView("platnosciView");
+  const div = document.getElementById("listaPlatnosci");
+  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
 
+  try {
+    const p = window.__prefetch?.platnosciP;
+    const lista = await (p || apiClubGet("platnosci", { numer: numerZalogowanego }));
+    renderPlatnosci(lista);
+  } catch (e) {
+    console.error("pokazPlatnosci error", e);
+    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
+  }
+}
+  
+function renderPlatnosci(lista) {
+  const div = document.getElementById("listaPlatnosci");
+  if (!div) return;
+
+  if (!Array.isArray(lista) || lista.length === 0) {
+    div.innerHTML = `<div class="card" style="background:#123a1a;">Brak płatności do wyświetlenia ✅</div>`;
+    return;
+  }
+
+  const miesiace = [
+    "styczeń","luty","marzec","kwiecień","maj","czerwiec",
+    "lipiec","sierpień","wrzesień","październik","listopad","grudzień"
+  ];
+
+  function escapeHtml_(txt) {
+    return String(txt ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function parsePaymentOrder_(name) {
+    const txt = String(name || "").trim();
+    const lower = txt.toLowerCase();
+
+    const yearMatch = lower.match(/20\d{2}/);
+    const year = yearMatch ? Number(yearMatch[0]) : 9999;
+
+    const monthIdx = miesiace.findIndex(m => lower.includes(m));
+    const safeMonthIdx = monthIdx >= 0 ? monthIdx : 99;
+
+    const typeOrder = lower.startsWith("składka") ? 0 : 1;
+
+    return {
+      year,
+      monthIdx: safeMonthIdx,
+      typeOrder
+    };
+  }
+
+  const sorted = [...lista].sort((a, b) => {
+    const pa = parsePaymentOrder_(a?.nazwa);
+    const pb = parsePaymentOrder_(b?.nazwa);
+
+    if (pa.year !== pb.year) return pa.year - pb.year;
+    if (pa.monthIdx !== pb.monthIdx) return pa.monthIdx - pb.monthIdx;
+    if (pa.typeOrder !== pb.typeOrder) return pa.typeOrder - pb.typeOrder;
+
+    return String(a?.nazwa || "").localeCompare(String(b?.nazwa || ""), "pl");
+  });
+
+  div.innerHTML = sorted.map(p => {
+    const isPaid =
+      p?.status === "oplacone" ||
+      p?.status === "opłacone" ||
+      p?.status === "green" ||
+      p?.status === "zaplacone" ||
+      p?.status === "zapłacone";
+
+    const bg = isPaid ? "#123a1a" : "#3a1414";
+    const badge = isPaid
+      ? `<span style="color:#7CFF7C; font-weight:700;">ZAPŁACONE</span>`
+      : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`;
+
+    const payBtn = !isPaid
+  ? `<button class="full-btn playerPayBtn"
+        style="margin-top:10px;"
+        onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)})">
+        Zapłać teraz
+     </button>`
+  : "";
+
+    const nazwa = escapeHtml_(p?.nazwa || "");
+    const kwota = Number(p?.kwota || 0);
+
+    const typLabel = String(p?.nazwa || "").toLowerCase().startsWith("składka")
+      ? "Składka"
+      : "Zajęcia dodatkowe";
+
+       return `
+      <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; gap:10px;">
+          <div>
+            <div style="opacity:.9; font-size:14px;">${typLabel}</div>
+            <div style="font-size:18px; font-weight:800;">${nazwa}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:18px; font-weight:800;">${kwota} zł</div>
+            <div style="margin-top:2px;">${badge}</div>
+          </div>
+        </div>
+    
+        ${payBtn}
+      </div>
+    `;
+  }).join("");
+}
+
+  function parsePlatnoscMeta_(nazwa){
+  if (!nazwa) return null;
+
+  const lower = nazwa.toLowerCase();
+
+  const isSkladka = lower.startsWith("składka");
+  const isZajecia = lower.startsWith("zajęcia");
+
+  const yearMatch = nazwa.match(/20\d{2}/);
+  if (!yearMatch) return null;
+  const year = Number(yearMatch[0]);
+
+  const miesiace = [
+    "styczeń","luty","marzec","kwiecień","maj","czerwiec",
+    "lipiec","sierpień","wrzesień","październik","listopad","grudzień"
+  ];
+
+  const monthIdx = miesiace.findIndex(m => lower.includes(m));
+  if (monthIdx === -1) return null;
+
+  return {
+    type: isSkladka ? "S" : (isZajecia ? "Z" : null),
+    year,
+    monthIdx
+  };
+}
+
+ function getPlatnoscColor_(meta, today){
+  if (!meta) return "#b30000"; // mocna czerwień fallback
+
+  const GREEN = "#00c853";  // zielony jak sygnalizacja (mocny)
+  const RED   = "#ff0000";  // agresywna czerwień
+
+  const paymentMonth = new Date(meta.year, meta.monthIdx, 1);
+  const nextMonth = new Date(meta.year, meta.monthIdx + 1, 1);
+
+  // ======================
+  // SKŁADKA
+  // ======================
+  if (meta.type === "S") {
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // bieżący miesiąc → zielony
+    if (meta.year === currentYear && meta.monthIdx === currentMonth) {
+      return GREEN;
+    }
+
+    // zaległe → czerwony
+    return RED;
+  }
+
+  // ======================
+  // ZAJĘCIA DODATKOWE
+  // ======================
+  if (meta.type === "Z") {
+    // deadline: 15 dzień następnego miesiąca
+    const deadline = new Date(meta.year, meta.monthIdx + 1, 15);
+    deadline.setHours(0,0,0,0);
+
+    if (today <= deadline) {
+      return GREEN; // jeszcze czas na rozliczenie
+    } else {
+      return RED;   // po 15 – wali po oczach
+    }
+  }
+
+  return RED;
+}
+
+  function formatPlatnoscNazwa_(txt){
+  if (!txt) return "";
+  return String(txt)
+    .replace(/^Składka\s*\(.*?\)\s*/i, "Składka ")
+    .replace(/^Zajęcia dodatkowe\s*/i, "Zajęcia ");
+}
+
+/* ===================== TRENINGI ======================-- */
+  
+async function pokazTreningi() {
+  goToView("homeView");
+  const div = document.getElementById("listaTreningow");
+  if (div) div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
+
+  try {
+    const p = window.__prefetch?.treningiP;
+    const lista = await (p || apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego }));
+    renderTreningi(lista);
+  } catch (e) {
+    console.error("pokazTreningi error", e);
+    if (div) div.innerHTML = `<p>❌ Błąd ładowania wydarzeń: ${String(e?.message || e)}</p>`;
+  }
+}
+
+function powrotDoPlatnosci() {
+  goToView("platnosciView", { replace: true });
+}
+  
+function renderTreningi(lista) {
+  const div = document.getElementById('listaTreningow');
+  if (!div) return;
+
+  function parseEventDateTime_(t) {
+    const dataStr = String(t?.data || "").trim();
+    const godzStr = String(t?.godzStart || "00:00").trim();
+
+    let y = 0, m = 0, d = 0;
+
+    // yyyy-mm-dd / yyyy.mm.dd
+    if (/^\d{4}[-.]\d{2}[-.]\d{2}$/.test(dataStr)) {
+      const parts = dataStr.split(/[-.]/);
+      y = Number(parts[0]);
+      m = Number(parts[1]);
+      d = Number(parts[2]);
+    }
+    // dd.mm.yyyy / dd-mm-yyyy
+    else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(dataStr)) {
+      const parts = dataStr.split(/[.-]/);
+      d = Number(parts[0]);
+      m = Number(parts[1]);
+      y = Number(parts[2]);
+    } else {
+      return new Date(9999, 11, 31, 23, 59, 59).getTime();
+    }
+
+    let hh = 0, mm = 0;
+    if (/^\d{1,2}:\d{2}$/.test(godzStr)) {
+      const timeParts = godzStr.split(":");
+      hh = Number(timeParts[0]);
+      mm = Number(timeParts[1]);
+    }
+
+    return new Date(y, m - 1, d, hh, mm, 0).getTime();
+  }
+
+  function isVisibleInApp_(t) {
+    // jeśli backend daje którąś z tych flag, respektujemy ją
+    if (typeof t?.widocznoscWApce !== "undefined") return !!t.widocznoscWApce;
+    if (typeof t?.widocznyWApce !== "undefined") return !!t.widocznyWApce;
+    if (typeof t?.visible !== "undefined") return !!t.visible;
+    if (typeof t?.appVisible !== "undefined") return !!t.appVisible;
+
+    // jeśli brak flagi w danych, nie blokujemy renderu
+    return true;
+  }
+
+  const terazTs = Date.now();
+
+  const listaPoFiltrowaniu = (Array.isArray(lista) ? lista : [])
+    .filter(t => {
+      // 1) checkbox "Widoczność w apce"
+      if (!isVisibleInApp_(t)) return false;
+
+      // 2) ukrycie wydarzenia po godzinie startu
+      const startTs = parseEventDateTime_(t);
+      if (!Number.isFinite(startTs)) return false;
+      if (startTs < terazTs) return false;
+
+      return true;
+    })
+    .sort((a, b) => parseEventDateTime_(a) - parseEventDateTime_(b));
+
+  if (!listaPoFiltrowaniu.length) {
+    div.innerHTML = "<p>Brak wydarzeń</p>";
+    return;
+  }
+
+  div.innerHTML = listaPoFiltrowaniu.map(t => `
+    <div class="card">
+      <p>
+        <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
+        Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+        Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; Zapisanych: ${t.zapisanych ?? 0}
+      </p>
+
+      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <button 
+          id="btn-${t.id}" 
+          ${t.zapisany ? 'disabled' : ''} 
+          style="background:${t.zapisany ? '#2e7d32' : '#c62828'};color:white;border:none;"
+          onclick="zapiszSie('${t.id}')">
+          ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
+        </button>
+
+        <button 
+          id="wypisz-${t.id}" 
+          ${t.zapisany ? '' : 'disabled'} 
+          style="background:#444;" 
+          onclick="wypiszSie('${t.id}')">
+          Wypisz się
+        </button>
+
+        <button 
+          style="background:#333;" 
+          onclick="toggleZapisani('${t.id}')">
+          👥 Zapisani
+        </button>
+      </div>
+
+      <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
+    </div>
+  `).join('');
+}
+async function toggleZapisani(id) {
+  const box = document.getElementById(`zapisani-${id}`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
+
+  try {
+    const lista = await apiClubGet("zapisani", { treningId: id });
+    if (!Array.isArray(lista) || !lista.length) {
+      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      return;
+    }
+    box.innerHTML = `<div class="card" style="background:#111;">
+      <b>Lista zapisanych:</b>
+      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+      </ul>
+    </div>`;
+  } catch {
+    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+  }
+}
+
+async function zapiszSie(id) {
+  const btn = document.getElementById(`btn-${id}`);
+  const wypiszBtn = document.getElementById(`wypisz-${id}`);
+  const box = document.getElementById(`zapisani-${id}`);
+
+  btn.classList.add("loading");
+  try {
+    const r = await apiClubGet("zapisz", { numer: numerZalogowanego, treningId: id });
+    if (r.ok) {
+      btn.innerText = "Zapisano ✅";
+      btn.disabled = true;
+      wypiszBtn.disabled = false;
+      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
+    } else alert(r.message);
+  } catch (err) {
+    alert("Błąd połączenia: " + err);
+  } finally {
+    btn.classList.remove("loading");
+  }
+}
+
+async function wypiszSie(id) {
+  const btn = document.getElementById(`wypisz-${id}`);
+  const zapiszBtn = document.getElementById(`btn-${id}`);
+  const box = document.getElementById(`zapisani-${id}`);
+
+  btn.classList.add("loading");
+  try {
+    const r = await apiClubGet("wypisz", { numer: numerZalogowanego, treningId: id });
+    if (r.ok) {
+      zapiszBtn.innerText = "Zapisz się";
+      zapiszBtn.disabled = false;
+      btn.disabled = true;
+      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
+    } else alert(r.message);
+  } catch (err) {
+    alert("Błąd połączenia: " + err);
+  } finally {
+    btn.classList.remove("loading");
+  }
+}
+
+async function odswiezListeZapisanych(id) {
+  const box = document.getElementById(`zapisani-${id}`);
+  if (!box) return;
+
+  box.innerHTML = '<div class="card" style="background:#222;">⏳ Odświeżanie...</div>';
+  try {
+    const lista = await apiClubGet("zapisani", { treningId: id });
+    if (!Array.isArray(lista) || !lista.length) {
+      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      return;
+    }
+    box.innerHTML = `<div class="card" style="background:#111;">
+      <b>Lista zapisanych:</b>
+      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+      </ul>
+    </div>`;
+  } catch {
+    box.innerHTML = '<div class="card" style="background:#700;">Błąd odświeżania</div>';
+  }
+}
+
+async function pokazStatystyki() {
+  goToView("statsView");
+  const div = document.getElementById("listaStatystyk");
+  if (div) div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
+
+  try {
+    const p = window.__prefetch?.statystykiP;
+    const lista = await (p || apiClubGet("statystyki", { numer: numerZalogowanego }));
+    renderStatystyki(lista);
+  } catch (e) {
+    console.error("pokazStatystyki error", e);
+    if (div) div.innerHTML = `<p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>`;
+  }
+}
+  
+function renderStatystyki(lista) {
+  // ✅ Kontener zależny od widoku (admin ma swój)
+  const isAdminStats = (currentView === "adminStatsView");
+  const div = isAdminStats
+    ? document.getElementById("adminStatsBody")
+    : document.getElementById("listaStatystyk");
+
+  if (!div) return;
+
+  if (!Array.isArray(lista) || lista.length === 0) {
+    div.innerHTML = "<p>Brak danych</p>";
+    return;
+  }
+
+  // ✅ Zostawiamy dokładnie kolejność z backendu / arkusza (kolumny C → N)
+  const ordered = [...lista];
+
+  const suma = ordered.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
+
+  const now = new Date();
+  const currentMonthName = [
+    "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
+    "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
+  ][now.getMonth()];
+
+  div.innerHTML =
+    ordered.map(s => {
+      const miesiac = String(s.miesiac || "").trim();
+      const treningi = Number(s.treningi) || 0;
+      const isCurrent = miesiac.toLowerCase() === currentMonthName.toLowerCase();
+      const badge = isCurrent ? ` <span style="opacity:.9;font-weight:700;">(teraz)</span>` : "";
+
+      return `<div class="card">
+        📅 ${miesiac}${badge} — 🏒 <b>${treningi}</b>
+      </div>`;
+    }).join("") +
+    `<div class="card" style="background:#222;margin-top:20px;font-weight:800;">
+      🔥 Łącznie: ${suma} treningów w sezonie
+    </div>`;
+}
+  
+function powrotDoTreningow() {
+  goToView("homeView"); // zamiast appBack() — stabilne
+}
+
+/* =================== KONIEC SEKTORA 120 =================== */ 
 
 
   
@@ -6158,473 +6627,7 @@ function adminOpenRaporty() {
   
 
   
-/* =================== 80 ZAWODNIK: TRENINGI / ZAPISY =================== */
-
-async function pokazPlatnosci() {
-  goToView("platnosciView");
-  const div = document.getElementById("listaPlatnosci");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
-
-  try {
-    const p = window.__prefetch?.platnosciP;
-    const lista = await (p || apiClubGet("platnosci", { numer: numerZalogowanego }));
-    renderPlatnosci(lista);
-  } catch (e) {
-    console.error("pokazPlatnosci error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
-  }
-}
-  
-function renderPlatnosci(lista) {
-  const div = document.getElementById("listaPlatnosci");
-  if (!div) return;
-
-  if (!Array.isArray(lista) || lista.length === 0) {
-    div.innerHTML = `<div class="card" style="background:#123a1a;">Brak płatności do wyświetlenia ✅</div>`;
-    return;
-  }
-
-  const miesiace = [
-    "styczeń","luty","marzec","kwiecień","maj","czerwiec",
-    "lipiec","sierpień","wrzesień","październik","listopad","grudzień"
-  ];
-
-  function escapeHtml_(txt) {
-    return String(txt ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
-  function parsePaymentOrder_(name) {
-    const txt = String(name || "").trim();
-    const lower = txt.toLowerCase();
-
-    const yearMatch = lower.match(/20\d{2}/);
-    const year = yearMatch ? Number(yearMatch[0]) : 9999;
-
-    const monthIdx = miesiace.findIndex(m => lower.includes(m));
-    const safeMonthIdx = monthIdx >= 0 ? monthIdx : 99;
-
-    const typeOrder = lower.startsWith("składka") ? 0 : 1;
-
-    return {
-      year,
-      monthIdx: safeMonthIdx,
-      typeOrder
-    };
-  }
-
-  const sorted = [...lista].sort((a, b) => {
-    const pa = parsePaymentOrder_(a?.nazwa);
-    const pb = parsePaymentOrder_(b?.nazwa);
-
-    if (pa.year !== pb.year) return pa.year - pb.year;
-    if (pa.monthIdx !== pb.monthIdx) return pa.monthIdx - pb.monthIdx;
-    if (pa.typeOrder !== pb.typeOrder) return pa.typeOrder - pb.typeOrder;
-
-    return String(a?.nazwa || "").localeCompare(String(b?.nazwa || ""), "pl");
-  });
-
-  div.innerHTML = sorted.map(p => {
-    const isPaid =
-      p?.status === "oplacone" ||
-      p?.status === "opłacone" ||
-      p?.status === "green" ||
-      p?.status === "zaplacone" ||
-      p?.status === "zapłacone";
-
-    const bg = isPaid ? "#123a1a" : "#3a1414";
-    const badge = isPaid
-      ? `<span style="color:#7CFF7C; font-weight:700;">ZAPŁACONE</span>`
-      : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`;
-
-    const payBtn = !isPaid
-  ? `<button class="full-btn playerPayBtn"
-        style="margin-top:10px;"
-        onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)})">
-        Zapłać teraz
-     </button>`
-  : "";
-
-    const nazwa = escapeHtml_(p?.nazwa || "");
-    const kwota = Number(p?.kwota || 0);
-
-    const typLabel = String(p?.nazwa || "").toLowerCase().startsWith("składka")
-      ? "Składka"
-      : "Zajęcia dodatkowe";
-
-       return `
-      <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
-        <div style="display:flex; justify-content:space-between; gap:10px;">
-          <div>
-            <div style="opacity:.9; font-size:14px;">${typLabel}</div>
-            <div style="font-size:18px; font-weight:800;">${nazwa}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px; font-weight:800;">${kwota} zł</div>
-            <div style="margin-top:2px;">${badge}</div>
-          </div>
-        </div>
-    
-        ${payBtn}
-      </div>
-    `;
-  }).join("");
-}
-
-  function parsePlatnoscMeta_(nazwa){
-  if (!nazwa) return null;
-
-  const lower = nazwa.toLowerCase();
-
-  const isSkladka = lower.startsWith("składka");
-  const isZajecia = lower.startsWith("zajęcia");
-
-  const yearMatch = nazwa.match(/20\d{2}/);
-  if (!yearMatch) return null;
-  const year = Number(yearMatch[0]);
-
-  const miesiace = [
-    "styczeń","luty","marzec","kwiecień","maj","czerwiec",
-    "lipiec","sierpień","wrzesień","październik","listopad","grudzień"
-  ];
-
-  const monthIdx = miesiace.findIndex(m => lower.includes(m));
-  if (monthIdx === -1) return null;
-
-  return {
-    type: isSkladka ? "S" : (isZajecia ? "Z" : null),
-    year,
-    monthIdx
-  };
-}
-
- function getPlatnoscColor_(meta, today){
-  if (!meta) return "#b30000"; // mocna czerwień fallback
-
-  const GREEN = "#00c853";  // zielony jak sygnalizacja (mocny)
-  const RED   = "#ff0000";  // agresywna czerwień
-
-  const paymentMonth = new Date(meta.year, meta.monthIdx, 1);
-  const nextMonth = new Date(meta.year, meta.monthIdx + 1, 1);
-
-  // ======================
-  // SKŁADKA
-  // ======================
-  if (meta.type === "S") {
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-
-    // bieżący miesiąc → zielony
-    if (meta.year === currentYear && meta.monthIdx === currentMonth) {
-      return GREEN;
-    }
-
-    // zaległe → czerwony
-    return RED;
-  }
-
-  // ======================
-  // ZAJĘCIA DODATKOWE
-  // ======================
-  if (meta.type === "Z") {
-    // deadline: 15 dzień następnego miesiąca
-    const deadline = new Date(meta.year, meta.monthIdx + 1, 15);
-    deadline.setHours(0,0,0,0);
-
-    if (today <= deadline) {
-      return GREEN; // jeszcze czas na rozliczenie
-    } else {
-      return RED;   // po 15 – wali po oczach
-    }
-  }
-
-  return RED;
-}
-
-  function formatPlatnoscNazwa_(txt){
-  if (!txt) return "";
-  return String(txt)
-    .replace(/^Składka\s*\(.*?\)\s*/i, "Składka ")
-    .replace(/^Zajęcia dodatkowe\s*/i, "Zajęcia ");
-}
-
-/* ===================== TRENINGI ======================-- */
-  
-async function pokazTreningi() {
-  goToView("homeView");
-  const div = document.getElementById("listaTreningow");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
-
-  try {
-    const p = window.__prefetch?.treningiP;
-    const lista = await (p || apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego }));
-    renderTreningi(lista);
-  } catch (e) {
-    console.error("pokazTreningi error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd ładowania wydarzeń: ${String(e?.message || e)}</p>`;
-  }
-}
-
-function powrotDoPlatnosci() {
-  goToView("platnosciView", { replace: true });
-}
-  
-function renderTreningi(lista) {
-  const div = document.getElementById('listaTreningow');
-  if (!div) return;
-
-  function parseEventDateTime_(t) {
-    const dataStr = String(t?.data || "").trim();
-    const godzStr = String(t?.godzStart || "00:00").trim();
-
-    let y = 0, m = 0, d = 0;
-
-    // yyyy-mm-dd / yyyy.mm.dd
-    if (/^\d{4}[-.]\d{2}[-.]\d{2}$/.test(dataStr)) {
-      const parts = dataStr.split(/[-.]/);
-      y = Number(parts[0]);
-      m = Number(parts[1]);
-      d = Number(parts[2]);
-    }
-    // dd.mm.yyyy / dd-mm-yyyy
-    else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(dataStr)) {
-      const parts = dataStr.split(/[.-]/);
-      d = Number(parts[0]);
-      m = Number(parts[1]);
-      y = Number(parts[2]);
-    } else {
-      return new Date(9999, 11, 31, 23, 59, 59).getTime();
-    }
-
-    let hh = 0, mm = 0;
-    if (/^\d{1,2}:\d{2}$/.test(godzStr)) {
-      const timeParts = godzStr.split(":");
-      hh = Number(timeParts[0]);
-      mm = Number(timeParts[1]);
-    }
-
-    return new Date(y, m - 1, d, hh, mm, 0).getTime();
-  }
-
-  function isVisibleInApp_(t) {
-    // jeśli backend daje którąś z tych flag, respektujemy ją
-    if (typeof t?.widocznoscWApce !== "undefined") return !!t.widocznoscWApce;
-    if (typeof t?.widocznyWApce !== "undefined") return !!t.widocznyWApce;
-    if (typeof t?.visible !== "undefined") return !!t.visible;
-    if (typeof t?.appVisible !== "undefined") return !!t.appVisible;
-
-    // jeśli brak flagi w danych, nie blokujemy renderu
-    return true;
-  }
-
-  const terazTs = Date.now();
-
-  const listaPoFiltrowaniu = (Array.isArray(lista) ? lista : [])
-    .filter(t => {
-      // 1) checkbox "Widoczność w apce"
-      if (!isVisibleInApp_(t)) return false;
-
-      // 2) ukrycie wydarzenia po godzinie startu
-      const startTs = parseEventDateTime_(t);
-      if (!Number.isFinite(startTs)) return false;
-      if (startTs < terazTs) return false;
-
-      return true;
-    })
-    .sort((a, b) => parseEventDateTime_(a) - parseEventDateTime_(b));
-
-  if (!listaPoFiltrowaniu.length) {
-    div.innerHTML = "<p>Brak wydarzeń</p>";
-    return;
-  }
-
-  div.innerHTML = listaPoFiltrowaniu.map(t => `
-    <div class="card">
-      <p>
-        <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
-        Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
-        Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; Zapisanych: ${t.zapisanych ?? 0}
-      </p>
-
-      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-        <button 
-          id="btn-${t.id}" 
-          ${t.zapisany ? 'disabled' : ''} 
-          style="background:${t.zapisany ? '#2e7d32' : '#c62828'};color:white;border:none;"
-          onclick="zapiszSie('${t.id}')">
-          ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
-        </button>
-
-        <button 
-          id="wypisz-${t.id}" 
-          ${t.zapisany ? '' : 'disabled'} 
-          style="background:#444;" 
-          onclick="wypiszSie('${t.id}')">
-          Wypisz się
-        </button>
-
-        <button 
-          style="background:#333;" 
-          onclick="toggleZapisani('${t.id}')">
-          👥 Zapisani
-        </button>
-      </div>
-
-      <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
-    </div>
-  `).join('');
-}
-async function toggleZapisani(id) {
-  const box = document.getElementById(`zapisani-${id}`);
-  if (!box) return;
-
-  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
-
-  box.classList.remove('hidden');
-  box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
-
-  try {
-    const lista = await apiClubGet("zapisani", { treningId: id });
-    if (!Array.isArray(lista) || !lista.length) {
-      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
-      return;
-    }
-    box.innerHTML = `<div class="card" style="background:#111;">
-      <b>Lista zapisanych:</b>
-      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
-        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
-      </ul>
-    </div>`;
-  } catch {
-    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
-  }
-}
-
-async function zapiszSie(id) {
-  const btn = document.getElementById(`btn-${id}`);
-  const wypiszBtn = document.getElementById(`wypisz-${id}`);
-  const box = document.getElementById(`zapisani-${id}`);
-
-  btn.classList.add("loading");
-  try {
-    const r = await apiClubGet("zapisz", { numer: numerZalogowanego, treningId: id });
-    if (r.ok) {
-      btn.innerText = "Zapisano ✅";
-      btn.disabled = true;
-      wypiszBtn.disabled = false;
-      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
-    } else alert(r.message);
-  } catch (err) {
-    alert("Błąd połączenia: " + err);
-  } finally {
-    btn.classList.remove("loading");
-  }
-}
-
-async function wypiszSie(id) {
-  const btn = document.getElementById(`wypisz-${id}`);
-  const zapiszBtn = document.getElementById(`btn-${id}`);
-  const box = document.getElementById(`zapisani-${id}`);
-
-  btn.classList.add("loading");
-  try {
-    const r = await apiClubGet("wypisz", { numer: numerZalogowanego, treningId: id });
-    if (r.ok) {
-      zapiszBtn.innerText = "Zapisz się";
-      zapiszBtn.disabled = false;
-      btn.disabled = true;
-      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
-    } else alert(r.message);
-  } catch (err) {
-    alert("Błąd połączenia: " + err);
-  } finally {
-    btn.classList.remove("loading");
-  }
-}
-
-async function odswiezListeZapisanych(id) {
-  const box = document.getElementById(`zapisani-${id}`);
-  if (!box) return;
-
-  box.innerHTML = '<div class="card" style="background:#222;">⏳ Odświeżanie...</div>';
-  try {
-    const lista = await apiClubGet("zapisani", { treningId: id });
-    if (!Array.isArray(lista) || !lista.length) {
-      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
-      return;
-    }
-    box.innerHTML = `<div class="card" style="background:#111;">
-      <b>Lista zapisanych:</b>
-      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
-        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
-      </ul>
-    </div>`;
-  } catch {
-    box.innerHTML = '<div class="card" style="background:#700;">Błąd odświeżania</div>';
-  }
-}
-
-async function pokazStatystyki() {
-  goToView("statsView");
-  const div = document.getElementById("listaStatystyk");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
-
-  try {
-    const p = window.__prefetch?.statystykiP;
-    const lista = await (p || apiClubGet("statystyki", { numer: numerZalogowanego }));
-    renderStatystyki(lista);
-  } catch (e) {
-    console.error("pokazStatystyki error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>`;
-  }
-}
-  
-function renderStatystyki(lista) {
-  // ✅ Kontener zależny od widoku (admin ma swój)
-  const isAdminStats = (currentView === "adminStatsView");
-  const div = isAdminStats
-    ? document.getElementById("adminStatsBody")
-    : document.getElementById("listaStatystyk");
-
-  if (!div) return;
-
-  if (!Array.isArray(lista) || lista.length === 0) {
-    div.innerHTML = "<p>Brak danych</p>";
-    return;
-  }
-
-  // ✅ Zostawiamy dokładnie kolejność z backendu / arkusza (kolumny C → N)
-  const ordered = [...lista];
-
-  const suma = ordered.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
-
-  const now = new Date();
-  const currentMonthName = [
-    "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
-    "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
-  ][now.getMonth()];
-
-  div.innerHTML =
-    ordered.map(s => {
-      const miesiac = String(s.miesiac || "").trim();
-      const treningi = Number(s.treningi) || 0;
-      const isCurrent = miesiac.toLowerCase() === currentMonthName.toLowerCase();
-      const badge = isCurrent ? ` <span style="opacity:.9;font-weight:700;">(teraz)</span>` : "";
-
-      return `<div class="card">
-        📅 ${miesiac}${badge} — 🏒 <b>${treningi}</b>
-      </div>`;
-    }).join("") +
-    `<div class="card" style="background:#222;margin-top:20px;font-weight:800;">
-      🔥 Łącznie: ${suma} treningów w sezonie
-    </div>`;
-}
-  
-function powrotDoTreningow() {
-  goToView("homeView"); // zamiast appBack() — stabilne
-}
+ 
  
 /* =================== 90 TRENER: LISTA / WYDARZENIA / DODAWANIE / USUWANIE =================== */
 function trainerPowrot() { appBack(); }
