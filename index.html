@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.47';
+  window.APP_BUILD = 'BETA APP v2.48';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2106,6 +2106,232 @@ function applyTheme_(theme) {
   
 /* =================== KONIEC SEKTORA 30 =================== */
 
+/* =================== 40 NAWIGACJA / ROUTER =================== */
+
+// Ukrycie wszystkich pełnych widoków aplikacji  
+function ukryjWszystkie() {
+  document.querySelectorAll(".container, .view").forEach(v => {
+    if (v.id === "app") return; // nie chowamy głównego wrappera
+    v.classList.add("hidden");
+  });
+}
+
+// Pobranie widoku głównego zależnie od stanu aplikacji  
+  function getRootViewId_() {
+  return (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView";
+}
+
+// Przełączenie widoku aplikacji i aktualizacja historii  
+function goToView(viewId, options = {}) {
+  const { replace = false, fromHistory = false } = options;
+
+  const prevView = String(currentView || "").trim();
+
+  ukryjWszystkie();
+  hideBusy();
+
+  const el = document.getElementById(viewId);
+  if (el) el.classList.remove("hidden");
+
+  currentView = viewId;
+
+  // ✅ UI menu + prefetch w tle
+  if (viewId === "playerMenuView") {
+    const lbl = document.getElementById("playerNumerLabel");
+    if (lbl) lbl.textContent = String(numerZalogowanego || "");
+    startPrefetchForPlayer_();
+  }
+
+  hookPushButton_();
+
+  if (viewId === "playerSettingsView") {
+    refreshPushButtonState_();
+  }
+
+  // =================== APP STACK ===================
+  if (!window.__appViewStack) window.__appViewStack = [];
+
+  if (!fromHistory) {
+    if (replace) {
+      if (window.__appViewStack.length === 0) {
+        window.__appViewStack = [viewId];
+      } else {
+        window.__appViewStack[window.__appViewStack.length - 1] = viewId;
+      }
+    } else {
+      if (!prevView) {
+        window.__appViewStack = [viewId];
+      } else if (prevView !== viewId) {
+        window.__appViewStack.push(viewId);
+      } else if (window.__appViewStack.length === 0) {
+        window.__appViewStack = [viewId];
+      }
+    }
+
+    const state = {
+      view: viewId,
+      appStack: [...window.__appViewStack]
+    };
+
+    try {
+      const urlKeep = location.pathname + location.search; // zostawia ?clubId=...
+      if (replace) history.replaceState(state, "", urlKeep);
+      else history.pushState(state, "", urlKeep);
+    } catch (e) {}
+  }
+}
+
+// Odtworzenie widoku na podstawie historii przeglądarki  
+function showViewFromHistory(viewId, state = null) {
+  ukryjWszystkie();
+  hideBusy();
+
+  const el = document.getElementById(viewId);
+  if (el) el.classList.remove("hidden");
+
+  currentView = viewId;
+
+  if (!window.__appViewStack) window.__appViewStack = [];
+
+  if (state && Array.isArray(state.appStack) && state.appStack.length) {
+    window.__appViewStack = [...state.appStack];
+  } else {
+    window.__appViewStack = [viewId];
+  }
+
+  // zachowujemy te same efekty UI co przy normalnym wejściu
+  if (viewId === "playerMenuView") {
+    const lbl = document.getElementById("playerNumerLabel");
+    if (lbl) lbl.textContent = String(numerZalogowanego || "");
+    startPrefetchForPlayer_();
+  }
+
+  hookPushButton_();
+
+  if (viewId === "playerSettingsView") {
+    refreshPushButtonState_();
+  }
+}
+
+// Powrót do poprzedniego widoku aplikacji  
+function appBack() {
+  const rootView = getRootViewId_();
+
+  if (!window.__appViewStack || !window.__appViewStack.length) {
+    goToView(rootView, { replace: true });
+    return;
+  }
+
+  // jeśli jesteśmy już na ekranie głównym aplikacji, nie cofamy dalej "webowo"
+  if (window.__appViewStack.length <= 1) {
+    goToView(rootView, { replace: true });
+    return;
+  }
+
+  history.back();
+}
+
+// Sprawdzenie, czy któryś modal płatności jest otwarty  
+function isAnyPaymentModalOpen_() {
+  const ids = ["adminPayConfirmModal", "adminPayConfirmSkladkaModal"];
+
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    return !el.classList.contains("hidden") && getComputedStyle(el).display !== "none";
+  });
+}
+
+// Sprawdzenie, czy aktywny wpis historii dotyczy modala edycji trenera  
+  function isTrainerEditHistoryModal_(modalName) {
+  try {
+    return !!(history.state && String(history.state.modal || "") === String(modalName || ""));
+  } catch (e) {
+    return false;
+  }
+}
+
+// Synchronizacja popupów edycji wydarzenia ze stanem historii
+function syncTrainerEditPopupsToHistoryState_(state) {
+  const modal = String(state?.modal || "").trim();
+
+  const mainPop = document.getElementById("trainerEditPopup");
+  const groupsPop = document.getElementById("editGroupsPopup");
+  const trenerzyPop = document.getElementById("editTrenerzyPopup");
+
+  const wantsMain =
+    modal === "trainerEditPopup" ||
+    modal === "editGroupsPopup" ||
+    modal === "editTrenerzyPopup";
+
+  // jeśli historia nie wskazuje już żadnego popupu edycji -> schowaj wszystko
+  if (!wantsMain) {
+    if (trenerzyPop) trenerzyPop.classList.add("hidden");
+    if (groupsPop) groupsPop.classList.add("hidden");
+    if (mainPop) mainPop.style.display = "none";
+
+    editMiesiac = null;
+    editCol5 = null;
+
+    const msg = document.getElementById("editEventMsg");
+    if (msg) msg.textContent = "";
+
+    const trenerzyMsg = document.getElementById("editTrenerzyMsg");
+    if (trenerzyMsg) trenerzyMsg.textContent = "";
+
+    return;
+  }
+
+  // główny popup ma zostać
+  if (mainPop) mainPop.style.display = "flex";
+
+  // popup grup
+  if (groupsPop) {
+    if (modal === "editGroupsPopup") groupsPop.classList.remove("hidden");
+    else groupsPop.classList.add("hidden");
+  }
+
+  // popup trenerów
+  if (trenerzyPop) {
+    if (modal === "editTrenerzyPopup") trenerzyPop.classList.remove("hidden");
+    else trenerzyPop.classList.add("hidden");
+  }
+}
+
+// Sprawdzenie, czy popup usuwania wydarzenia jest otwarty  
+  function isTrainerDeletePopupOpen_() {
+  const el = document.getElementById("trainerDeletePopup");
+  if (!el) return false;
+  return el.classList.contains("show");
+}
+
+// Obsługa nawigacji wstecz / dalej z historii przeglądarki  
+window.addEventListener("popstate", (event) => {
+  const state = event.state;
+  const fallbackView = getRootViewId_();
+
+  if (state && state.view) {
+    showViewFromHistory(state.view, state);
+  } else {
+    showViewFromHistory(fallbackView, { view: fallbackView, appStack: [fallbackView] });
+  }
+
+  // modale płatności
+  if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
+    adminCancelConfirmPayment();
+  }
+
+  // popup usuwania wydarzenia
+  if (isTrainerDeletePopupOpen_() && !(state && state.modal === "trainerDeletePopup")) {
+    const pop = document.getElementById("trainerDeletePopup");
+    if (pop) pop.classList.remove("show");
+  }
+
+  // popupy edycji wydarzenia
+  syncTrainerEditPopupsToHistoryState_(state);
+});
+
+/* =================== KONIEC SEKTORA 40 =================== */
 
   
 async function preloadClubAd() {
@@ -2634,221 +2860,6 @@ function closePlayerPaymentPopup() {
   
 
 
-
-
-/* =================== 40 NAWIGACJA / ROUTER =================== */
-function ukryjWszystkie() {
-  document.querySelectorAll(".container, .view").forEach(v => {
-    if (v.id === "app") return; // nie chowamy głównego wrappera
-    v.classList.add("hidden");
-  });
-}
-
-  function getRootViewId_() {
-  return (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView";
-}
-
-function goToView(viewId, options = {}) {
-  const { replace = false, fromHistory = false } = options;
-
-  const prevView = String(currentView || "").trim();
-
-  ukryjWszystkie();
-  hideBusy();
-
-  const el = document.getElementById(viewId);
-  if (el) el.classList.remove("hidden");
-
-  currentView = viewId;
-
-  // ✅ UI menu + prefetch w tle
-  if (viewId === "playerMenuView") {
-    const lbl = document.getElementById("playerNumerLabel");
-    if (lbl) lbl.textContent = String(numerZalogowanego || "");
-    startPrefetchForPlayer_();
-  }
-
-  hookPushButton_();
-
-  if (viewId === "playerSettingsView") {
-    refreshPushButtonState_();
-  }
-
-  // =================== APP STACK ===================
-  if (!window.__appViewStack) window.__appViewStack = [];
-
-  if (!fromHistory) {
-    if (replace) {
-      if (window.__appViewStack.length === 0) {
-        window.__appViewStack = [viewId];
-      } else {
-        window.__appViewStack[window.__appViewStack.length - 1] = viewId;
-      }
-    } else {
-      if (!prevView) {
-        window.__appViewStack = [viewId];
-      } else if (prevView !== viewId) {
-        window.__appViewStack.push(viewId);
-      } else if (window.__appViewStack.length === 0) {
-        window.__appViewStack = [viewId];
-      }
-    }
-
-    const state = {
-      view: viewId,
-      appStack: [...window.__appViewStack]
-    };
-
-    try {
-      const urlKeep = location.pathname + location.search; // zostawia ?clubId=...
-      if (replace) history.replaceState(state, "", urlKeep);
-      else history.pushState(state, "", urlKeep);
-    } catch (e) {}
-  }
-}
-
-function showViewFromHistory(viewId, state = null) {
-  ukryjWszystkie();
-  hideBusy();
-
-  const el = document.getElementById(viewId);
-  if (el) el.classList.remove("hidden");
-
-  currentView = viewId;
-
-  if (!window.__appViewStack) window.__appViewStack = [];
-
-  if (state && Array.isArray(state.appStack) && state.appStack.length) {
-    window.__appViewStack = [...state.appStack];
-  } else {
-    window.__appViewStack = [viewId];
-  }
-
-  // zachowujemy te same efekty UI co przy normalnym wejściu
-  if (viewId === "playerMenuView") {
-    const lbl = document.getElementById("playerNumerLabel");
-    if (lbl) lbl.textContent = String(numerZalogowanego || "");
-    startPrefetchForPlayer_();
-  }
-
-  hookPushButton_();
-
-  if (viewId === "playerSettingsView") {
-    refreshPushButtonState_();
-  }
-}
-
-function appBack() {
-  const rootView = getRootViewId_();
-
-  if (!window.__appViewStack || !window.__appViewStack.length) {
-    goToView(rootView, { replace: true });
-    return;
-  }
-
-  // jeśli jesteśmy już na ekranie głównym aplikacji, nie cofamy dalej "webowo"
-  if (window.__appViewStack.length <= 1) {
-    goToView(rootView, { replace: true });
-    return;
-  }
-
-  history.back();
-}
-
-function isAnyPaymentModalOpen_() {
-  const ids = ["adminPayConfirmModal", "adminPayConfirmSkladkaModal"];
-
-  return ids.some(id => {
-    const el = document.getElementById(id);
-    if (!el) return false;
-    return !el.classList.contains("hidden") && getComputedStyle(el).display !== "none";
-  });
-}
-
-  function isTrainerEditHistoryModal_(modalName) {
-  try {
-    return !!(history.state && String(history.state.modal || "") === String(modalName || ""));
-  } catch (e) {
-    return false;
-  }
-}
-
-function syncTrainerEditPopupsToHistoryState_(state) {
-  const modal = String(state?.modal || "").trim();
-
-  const mainPop = document.getElementById("trainerEditPopup");
-  const groupsPop = document.getElementById("editGroupsPopup");
-  const trenerzyPop = document.getElementById("editTrenerzyPopup");
-
-  const wantsMain =
-    modal === "trainerEditPopup" ||
-    modal === "editGroupsPopup" ||
-    modal === "editTrenerzyPopup";
-
-  // jeśli historia nie wskazuje już żadnego popupu edycji -> schowaj wszystko
-  if (!wantsMain) {
-    if (trenerzyPop) trenerzyPop.classList.add("hidden");
-    if (groupsPop) groupsPop.classList.add("hidden");
-    if (mainPop) mainPop.style.display = "none";
-
-    editMiesiac = null;
-    editCol5 = null;
-
-    const msg = document.getElementById("editEventMsg");
-    if (msg) msg.textContent = "";
-
-    const trenerzyMsg = document.getElementById("editTrenerzyMsg");
-    if (trenerzyMsg) trenerzyMsg.textContent = "";
-
-    return;
-  }
-
-  // główny popup ma zostać
-  if (mainPop) mainPop.style.display = "flex";
-
-  // popup grup
-  if (groupsPop) {
-    if (modal === "editGroupsPopup") groupsPop.classList.remove("hidden");
-    else groupsPop.classList.add("hidden");
-  }
-
-  // popup trenerów
-  if (trenerzyPop) {
-    if (modal === "editTrenerzyPopup") trenerzyPop.classList.remove("hidden");
-    else trenerzyPop.classList.add("hidden");
-  }
-}
-
-  function isTrainerDeletePopupOpen_() {
-  const el = document.getElementById("trainerDeletePopup");
-  if (!el) return false;
-  return el.classList.contains("show");
-}
-  
-window.addEventListener("popstate", (event) => {
-  const state = event.state;
-  const fallbackView = getRootViewId_();
-
-  if (state && state.view) {
-    showViewFromHistory(state.view, state);
-  } else {
-    showViewFromHistory(fallbackView, { view: fallbackView, appStack: [fallbackView] });
-  }
-
-  // modale płatności
-  if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
-    adminCancelConfirmPayment();
-  }
-
-  // popup usuwania wydarzenia
-  if (isTrainerDeletePopupOpen_() && !(state && state.modal === "trainerDeletePopup")) {
-    const pop = document.getElementById("trainerDeletePopup");
-    if (pop) pop.classList.remove("show");
-  }
-
-  // popupy edycji wydarzenia
-  syncTrainerEditPopupsToHistoryState_(state);
-});
 
 
 
