@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.56';
+  window.APP_BUILD = 'BETA APP v2.57';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6144,7 +6144,6 @@ async function adminSaveGrupyLocal() {
   }
 }
 
-  /* =================== ADMIN: STATYSTYKI (reuse statsView) =================== */
 // ADMIN: Statystyki zawodnika (reuse ekranu zawodnika)
   
 async function adminOpenStats() {
@@ -6206,8 +6205,10 @@ async function adminApplyGroupsPopup() {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   }
 }
+
+/* =================== KONIEC SEKTORA 160 =================== */
   
-// =================== SPOSÓB ROZLICZANIA PŁATNOŚCI ===================
+/* =================== 170 ADMIN / BILLING / PAYMENTS =================== */
 
 function adminOpenRozliczPopup() {
   const modal = document.getElementById("adminRozliczModal");
@@ -6416,7 +6417,7 @@ function renderPaymentTile_(p) {
     </div>
   `;
 }
-
+  
 // =================== ADMIN: CONFIRM PŁATNOŚCI (używamy WYŁĄCZNIE #adminPayConfirmModal) ===================
 window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
@@ -6759,6 +6760,9 @@ function adminCancelConfirmPayment() {
   window.__adminActivePayModal = "";
 }
 
+/* =================== KONIEC SEKTORA 170 =================== */
+
+/* =================== 180 ADMIN / SYSTEM PRZELEWY / IMPORT =================== */  
 // =================== SYSTEM PRZELEWY ===================
 
 async function adminOpenSystemPrzelewy() {
@@ -6952,13 +6956,15 @@ function renderAdminSystemPrzelewTile_(p) {
   `;
 }
   
-function escapeHtml_(txt) {
-  return String(txt || "")
+  // minimalny escape do HTML (żeby nazwiska/rodzaje nie rozwaliły DOM)
+function escapeHtml_(s) {
+  
+  return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/'/g, "&#39;");
 }
 
 async function adminIgnoreSystemPrzelew(row) {
@@ -7422,7 +7428,9 @@ function closeImportPopup() {
   }
 }
   
-  // =================== 67 ADMIN: RAPORTY ===================
+/* =================== KONIEC SEKTORA 180 =================== */
+
+/* =================== 190 ADMIN / REPORTS =================== */
 
 function adminOpenRaporty() {
   const el = document.getElementById("adminRaportyView");
@@ -7443,21 +7451,6 @@ function adminOpenRaporty() {
   }
 }
   
-
-  
-
-  
- 
- 
-
-
-  
-
-  
-
-  
-  /* =================== 92 ADMIN: RAPORTY (WIDOKI) =================== */
-
   // ===== RAPORTY v2: parser bloków "MIESIĄC:" z siatki arkusza =====
 // grid = 2D array (np. getDisplayValues), gdzie interesuje nas głównie kolumna A (index 0)
 // Zwraca: [{ monthLabel, rows }] w kolejności jak w arkuszu (od góry do dołu)
@@ -7655,17 +7648,6 @@ function formatHours_(h) {
   return s;
 }
 
-// minimalny escape do HTML (żeby nazwiska/rodzaje nie rozwaliły DOM)
-function escapeHtml_(s) {
-  
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
  function fmtDate_(v) {
   if (!v) return "";
   // Date object
@@ -7701,12 +7683,6 @@ function fmtTime_(v) {
 function adminRaportyOpenTrenerzy() {
   goToView("adminRaportTrenerzyView");
   adminLoadRaportTrenerzy_();
-}
-
-// menu -> raport rezerwacja
-function adminRaportyOpenRezerwacja() {
-  goToView("adminRaportRezerwacjaView");
-  adminLoadRaportRezerwacja_();
 }
 
 /* =================== RAPORT: TRENERZY (NOWE: bloki MIESIĄC:) =================== */
@@ -7871,6 +7847,12 @@ function renderAdminRaportTrenerzyMonth_(trainers) {
 
 /* =================== RAPORT: REZERWACJA (NOWE: bloki MIESIĄC:) =================== */
 
+// menu -> raport rezerwacja
+function adminRaportyOpenRezerwacja() {
+  goToView("adminRaportRezerwacjaView");
+  adminLoadRaportRezerwacja_();
+}
+  
 async function adminLoadRaportRezerwacja_() {
   const body = document.getElementById("adminRaportRezerwacjaBody");
   const sumEl = document.getElementById("adminRaportRezerwacjaSummary");
@@ -7979,46 +7961,10 @@ async function adminLoadRaportRezerwacja_() {
 
   return html;
 }
+
+/* =================== KONIEC SEKTORA 190 =================== */
   
-/* =================== 99 START APLIKACJI =================== */
-window.addEventListener('load', () => {
-  //odtworzIntroSound();
-
-  const splash = document.getElementById('splash');
-  const app = document.getElementById('app');
-
-  if (app) app.classList.remove('hidden');
-
-  const wersja = document.getElementById("wersjaNum");
-  if (wersja) wersja.textContent = APP_BUILD;
-
-  const setupSubmitBtn = document.getElementById("btnSetupSubmit");
-  if (setupSubmitBtn && !setupSubmitBtn.getAttribute("onclick")) {
-    setupSubmitBtn.addEventListener("click", submitSetupAndActivateClub);
-  }
-
-  // START: najpierw ustaw clubId z URL (albo wyczyść na linku głównym)
-  initClubFromUrl_();
-
-  // dopiero teraz ustawiamy stan historii (bo clubId może się zmienić)
-  try {
-    history.replaceState(
-      { view: (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView" },
-      "",
-      ""
-    );
-  } catch (e) {}
-
-  // router + theme
-  startApp_();
-
-  // splash ma być zawsze widoczny minimalnie chwilę (żeby nie "mrugał")
-  if (splash) {
-    setTimeout(() => { splash.style.display = 'none'; }, 2000);
-  }
-});
-
-/* =================== POWIADOMIENIA PUSH =================== */
+/* =================== 200 MANUAL PUSH / GROUPS =================== */
 
 window.__manualPushReturnView = "adminPanelView";
 window.__manualPushRole = "admin";
@@ -8250,6 +8196,44 @@ function applyManualPushGroupsPopup() {
     if (msgEl) msgEl.textContent = "❌ " + (err?.message || "Błąd wysyłki");
   }
 }
+
+/* =================== 999 START APLIKACJI =================== */
+window.addEventListener('load', () => {
+  //odtworzIntroSound();
+
+  const splash = document.getElementById('splash');
+  const app = document.getElementById('app');
+
+  if (app) app.classList.remove('hidden');
+
+  const wersja = document.getElementById("wersjaNum");
+  if (wersja) wersja.textContent = APP_BUILD;
+
+  const setupSubmitBtn = document.getElementById("btnSetupSubmit");
+  if (setupSubmitBtn && !setupSubmitBtn.getAttribute("onclick")) {
+    setupSubmitBtn.addEventListener("click", submitSetupAndActivateClub);
+  }
+
+  // START: najpierw ustaw clubId z URL (albo wyczyść na linku głównym)
+  initClubFromUrl_();
+
+  // dopiero teraz ustawiamy stan historii (bo clubId może się zmienić)
+  try {
+    history.replaceState(
+      { view: (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView" },
+      "",
+      ""
+    );
+  } catch (e) {}
+
+  // router + theme
+  startApp_();
+
+  // splash ma być zawsze widoczny minimalnie chwilę (żeby nie "mrugał")
+  if (splash) {
+    setTimeout(() => { splash.style.display = 'none'; }, 2000);
+  }
+}); 
   
 </script>
 </body>
