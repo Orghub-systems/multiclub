@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.54';
+  window.APP_BUILD = 'BETA APP v2.55';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4957,8 +4957,365 @@ function powrotDoTreningow() {
 
 /* =================== KONIEC SEKTORA 120 =================== */ 
 
-
+/* =================== 130 TRENER: LISTA / WYDARZENIA / DODAWANIE / USUWANIE =================== */
   
+function trainerPowrot() { appBack(); }
+
+  // ✅ MUSI być globalne dla onclick w HTML
+window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
+  goToView("trainerWydarzeniaView");
+  try {
+    const lista = await apiClubGet("treningiTrener", { grupa: window.grupyTrenera || "" });
+    renderTreningiTrainer(lista);
+  } catch (e) {
+    const div = document.getElementById("trainerListaWydarzen");
+    if (div) div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+  }
+};
+
+async function trainerPokazZawodnicy() {
+  goToView("trainerZawodnicyView");
+  const box = document.getElementById("trainerListaZawodnikow");
+  box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+
+  try {
+    const lista = await apiClubGet("listaZawodnikow", { grupy: window.grupyTrenera || "" });
+    if (!Array.isArray(lista) || lista.length === 0) {
+      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
+      return;
+    }
+
+    box.innerHTML = lista.map(z => `
+      <div class="card" style="text-align:left;">
+        <b>#${z.nr}</b> — ${z.nazwisko}<br>
+        <span style="opacity:0.8;">${z.suma} treningów łącznie</span>
+      </div>
+    `).join('');
+  } catch {
+    box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
+  }
+}
+  
+function renderTreningiTrainer(lista) {
+  const div = document.getElementById("trainerListaWydarzen");
+  if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
+
+  // ✅ Globalna mapa eventów dla popupu edycji
+  window.__trainerEventsByKey = {};
+
+  // parser "dd.mm.yyyy" albo "dd-mm-yyyy" -> "yyyy-mm-dd"
+  function toISO_(dataTxt) {
+    const s = String(dataTxt || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    const m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
+    if (!m) return "";
+    const dd = String(m[1]).padStart(2, "0");
+    const mm = String(m[2]).padStart(2, "0");
+    const yyyy = m[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // ✅ SORTOWANIE wydarzeń po dacie i godzinie
+  const sortedLista = [...lista].sort((a, b) => {
+    const da = toISO_(a.data);
+    const db = toISO_(b.data);
+
+    if (da !== db) return da.localeCompare(db);
+
+    const ha = String(a.godzStart || "00:00");
+    const hb = String(b.godzStart || "00:00");
+
+    return ha.localeCompare(hb);
+  });
+
+  div.innerHTML = sortedLista.map(t => {
+    const key = `${t.miesiac}-${t.czasCol}`;
+    const dataISO = toISO_(t.data);
+
+    window.__trainerEventsByKey[key] = {
+      key,
+      miesiac: t.miesiac,
+      czasCol: t.czasCol,
+      dataISO,
+      start: String(t.godzStart || ""),
+      end: String(t.godzKoniec || ""),
+      rodzaj: String(t.rodzaj || ""),
+    };
+
+    return `
+      <div class="card" data-event-id="${key}">
+        <b>${t.rodzaj}</b> ${t.data} (${t.dzien})<br>
+        Godzina: <b>${t.godzStart}</b> – <b>${t.godzKoniec}</b><br>
+        Trener: <b>${t.trener || "—"}</b> | Zapisanych: ${t.zapisanych}<br><br>
+
+        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+          <button class="btn" onclick="trainerToggleZapisani('${t.id}')">👥 Zapisani</button>
+          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">✏️ Edytuj</button>
+          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">🗑️ Usuń</button>
+        </div>
+
+        <div id="trainer-zapisani-${t.id}" class="hidden"></div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function trainerToggleZapisani(id) {
+  const box = document.getElementById(`trainer-zapisani-${id}`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
+
+  try {
+    const lista = await apiClubGet("zapisani", { treningId: id });
+    if (!Array.isArray(lista) || !lista.length) {
+      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      return;
+    }
+    box.innerHTML = `<div class="card" style="background:#111;">
+      <b>Lista zapisanych:</b>
+      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+      </ul>
+    </div>`;
+  } catch {
+    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+  }
+}
+
+/* --- dodawanie wydarzenia --- */
+async function zaladujListeTrenerow() {
+  try {
+    const lista = await apiClubGet("getTrenerzy", {});
+    const t1 = document.getElementById("eventTrener1");
+    const t2 = document.getElementById("eventTrener2");
+    t1.innerHTML = "<option value=''>— wybierz trenera —</option>";
+    t2.innerHTML = "<option value=''>— Brak —</option>";
+    (lista || []).forEach(nazw => {
+      t1.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+      t2.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+    });
+  } catch {}
+}
+
+  function resetTrenerSelects_() {
+  // ukryj kolejne selecty
+  ["trener2Wrap","trener3Wrap","trener4Wrap"].forEach(id => {
+    const w = document.getElementById(id);
+    if (w) w.classList.add("hidden");
+  });
+
+  // wyczyść wartości (żeby nie “pamiętało”)
+  ["eventTrener1","eventTrener2","eventTrener3","eventTrener4"].forEach(id => {
+    const s = document.getElementById(id);
+    if (s) s.value = "";
+  });
+}
+
+// pokazuj kolejny select dopiero gdy wybrano poprzedni
+function onTrenerPick(n) {
+  const cur = document.getElementById(`eventTrener${n}`);
+  const nextWrap = document.getElementById(`trener${n+1}Wrap`);
+  if (!cur) return;
+
+  const picked = String(cur.value || "").trim();
+  if (nextWrap) {
+    if (picked) nextWrap.classList.remove("hidden");
+    else nextWrap.classList.add("hidden");
+  }
+}
+  
+ function pokazDodajWydarzenie() {
+  goToView("trainerDodajWydarzenieView");
+
+  // ✅ wymuś start kalendarza i zegarów po wejściu do widoku
+  try { initEventPickers_(); } catch (e) { console.warn("initEventPickers_ failed:", e); }
+
+  resetTrenerSelects_();
+  resetGroups_();
+  zaladujListeTrenerow();
+}
+
+  /* ===== GRUPY: popup G1–G10 ===== */
+let selectedGroups = new Set(); // np. "G1","G2"...
+
+function renderGroupsList_() {
+  const box = document.getElementById("groupsList");
+  if (!box) return;
+
+  const groups = Array.from({ length: 10 }, (_, i) => `G${i + 1}`);
+
+  box.innerHTML = groups.map(g => {
+    const checked = selectedGroups.has(g) ? "checked" : "";
+    return `
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:10px;background:#111;">
+        <span style="font-weight:700;">${g}</span>
+        <input type="checkbox" class="grpPick" value="${g}" ${checked} style="transform:scale(1.25);">
+      </label>
+    `;
+  }).join("");
+}
+
+function openGroupsPopup() {
+  renderGroupsList_();
+  const pop = document.getElementById("groupsPopup");
+  if (pop) pop.classList.remove("hidden");
+}
+
+function closeGroupsPopup() {
+  const pop = document.getElementById("groupsPopup");
+  if (pop) pop.classList.add("hidden");
+}
+
+function applyGroupsPopup() {
+  const picks = document.querySelectorAll("#groupsList .grpPick");
+  selectedGroups = new Set();
+  picks.forEach(ch => { if (ch.checked) selectedGroups.add(ch.value); });
+
+  updateGroupsSummary_();
+  closeGroupsPopup();
+}
+
+function updateGroupsSummary_() {
+  const btn = document.getElementById("btnPickGroups");
+  if (!btn) return;
+
+  const arr = Array.from(selectedGroups);
+  arr.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+
+  btn.textContent = arr.length ? arr.join(", ") : "Wybierz grupy";
+}
+
+function resetGroups_() {
+  selectedGroups = new Set();
+  updateGroupsSummary_();
+}
+
+function validHour(hhmm) { return /^\d{2}:\d{2}$/.test(hhmm); }
+
+async function wyslijNoweWydarzenie() {
+  const data = document.getElementById("eventData").value;
+  const start = document.getElementById("eventStart").value;
+  const end = document.getElementById("eventEnd").value;
+  const rodzaj = document.getElementById("eventRodzaj").value;
+
+  const trener1 = document.getElementById("eventTrener1").value;
+  const trener2 = document.getElementById("eventTrener2")?.value || "";
+  const trener3 = document.getElementById("eventTrener3")?.value || "";
+  const trener4 = document.getElementById("eventTrener4")?.value || "";
+
+  const grupy = Array.from(selectedGroups).join(",");
+  const liczDoStat = document.getElementById("eventStat").checked;
+  const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
+  const msg = document.getElementById("eventMsg");
+
+  if (!data || !start || !rodzaj) { msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj."; return; }
+  if (!validHour(start) || !validHour(end)) { msg.innerText = "❌ Godzina w formacie HH:MM."; return; }
+  if (start >= end) { msg.innerText = "❌ Koniec musi być później niż start."; return; }
+
+  msg.innerText = "⏳ Dodawanie wydarzenia...";
+  try {
+const r = await apiClubPost({
+  action: "dodajWydarzenie",
+  data,
+  godzStart: start,
+  godzKoniec: end,
+  rodzaj,
+  trener1,
+  trener2,
+  trener3,
+  trener4,
+  grupy,
+  liczDoStatystyk: String(liczDoStat),
+  rezerwacjaObiektu: rezerwacjaObiektu
+});
+
+    msg.innerText = r.message || "Nieznany wynik.";
+
+    if (r.success) {
+      document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
+        if (i.type !== "checkbox") i.value = "";
+        else i.checked = false;
+      });
+
+      resetTrenerSelects_();
+      resetGroups_();
+
+      setTimeout(() => trainerPokazWydarzenia(), 800);
+    }
+
+  } catch (err) {
+    msg.innerText = "❌ Błąd połączenia: " + err;
+  }
+}
+
+function initEventPickers_() {
+  const elDate = document.getElementById("eventData");
+  if (elDate && window.flatpickr && !elDate._flatpickr) {
+    flatpickr(elDate, {
+      dateFormat: "Y-m-d",
+      allowInput: true
+    });
+  }
+}
+  
+ // ===== DELETE WYDARZENIA =====
+
+function trainerShowDeletePopup(miesiac, czasCol) {
+  deleteMiesiac = miesiac;
+  deleteCzasCol = czasCol;
+
+  const pop = document.getElementById("trainerDeletePopup");
+  if (pop) pop.classList.add("show");
+
+  pushPaymentModalHistoryState_("trainerDeletePopup");
+}
+  
+function trainerHideDeletePopup() {
+  if (isHistoryModal_("trainerDeletePopup")) {
+    history.back();
+    return;
+  }
+
+  const pop = document.getElementById("trainerDeletePopup");
+  if (pop) pop.classList.remove("show");
+}
+  
+async function trainerConfirmDeleteYes() {
+  // zamknij popup usuwania w sposób zgodny z historią
+  trainerHideDeletePopup();
+
+  const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
+  const card = document.querySelector(`[data-event-id='${treningId}']`);
+  if (card) {
+    card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
+  }
+
+  try {
+    const data = await apiClubGet("usunWydarzenie", { treningId });
+
+    if (data.success) {
+      if (card) {
+        card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
+      }
+      setTimeout(() => trainerPokazWydarzenia(), 800);
+    } else {
+      if (card) {
+        card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${data.error || "Błąd"}</div>`;
+      }
+    }
+  } catch (err) {
+    if (card) {
+      card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
+    }
+  }
+}
+
+/* =================== KONIEC SEKTORA 130 =================== */ 
 
 
   /* =================== 65 ADMIN PANEL (frontend) =================== */
@@ -6629,177 +6986,9 @@ function adminOpenRaporty() {
   
  
  
-/* =================== 90 TRENER: LISTA / WYDARZENIA / DODAWANIE / USUWANIE =================== */
-function trainerPowrot() { appBack(); }
 
-  // ✅ MUSI być globalne dla onclick w HTML
-window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
-  goToView("trainerWydarzeniaView");
-  try {
-    const lista = await apiClubGet("treningiTrener", { grupa: window.grupyTrenera || "" });
-    renderTreningiTrainer(lista);
-  } catch (e) {
-    const div = document.getElementById("trainerListaWydarzen");
-    if (div) div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
-  }
-};
-
-async function trainerPokazZawodnicy() {
-  goToView("trainerZawodnicyView");
-  const box = document.getElementById("trainerListaZawodnikow");
-  box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
-
-  try {
-    const lista = await apiClubGet("listaZawodnikow", { grupy: window.grupyTrenera || "" });
-    if (!Array.isArray(lista) || lista.length === 0) {
-      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
-      return;
-    }
-
-    box.innerHTML = lista.map(z => `
-      <div class="card" style="text-align:left;">
-        <b>#${z.nr}</b> — ${z.nazwisko}<br>
-        <span style="opacity:0.8;">${z.suma} treningów łącznie</span>
-      </div>
-    `).join('');
-  } catch {
-    box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
-  }
-}
+/* =================== 140 TRAINER / EDIT EVENT =================== */  
   
-function renderTreningiTrainer(lista) {
-  const div = document.getElementById("trainerListaWydarzen");
-  if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
-
-  // ✅ Globalna mapa eventów dla popupu edycji
-  window.__trainerEventsByKey = {};
-
-  // parser "dd.mm.yyyy" albo "dd-mm-yyyy" -> "yyyy-mm-dd"
-  function toISO_(dataTxt) {
-    const s = String(dataTxt || "").trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-    const m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
-    if (!m) return "";
-    const dd = String(m[1]).padStart(2, "0");
-    const mm = String(m[2]).padStart(2, "0");
-    const yyyy = m[3];
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  // ✅ SORTOWANIE wydarzeń po dacie i godzinie
-  const sortedLista = [...lista].sort((a, b) => {
-    const da = toISO_(a.data);
-    const db = toISO_(b.data);
-
-    if (da !== db) return da.localeCompare(db);
-
-    const ha = String(a.godzStart || "00:00");
-    const hb = String(b.godzStart || "00:00");
-
-    return ha.localeCompare(hb);
-  });
-
-  div.innerHTML = sortedLista.map(t => {
-    const key = `${t.miesiac}-${t.czasCol}`;
-    const dataISO = toISO_(t.data);
-
-    window.__trainerEventsByKey[key] = {
-      key,
-      miesiac: t.miesiac,
-      czasCol: t.czasCol,
-      dataISO,
-      start: String(t.godzStart || ""),
-      end: String(t.godzKoniec || ""),
-      rodzaj: String(t.rodzaj || ""),
-    };
-
-    return `
-      <div class="card" data-event-id="${key}">
-        <b>${t.rodzaj}</b> ${t.data} (${t.dzien})<br>
-        Godzina: <b>${t.godzStart}</b> – <b>${t.godzKoniec}</b><br>
-        Trener: <b>${t.trener || "—"}</b> | Zapisanych: ${t.zapisanych}<br><br>
-
-        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="btn" onclick="trainerToggleZapisani('${t.id}')">👥 Zapisani</button>
-          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">✏️ Edytuj</button>
-          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">🗑️ Usuń</button>
-        </div>
-
-        <div id="trainer-zapisani-${t.id}" class="hidden"></div>
-      </div>
-    `;
-  }).join('');
-}
-
-async function trainerToggleZapisani(id) {
-  const box = document.getElementById(`trainer-zapisani-${id}`);
-  if (!box) return;
-
-  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
-
-  box.classList.remove('hidden');
-  box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
-
-  try {
-    const lista = await apiClubGet("zapisani", { treningId: id });
-    if (!Array.isArray(lista) || !lista.length) {
-      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
-      return;
-    }
-    box.innerHTML = `<div class="card" style="background:#111;">
-      <b>Lista zapisanych:</b>
-      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
-        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
-      </ul>
-    </div>`;
-  } catch {
-    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
-  }
-}
-
-/* --- dodawanie wydarzenia --- */
-async function zaladujListeTrenerow() {
-  try {
-    const lista = await apiClubGet("getTrenerzy", {});
-    const t1 = document.getElementById("eventTrener1");
-    const t2 = document.getElementById("eventTrener2");
-    t1.innerHTML = "<option value=''>— wybierz trenera —</option>";
-    t2.innerHTML = "<option value=''>— Brak —</option>";
-    (lista || []).forEach(nazw => {
-      t1.innerHTML += `<option value="${nazw}">${nazw}</option>`;
-      t2.innerHTML += `<option value="${nazw}">${nazw}</option>`;
-    });
-  } catch {}
-}
-
-  function resetTrenerSelects_() {
-  // ukryj kolejne selecty
-  ["trener2Wrap","trener3Wrap","trener4Wrap"].forEach(id => {
-    const w = document.getElementById(id);
-    if (w) w.classList.add("hidden");
-  });
-
-  // wyczyść wartości (żeby nie “pamiętało”)
-  ["eventTrener1","eventTrener2","eventTrener3","eventTrener4"].forEach(id => {
-    const s = document.getElementById(id);
-    if (s) s.value = "";
-  });
-}
-
-// pokazuj kolejny select dopiero gdy wybrano poprzedni
-function onTrenerPick(n) {
-  const cur = document.getElementById(`eventTrener${n}`);
-  const nextWrap = document.getElementById(`trener${n+1}Wrap`);
-  if (!cur) return;
-
-  const picked = String(cur.value || "").trim();
-  if (nextWrap) {
-    if (picked) nextWrap.classList.remove("hidden");
-    else nextWrap.classList.add("hidden");
-  }
-}
-
   /* ===== EDYCJA: TRENERZY (selecty) ===== */
 async function zaladujListeTrenerowDoEdycji() {
   try {
@@ -6994,191 +7183,9 @@ function resetEditGroups_() {
   updateEditGroupsSummary_();
 }
 
-function pokazDodajWydarzenie() {
-  goToView("trainerDodajWydarzenieView");
 
-  // ✅ wymuś start kalendarza i zegarów po wejściu do widoku
-  try { initEventPickers_(); } catch (e) { console.warn("initEventPickers_ failed:", e); }
-
-  resetTrenerSelects_();
-  resetGroups_();
-  zaladujListeTrenerow();
-}
-
-  /* ===== GRUPY: popup G1–G10 ===== */
-let selectedGroups = new Set(); // np. "G1","G2"...
-
-function renderGroupsList_() {
-  const box = document.getElementById("groupsList");
-  if (!box) return;
-
-  const groups = Array.from({ length: 10 }, (_, i) => `G${i + 1}`);
-
-  box.innerHTML = groups.map(g => {
-    const checked = selectedGroups.has(g) ? "checked" : "";
-    return `
-      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:10px;background:#111;">
-        <span style="font-weight:700;">${g}</span>
-        <input type="checkbox" class="grpPick" value="${g}" ${checked} style="transform:scale(1.25);">
-      </label>
-    `;
-  }).join("");
-}
-
-function openGroupsPopup() {
-  renderGroupsList_();
-  const pop = document.getElementById("groupsPopup");
-  if (pop) pop.classList.remove("hidden");
-}
-
-function closeGroupsPopup() {
-  const pop = document.getElementById("groupsPopup");
-  if (pop) pop.classList.add("hidden");
-}
-
-function applyGroupsPopup() {
-  const picks = document.querySelectorAll("#groupsList .grpPick");
-  selectedGroups = new Set();
-  picks.forEach(ch => { if (ch.checked) selectedGroups.add(ch.value); });
-
-  updateGroupsSummary_();
-  closeGroupsPopup();
-}
-
-function updateGroupsSummary_() {
-  const btn = document.getElementById("btnPickGroups");
-  if (!btn) return;
-
-  const arr = Array.from(selectedGroups);
-  arr.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
-
-  btn.textContent = arr.length ? arr.join(", ") : "Wybierz grupy";
-}
-
-function resetGroups_() {
-  selectedGroups = new Set();
-  updateGroupsSummary_();
-}
-
-function validHour(hhmm) { return /^\d{2}:\d{2}$/.test(hhmm); }
-
-async function wyslijNoweWydarzenie() {
-  const data = document.getElementById("eventData").value;
-  const start = document.getElementById("eventStart").value;
-  const end = document.getElementById("eventEnd").value;
-  const rodzaj = document.getElementById("eventRodzaj").value;
-
-  const trener1 = document.getElementById("eventTrener1").value;
-  const trener2 = document.getElementById("eventTrener2")?.value || "";
-  const trener3 = document.getElementById("eventTrener3")?.value || "";
-  const trener4 = document.getElementById("eventTrener4")?.value || "";
-
-  const grupy = Array.from(selectedGroups).join(",");
-  const liczDoStat = document.getElementById("eventStat").checked;
-  const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
-  const msg = document.getElementById("eventMsg");
-
-  if (!data || !start || !rodzaj) { msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj."; return; }
-  if (!validHour(start) || !validHour(end)) { msg.innerText = "❌ Godzina w formacie HH:MM."; return; }
-  if (start >= end) { msg.innerText = "❌ Koniec musi być później niż start."; return; }
-
-  msg.innerText = "⏳ Dodawanie wydarzenia...";
-  try {
-const r = await apiClubPost({
-  action: "dodajWydarzenie",
-  data,
-  godzStart: start,
-  godzKoniec: end,
-  rodzaj,
-  trener1,
-  trener2,
-  trener3,
-  trener4,
-  grupy,
-  liczDoStatystyk: String(liczDoStat),
-  rezerwacjaObiektu: rezerwacjaObiektu
-});
-
-    msg.innerText = r.message || "Nieznany wynik.";
-
-    if (r.success) {
-      document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
-        if (i.type !== "checkbox") i.value = "";
-        else i.checked = false;
-      });
-
-      resetTrenerSelects_();
-      resetGroups_();
-
-      setTimeout(() => trainerPokazWydarzenia(), 800);
-    }
-
-  } catch (err) {
-    msg.innerText = "❌ Błąd połączenia: " + err;
-  }
-}
-
-function initEventPickers_() {
-  const elDate = document.getElementById("eventData");
-  if (elDate && window.flatpickr && !elDate._flatpickr) {
-    flatpickr(elDate, {
-      dateFormat: "Y-m-d",
-      allowInput: true
-    });
-  }
-}
   
- // ===== DELETE WYDARZENIA =====
 
-function trainerShowDeletePopup(miesiac, czasCol) {
-  deleteMiesiac = miesiac;
-  deleteCzasCol = czasCol;
-
-  const pop = document.getElementById("trainerDeletePopup");
-  if (pop) pop.classList.add("show");
-
-  pushPaymentModalHistoryState_("trainerDeletePopup");
-}
-  
-function trainerHideDeletePopup() {
-  if (isHistoryModal_("trainerDeletePopup")) {
-    history.back();
-    return;
-  }
-
-  const pop = document.getElementById("trainerDeletePopup");
-  if (pop) pop.classList.remove("show");
-}
-  
-async function trainerConfirmDeleteYes() {
-  // zamknij popup usuwania w sposób zgodny z historią
-  trainerHideDeletePopup();
-
-  const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
-  const card = document.querySelector(`[data-event-id='${treningId}']`);
-  if (card) {
-    card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
-  }
-
-  try {
-    const data = await apiClubGet("usunWydarzenie", { treningId });
-
-    if (data.success) {
-      if (card) {
-        card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
-      }
-      setTimeout(() => trainerPokazWydarzenia(), 800);
-    } else {
-      if (card) {
-        card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${data.error || "Błąd"}</div>`;
-      }
-    }
-  } catch (err) {
-    if (card) {
-      card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
-    }
-  }
-}
   
 /* =================== 90B TRENER: EDYCJA WYDARZENIA (POPUP) =================== */
 
