@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.48';
+  window.APP_BUILD = 'BETA APP v2.49';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2333,7 +2333,9 @@ window.addEventListener("popstate", (event) => {
 
 /* =================== KONIEC SEKTORA 40 =================== */
 
-  
+/* =================== 50 APP BOOT / START =================== */
+
+// Wstępne pobranie danych reklamy klubu  
 async function preloadClubAd() {
   try {
     const clubId = getClubIdFromUrl_();
@@ -2360,6 +2362,60 @@ async function preloadClubAd() {
   }
 }
 
+// Start aplikacji i ustawienie widoku początkowego 
+async function startApp_() {
+const clubFromUrl = getClubIdFromUrl_();
+
+preloadClubAd();
+  
+// jeśli NIE ma clubId w URL → to jest link ogólny: reset + odblokuj konfigurację
+if (!clubFromUrl) {
+  saveClubId_("");
+  unlockCfg_();
+  clearLocalClubConfig();
+} else {
+  // jeśli jest clubId → ustaw i zapamiętaj stabilnie
+  saveClubId_(clubFromUrl);
+}
+  applyClubManifest_(clubId);
+
+  // --- KOLOR ---
+  if (!clubFromUrl) {
+
+    // Fabryka = zawsze biało
+    document.body.style.backgroundColor = "#ffffff";
+
+  } else {
+
+    try {
+      const branding = await apiClubGet("branding", {});
+
+      if (branding?.bg_color) {
+        document.body.style.backgroundColor = branding.bg_color;
+      }
+
+      if (branding?.logo_data) {
+        const logoImg =
+          document.querySelector("#loginView img.logo") ||
+          document.querySelector("#loginView img");
+
+        if (logoImg) logoImg.src = branding.logo_data;
+      }
+
+    } catch (e) {
+      console.warn("Branding load failed", e);
+    }
+
+  }
+
+    // --- ROUTER ---
+    refreshClubBadge_();
+    const effectiveClubId = (clubFromUrl || clubId || "").trim();
+    goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
+} 
+
+/* =================== KONIEC SEKTORA 50 =================== */
+  
   /******************** PUSH ********************/
   
 const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
@@ -2863,56 +2919,6 @@ function closePlayerPaymentPopup() {
 
 
 
-async function startApp_() {
-const clubFromUrl = getClubIdFromUrl_();
-
-preloadClubAd();
-  
-// jeśli NIE ma clubId w URL → to jest link ogólny: reset + odblokuj konfigurację
-if (!clubFromUrl) {
-  saveClubId_("");
-  unlockCfg_();
-  clearLocalClubConfig();
-} else {
-  // jeśli jest clubId → ustaw i zapamiętaj stabilnie
-  saveClubId_(clubFromUrl);
-}
-  applyClubManifest_(clubId);
-
-  // --- KOLOR ---
-  if (!clubFromUrl) {
-
-    // Fabryka = zawsze biało
-    document.body.style.backgroundColor = "#ffffff";
-
-  } else {
-
-    try {
-      const branding = await apiClubGet("branding", {});
-
-      if (branding?.bg_color) {
-        document.body.style.backgroundColor = branding.bg_color;
-      }
-
-      if (branding?.logo_data) {
-        const logoImg =
-          document.querySelector("#loginView img.logo") ||
-          document.querySelector("#loginView img");
-
-        if (logoImg) logoImg.src = branding.logo_data;
-      }
-
-    } catch (e) {
-      console.warn("Branding load failed", e);
-    }
-
-  }
-
-    // --- ROUTER ---
-    refreshClubBadge_();
-    const effectiveClubId = (clubFromUrl || clubId || "").trim();
-    goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
-}
 
 /* =================== 50 API (CORE / CLUB) =================== */
 function requireClubId() {
