@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.57';
+  window.APP_BUILD = 'BETA APP v2.58';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2413,6 +2413,12 @@ function syncTrainerEditPopupsToHistoryState_(state) {
   return el.classList.contains("show");
 }
 
+function isAdminDeletePopupOpen_() {
+  const el = document.getElementById("adminDeletePopup");
+  if (!el) return false;
+  return !el.classList.contains("hidden");
+}  
+
 // Obsługa nawigacji wstecz / dalej z historii przeglądarki  
 window.addEventListener("popstate", (event) => {
   const state = event.state;
@@ -2427,6 +2433,13 @@ window.addEventListener("popstate", (event) => {
   // modale płatności
   if (isAnyPaymentModalOpen_() && !(state && state.modal)) {
     adminCancelConfirmPayment();
+  }
+
+  // popup admin: usuwanie zawodnika
+  if (isAdminDeletePopupOpen_() && !(state && state.modal === "adminDeletePopup")) {
+    hideModal("adminDeletePopup");
+    window.__adminDeleteNr = "";
+    window.__adminDeleteNazw = "";
   }
 
   // popup usuwania wydarzenia
@@ -5856,18 +5869,20 @@ function adminOpenDeletePopup(nr, nazwisko) {
 
   const txt = document.getElementById("adminDeletePopupText");
   if (txt) {
-    // dokładnie jak chcesz w treści:
     txt.textContent = "Czy napewno chcesz usunąć zawodnika ?";
-    // opcjonalnie wersja z numerem/nazwiskiem (jak zechcesz):
-    // txt.textContent = `Czy napewno chcesz usunąć zawodnika #${numer} — ${window.__adminDeleteNazw || "—"} ?`;
   }
 
-    showModal("adminDeletePopup");
+  showModal("adminDeletePopup");
+  pushPaymentModalHistoryState_("adminDeletePopup");
 }
 
 function adminCloseDeletePopup() {
-  const pop = document.getElementById("adminDeletePopup");
-  if (pop) pop.classList.add("hidden");
+  if (isHistoryModal_("adminDeletePopup")) {
+    history.back();
+    return;
+  }
+
+  hideModal("adminDeletePopup");
   window.__adminDeleteNr = "";
   window.__adminDeleteNazw = "";
 }
