@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.49';
+  window.APP_BUILD = 'BETA APP v2.50';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1986,7 +1986,6 @@ function saveLocalClubConfig(cfg) {
   localStorage.setItem(LS_KEY_CFG, JSON.stringify(cfg || {}));
 }
 
-  
 function clearLocalClubConfig() {
   localStorage.removeItem(LS_KEY_CFG);
 }
@@ -2065,7 +2064,8 @@ function getClubIdFromUrl_() {
 }
 
 /* =================== KONIEC SEKTORA 20 =================== */
-/* =================== 30 BUSY OVERLAY =================== */
+  
+/* =================== 30 UI HELPERS / OVERLAYS / THEME =================== */
 
 // Pokazanie globalnego busy overlaya  
 function showBusy(text) {
@@ -2106,7 +2106,115 @@ function applyTheme_(theme) {
   
 /* =================== KONIEC SEKTORA 30 =================== */
 
-/* =================== 40 NAWIGACJA / ROUTER =================== */
+/* =================== 40 API (CORE / CLUB) =================== */
+
+// Wymuszenie obecności clubId przed wywołaniem API klubu
+function requireClubId() {
+  if (!clubId) throw new Error("Brak clubId. Najpierw skonfiguruj klub.");
+}
+
+// POST do CORE bez wymaganego clubId
+async function apiCorePost(payload = {}) {
+  // DIAG_START: Panel 2 / CORE POST diagnostics
+  const safePayload = { ...payload };
+  ["haslo", "password", "token", "auth", "authorization"].forEach((k) => {
+    if (safePayload[k] != null) safePayload[k] = "[REDACTED]";
+  });
+  console.log("[DIAG][apiCorePost][request]", {
+    clubId: safePayload.clubId || clubId || "",
+    action: safePayload.action || "",
+    mode: safePayload.mode || "",
+    payload: safePayload
+  });
+  // DIAG_END
+
+  const body = new URLSearchParams({ ...payload });
+  const res = await fetch(CORE_URL, { method: "POST", body });
+
+  // DIAG_START: Panel 2 / CORE response diagnostics
+  const contentType = res.headers.get("content-type") || "";
+  console.log("[DIAG][apiCorePost][response-meta]", {
+    status: res.status,
+    contentType
+  });
+  if (!/json/i.test(contentType)) {
+    const raw = await res.clone().text();
+    console.log("[DIAG][apiCorePost][non-json-preview]", raw.slice(0, 200));
+  }
+  // DIAG_END
+
+  return res.json();
+}
+
+// Aktywacja klubu przez CORE  
+window.activateClub_ = async function(payload = {}) {
+  return apiCorePost({ action: "activateClub", ...payload });
+};
+
+// GET do API klubu z clubId
+async function apiClubGet(action, params = {}) {
+  requireClubId();
+  const url = new URL(CORE_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("clubId", clubId);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  return res.json();
+}
+
+// Wyciągnięcie komunikatu błędu z odpowiedzi HTML GAS  
+function extractGasError_(html) {
+  try {
+    // Najczęściej właściwy komunikat siedzi w <div class="errorMessage">...</div>
+    const m = String(html || "").match(/<div class="errorMessage"[^>]*>([\s\S]*?)<\/div>/i);
+    if (!m) return "";
+    // usuń tagi i zbij spacje
+    return m[1]
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+\n/g, "\n")
+      .replace(/\n\s+/g, "\n")
+      .trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+// POST do API klubu z clubId  
+async function apiClubPost(payload = {}) {
+  requireClubId();
+
+  // Budujemy body ręcznie, żeby NIC nie ginęło (zwłaszcza 0/1 i false)
+  const body = new URLSearchParams();
+  body.set("clubId", String(clubId));
+
+  // ważne: payload może mieć np. rezerwacjaObiektu: 0/1
+  // URLSearchParams({ ... }) potrafi to "zgubić", jeśli wartość jest undefined
+  for (const [k, v] of Object.entries(payload || {})) {
+    if (v === undefined || v === null) continue; // nie wysyłamy śmieci
+    body.set(k, String(v)); // wymuszamy string → GAS dostaje stabilnie
+  }
+
+  const res = await fetch(CORE_URL, { method: "POST", body });
+  const text = await res.text();
+
+  // 1) normalny JSON
+  try {
+    return JSON.parse(text);
+  } catch (e) {}
+
+  // 2) HTML z GAS — wyciągamy sensowny komunikat
+  const msg = extractGasError_(text);
+  return {
+    ok: false,
+    error: msg ? ("GAS ERROR: " + msg) : ("Backend zwrócił nie-JSON (" + res.status + ")."),
+    raw: text.slice(0, 600)
+  };
+}
+
+/* =================== KONIEC SEKTORA 40 =================== */
+
+/* =================== 50 NAVIGATION / ROUTER / HISTORY =================== */
 
 // Ukrycie wszystkich pełnych widoków aplikacji  
 function ukryjWszystkie() {
@@ -2331,9 +2439,9 @@ window.addEventListener("popstate", (event) => {
   syncTrainerEditPopupsToHistoryState_(state);
 });
 
-/* =================== KONIEC SEKTORA 40 =================== */
+/* =================== KONIEC SEKTORA 50 =================== */
 
-/* =================== 50 APP BOOT / START =================== */
+/* =================== 60 APP BOOT / START =================== */
 
 // Wstępne pobranie danych reklamy klubu  
 async function preloadClubAd() {
@@ -2414,7 +2522,7 @@ if (!clubFromUrl) {
     goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
 } 
 
-/* =================== KONIEC SEKTORA 50 =================== */
+/* =================== KONIEC SEKTORA 60 =================== */
   
   /******************** PUSH ********************/
   
@@ -2919,107 +3027,6 @@ function closePlayerPaymentPopup() {
 
 
 
-
-/* =================== 50 API (CORE / CLUB) =================== */
-function requireClubId() {
-  if (!clubId) throw new Error("Brak clubId. Najpierw skonfiguruj klub.");
-}
-
-// POST do CORE bez clubId (np. createClub)
-async function apiCorePost(payload = {}) {
-  // DIAG_START: Panel 2 / CORE POST diagnostics
-  const safePayload = { ...payload };
-  ["haslo", "password", "token", "auth", "authorization"].forEach((k) => {
-    if (safePayload[k] != null) safePayload[k] = "[REDACTED]";
-  });
-  console.log("[DIAG][apiCorePost][request]", {
-    clubId: safePayload.clubId || clubId || "",
-    action: safePayload.action || "",
-    mode: safePayload.mode || "",
-    payload: safePayload
-  });
-  // DIAG_END
-
-  const body = new URLSearchParams({ ...payload });
-  const res = await fetch(CORE_URL, { method: "POST", body });
-
-  // DIAG_START: Panel 2 / CORE response diagnostics
-  const contentType = res.headers.get("content-type") || "";
-  console.log("[DIAG][apiCorePost][response-meta]", {
-    status: res.status,
-    contentType
-  });
-  if (!/json/i.test(contentType)) {
-    const raw = await res.clone().text();
-    console.log("[DIAG][apiCorePost][non-json-preview]", raw.slice(0, 200));
-  }
-  // DIAG_END
-
-  return res.json();
-}
-
-window.activateClub_ = async function(payload = {}) {
-  return apiCorePost({ action: "activateClub", ...payload });
-};
-
-// GET/POST do CLUB (wymaga clubId)
-async function apiClubGet(action, params = {}) {
-  requireClubId();
-  const url = new URL(CORE_URL);
-  url.searchParams.set("action", action);
-  url.searchParams.set("clubId", clubId);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  return res.json();
-}
-
-function extractGasError_(html) {
-  try {
-    // Najczęściej właściwy komunikat siedzi w <div class="errorMessage">...</div>
-    const m = String(html || "").match(/<div class="errorMessage"[^>]*>([\s\S]*?)<\/div>/i);
-    if (!m) return "";
-    // usuń tagi i zbij spacje
-    return m[1]
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+\n/g, "\n")
-      .replace(/\n\s+/g, "\n")
-      .trim();
-  } catch (e) {
-    return "";
-  }
-}
-
-async function apiClubPost(payload = {}) {
-  requireClubId();
-
-  // Budujemy body ręcznie, żeby NIC nie ginęło (zwłaszcza 0/1 i false)
-  const body = new URLSearchParams();
-  body.set("clubId", String(clubId));
-
-  // ważne: payload może mieć np. rezerwacjaObiektu: 0/1
-  // URLSearchParams({ ... }) potrafi to "zgubić", jeśli wartość jest undefined
-  for (const [k, v] of Object.entries(payload || {})) {
-    if (v === undefined || v === null) continue; // nie wysyłamy śmieci
-    body.set(k, String(v)); // wymuszamy string → GAS dostaje stabilnie
-  }
-
-  const res = await fetch(CORE_URL, { method: "POST", body });
-  const text = await res.text();
-
-  // 1) normalny JSON
-  try {
-    return JSON.parse(text);
-  } catch (e) {}
-
-  // 2) HTML z GAS — wyciągamy sensowny komunikat
-  const msg = extractGasError_(text);
-  return {
-    ok: false,
-    error: msg ? ("GAS ERROR: " + msg) : ("Backend zwrócił nie-JSON (" + res.status + ")."),
-    raw: text.slice(0, 600)
-  };
-}
   
 /* =================== 60 ORGHUB START / KONFIGURACJA =================== */
 
