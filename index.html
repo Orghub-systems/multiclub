@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.55';
+  window.APP_BUILD = 'BETA APP v2.56';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5317,8 +5317,469 @@ async function trainerConfirmDeleteYes() {
 
 /* =================== KONIEC SEKTORA 130 =================== */ 
 
+/* =================== 140 TRAINER / EDIT EVENT =================== */ 
 
-  /* =================== 65 ADMIN PANEL (frontend) =================== */
+// stan edycji
+let editMiesiac = null;
+let editCol5 = null;  
+  
+  /* ===== EDYCJA: TRENERZY (selecty) ===== */
+async function zaladujListeTrenerowDoEdycji() {
+  try {
+    const lista = await apiClubGet("getTrenerzy", {});
+    const ids = ["editTrener1","editTrener2","editTrener3","editTrener4"];
+
+    ids.forEach((id, idx) => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+
+      // pierwsza lista ma "wybierz", kolejne mają "kolejny"
+      const firstOpt = (idx === 0)
+        ? "<option value=''>— wybierz trenera —</option>"
+        : "<option value=''>— kolejny trener —</option>";
+
+      sel.innerHTML = firstOpt + (lista || []).map(n => `<option value="${n}">${n}</option>`).join("");
+    });
+  } catch (e) {
+    console.warn("Nie udało się wczytać trenerów do edycji", e);
+  }
+}
+
+function resetEditTrenerSelects_() {
+  ["editTrener2Wrap","editTrener3Wrap","editTrener4Wrap"].forEach(id => {
+    const w = document.getElementById(id);
+    if (w) w.classList.add("hidden");
+  });
+
+  ["editTrener1","editTrener2","editTrener3","editTrener4"].forEach(id => {
+    const s = document.getElementById(id);
+    if (s) s.value = "";
+  });
+}
+
+function onEditTrenerPick(n) {
+  const cur = document.getElementById(`editTrener${n}`);
+  const nextWrap = document.getElementById(`editTrener${n+1}Wrap`);
+  if (!cur) return;
+
+  const picked = String(cur.value || "").trim();
+  if (nextWrap) {
+    if (picked) nextWrap.classList.remove("hidden");
+    else nextWrap.classList.add("hidden");
+  }
+}
+
+/* ===== EDYCJA: GRUPY (popup G1–G10) ===== */
+let selectedEditGroups = new Set(); // np. "G1","G2"...
+
+function renderEditGroupsList_() {
+  const box = document.getElementById("editGroupsList");
+  if (!box) return;
+
+  const groups = Array.from({ length: 10 }, (_, i) => `G${i + 1}`);
+
+  box.innerHTML = groups.map(g => {
+    const checked = selectedEditGroups.has(g) ? "checked" : "";
+    return `
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:10px;background:#111;">
+        <span style="font-weight:700;">${g}</span>
+        <input type="checkbox" class="editGrpPick" value="${g}" ${checked} style="transform:scale(1.25);">
+      </label>
+    `;
+  }).join("");
+}
+
+function openEditGroupsPopup() {
+  renderEditGroupsList_();
+
+  const pop = document.getElementById("editGroupsPopup");
+  if (pop) pop.classList.remove("hidden");
+
+  pushPaymentModalHistoryState_("editGroupsPopup");
+}
+
+function closeEditGroupsPopup() {
+  // jeśli aktualny wpis historii dotyczy popupu grup,
+  // zamykamy go przez cofnięcie historii
+  if (isHistoryModal_("editGroupsPopup")) {
+    history.back();
+    return;
+  }
+
+  const pop = document.getElementById("editGroupsPopup");
+  if (pop) pop.classList.add("hidden");
+}
+
+function applyEditGroupsPopup() {
+  const picks = document.querySelectorAll("#editGroupsList .editGrpPick");
+  selectedEditGroups = new Set();
+  picks.forEach(ch => { if (ch.checked) selectedEditGroups.add(ch.value); });
+
+  updateEditGroupsSummary_();
+  closeEditGroupsPopup();
+}
+
+  /* =================== EDIT: POPUP TRENERZY =================== */
+function openEditTrenerzyPopup() {
+  const pop = document.getElementById("editTrenerzyPopup");
+  if (!pop) return;
+
+  // skopiuj aktualne wartości z "silnika" (ukryte editTrener1..4) do pickerów w popupie
+  copySelectValue_("editTrener1", "pickEditTrener1");
+  copySelectValue_("editTrener2", "pickEditTrener2");
+  copySelectValue_("editTrener3", "pickEditTrener3");
+  copySelectValue_("editTrener4", "pickEditTrener4");
+
+  // pokaż popup
+  pop.classList.remove("hidden");
+
+  pushPaymentModalHistoryState_("editTrenerzyPopup");
+}
+
+function closeEditTrenerzyPopup() {
+  // jeśli aktualny wpis historii dotyczy popupu trenerów,
+  // zamykamy go przez cofnięcie historii
+  if (isHistoryModal_("editTrenerzyPopup")) {
+    history.back();
+    return;
+  }
+
+  const pop = document.getElementById("editTrenerzyPopup");
+  if (!pop) return;
+  pop.classList.add("hidden");
+}
+
+function applyEditTrenerzyPopup() {
+  // przepisz wybory z popupu do ukrytych selectów (silnik)
+  copySelectValue_("pickEditTrener1", "editTrener1");
+  copySelectValue_("pickEditTrener2", "editTrener2");
+  copySelectValue_("pickEditTrener3", "editTrener3");
+  copySelectValue_("pickEditTrener4", "editTrener4");
+
+  // odpal istniejącą logikę kaskadową (jeśli masz)
+  try { if (typeof onEditTrenerPick === "function") onEditTrenerPick(1); } catch(e){}
+  try { if (typeof onEditTrenerPick === "function") onEditTrenerPick(2); } catch(e){}
+  try { if (typeof onEditTrenerPick === "function") onEditTrenerPick(3); } catch(e){}
+
+  // zaktualizuj podgląd na ekranie edycji
+  updateEditTrenerzySummary_();
+
+  closeEditTrenerzyPopup();
+}
+
+/* helper: kopiowanie value między selectami */
+function copySelectValue_(fromId, toId) {
+  const from = document.getElementById(fromId);
+  const to = document.getElementById(toId);
+  if (!from || !to) return;
+
+  // jeśli "to" nie ma jeszcze opcji, a "from" ma — skopiuj options (bezpiecznie)
+  if (to.tagName === "SELECT" && from.tagName === "SELECT" && to.options.length <= 1 && from.options.length > 1) {
+    to.innerHTML = from.innerHTML;
+  }
+
+  to.value = from.value || "";
+}
+
+/* helper: podgląd trenerów na ekranie edycji */
+function updateEditTrenerzySummary_() {
+  const btn = document.getElementById("btnEditPickTrenerzy");
+  if (!btn) return;
+
+  const t1 = (document.getElementById("editTrener1")?.value || "").trim();
+  const t2 = (document.getElementById("editTrener2")?.value || "").trim();
+  const t3 = (document.getElementById("editTrener3")?.value || "").trim();
+  const t4 = (document.getElementById("editTrener4")?.value || "").trim();
+
+  const arr = [t1, t2, t3, t4].filter(Boolean);
+
+  if (arr.length === 0) {
+    btn.textContent = "Trener: Bez trenera";
+  } else if (arr.length === 1) {
+    btn.textContent = "Trener: " + arr[0];
+  } else {
+    btn.textContent = "Trenerzy: " + arr.join(", ");
+  }
+}
+  
+function updateEditGroupsSummary_() {
+  const btn = document.getElementById("btnEditPickGroups");
+  if (!btn) return;
+
+  const arr = Array.from(selectedEditGroups || []);
+  arr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
+
+  btn.textContent = arr.length ? ("Grupy: " + arr.join(", ")) : "Grupy: —";
+}
+
+function resetEditGroups_() {
+  selectedEditGroups = new Set();
+  updateEditGroupsSummary_();
+}
+
+/* =================== 140B TRENER: EDYCJA WYDARZENIA (POPUP) =================== */
+
+function isHistoryModal_(modalId) {
+  try {
+    return !!(history.state && String(history.state.modal || "") === String(modalId || ""));
+  } catch (e) {
+    return false;
+  }
+}
+  
+// otwarcie popupu + wypełnienie pól + dociągnięcie trenerów i grup (bez psucia startu apki)
+async function trainerShowEditPopup(miesiac, col5) {
+  editMiesiac = String(miesiac || "");
+  editCol5 = Number(col5);
+
+  const pop = document.getElementById("trainerEditPopup");
+  const msg = document.getElementById("editEventMsg");
+  if (msg) msg.textContent = "⏳ Ładuję trenerów i grupy...";
+
+  // 1) podstawowe pola z cache listy (od razu)
+  const key = `${editMiesiac}-${editCol5}`;
+  const cached = window.__trainerEventsByKey ? window.__trainerEventsByKey[key] : null;
+
+  const d = document.getElementById("editEventData");
+  const s = document.getElementById("editEventStart");
+  const e = document.getElementById("editEventEnd");
+  const r = document.getElementById("editEventRodzaj");
+
+  if (d) d.value = cached?.dataISO || "";
+  if (s) s.value = cached?.start || "";
+  if (e) e.value = cached?.end || "";
+  if (r) r.value = cached?.rodzaj || "";
+
+  // 2) reset UI (żeby nie pamiętało)
+  resetEditTrenerSelects_();
+  resetEditGroups_();
+
+  // 3) pokaż popup od razu, ale z komunikatem "ładuję"
+  if (pop) pop.style.display = "flex";
+
+  // ✅ zawsze podepnij klik do przycisku w tym popupie
+  const saveBtn = pop ? pop.querySelector("#btnEditSave") : null;
+  if (saveBtn) saveBtn.onclick = trainerSaveEditEvent;
+
+  // ✅ nowy wpis historii dla głównego popupu edycji
+  pushPaymentModalHistoryState_("trainerEditPopup");
+
+  // 4) załaduj opcje trenerów do selectów
+  await zaladujListeTrenerowDoEdycji();
+
+  // 5) pobierz szczegóły wydarzenia (trenerzy + grupy)
+  try {
+    const treningId = `${editMiesiac}-${editCol5}`;
+    const details = await apiClubGet("wydarzenieDetails", { treningId });
+
+    if (details?.success) {
+      const trenerArr = normalizeTrenerzy_(details?.trenerzy);
+      const grupyArr  = normalizeGrupy_(details?.grupy);
+
+      setEditTrenerzy_(trenerArr);
+      updateEditTrenerzySummary_();
+      setEditGroups_(grupyArr);
+
+      // === ustaw checkboxy z backendu ===
+      const chkStat = document.getElementById("editEventStat");
+      const chkRez  = document.getElementById("editEventRez");
+
+      if (chkStat) chkStat.checked = !!details.liczDoStatystyk;
+      if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
+
+      if (msg) msg.textContent = "";
+
+    } else {
+      if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów i grup.";
+      console.warn("wydarzenieDetails:", details);
+    }
+  } catch (err) {
+    if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów i grup.";
+  }
+}
+
+function trainerHideEditPopup() {
+  // jeśli aktualny wpis historii dotyczy tego popupu,
+  // to zamykamy go przez cofnięcie historii, a nie "na sucho"
+  if (isHistoryModal_("trainerEditPopup")) {
+    history.back();
+    return;
+  }
+
+  const pop = document.getElementById("trainerEditPopup");
+  if (pop) pop.style.display = "none";
+
+  // na wszelki wypadek schowaj też popupy wewnętrzne
+  const groupsPop = document.getElementById("editGroupsPopup");
+  if (groupsPop) groupsPop.classList.add("hidden");
+
+  const trenerzyPop = document.getElementById("editTrenerzyPopup");
+  if (trenerzyPop) trenerzyPop.classList.add("hidden");
+
+  editMiesiac = null;
+  editCol5 = null;
+
+  const msg = document.getElementById("editEventMsg");
+  if (msg) msg.textContent = "";
+
+  const trenerzyMsg = document.getElementById("editTrenerzyMsg");
+  if (trenerzyMsg) trenerzyMsg.textContent = "";
+}
+
+function validHour_(hhmm) { return /^\d{2}:\d{2}$/.test(String(hhmm || "")); }
+
+function normalizeTrenerzy_(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.map(x => String(x||"").trim()).filter(Boolean);
+  // string: "A, B" albo "A;B"
+  return String(input)
+    .split(/[,;]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function normalizeGrupy_(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.map(x => String(x||"").trim()).filter(Boolean);
+  return String(input)
+    .split(/[,;]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function setEditTrenerzy_(arr) {
+  const t = (arr || []).slice(0, 4);
+
+  const s1 = document.getElementById("editTrener1");
+  const s2 = document.getElementById("editTrener2");
+  const s3 = document.getElementById("editTrener3");
+  const s4 = document.getElementById("editTrener4");
+
+  if (s1) s1.value = t[0] || "";
+  if (s2) s2.value = t[1] || "";
+  if (s3) s3.value = t[2] || "";
+  if (s4) s4.value = t[3] || "";
+
+  // ✅ pokaż wrapy zależnie od tego, czy poprzedni trener istnieje
+  const w2 = document.getElementById("editTrener2Wrap");
+  const w3 = document.getElementById("editTrener3Wrap");
+  const w4 = document.getElementById("editTrener4Wrap");
+
+  if (w2) (t[0] ? w2.classList.remove("hidden") : w2.classList.add("hidden"));
+  if (w3) (t[1] ? w3.classList.remove("hidden") : w3.classList.add("hidden"));
+  if (w4) (t[2] ? w4.classList.remove("hidden") : w4.classList.add("hidden"));
+
+  // ✅ wymuś “refresh” dla selectów (czasem Safari/Chrome na mobile lubi nie przerysować)
+  [s1, s2, s3, s4].forEach(sel => {
+    if (!sel) return;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+function setEditGroups_(arr) {
+  selectedEditGroups = new Set((arr || []).map(x => String(x||"").trim()).filter(Boolean));
+
+  // ✅ od razu pokaż summary na ekranie (bez klikania w "Wybierz grupy")
+  updateEditGroupsSummary_();
+
+  // ✅ i od razu przygotuj listę (żeby po otwarciu popupu checkboxy były już gotowe)
+  renderEditGroupsList_();
+}
+
+// zapis do backendu
+async function trainerSaveEditEvent() {
+  const msg = document.getElementById("editEventMsg");
+  if (msg) msg.textContent = "";
+
+  const btn = document.getElementById("btnEditSave");
+  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
+
+  try {
+    if (!editMiesiac || !editCol5) {
+      if (msg) msg.textContent = "❌ Brak identyfikatora wydarzenia.";
+      return;
+    }
+
+    const dataISO = (document.getElementById("editEventData")?.value || "").trim();
+    const start   = (document.getElementById("editEventStart")?.value || "").trim();
+    const end     = (document.getElementById("editEventEnd")?.value || "").trim();
+    const rodzaj  = (document.getElementById("editEventRodzaj")?.value || "").trim();
+
+    if (!dataISO || !start || !end) {
+      if (msg) msg.textContent = "❌ Uzupełnij datę i godziny.";
+      return;
+    }
+    if (start >= end) {
+      if (msg) msg.textContent = "❌ Godzina końca musi być później niż start.";
+      return;
+    }
+
+    const treningId = `${editMiesiac}-${editCol5}`;
+
+    // trenerzy z selectów
+    const trenerzyArr = [
+      document.getElementById("editTrener1")?.value,
+      document.getElementById("editTrener2")?.value,
+      document.getElementById("editTrener3")?.value,
+      document.getElementById("editTrener4")?.value
+    ].map(v => String(v || "").trim()).filter(Boolean);
+
+    // grupy z popupu
+    const grupyArr = Array.from(selectedEditGroups || []);
+    grupyArr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
+    const grupyCsv = grupyArr.join(",");
+
+    // ✅ CHECKBOXY (EDYCJA)
+    const liczDoStat = document.getElementById("editEventStat")?.checked ? 1 : 0;
+    const rezerwacjaObiektu = document.getElementById("editEventRez")?.checked ? 1 : 0;
+
+    const r = await apiClubPost({
+      action: "edytujWydarzenie",
+      treningId,
+      data: dataISO,
+      godzStart: start,
+      godzKoniec: end,
+      rodzaj,
+      trenerzy: trenerzyArr.join(", "),
+      grupy: grupyCsv,
+
+      // ✅ ważne: nazwy MUSZĄ pasować do routera (p.liczDoStatystyk / p.rezerwacjaObiektu)
+      liczDoStatystyk: liczDoStat,
+      rezerwacjaObiektu: rezerwacjaObiektu
+    });
+
+    console.log("DEBUG SAVE:", {
+  treningId,
+  liczDoStat,
+  rezerwacjaObiektu,
+  response: r
+});
+
+    if (r && (r.success || r.ok)) {
+      if (msg) msg.textContent = "✅ Zapisano. Odświeżam listę…";
+
+      try {
+        await trainerPokazWydarzenia();
+        setTimeout(trainerHideEditPopup, 300);
+      } catch (refreshErr) {
+        console.error("Refresh after save failed:", refreshErr);
+        if (msg) msg.textContent = "✅ Zapisano, ale nie udało się odświeżyć listy.";
+      }
+      return;
+    } else {
+      if (msg) msg.textContent = "❌ Nie udało się zapisać zmian: " + (r?.error || r?.message || "");
+    }
+
+  } catch (err) {
+    console.error(err);
+    if (msg) msg.textContent = "❌ Błąd zapisu (sprawdź konsolę).";
+  } finally {
+    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
+
+  /* =================== KONIEC SEKTORA 140 =================== */
+ 
+ /* =================== 150 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
 
 async function adminPokazZawodnikow() {
   goToView("adminZawodnicyView");
@@ -5468,43 +5929,10 @@ async function adminDoDeletePlayer() {
     alert("❌ Błąd połączenia: " + (e?.message || e));
   }
 }
+
+/* =================== KONIEC SEKTORA 150 =================== */
   
-async function adminSaveGrupy(nr, selectedSetOrArray) {
-  const numer = String(nr || "").trim();
-  if (!numer) { alert("❌ Brak numeru zawodnika"); return; }
-
-  // accepted: Set, Array, string
-  let grupyCsv = "";
-  if (typeof selectedSetOrArray === "string") {
-    grupyCsv = selectedSetOrArray.trim();
-  } else if (selectedSetOrArray && typeof selectedSetOrArray.forEach === "function") {
-    const arr = [];
-    selectedSetOrArray.forEach(v => arr.push(String(v || "").trim()));
-    grupyCsv = arr.filter(Boolean).sort((a,b)=>Number(a.slice(1))-Number(b.slice(1))).join(",");
-  } else if (Array.isArray(selectedSetOrArray)) {
-    grupyCsv = selectedSetOrArray.map(v=>String(v||"").trim()).filter(Boolean)
-      .sort((a,b)=>Number(a.slice(1))-Number(b.slice(1))).join(",");
-  }
-
-  try {
-    const r = await apiClubPost({
-      action: "adminSetGrupy",
-      numer,
-      grupy: grupyCsv
-    });
-
-    if (!r || !(r.success || r.ok)) {
-      alert("❌ Zapis grup nie wyszedł: " + (r?.error || r?.message || JSON.stringify(r)));
-      return;
-    }
-
-    alert("✅ Zapisano grupy: " + (r.written || grupyCsv || "—"));
-  } catch (e) {
-    alert("❌ Błąd połączenia: " + (e?.message || e));
-  }
-}
-
-  /* =================== 66 ADMIN: POPUP ZAWODNIK + GRUPY/STATY/PŁATNOŚCI =================== */
+/* =================== 160 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
 
 // ---- Otwarcie okna zawodnika (wywołasz z listy zawodników) ----
 function adminOpenZawodnik(nr, nazwisko, joinDate) {
@@ -5575,6 +6003,41 @@ function adminOpenZawodnik(nr, nazwisko, joinDate) {
 }
 // =================== GRUPY ===================
 let __adminGroupsSet = new Set();
+
+async function adminSaveGrupy(nr, selectedSetOrArray) {
+  const numer = String(nr || "").trim();
+  if (!numer) { alert("❌ Brak numeru zawodnika"); return; }
+
+  // accepted: Set, Array, string
+  let grupyCsv = "";
+  if (typeof selectedSetOrArray === "string") {
+    grupyCsv = selectedSetOrArray.trim();
+  } else if (selectedSetOrArray && typeof selectedSetOrArray.forEach === "function") {
+    const arr = [];
+    selectedSetOrArray.forEach(v => arr.push(String(v || "").trim()));
+    grupyCsv = arr.filter(Boolean).sort((a,b)=>Number(a.slice(1))-Number(b.slice(1))).join(",");
+  } else if (Array.isArray(selectedSetOrArray)) {
+    grupyCsv = selectedSetOrArray.map(v=>String(v||"").trim()).filter(Boolean)
+      .sort((a,b)=>Number(a.slice(1))-Number(b.slice(1))).join(",");
+  }
+
+  try {
+    const r = await apiClubPost({
+      action: "adminSetGrupy",
+      numer,
+      grupy: grupyCsv
+    });
+
+    if (!r || !(r.success || r.ok)) {
+      alert("❌ Zapis grup nie wyszedł: " + (r?.error || r?.message || JSON.stringify(r)));
+      return;
+    }
+
+    alert("✅ Zapisano grupy: " + (r.written || grupyCsv || "—"));
+  } catch (e) {
+    alert("❌ Błąd połączenia: " + (e?.message || e));
+  }
+}  
 
 function adminRenderGroupsGrid_() {
   const grid = document.getElementById("adminGroupsGrid");
@@ -6987,470 +7450,12 @@ function adminOpenRaporty() {
  
  
 
-/* =================== 140 TRAINER / EDIT EVENT =================== */  
-  
-  /* ===== EDYCJA: TRENERZY (selecty) ===== */
-async function zaladujListeTrenerowDoEdycji() {
-  try {
-    const lista = await apiClubGet("getTrenerzy", {});
-    const ids = ["editTrener1","editTrener2","editTrener3","editTrener4"];
-
-    ids.forEach((id, idx) => {
-      const sel = document.getElementById(id);
-      if (!sel) return;
-
-      // pierwsza lista ma "wybierz", kolejne mają "kolejny"
-      const firstOpt = (idx === 0)
-        ? "<option value=''>— wybierz trenera —</option>"
-        : "<option value=''>— kolejny trener —</option>";
-
-      sel.innerHTML = firstOpt + (lista || []).map(n => `<option value="${n}">${n}</option>`).join("");
-    });
-  } catch (e) {
-    console.warn("Nie udało się wczytać trenerów do edycji", e);
-  }
-}
-
-function resetEditTrenerSelects_() {
-  ["editTrener2Wrap","editTrener3Wrap","editTrener4Wrap"].forEach(id => {
-    const w = document.getElementById(id);
-    if (w) w.classList.add("hidden");
-  });
-
-  ["editTrener1","editTrener2","editTrener3","editTrener4"].forEach(id => {
-    const s = document.getElementById(id);
-    if (s) s.value = "";
-  });
-}
-
-function onEditTrenerPick(n) {
-  const cur = document.getElementById(`editTrener${n}`);
-  const nextWrap = document.getElementById(`editTrener${n+1}Wrap`);
-  if (!cur) return;
-
-  const picked = String(cur.value || "").trim();
-  if (nextWrap) {
-    if (picked) nextWrap.classList.remove("hidden");
-    else nextWrap.classList.add("hidden");
-  }
-}
-
-/* ===== EDYCJA: GRUPY (popup G1–G10) ===== */
-let selectedEditGroups = new Set(); // np. "G1","G2"...
-
-function renderEditGroupsList_() {
-  const box = document.getElementById("editGroupsList");
-  if (!box) return;
-
-  const groups = Array.from({ length: 10 }, (_, i) => `G${i + 1}`);
-
-  box.innerHTML = groups.map(g => {
-    const checked = selectedEditGroups.has(g) ? "checked" : "";
-    return `
-      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:10px;background:#111;">
-        <span style="font-weight:700;">${g}</span>
-        <input type="checkbox" class="editGrpPick" value="${g}" ${checked} style="transform:scale(1.25);">
-      </label>
-    `;
-  }).join("");
-}
-
-function openEditGroupsPopup() {
-  renderEditGroupsList_();
-
-  const pop = document.getElementById("editGroupsPopup");
-  if (pop) pop.classList.remove("hidden");
-
-  pushPaymentModalHistoryState_("editGroupsPopup");
-}
-
-function closeEditGroupsPopup() {
-  // jeśli aktualny wpis historii dotyczy popupu grup,
-  // zamykamy go przez cofnięcie historii
-  if (isHistoryModal_("editGroupsPopup")) {
-    history.back();
-    return;
-  }
-
-  const pop = document.getElementById("editGroupsPopup");
-  if (pop) pop.classList.add("hidden");
-}
-
-function applyEditGroupsPopup() {
-  const picks = document.querySelectorAll("#editGroupsList .editGrpPick");
-  selectedEditGroups = new Set();
-  picks.forEach(ch => { if (ch.checked) selectedEditGroups.add(ch.value); });
-
-  updateEditGroupsSummary_();
-  closeEditGroupsPopup();
-}
-
-  /* =================== EDIT: POPUP TRENERZY =================== */
-function openEditTrenerzyPopup() {
-  const pop = document.getElementById("editTrenerzyPopup");
-  if (!pop) return;
-
-  // skopiuj aktualne wartości z "silnika" (ukryte editTrener1..4) do pickerów w popupie
-  copySelectValue_("editTrener1", "pickEditTrener1");
-  copySelectValue_("editTrener2", "pickEditTrener2");
-  copySelectValue_("editTrener3", "pickEditTrener3");
-  copySelectValue_("editTrener4", "pickEditTrener4");
-
-  // pokaż popup
-  pop.classList.remove("hidden");
-
-  pushPaymentModalHistoryState_("editTrenerzyPopup");
-}
-
-function closeEditTrenerzyPopup() {
-  // jeśli aktualny wpis historii dotyczy popupu trenerów,
-  // zamykamy go przez cofnięcie historii
-  if (isHistoryModal_("editTrenerzyPopup")) {
-    history.back();
-    return;
-  }
-
-  const pop = document.getElementById("editTrenerzyPopup");
-  if (!pop) return;
-  pop.classList.add("hidden");
-}
-
-function applyEditTrenerzyPopup() {
-  // przepisz wybory z popupu do ukrytych selectów (silnik)
-  copySelectValue_("pickEditTrener1", "editTrener1");
-  copySelectValue_("pickEditTrener2", "editTrener2");
-  copySelectValue_("pickEditTrener3", "editTrener3");
-  copySelectValue_("pickEditTrener4", "editTrener4");
-
-  // odpal istniejącą logikę kaskadową (jeśli masz)
-  try { if (typeof onEditTrenerPick === "function") onEditTrenerPick(1); } catch(e){}
-  try { if (typeof onEditTrenerPick === "function") onEditTrenerPick(2); } catch(e){}
-  try { if (typeof onEditTrenerPick === "function") onEditTrenerPick(3); } catch(e){}
-
-  // zaktualizuj podgląd na ekranie edycji
-  updateEditTrenerzySummary_();
-
-  closeEditTrenerzyPopup();
-}
-
-/* helper: kopiowanie value między selectami */
-function copySelectValue_(fromId, toId) {
-  const from = document.getElementById(fromId);
-  const to = document.getElementById(toId);
-  if (!from || !to) return;
-
-  // jeśli "to" nie ma jeszcze opcji, a "from" ma — skopiuj options (bezpiecznie)
-  if (to.tagName === "SELECT" && from.tagName === "SELECT" && to.options.length <= 1 && from.options.length > 1) {
-    to.innerHTML = from.innerHTML;
-  }
-
-  to.value = from.value || "";
-}
-
-/* helper: podgląd trenerów na ekranie edycji */
-function updateEditTrenerzySummary_() {
-  const btn = document.getElementById("btnEditPickTrenerzy");
-  if (!btn) return;
-
-  const t1 = (document.getElementById("editTrener1")?.value || "").trim();
-  const t2 = (document.getElementById("editTrener2")?.value || "").trim();
-  const t3 = (document.getElementById("editTrener3")?.value || "").trim();
-  const t4 = (document.getElementById("editTrener4")?.value || "").trim();
-
-  const arr = [t1, t2, t3, t4].filter(Boolean);
-
-  if (arr.length === 0) {
-    btn.textContent = "Trener: Bez trenera";
-  } else if (arr.length === 1) {
-    btn.textContent = "Trener: " + arr[0];
-  } else {
-    btn.textContent = "Trenerzy: " + arr.join(", ");
-  }
-}
-  
-function updateEditGroupsSummary_() {
-  const btn = document.getElementById("btnEditPickGroups");
-  if (!btn) return;
-
-  const arr = Array.from(selectedEditGroups || []);
-  arr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
-
-  btn.textContent = arr.length ? ("Grupy: " + arr.join(", ")) : "Grupy: —";
-}
-
-function resetEditGroups_() {
-  selectedEditGroups = new Set();
-  updateEditGroupsSummary_();
-}
-
 
   
 
   
-/* =================== 90B TRENER: EDYCJA WYDARZENIA (POPUP) =================== */
 
-// stan edycji
-let editMiesiac = null;
-let editCol5 = null;
-
-function isHistoryModal_(modalId) {
-  try {
-    return !!(history.state && String(history.state.modal || "") === String(modalId || ""));
-  } catch (e) {
-    return false;
-  }
-}
   
-// otwarcie popupu + wypełnienie pól + dociągnięcie trenerów i grup (bez psucia startu apki)
-async function trainerShowEditPopup(miesiac, col5) {
-  editMiesiac = String(miesiac || "");
-  editCol5 = Number(col5);
-
-  const pop = document.getElementById("trainerEditPopup");
-  const msg = document.getElementById("editEventMsg");
-  if (msg) msg.textContent = "⏳ Ładuję trenerów i grupy...";
-
-  // 1) podstawowe pola z cache listy (od razu)
-  const key = `${editMiesiac}-${editCol5}`;
-  const cached = window.__trainerEventsByKey ? window.__trainerEventsByKey[key] : null;
-
-  const d = document.getElementById("editEventData");
-  const s = document.getElementById("editEventStart");
-  const e = document.getElementById("editEventEnd");
-  const r = document.getElementById("editEventRodzaj");
-
-  if (d) d.value = cached?.dataISO || "";
-  if (s) s.value = cached?.start || "";
-  if (e) e.value = cached?.end || "";
-  if (r) r.value = cached?.rodzaj || "";
-
-  // 2) reset UI (żeby nie pamiętało)
-  resetEditTrenerSelects_();
-  resetEditGroups_();
-
-  // 3) pokaż popup od razu, ale z komunikatem "ładuję"
-  if (pop) pop.style.display = "flex";
-
-  // ✅ zawsze podepnij klik do przycisku w tym popupie
-  const saveBtn = pop ? pop.querySelector("#btnEditSave") : null;
-  if (saveBtn) saveBtn.onclick = trainerSaveEditEvent;
-
-  // ✅ nowy wpis historii dla głównego popupu edycji
-  pushPaymentModalHistoryState_("trainerEditPopup");
-
-  // 4) załaduj opcje trenerów do selectów
-  await zaladujListeTrenerowDoEdycji();
-
-  // 5) pobierz szczegóły wydarzenia (trenerzy + grupy)
-  try {
-    const treningId = `${editMiesiac}-${editCol5}`;
-    const details = await apiClubGet("wydarzenieDetails", { treningId });
-
-    if (details?.success) {
-      const trenerArr = normalizeTrenerzy_(details?.trenerzy);
-      const grupyArr  = normalizeGrupy_(details?.grupy);
-
-      setEditTrenerzy_(trenerArr);
-      updateEditTrenerzySummary_();
-      setEditGroups_(grupyArr);
-
-      // === ustaw checkboxy z backendu ===
-      const chkStat = document.getElementById("editEventStat");
-      const chkRez  = document.getElementById("editEventRez");
-
-      if (chkStat) chkStat.checked = !!details.liczDoStatystyk;
-      if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
-
-      if (msg) msg.textContent = "";
-
-    } else {
-      if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów i grup.";
-      console.warn("wydarzenieDetails:", details);
-    }
-  } catch (err) {
-    if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów i grup.";
-  }
-}
-
-function trainerHideEditPopup() {
-  // jeśli aktualny wpis historii dotyczy tego popupu,
-  // to zamykamy go przez cofnięcie historii, a nie "na sucho"
-  if (isHistoryModal_("trainerEditPopup")) {
-    history.back();
-    return;
-  }
-
-  const pop = document.getElementById("trainerEditPopup");
-  if (pop) pop.style.display = "none";
-
-  // na wszelki wypadek schowaj też popupy wewnętrzne
-  const groupsPop = document.getElementById("editGroupsPopup");
-  if (groupsPop) groupsPop.classList.add("hidden");
-
-  const trenerzyPop = document.getElementById("editTrenerzyPopup");
-  if (trenerzyPop) trenerzyPop.classList.add("hidden");
-
-  editMiesiac = null;
-  editCol5 = null;
-
-  const msg = document.getElementById("editEventMsg");
-  if (msg) msg.textContent = "";
-
-  const trenerzyMsg = document.getElementById("editTrenerzyMsg");
-  if (trenerzyMsg) trenerzyMsg.textContent = "";
-}
-
-function validHour_(hhmm) { return /^\d{2}:\d{2}$/.test(String(hhmm || "")); }
-
-function normalizeTrenerzy_(input) {
-  if (!input) return [];
-  if (Array.isArray(input)) return input.map(x => String(x||"").trim()).filter(Boolean);
-  // string: "A, B" albo "A;B"
-  return String(input)
-    .split(/[,;]+/)
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
-function normalizeGrupy_(input) {
-  if (!input) return [];
-  if (Array.isArray(input)) return input.map(x => String(x||"").trim()).filter(Boolean);
-  return String(input)
-    .split(/[,;]+/)
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
-function setEditTrenerzy_(arr) {
-  const t = (arr || []).slice(0, 4);
-
-  const s1 = document.getElementById("editTrener1");
-  const s2 = document.getElementById("editTrener2");
-  const s3 = document.getElementById("editTrener3");
-  const s4 = document.getElementById("editTrener4");
-
-  if (s1) s1.value = t[0] || "";
-  if (s2) s2.value = t[1] || "";
-  if (s3) s3.value = t[2] || "";
-  if (s4) s4.value = t[3] || "";
-
-  // ✅ pokaż wrapy zależnie od tego, czy poprzedni trener istnieje
-  const w2 = document.getElementById("editTrener2Wrap");
-  const w3 = document.getElementById("editTrener3Wrap");
-  const w4 = document.getElementById("editTrener4Wrap");
-
-  if (w2) (t[0] ? w2.classList.remove("hidden") : w2.classList.add("hidden"));
-  if (w3) (t[1] ? w3.classList.remove("hidden") : w3.classList.add("hidden"));
-  if (w4) (t[2] ? w4.classList.remove("hidden") : w4.classList.add("hidden"));
-
-  // ✅ wymuś “refresh” dla selectów (czasem Safari/Chrome na mobile lubi nie przerysować)
-  [s1, s2, s3, s4].forEach(sel => {
-    if (!sel) return;
-    sel.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-}
-function setEditGroups_(arr) {
-  selectedEditGroups = new Set((arr || []).map(x => String(x||"").trim()).filter(Boolean));
-
-  // ✅ od razu pokaż summary na ekranie (bez klikania w "Wybierz grupy")
-  updateEditGroupsSummary_();
-
-  // ✅ i od razu przygotuj listę (żeby po otwarciu popupu checkboxy były już gotowe)
-  renderEditGroupsList_();
-}
-
-// zapis do backendu
-async function trainerSaveEditEvent() {
-  const msg = document.getElementById("editEventMsg");
-  if (msg) msg.textContent = "";
-
-  const btn = document.getElementById("btnEditSave");
-  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
-
-  try {
-    if (!editMiesiac || !editCol5) {
-      if (msg) msg.textContent = "❌ Brak identyfikatora wydarzenia.";
-      return;
-    }
-
-    const dataISO = (document.getElementById("editEventData")?.value || "").trim();
-    const start   = (document.getElementById("editEventStart")?.value || "").trim();
-    const end     = (document.getElementById("editEventEnd")?.value || "").trim();
-    const rodzaj  = (document.getElementById("editEventRodzaj")?.value || "").trim();
-
-    if (!dataISO || !start || !end) {
-      if (msg) msg.textContent = "❌ Uzupełnij datę i godziny.";
-      return;
-    }
-    if (start >= end) {
-      if (msg) msg.textContent = "❌ Godzina końca musi być później niż start.";
-      return;
-    }
-
-    const treningId = `${editMiesiac}-${editCol5}`;
-
-    // trenerzy z selectów
-    const trenerzyArr = [
-      document.getElementById("editTrener1")?.value,
-      document.getElementById("editTrener2")?.value,
-      document.getElementById("editTrener3")?.value,
-      document.getElementById("editTrener4")?.value
-    ].map(v => String(v || "").trim()).filter(Boolean);
-
-    // grupy z popupu
-    const grupyArr = Array.from(selectedEditGroups || []);
-    grupyArr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
-    const grupyCsv = grupyArr.join(",");
-
-    // ✅ CHECKBOXY (EDYCJA)
-    const liczDoStat = document.getElementById("editEventStat")?.checked ? 1 : 0;
-    const rezerwacjaObiektu = document.getElementById("editEventRez")?.checked ? 1 : 0;
-
-    const r = await apiClubPost({
-      action: "edytujWydarzenie",
-      treningId,
-      data: dataISO,
-      godzStart: start,
-      godzKoniec: end,
-      rodzaj,
-      trenerzy: trenerzyArr.join(", "),
-      grupy: grupyCsv,
-
-      // ✅ ważne: nazwy MUSZĄ pasować do routera (p.liczDoStatystyk / p.rezerwacjaObiektu)
-      liczDoStatystyk: liczDoStat,
-      rezerwacjaObiektu: rezerwacjaObiektu
-    });
-
-    console.log("DEBUG SAVE:", {
-  treningId,
-  liczDoStat,
-  rezerwacjaObiektu,
-  response: r
-});
-
-    if (r && (r.success || r.ok)) {
-      if (msg) msg.textContent = "✅ Zapisano. Odświeżam listę…";
-
-      try {
-        await trainerPokazWydarzenia();
-        setTimeout(trainerHideEditPopup, 300);
-      } catch (refreshErr) {
-        console.error("Refresh after save failed:", refreshErr);
-        if (msg) msg.textContent = "✅ Zapisano, ale nie udało się odświeżyć listy.";
-      }
-      return;
-    } else {
-      if (msg) msg.textContent = "❌ Nie udało się zapisać zmian: " + (r?.error || r?.message || "");
-    }
-
-  } catch (err) {
-    console.error(err);
-    if (msg) msg.textContent = "❌ Błąd zapisu (sprawdź konsolę).";
-  } finally {
-    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
-  }
-}
-
   /* =================== 92 ADMIN: RAPORTY (WIDOKI) =================== */
 
   // ===== RAPORTY v2: parser bloków "MIESIĄC:" z siatki arkusza =====
