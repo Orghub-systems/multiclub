@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.45';
+  window.APP_BUILD = 'BETA APP v2.46';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1945,10 +1945,129 @@ window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
 
 /* =================== KONIEC SEKTORA 10 =================== */
+  
+/* =================== 20 PAMIĘĆ LOKALNA (localStorage) =================== */
+
+// Klucz localStorage dla konfiguracji klubu  
+const LS_KEY_CFG = "orghub.clubConfig.v1";
+
+// Klucz localStorage dla clubId  
+const LS_KEY_CLUBID = "orghub_clubId";
+
+// Klucz localStorage dla motywu  
+const LS_KEY_THEME = "orghub_theme";
+
+// Klucz localStorage dla blokady konfiguracji  
+const LS_KEY_CFG_LOCK = "orghub_cfg_locked";
+
+// Sprawdzenie, czy konfiguracja jest zablokowana  
+function isCfgLocked_() {
+  return localStorage.getItem(LS_KEY_CFG_LOCK) === "1";
+}
+
+// Zablokowanie konfiguracji  
+function lockCfg_() {
+  localStorage.setItem(LS_KEY_CFG_LOCK, "1");
+}
+
+// Odblokowanie konfiguracji  
+function unlockCfg_() {
+  localStorage.removeItem(LS_KEY_CFG_LOCK);
+}
+
+// Odczyt lokalnej konfiguracji klubu  
+function loadLocalClubConfig() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY_CFG) || "null"); }
+  catch { return null; }
+}
+
+// Zapis lokalnej konfiguracji klubu  
+function saveLocalClubConfig(cfg) {
+  localStorage.setItem(LS_KEY_CFG, JSON.stringify(cfg || {}));
+}
+
+  
+function clearLocalClubConfig() {
+  localStorage.removeItem(LS_KEY_CFG);
+}
+
+// Usunięcie lokalnej konfiguracji klubu  
+function saveClubId_(id) {
+  clubId = String(id || "").trim();
+  if (clubId) localStorage.setItem(LS_KEY_CLUBID, clubId);
+  else localStorage.removeItem(LS_KEY_CLUBID);
+}
+
+// Zapis motywu do pamięci lokalnej  
+function saveTheme_(theme) {
+  localStorage.setItem(LS_KEY_THEME, JSON.stringify(theme || {}));
+}
+
+// Odczyt motywu z pamięci lokalnej  
+function loadTheme_() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY_THEME) || "null"); }
+  catch { return null; }
+}
+
+// Inicjalizacja clubId z URL lub hash  
+function initClubFromUrl_() {
+  try {
+    // 1) ?clubId=
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("clubId");
+    if (q) { saveClubId_(q); return; }
+
+    // 2) #clubId=  (PWA start_url z manifestu)
+    const hash = String(window.location.hash || "");
+    const m = hash.match(/clubId=([^&]+)/i);
+    if (m && m[1]) { saveClubId_(decodeURIComponent(m[1])); return; }
+
+    // 3) brak clubId w URL → NIE resetujemy (zostaje ostatni zapisany)
+    //    (to jest kluczowe, bo Chrome czasem uruchamia standalone bez query)
+  } catch (e) {}
+}
+
+// Ustawienie manifestu PWA dla klubu  
+function applyClubManifest_(clubId) {
+  try {
+    const id = String(clubId || "").trim().toLowerCase();
+    const link = document.getElementById("appManifestLink");
+    if (!link) return;
+
+    // Jeśli nie ma clubId → wracamy do głównego manifestu
+    if (!id) {
+      link.setAttribute("href", "manifest.json");
+      return;
+    }
+
+    // Jeśli jest clubId → manifest per klub
+    link.setAttribute("href", `/manifests/manifest-${id}.json`);
+  } catch (e) {}
+}
+
+// Pobranie clubId z URL lub hash  
+function getClubIdFromUrl_() {
+  try {
+    // 1) query ?clubId=...
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("clubId");
+    if (q) return String(q).trim();
+
+    // 2) hash #clubId=... (PWA start_url)
+    const hash = String(window.location.hash || "");
+    const m = hash.match(/clubId=([^&]+)/i);
+    if (m && m[1]) return decodeURIComponent(m[1]).trim();
+
+    return "";
+  } catch (e) {
+    return "";
+  }
+}
+
+/* =================== KONIEC SEKTORA 20 =================== */
 
 
   
-
 async function preloadClubAd() {
   try {
     const clubId = getClubIdFromUrl_();
@@ -2473,98 +2592,7 @@ function closePlayerPaymentPopup() {
   }
 }
   
-/* =================== 20 PAMIĘĆ LOKALNA (localStorage) =================== */
-const LS_KEY_CFG = "orghub.clubConfig.v1";
-const LS_KEY_CLUBID = "orghub_clubId";
-const LS_KEY_THEME = "orghub_theme";
-const LS_KEY_CFG_LOCK = "orghub_cfg_locked";
 
-function isCfgLocked_() {
-  return localStorage.getItem(LS_KEY_CFG_LOCK) === "1";
-}
-
-function lockCfg_() {
-  localStorage.setItem(LS_KEY_CFG_LOCK, "1");
-}
-
-function unlockCfg_() {
-  localStorage.removeItem(LS_KEY_CFG_LOCK);
-}
-
-function loadLocalClubConfig() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY_CFG) || "null"); }
-  catch { return null; }
-}
-function saveLocalClubConfig(cfg) {
-  localStorage.setItem(LS_KEY_CFG, JSON.stringify(cfg || {}));
-}
-function clearLocalClubConfig() {
-  localStorage.removeItem(LS_KEY_CFG);
-}
-function saveClubId_(id) {
-  clubId = String(id || "").trim();
-  if (clubId) localStorage.setItem(LS_KEY_CLUBID, clubId);
-  else localStorage.removeItem(LS_KEY_CLUBID);
-}
-function saveTheme_(theme) {
-  localStorage.setItem(LS_KEY_THEME, JSON.stringify(theme || {}));
-}
-function loadTheme_() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY_THEME) || "null"); }
-  catch { return null; }
-}
-
-function initClubFromUrl_() {
-  try {
-    // 1) ?clubId=
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get("clubId");
-    if (q) { saveClubId_(q); return; }
-
-    // 2) #clubId=  (PWA start_url z manifestu)
-    const hash = String(window.location.hash || "");
-    const m = hash.match(/clubId=([^&]+)/i);
-    if (m && m[1]) { saveClubId_(decodeURIComponent(m[1])); return; }
-
-    // 3) brak clubId w URL → NIE resetujemy (zostaje ostatni zapisany)
-    //    (to jest kluczowe, bo Chrome czasem uruchamia standalone bez query)
-  } catch (e) {}
-}
-
-function applyClubManifest_(clubId) {
-  try {
-    const id = String(clubId || "").trim().toLowerCase();
-    const link = document.getElementById("appManifestLink");
-    if (!link) return;
-
-    // Jeśli nie ma clubId → wracamy do głównego manifestu
-    if (!id) {
-      link.setAttribute("href", "manifest.json");
-      return;
-    }
-
-    // Jeśli jest clubId → manifest per klub
-    link.setAttribute("href", `/manifests/manifest-${id}.json`);
-  } catch (e) {}
-}
-  
-function getClubIdFromUrl_() {
-  try {
-    // 1) query ?clubId=...
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get("clubId");
-    if (q) return String(q).trim();
-
-    // 2) hash #clubId=... (PWA start_url)
-    const hash = String(window.location.hash || "");
-    const m = hash.match(/clubId=([^&]+)/i);
-    if (m && m[1]) return decodeURIComponent(m[1]).trim();
-
-    return "";
-  } catch (e) {
-    return "";
-  }
-}
 
 /* =================== 30 BUSY OVERLAY =================== */
 function showBusy(text) {
