@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.45';
+  window.APP_BUILD = 'BETA APP v2.44';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1928,7 +1928,31 @@ let currentView = "loginView";
 window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
 
+async function preloadClubAd() {
+  try {
+    const clubId = getClubIdFromUrl_();
+    if (!clubId) return;
 
+    const res = await fetch(`${CORE_URL}?action=club_ad&clubId=${encodeURIComponent(clubId)}`);
+    const data = await res.json();
+
+    if (!data || !data.enabled || !data.assetPath) {
+      window.__clubAdData = null;
+      return;
+    }
+
+    data.assetUrl = `${location.origin}/__ads/${data.assetPath}`;
+    window.__clubAdData = data;
+
+    if (data.type === "image") {
+      const img = new Image();
+      img.src = data.assetUrl;
+    }
+  } catch (e) {
+    console.error("Błąd preload reklamy:", e);
+    window.__clubAdData = null;
+  }
+}
 
   /******************** PUSH ********************/
   
@@ -2521,8 +2545,7 @@ function getClubIdFromUrl_() {
   }
 }
 
-/* =================== 30 UI HELPERS / OVERLAYS / THEME =================== */
-  
+/* =================== 30 BUSY OVERLAY =================== */
 function showBusy(text) {
   const ov = document.getElementById("busyOverlay");
   const bt = document.getElementById("busyText");
@@ -2534,139 +2557,7 @@ function hideBusy() {
   if (ov) ov.classList.add("hidden");
 }
 
-function refreshClubBadge_() {
-  const el = document.getElementById("clubIdBadge");
-  if (!el) return;
-
-  const name = (clubId || "")
-    .replace(/_/g, " ")   // zamiana _ na spację
-    .toUpperCase();
-
-  el.textContent = name;
-}
-
-function applyTheme_(theme) {
-  try {
-    if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
-
-    const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
-    if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
-
-  } catch (e) {}
-}  
-
-
-
-
-
-    // --- ROUTER ---
-    refreshClubBadge_();
-    const effectiveClubId = (clubFromUrl || clubId || "").trim();
-    goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
-}
-
-/* =================== 40 API (CORE / CLUB) =================== */
-function requireClubId() {
-  if (!clubId) throw new Error("Brak clubId. Najpierw skonfiguruj klub.");
-}
-
-// POST do CORE bez clubId (np. createClub)
-async function apiCorePost(payload = {}) {
-  // DIAG_START: Panel 2 / CORE POST diagnostics
-  const safePayload = { ...payload };
-  ["haslo", "password", "token", "auth", "authorization"].forEach((k) => {
-    if (safePayload[k] != null) safePayload[k] = "[REDACTED]";
-  });
-  console.log("[DIAG][apiCorePost][request]", {
-    clubId: safePayload.clubId || clubId || "",
-    action: safePayload.action || "",
-    mode: safePayload.mode || "",
-    payload: safePayload
-  });
-  // DIAG_END
-
-  const body = new URLSearchParams({ ...payload });
-  const res = await fetch(CORE_URL, { method: "POST", body });
-
-  // DIAG_START: Panel 2 / CORE response diagnostics
-  const contentType = res.headers.get("content-type") || "";
-  console.log("[DIAG][apiCorePost][response-meta]", {
-    status: res.status,
-    contentType
-  });
-  if (!/json/i.test(contentType)) {
-    const raw = await res.clone().text();
-    console.log("[DIAG][apiCorePost][non-json-preview]", raw.slice(0, 200));
-  }
-  // DIAG_END
-
-  return res.json();
-}
-
-window.activateClub_ = async function(payload = {}) {
-  return apiCorePost({ action: "activateClub", ...payload });
-};
-
-// GET/POST do CLUB (wymaga clubId)
-async function apiClubGet(action, params = {}) {
-  requireClubId();
-  const url = new URL(CORE_URL);
-  url.searchParams.set("action", action);
-  url.searchParams.set("clubId", clubId);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  return res.json();
-}
-
-function extractGasError_(html) {
-  try {
-    // Najczęściej właściwy komunikat siedzi w <div class="errorMessage">...</div>
-    const m = String(html || "").match(/<div class="errorMessage"[^>]*>([\s\S]*?)<\/div>/i);
-    if (!m) return "";
-    // usuń tagi i zbij spacje
-    return m[1]
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+\n/g, "\n")
-      .replace(/\n\s+/g, "\n")
-      .trim();
-  } catch (e) {
-    return "";
-  }
-}
-
-async function apiClubPost(payload = {}) {
-  requireClubId();
-
-  // Budujemy body ręcznie, żeby NIC nie ginęło (zwłaszcza 0/1 i false)
-  const body = new URLSearchParams();
-  body.set("clubId", String(clubId));
-
-  // ważne: payload może mieć np. rezerwacjaObiektu: 0/1
-  // URLSearchParams({ ... }) potrafi to "zgubić", jeśli wartość jest undefined
-  for (const [k, v] of Object.entries(payload || {})) {
-    if (v === undefined || v === null) continue; // nie wysyłamy śmieci
-    body.set(k, String(v)); // wymuszamy string → GAS dostaje stabilnie
-  }
-
-  const res = await fetch(CORE_URL, { method: "POST", body });
-  const text = await res.text();
-
-  // 1) normalny JSON
-  try {
-    return JSON.parse(text);
-  } catch (e) {}
-
-  // 2) HTML z GAS — wyciągamy sensowny komunikat
-  const msg = extractGasError_(text);
-  return {
-    ok: false,
-    error: msg ? ("GAS ERROR: " + msg) : ("Backend zwrócił nie-JSON (" + res.status + ")."),
-    raw: text.slice(0, 600)
-  };
-}
-
-/* =================== 50 NAWIGACJA / ROUTER =================== */
+/* =================== 40 NAWIGACJA / ROUTER =================== */
 function ukryjWszystkie() {
   document.querySelectorAll(".container, .view").forEach(v => {
     if (v.id === "app") return; // nie chowamy głównego wrappera
@@ -2878,36 +2769,29 @@ window.addEventListener("popstate", (event) => {
 
   // popupy edycji wydarzenia
   syncTrainerEditPopupsToHistoryState_(state);
-});  
+});
 
-/* =================== 60 APP BOOT / START =================== */
+function refreshClubBadge_() {
+  const el = document.getElementById("clubIdBadge");
+  if (!el) return;
 
-  async function preloadClubAd() {
-  try {
-    const clubId = getClubIdFromUrl_();
-    if (!clubId) return;
+  const name = (clubId || "")
+    .replace(/_/g, " ")   // zamiana _ na spację
+    .toUpperCase();
 
-    const res = await fetch(`${CORE_URL}?action=club_ad&clubId=${encodeURIComponent(clubId)}`);
-    const data = await res.json();
-
-    if (!data || !data.enabled || !data.assetPath) {
-      window.__clubAdData = null;
-      return;
-    }
-
-    data.assetUrl = `${location.origin}/__ads/${data.assetPath}`;
-    window.__clubAdData = data;
-
-    if (data.type === "image") {
-      const img = new Image();
-      img.src = data.assetUrl;
-    }
-  } catch (e) {
-    console.error("Błąd preload reklamy:", e);
-    window.__clubAdData = null;
-  }
+  el.textContent = name;
 }
- 
+
+function applyTheme_(theme) {
+  try {
+    if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
+
+    const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
+    if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
+
+  } catch (e) {}
+}
+
 async function startApp_() {
 const clubFromUrl = getClubIdFromUrl_();
 
@@ -2952,8 +2836,115 @@ if (!clubFromUrl) {
     }
 
   }
+
+    // --- ROUTER ---
+    refreshClubBadge_();
+    const effectiveClubId = (clubFromUrl || clubId || "").trim();
+    goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
+}
+
+/* =================== 50 API (CORE / CLUB) =================== */
+function requireClubId() {
+  if (!clubId) throw new Error("Brak clubId. Najpierw skonfiguruj klub.");
+}
+
+// POST do CORE bez clubId (np. createClub)
+async function apiCorePost(payload = {}) {
+  // DIAG_START: Panel 2 / CORE POST diagnostics
+  const safePayload = { ...payload };
+  ["haslo", "password", "token", "auth", "authorization"].forEach((k) => {
+    if (safePayload[k] != null) safePayload[k] = "[REDACTED]";
+  });
+  console.log("[DIAG][apiCorePost][request]", {
+    clubId: safePayload.clubId || clubId || "",
+    action: safePayload.action || "",
+    mode: safePayload.mode || "",
+    payload: safePayload
+  });
+  // DIAG_END
+
+  const body = new URLSearchParams({ ...payload });
+  const res = await fetch(CORE_URL, { method: "POST", body });
+
+  // DIAG_START: Panel 2 / CORE response diagnostics
+  const contentType = res.headers.get("content-type") || "";
+  console.log("[DIAG][apiCorePost][response-meta]", {
+    status: res.status,
+    contentType
+  });
+  if (!/json/i.test(contentType)) {
+    const raw = await res.clone().text();
+    console.log("[DIAG][apiCorePost][non-json-preview]", raw.slice(0, 200));
+  }
+  // DIAG_END
+
+  return res.json();
+}
+
+window.activateClub_ = async function(payload = {}) {
+  return apiCorePost({ action: "activateClub", ...payload });
+};
+
+// GET/POST do CLUB (wymaga clubId)
+async function apiClubGet(action, params = {}) {
+  requireClubId();
+  const url = new URL(CORE_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("clubId", clubId);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  return res.json();
+}
+
+function extractGasError_(html) {
+  try {
+    // Najczęściej właściwy komunikat siedzi w <div class="errorMessage">...</div>
+    const m = String(html || "").match(/<div class="errorMessage"[^>]*>([\s\S]*?)<\/div>/i);
+    if (!m) return "";
+    // usuń tagi i zbij spacje
+    return m[1]
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+\n/g, "\n")
+      .replace(/\n\s+/g, "\n")
+      .trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+async function apiClubPost(payload = {}) {
+  requireClubId();
+
+  // Budujemy body ręcznie, żeby NIC nie ginęło (zwłaszcza 0/1 i false)
+  const body = new URLSearchParams();
+  body.set("clubId", String(clubId));
+
+  // ważne: payload może mieć np. rezerwacjaObiektu: 0/1
+  // URLSearchParams({ ... }) potrafi to "zgubić", jeśli wartość jest undefined
+  for (const [k, v] of Object.entries(payload || {})) {
+    if (v === undefined || v === null) continue; // nie wysyłamy śmieci
+    body.set(k, String(v)); // wymuszamy string → GAS dostaje stabilnie
+  }
+
+  const res = await fetch(CORE_URL, { method: "POST", body });
+  const text = await res.text();
+
+  // 1) normalny JSON
+  try {
+    return JSON.parse(text);
+  } catch (e) {}
+
+  // 2) HTML z GAS — wyciągamy sensowny komunikat
+  const msg = extractGasError_(text);
+  return {
+    ok: false,
+    error: msg ? ("GAS ERROR: " + msg) : ("Backend zwrócił nie-JSON (" + res.status + ")."),
+    raw: text.slice(0, 600)
+  };
+}
   
-/* =================== 70 CONFIG / SETUP KLUBU =================== */
+/* =================== 60 ORGHUB START / KONFIGURACJA =================== */
 
 /**
  * Panel 1: logo + nazwa + kolor + email (bez sezonu)
