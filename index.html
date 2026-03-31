@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.65.1';
+  window.APP_BUILD = 'BETA APP v2.64.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3897,9 +3897,6 @@ async function zaloguj() {
     if (data.role === "zawodnik") {
       numerZalogowanego = data.login;
       grupaZalogowanego = data.grupa || "";
-
-      window.__playerBootstrapData = null;
-      window.__playerBootstrapP = null;
     
       // reset lokalnych cache po loginie zawodnika
       window.__platnosciCache = null;
@@ -4225,60 +4222,62 @@ function pickFreeNumber(numer) {
   renderClubAd(null);
 }
 
-async function getPlayerBootstrapData_() {
-  if (!numerZalogowanego) throw new Error("Brak numeru zawodnika");
-  if (!clubId) throw new Error("Brak clubId");
-
-  // jeśli mamy już gotowe dane w pamięci
-  if (window.__playerBootstrapData) {
-    return window.__playerBootstrapData;
-  }
-
-  // jeśli request już leci, użyj istniejącego promise
-  if (window.__playerBootstrapP) {
-    const data = await window.__playerBootstrapP;
-    if (data && data.success) {
-      window.__playerBootstrapData = data;
-      return data;
-    }
-  }
-
-  // fallback: odpal nowy request
-  window.__playerBootstrapP = apiClubGet("playerBootstrap", {
-    grupa: grupaZalogowanego,
-    numer: numerZalogowanego
-  });
-
-  const data = await window.__playerBootstrapP;
-
-  if (data && data.success) {
-    window.__playerBootstrapData = data;
-    return data;
-  }
-
-  throw new Error(data?.error || "Nie udało się pobrać playerBootstrap");
-}
-  
 function startPrefetchForPlayer_() {
+   return;
+  // cache na promisy + timestamp + timery
+  window.__prefetch = window.__prefetch || {
+    t: 0,
+    platnosciP: null,
+    treningiP: null,
+    statystykiP: null,
+    platnosciTimer: null,
+    statystykiTimer: null
+  };
+
+  // warunki minimalne
   if (!numerZalogowanego) return;
   if (!clubId) return;
 
-  window.__playerBootstrapData = null;
+  const now = Date.now();
 
-  if (window.__playerBootstrapP) return;
+  // jeśli odpalone w ostatnich 30s, nie odpalaj ponownie
+  if (window.__prefetch.t && (now - window.__prefetch.t) < 30000) return;
 
-  window.__playerBootstrapP = apiClubGet("playerBootstrap", {
+  window.__prefetch.t = now;
+
+  // wyczyść poprzednie timery
+  if (window.__prefetch.platnosciTimer) {
+    clearTimeout(window.__prefetch.platnosciTimer);
+    window.__prefetch.platnosciTimer = null;
+  }
+  if (window.__prefetch.statystykiTimer) {
+    clearTimeout(window.__prefetch.statystykiTimer);
+    window.__prefetch.statystykiTimer = null;
+  }
+
+  // reset promisów
+  window.__prefetch.platnosciP = null;
+  window.__prefetch.statystykiP = null;
+
+  // 1) od razu grzej wydarzenia
+  window.__prefetch.treningiP = apiClubGet("treningi", {
     grupa: grupaZalogowanego,
     numer: numerZalogowanego
-  }).then(data => {
-    if (data && data.success) {
-      window.__playerBootstrapData = data;
-    }
-    return data;
-  }).catch(err => {
-    console.warn("playerBootstrap prefetch failed:", err);
-    return null;
   });
+
+  // 2) po chwili grzej płatności
+  window.__prefetch.platnosciTimer = setTimeout(() => {
+    window.__prefetch.platnosciP = apiClubGet("platnosci", {
+      numer: numerZalogowanego
+    });
+  }, 800);
+
+  // 3) jeszcze później grzej statystyki
+  window.__prefetch.statystykiTimer = setTimeout(() => {
+    window.__prefetch.statystykiP = apiClubGet("statystyki", {
+      numer: numerZalogowanego
+    });
+  }, 1800);
 }
   
 function renderClubAd(ad) {
@@ -4609,16 +4608,8 @@ async function pokazPlatnosci() {
   if (div) div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
 
   try {
-    let lista = null;
-
-    try {
-      const boot = await getPlayerBootstrapData_();
-      lista = Array.isArray(boot?.platnosci) ? boot.platnosci : [];
-    } catch (e) {
-      console.warn("Bootstrap platnosci fallback:", e);
-      lista = await apiClubGet("platnosci", { numer: numerZalogowanego });
-    }
-
+    const p = window.__prefetch?.platnosciP;
+    const lista = await (p || apiClubGet("platnosci", { numer: numerZalogowanego }));
     renderPlatnosci(lista);
   } catch (e) {
     console.error("pokazPlatnosci error", e);
@@ -4809,19 +4800,8 @@ async function pokazTreningi() {
   if (div) div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
 
   try {
-    let lista = null;
-
-    try {
-      const boot = await getPlayerBootstrapData_();
-      lista = Array.isArray(boot?.treningi) ? boot.treningi : [];
-    } catch (e) {
-      console.warn("Bootstrap treningi fallback:", e);
-      lista = await apiClubGet("treningi", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego
-      });
-    }
-
+    const p = window.__prefetch?.treningiP;
+    const lista = await (p || apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego }));
     renderTreningi(lista);
   } catch (e) {
     console.error("pokazTreningi error", e);
@@ -5034,16 +5014,8 @@ async function pokazStatystyki() {
   if (div) div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
 
   try {
-    let lista = null;
-
-    try {
-      const boot = await getPlayerBootstrapData_();
-      lista = Array.isArray(boot?.statystyki) ? boot.statystyki : [];
-    } catch (e) {
-      console.warn("Bootstrap statystyki fallback:", e);
-      lista = await apiClubGet("statystyki", { numer: numerZalogowanego });
-    }
-
+    const p = window.__prefetch?.statystykiP;
+    const lista = await (p || apiClubGet("statystyki", { numer: numerZalogowanego }));
     renderStatystyki(lista);
   } catch (e) {
     console.error("pokazStatystyki error", e);
