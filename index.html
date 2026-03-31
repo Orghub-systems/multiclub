@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.64.1';
+  window.APP_BUILD = 'BETA APP v2.65.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2558,7 +2558,7 @@ async function startApp_() {
 
       const bootTheme = {
         bgColor: boot?.bg_color || "",
-        logoUrl: boot?.logo_data || "",
+        logoUrl: boot?.logo_url || "",
         clubName: boot?.club_name || ""
       };
 
@@ -2580,7 +2580,7 @@ async function startApp_() {
 
       const freshTheme = {
         bgColor: boot?.bg_color || localTheme?.bgColor || "",
-        logoUrl: boot?.logo_data || localTheme?.logoUrl || "",
+        logoUrl: boot?.logo_url || localTheme?.logoUrl || "",
         clubName: boot?.club_name || localTheme?.clubName || ""
       };
 
