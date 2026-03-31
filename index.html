@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.63';
+  window.APP_BUILD = 'BETA APP v2.64';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2540,35 +2540,55 @@ async function startApp_() {
 
   applyClubManifest_(clubId);
 
-  // 1) natychmiast zastosuj lokalny theme, jeśli istnieje
+  const effectiveClubId = (clubFromUrl || clubId || "").trim();
   const localTheme = loadTheme_();
-  if (localTheme) {
+
+  // 1) jeśli mamy zapisany lokalny branding klubu → użyj go od razu
+  if (effectiveClubId && localTheme) {
     applyTheme_(localTheme);
-  } else if (!clubFromUrl) {
+  } else if (!effectiveClubId) {
     document.body.style.backgroundColor = "#ffffff";
   }
 
-  // 2) od razu pokaż właściwy widok, bez czekania na branding z backendu
+  // 2) jeśli mamy clubId, ale nie mamy jeszcze theme lokalnie,
+  //    pobierz lekki branding startowy przed pokazaniem loginu
+  if (effectiveClubId && !localTheme) {
+    try {
+      const boot = await apiClubGet("brandingBoot", {});
+
+      const bootTheme = {
+        bgColor: boot?.bg_color || "",
+        logoUrl: boot?.logo_data || "",
+        clubName: boot?.club_name || ""
+      };
+
+      saveTheme_(bootTheme);
+      applyTheme_(bootTheme);
+    } catch (e) {
+      console.warn("Branding boot load failed", e);
+    }
+  }
+
+  // 3) pokaż widok dopiero po zastosowaniu theme lokalnego lub brandingBoot
   refreshClubBadge_();
-  const effectiveClubId = (clubFromUrl || clubId || "").trim();
   goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
 
-  // 3) branding dociągaj już w tle
-  if (clubFromUrl) {
+  // 4) lekkie odświeżenie theme w tle — tylko jeśli mamy clubId i theme już istniał lokalnie
+  if (effectiveClubId && localTheme) {
     try {
-      const branding = await apiClubGet("branding", {});
+      const boot = await apiClubGet("brandingBoot", {});
 
       const freshTheme = {
-        bgColor: branding?.bg_color || localTheme?.bgColor || "",
-        logoUrl: branding?.logo_data || localTheme?.logoUrl || "",
-        clubName: branding?.club_name || localTheme?.clubName || ""
+        bgColor: boot?.bg_color || localTheme?.bgColor || "",
+        logoUrl: boot?.logo_data || localTheme?.logoUrl || "",
+        clubName: boot?.club_name || localTheme?.clubName || ""
       };
 
       saveTheme_(freshTheme);
       applyTheme_(freshTheme);
       refreshClubBadge_();
     } catch (e) {
-      console.warn("Branding load failed", e);
+      console.warn("Branding boot refresh failed", e);
     }
   }
 }
