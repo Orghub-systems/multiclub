@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.65.1';
+  window.APP_BUILD = 'BETA APP v2.65.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5014,8 +5014,7 @@ async function pokazStatystyki() {
   if (div) div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
 
   try {
-    const p = window.__prefetch?.statystykiP;
-    const lista = await (p || apiClubGet("statystyki", { numer: numerZalogowanego }));
+    const lista = await apiClubGet("statystyki", { numer: numerZalogowanego });
     renderStatystyki(lista);
   } catch (e) {
     console.error("pokazStatystyki error", e);
@@ -5024,7 +5023,6 @@ async function pokazStatystyki() {
 }
   
 function renderStatystyki(lista) {
-  // ✅ Kontener zależny od widoku (admin ma swój)
   const isAdminStats = (currentView === "adminStatsView");
   const div = isAdminStats
     ? document.getElementById("adminStatsBody")
@@ -5037,31 +5035,33 @@ function renderStatystyki(lista) {
     return;
   }
 
-  // ✅ Zostawiamy dokładnie kolejność z backendu / arkusza (kolumny C → N)
   const ordered = [...lista];
-
   const suma = ordered.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
 
-  const now = new Date();
   const currentMonthName = [
     "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
     "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
-  ][now.getMonth()];
+  ][new Date().getMonth()];
 
-  div.innerHTML =
-    ordered.map(s => {
-      const miesiac = String(s.miesiac || "").trim();
-      const treningi = Number(s.treningi) || 0;
-      const isCurrent = miesiac.toLowerCase() === currentMonthName.toLowerCase();
-      const badge = isCurrent ? ` <span style="opacity:.9;font-weight:700;">(teraz)</span>` : "";
+  const rowsHtml = ordered.map(s => {
+    const miesiac = String(s.miesiac || "").trim();
+    const treningi = Number(s.treningi) || 0;
 
-      return `<div class="card">
-        📅 ${miesiac}${badge} — 🏒 <b>${treningi}</b>
-      </div>`;
-    }).join("") +
-    `<div class="card" style="background:#222;margin-top:20px;font-weight:800;">
-      🔥 Łącznie: ${suma} treningów w sezonie
+    const isCurrent = miesiac.toLowerCase() === currentMonthName.toLowerCase();
+    const badge = isCurrent
+      ? ` <span style="opacity:.9;font-weight:700;">(teraz)</span>`
+      : "";
+
+    return `<div class="card">
+      📅 ${miesiac}${badge} — 🏒 <b>${treningi}</b>
     </div>`;
+  }).join("");
+
+  const sumHtml = `<div class="card" style="background:#222;margin-top:20px;font-weight:800;">
+    🔥 Łącznie: ${suma} treningów w sezonie
+  </div>`;
+
+  div.innerHTML = rowsHtml + sumHtml;
 }
   
 function powrotDoTreningow() {
