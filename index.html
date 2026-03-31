@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.59';
+  window.APP_BUILD = 'BETA APP v2.60';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4166,22 +4166,33 @@ function pickFreeNumber(numer) {
 
 function startPrefetchForPlayer_() {
   // cache na promisy + timestamp, żeby nie walić API co sekundę
-  window.__prefetch = window.__prefetch || { t: 0, platnosciP: null, treningiP: null, statystykiP: null };
+  window.__prefetch = window.__prefetch || {
+    t: 0,
+    platnosciP: null,
+    treningiP: null,
+    statystykiP: null
+  };
 
   // warunki minimalne
   if (!numerZalogowanego) return;
   if (!clubId) return;
 
   const now = Date.now();
+
   // jeśli odpalone w ostatnich 30s, nie odpalaj ponownie
   if (window.__prefetch.t && (now - window.__prefetch.t) < 30000) return;
 
   window.__prefetch.t = now;
 
-  // odpal równolegle — bez await
-  window.__prefetch.platnosciP = apiClubGet("platnosci", { numer: numerZalogowanego });
-  window.__prefetch.treningiP  = apiClubGet("treningi",  { grupa: grupaZalogowanego, numer: numerZalogowanego });
-  window.__prefetch.statystykiP= apiClubGet("statystyki",{ numer: numerZalogowanego });
+  // reset poprzednich promisów
+  window.__prefetch.platnosciP = null;
+  window.__prefetch.statystykiP = null;
+
+  // na ten moment prefetchujemy tylko wydarzenia
+  window.__prefetch.treningiP = apiClubGet("treningi", {
+    grupa: grupaZalogowanego,
+    numer: numerZalogowanego
+  });
 }
   
 function renderClubAd(ad) {
