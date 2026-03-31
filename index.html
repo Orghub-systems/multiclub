@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.60';
+  window.APP_BUILD = 'BETA APP v2.61';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4165,12 +4165,14 @@ function pickFreeNumber(numer) {
 }
 
 function startPrefetchForPlayer_() {
-  // cache na promisy + timestamp, żeby nie walić API co sekundę
+  // cache na promisy + timestamp + timery
   window.__prefetch = window.__prefetch || {
     t: 0,
     platnosciP: null,
     treningiP: null,
-    statystykiP: null
+    statystykiP: null,
+    platnosciTimer: null,
+    statystykiTimer: null
   };
 
   // warunki minimalne
@@ -4184,15 +4186,39 @@ function startPrefetchForPlayer_() {
 
   window.__prefetch.t = now;
 
-  // reset poprzednich promisów
+  // wyczyść poprzednie timery
+  if (window.__prefetch.platnosciTimer) {
+    clearTimeout(window.__prefetch.platnosciTimer);
+    window.__prefetch.platnosciTimer = null;
+  }
+  if (window.__prefetch.statystykiTimer) {
+    clearTimeout(window.__prefetch.statystykiTimer);
+    window.__prefetch.statystykiTimer = null;
+  }
+
+  // reset promisów
   window.__prefetch.platnosciP = null;
   window.__prefetch.statystykiP = null;
 
-  // na ten moment prefetchujemy tylko wydarzenia
+  // 1) od razu grzej wydarzenia
   window.__prefetch.treningiP = apiClubGet("treningi", {
     grupa: grupaZalogowanego,
     numer: numerZalogowanego
   });
+
+  // 2) po chwili grzej płatności
+  window.__prefetch.platnosciTimer = setTimeout(() => {
+    window.__prefetch.platnosciP = apiClubGet("platnosci", {
+      numer: numerZalogowanego
+    });
+  }, 800);
+
+  // 3) jeszcze później grzej statystyki
+  window.__prefetch.statystykiTimer = setTimeout(() => {
+    window.__prefetch.statystykiP = apiClubGet("statystyki", {
+      numer: numerZalogowanego
+    });
+  }, 1800);
 }
   
 function renderClubAd(ad) {
