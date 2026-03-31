@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.58';
+  window.APP_BUILD = 'BETA APP v2.59';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3836,22 +3836,26 @@ async function zaloguj() {
 
     komunikat.innerText = "✅ Zalogowano";
 
-      if (data.role === "zawodnik") {
-        numerZalogowanego = data.login;
-        grupaZalogowanego = data.grupa || "";
-      
-        try {
-          window.__platnosciCache = await apiClubGet("platnosci", { numer: numerZalogowanego });
-        } catch (e) {
-          window.__platnosciCache = null;
-        }
-      
-        goToView("playerMenuView");
-      
-        loadClubAd();
-      
-        return;
-      }
+    if (data.role === "zawodnik") {
+      numerZalogowanego = data.login;
+      grupaZalogowanego = data.grupa || "";
+    
+      // reset lokalnych cache po loginie zawodnika
+      window.__platnosciCache = null;
+      window.__prefetch = {
+        t: 0,
+        platnosciP: null,
+        treningiP: null,
+        statystykiP: null
+      };
+    
+      // najpierw pokaż menu, dane dociągną się w tle
+      goToView("playerMenuView");
+    
+      loadClubAd();
+    
+      return;
+    }
 
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
