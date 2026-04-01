@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.65.2';
+  window.APP_BUILD = 'BETA APP v2.66';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -700,12 +700,35 @@ input[type="number"] {
 </div>
     
 <!-- PLAYER PAYMENTS VIEW
-     Lista płatności zawodnika -->
+     Menu płatności zawodnika -->
     
-    <div id="platnosciView" class="container hidden">
-      <h1>Płatności</h1>
-      <div id="listaPlatnosci">Ładowanie...</div>
-      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+<div id="platnosciView" class="container hidden">
+  <h1>Płatności</h1>
+
+  <div id="platnosciSummaryBox">Ładowanie...</div>
+
+  <button class="full-btn" onclick="pokazPlatnosciBiezace()">📌 Bieżące</button>
+  <button class="full-btn" onclick="pokazPlatnosciWplacone()">✅ Wpłacone</button>
+  <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+</div>
+
+<!-- PLAYER PAYMENTS CURRENT VIEW
+     Bieżące należności zawodnika -->
+
+<div id="platnosciBiezaceView" class="container hidden">
+  <h1>Płatności bieżące</h1>
+  <div id="listaPlatnosciBiezace">Ładowanie...</div>
+  <button class="full-btn alt" onclick="goToView('platnosciView')" style="margin-top:10px;"> ⬅ Powrót do płatności </button>
+</div>
+
+<!-- PLAYER PAYMENTS PAID VIEW
+     Wpłacone płatności zawodnika -->
+
+<div id="platnosciWplaconeView" class="container hidden">
+  <h1>Płatności wpłacone</h1>
+  <div id="listaPlatnosciWplacone">Ładowanie...</div>
+  <button class="full-btn alt" onclick="goToView('platnosciView')" style="margin-top:10px;"> ⬅ Powrót do płatności </button>
+</div>
     </div>
 
 <!-- PLAYER EVENTS VIEW
@@ -4602,29 +4625,104 @@ function closePlayerPaymentPopup() {
 
 /* =================== 120 PLAYER / PAYMENTS / EVENTS / STATS =================== */
 
+async function getPlayerPaymentsPayload_(forceRefresh = false) {
+  const cached = window.__playerPaymentsPayload;
+
+  if (
+    !forceRefresh &&
+    cached &&
+    typeof cached === "object" &&
+    Array.isArray(cached.biezace) &&
+    Array.isArray(cached.wplacone)
+  ) {
+    return cached;
+  }
+
+  const p = window.__prefetch?.platnosciP;
+  const payload = await (p || apiClubGet("platnosci", { numer: numerZalogowanego }));
+
+  window.__playerPaymentsPayload = {
+    biezace: Array.isArray(payload?.biezace) ? payload.biezace : [],
+    wplacone: Array.isArray(payload?.wplacone) ? payload.wplacone : [],
+    sumaBiezace: Number(payload?.sumaBiezace || 0),
+    sumaWplacone: Number(payload?.sumaWplacone || 0)
+  };
+
+  return window.__playerPaymentsPayload;
+}
+
 async function pokazPlatnosci() {
   goToView("platnosciView");
-  const div = document.getElementById("listaPlatnosci");
+
+  const div = document.getElementById("platnosciSummaryBox");
   if (div) div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
 
   try {
-    const p = window.__prefetch?.platnosciP;
-    const lista = await (p || apiClubGet("platnosci", { numer: numerZalogowanego }));
-    renderPlatnosci(lista);
+    const payload = await getPlayerPaymentsPayload_();
+    renderPlatnosciMenu(payload);
   } catch (e) {
     console.error("pokazPlatnosci error", e);
     if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
   }
 }
-  
-function renderPlatnosci(lista) {
-  const div = document.getElementById("listaPlatnosci");
+
+async function pokazPlatnosciBiezace() {
+  goToView("platnosciBiezaceView");
+
+  const div = document.getElementById("listaPlatnosciBiezace");
+  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
+
+  try {
+    const payload = await getPlayerPaymentsPayload_();
+    renderPlatnosciListInto_("listaPlatnosciBiezace", payload.biezace, payload.sumaBiezace, "biezace");
+  } catch (e) {
+    console.error("pokazPlatnosciBiezace error", e);
+    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
+  }
+}
+
+async function pokazPlatnosciWplacone() {
+  goToView("platnosciWplaconeView");
+
+  const div = document.getElementById("listaPlatnosciWplacone");
+  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
+
+  try {
+    const payload = await getPlayerPaymentsPayload_();
+    renderPlatnosciListInto_("listaPlatnosciWplacone", payload.wplacone, payload.sumaWplacone, "wplacone");
+  } catch (e) {
+    console.error("pokazPlatnosciWplacone error", e);
+    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
+  }
+}
+
+function renderPlatnosciMenu(payload) {
+  const div = document.getElementById("platnosciSummaryBox");
   if (!div) return;
 
-  if (!Array.isArray(lista) || lista.length === 0) {
-    div.innerHTML = `<div class="card" style="background:#123a1a;">Brak płatności do wyświetlenia ✅</div>`;
-    return;
-  }
+  const biezace = Array.isArray(payload?.biezace) ? payload.biezace : [];
+  const wplacone = Array.isArray(payload?.wplacone) ? payload.wplacone : [];
+  const sumaBiezace = Number(payload?.sumaBiezace || 0);
+  const sumaWplacone = Number(payload?.sumaWplacone || 0);
+
+  div.innerHTML = `
+    <div class="card" style="background:#3a1414; text-align:left; margin-top:10px;">
+      <div style="font-size:14px; opacity:.9;">Bieżące</div>
+      <div style="font-size:24px; font-weight:800;">${sumaBiezace} zł</div>
+      <div style="margin-top:4px; color:#FF7C7C; font-weight:700;">Pozycji: ${biezace.length}</div>
+    </div>
+
+    <div class="card" style="background:#123a1a; text-align:left; margin-top:10px;">
+      <div style="font-size:14px; opacity:.9;">Wpłacone</div>
+      <div style="font-size:24px; font-weight:800;">${sumaWplacone} zł</div>
+      <div style="margin-top:4px; color:#7CFF7C; font-weight:700;">Pozycji: ${wplacone.length}</div>
+    </div>
+  `;
+}
+
+function renderPlatnosciListInto_(containerId, lista, suma, mode) {
+  const div = document.getElementById(containerId);
+  if (!div) return;
 
   const miesiace = [
     "styczeń","luty","marzec","kwiecień","maj","czerwiec",
@@ -4650,53 +4748,59 @@ function renderPlatnosci(lista) {
 
     const typeOrder = lower.startsWith("składka") ? 0 : 1;
 
-    return {
-      year,
-      monthIdx: safeMonthIdx,
-      typeOrder
-    };
+    return { year, monthIdx: safeMonthIdx, typeOrder };
   }
 
-  const sorted = [...lista].sort((a, b) => {
-    const pa = parsePaymentOrder_(a?.nazwa);
-    const pb = parsePaymentOrder_(b?.nazwa);
+  const sorted = Array.isArray(lista)
+    ? [...lista].sort((a, b) => {
+        const pa = parsePaymentOrder_(a?.nazwa);
+        const pb = parsePaymentOrder_(b?.nazwa);
 
-    if (pa.year !== pb.year) return pa.year - pb.year;
-    if (pa.monthIdx !== pb.monthIdx) return pa.monthIdx - pb.monthIdx;
-    if (pa.typeOrder !== pb.typeOrder) return pa.typeOrder - pb.typeOrder;
+        if (pa.year !== pb.year) return pa.year - pb.year;
+        if (pa.monthIdx !== pb.monthIdx) return pa.monthIdx - pb.monthIdx;
+        if (pa.typeOrder !== pb.typeOrder) return pa.typeOrder - pb.typeOrder;
 
-    return String(a?.nazwa || "").localeCompare(String(b?.nazwa || ""), "pl");
-  });
+        return String(a?.nazwa || "").localeCompare(String(b?.nazwa || ""), "pl");
+      })
+    : [];
 
-  div.innerHTML = sorted.map(p => {
-    const isPaid =
-      p?.status === "oplacone" ||
-      p?.status === "opłacone" ||
-      p?.status === "green" ||
-      p?.status === "zaplacone" ||
-      p?.status === "zapłacone";
+  const isPaidMode = mode === "wplacone";
 
-    const bg = isPaid ? "#123a1a" : "#3a1414";
-    const badge = isPaid
-      ? `<span style="color:#7CFF7C; font-weight:700;">ZAPŁACONE</span>`
-      : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`;
+  if (sorted.length === 0) {
+    div.innerHTML = `
+      <div class="card" style="background:${isPaidMode ? "#123a1a" : "#3a1414"};">
+        ${isPaidMode ? "Brak wpłaconych pozycji" : "Brak bieżących należności ✅"}
+      </div>
+    `;
+    return;
+  }
 
-    const payBtn = !isPaid
-  ? `<button class="full-btn playerPayBtn"
-        style="margin-top:10px;"
-        onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)})">
-        Zapłać teraz
-     </button>`
-  : "";
+  const summaryCard = `
+    <div class="card" style="background:${isPaidMode ? "#123a1a" : "#3a1414"}; text-align:left; margin-top:10px;">
+      <div style="font-size:14px; opacity:.9;">${isPaidMode ? "Wpłacone" : "Bieżące"}</div>
+      <div style="font-size:24px; font-weight:800;">${Number(suma || 0)} zł</div>
+    </div>
+  `;
+
+  const itemsHtml = sorted.map(p => {
+    const bg = isPaidMode ? "#123a1a" : "#3a1414";
+    const badge = isPaidMode
+      ? `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
+      : `<span style="color:#FF7C7C; font-weight:700;">BIEŻĄCE</span>`;
+
+    const payBtn = !isPaidMode
+      ? `<button class="full-btn playerPayBtn"
+            style="margin-top:10px;"
+            onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)})">
+            Zapłać teraz
+         </button>`
+      : "";
 
     const nazwa = escapeHtml_(p?.nazwa || "");
     const kwota = Number(p?.kwota || 0);
+    const typLabel = p?.kind === "skladka" ? "Składka" : "Zajęcia dodatkowe";
 
-    const typLabel = String(p?.nazwa || "").toLowerCase().startsWith("składka")
-      ? "Składka"
-      : "Zajęcia dodatkowe";
-
-       return `
+    return `
       <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
         <div style="display:flex; justify-content:space-between; gap:10px;">
           <div>
@@ -4708,11 +4812,12 @@ function renderPlatnosci(lista) {
             <div style="margin-top:2px;">${badge}</div>
           </div>
         </div>
-    
         ${payBtn}
       </div>
     `;
   }).join("");
+
+  div.innerHTML = summaryCard + itemsHtml;
 }
 
   function parsePlatnoscMeta_(nazwa){
