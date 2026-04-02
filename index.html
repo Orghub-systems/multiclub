@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.66.3';
+  window.APP_BUILD = 'BETA APP v2.67';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -709,7 +709,7 @@ input[type="number"] {
 
   <button class="full-btn" onclick="pokazPlatnosciBiezace()">📌 Bieżące</button>
   <button class="full-btn" onclick="pokazPlatnosciWplacone()">✅ Wpłacone</button>
-  <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+  <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do menu </button>
 </div>
 
 <!-- PLAYER PAYMENTS CURRENT VIEW
@@ -718,7 +718,7 @@ input[type="number"] {
 <div id="platnosciBiezaceView" class="container hidden">
   <h1>Płatności bieżące</h1>
   <div id="listaPlatnosciBiezace">Ładowanie...</div>
-  <button class="full-btn alt" onclick="goToView('platnosciView')" style="margin-top:10px;"> ⬅ Powrót do płatności </button>
+  <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do płatności </button>
 </div>
 
 <!-- PLAYER PAYMENTS PAID VIEW
@@ -727,7 +727,7 @@ input[type="number"] {
 <div id="platnosciWplaconeView" class="container hidden">
   <h1>Płatności wpłacone</h1>
   <div id="listaPlatnosciWplacone">Ładowanie...</div>
-  <button class="full-btn alt" onclick="goToView('platnosciView')" style="margin-top:10px;"> ⬅ Powrót do płatności </button>
+  <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do płatności </button>
 </div>
     </div>
 
@@ -737,7 +737,7 @@ input[type="number"] {
     <div id="homeView" class="container hidden">
       <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
       <div id="listaTreningow">Ładowanie...</div>
-      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+     <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
 
 <!-- PLAYER STATS VIEW
@@ -746,7 +746,7 @@ input[type="number"] {
     <div id="statsView" class="container hidden">
       <h1>Statystyki</h1>
       <div id="listaStatystyk">Ładowanie...</div>
-      <button class="full-btn alt" onclick="goToView('playerMenuView')" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+      <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
 
 <!-- PLAYER SETTINGS VIEW
@@ -762,7 +762,7 @@ input[type="number"] {
 
   <div class="login-box">
     <button id="btnEnablePush" class="full-btn">🔔 Włącz powiadomienia</button>
-    <button class="full-btn alt" onclick="goToView('playerMenuView')"> ⬅ Powrót do menu </button>
+    <button class="full-btn alt" onclick="appBack()"> ⬅ Powrót do menu </button>
   </div>
 
   <p id="pushStatus" style="margin-top:15px;"></p>
