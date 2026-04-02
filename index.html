@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.67';
+  window.APP_BUILD = 'BETA APP v2.67.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -640,6 +640,7 @@ input[type="number"] {
     <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
     <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
     <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
+    <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót</button>
   </div>
 
   <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
@@ -800,7 +801,7 @@ input[type="number"] {
       <h1>Wydarzenia</h1>
       <div id="trainerListaWydarzen">Ładowanie...</div>
       <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
-      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
     </div>
 
     <!-- TRAINER ADD EVENT VIEW
@@ -912,7 +913,7 @@ input[type="number"] {
   <button class="full-btn" onclick="adminRaportyOpenTrenerzy()">🏒 Trenerzy</button>
   <button class="full-btn" onclick="adminRaportyOpenRezerwacja()">🏟️ Rezerwacja obiektu</button>
 
-  <button class="full-btn alt" onclick="goToView('adminPanelView')">⬅ Powrót</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN REPORT EVENTS VIEW
@@ -927,7 +928,7 @@ input[type="number"] {
 
   <div id="adminRaportWydarzeniaSummary" style="margin-top:12px; opacity:.9;"></div>
 
-  <button class="full-btn alt" onclick="goToView('adminRaportyView')">⬅ Powrót</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN REPORT TRAINERS VIEW
@@ -942,7 +943,7 @@ input[type="number"] {
 
   <div id="adminRaportTrenerzySummary" style="margin-top:12px; opacity:.9;"></div>
 
-  <button class="full-btn alt" onclick="goToView('adminRaportyView')">⬅ Powrót</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN REPORT RESERVATION VIEW
@@ -957,7 +958,7 @@ input[type="number"] {
 
   <div id="adminRaportRezerwacjaSummary" style="margin-top:12px; opacity:.9;"></div>
 
-  <button class="full-btn alt" onclick="goToView('adminRaportyView')">⬅ Powrót</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN PLAYERS VIEW
@@ -1038,7 +1039,7 @@ input[type="number"] {
     <div class="card" style="background:#222;">⏳ Ładowanie...</div>
   </div>
 
-  <button class="full-btn alt" onclick="goToView('adminZawodnikView')">⬅ Powrót</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 
   <p id="adminStatsMsg" style="margin-top:10px;"></p>
 </div>
@@ -1053,7 +1054,7 @@ input[type="number"] {
     <div class="card" style="background:#222;">⏳ Ładowanie...</div>
   </div>
 
-  <button class="full-btn alt" onclick="goToView('adminZawodnikView')">⬅ Powrót</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 
   <p id="adminPaymentsMsg" style="margin-top:10px;"></p>
 </div>
@@ -1170,7 +1171,7 @@ input[type="number"] {
 
   <div style="margin-top:14px;">
     <button class="full-btn" type="button" onclick="sendManualPush()">Wyślij</button>
-    <button class="full-btn alt" type="button" onclick="closeManualPushView()">⬅ Powrót</button>
+    <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
   </div>
 
   <p id="manualPushMsg" style="margin-top:10px; min-height:1.2em;"></p>
