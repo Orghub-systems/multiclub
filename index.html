@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.67.2';
+  window.APP_BUILD = 'BETA APP v2.67.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3882,14 +3882,18 @@ function pokazLogowanie() {
   numerZalogowanego = null;
   grupaZalogowanego = null;
   window.grupyTrenera = "";
+
+  const komunikat = document.getElementById("komunikat");
+  if (komunikat) komunikat.innerText = "";
+
   refreshClubBadge_();
   goToView("loginView");
 }
+  
 function pokazRejestracjaSelect() { goToView("registerSelectView"); }
 function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
 function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
   
-
 async function zaloguj() {
   const login = document.getElementById("numer").value.trim();
   const haslo = document.getElementById("haslo").value.trim();
