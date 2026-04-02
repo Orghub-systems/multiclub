@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.67.3';
+  window.APP_BUILD = 'BETA APP v2.67.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2315,8 +2315,9 @@ function goToView(viewId, options = {}) {
 
   hookPushButton_();
 
-  if (viewId === "playerSettingsView") {
-    refreshPushButtonState_();
+  if (viewId === "loginView") {
+    const komunikat = document.getElementById("komunikat");
+    if (komunikat) komunikat.innerText = "";
   }
 
   // =================== APP STACK ===================
