@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.68.1';
+  window.APP_BUILD = 'BETA APP v2.68.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5582,7 +5582,6 @@ async function trainerLoadRaportObecnosci_() {
   if (sumEl) sumEl.textContent = "";
 
   try {
-    // ===== PODMIEŃ TYLKO TĘ JEDNĄ LINIJKĘ =====
     const loggedTrainerName = String(
       window.zalogowanyTrenerName ||
       (function(){ try { return sessionStorage.getItem("zalogowanyTrenerName") || ""; } catch(e) { return ""; } })()
@@ -5594,53 +5593,40 @@ async function trainerLoadRaportObecnosci_() {
       return;
     }
 
-    const res = await apiClubGet("raportTrenerzy", {});
+    const res = await apiClubGet("raportObecnosciTrenera", { trenerName: loggedTrainerName });
 
-    if (!res || res.success !== true || !Array.isArray(res.grid)) {
-      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu trenerów.</div>`;
+    if (!res || res.success !== true || !Array.isArray(res.months)) {
+      const err = String(res?.error || "Błąd pobierania raportu obecności");
+      if (body) body.innerHTML = `<div class="card" style="background:#222;">${escapeHtml_(err)}</div>`;
       if (sumEl) sumEl.textContent = "";
       return;
     }
 
-    const blocks = parseReportBlocksFromGrid_(res.grid);
-    if (!blocks.length) {
-      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak bloków MIESIĄC: w raporcie trenerów.</div>`;
-      if (sumEl) sumEl.textContent = "";
+    if (!res.months.length) {
+      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak wpisów obecności dla trenera: ${escapeHtml_(loggedTrainerName)}</div>`;
+      if (sumEl) sumEl.textContent = `Trener: ${loggedTrainerName}`;
       return;
     }
 
-    blocks.reverse();
-
-    const needle = normalizeTrainerNameForReport_(loggedTrainerName);
     let htmlAll = "";
-    let monthsCount = 0;
     let entriesCount = 0;
 
-    for (const b of blocks) {
-      const trainers = parseTrainersSectionFromMonthBlock_(b.rows);
-      const mine = trainers.find(t => normalizeTrainerNameForReport_(t.name) === needle);
+    for (const m of res.months) {
+      const t = m?.trainer;
+      if (!t) continue;
 
-      if (!mine) continue;
-
-      monthsCount++;
-      entriesCount += Array.isArray(mine.rows) ? mine.rows.length : 0;
+      entriesCount += Array.isArray(t.rows) ? t.rows.length : 0;
 
       htmlAll += `
         <div class="card" style="padding:12px;text-align:left;margin-bottom:12px;">
-          <div style="font-weight:900;font-size:16px;margin-bottom:10px;">${escapeHtml_(b.monthLabel)}</div>
-          ${renderAdminRaportTrenerzyMonth_([mine])}
+          <div style="font-weight:900;font-size:16px;margin-bottom:10px;">${escapeHtml_(m.monthLabel || "")}</div>
+          ${renderAdminRaportTrenerzyMonth_([t])}
         </div>
       `;
     }
 
-    if (!htmlAll) {
-      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak wpisów obecności dla trenera: ${escapeHtml_(loggedTrainerName)}</div>`;
-      if (sumEl) sumEl.textContent = "";
-      return;
-    }
-
     if (body) body.innerHTML = htmlAll;
-    if (sumEl) sumEl.textContent = `Trener: ${loggedTrainerName} • Obecności: ${entriesCount} • Miesięcy: ${monthsCount}`;
+    if (sumEl) sumEl.textContent = `Trener: ${loggedTrainerName} • Obecności: ${entriesCount} • Miesięcy: ${res.months.length}`;
 
   } catch (e) {
     console.error(e);
