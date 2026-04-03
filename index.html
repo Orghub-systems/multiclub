@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.68';
+  window.APP_BUILD = 'BETA APP v2.68.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3895,6 +3895,7 @@ function pokazLogowanie() {
   grupaZalogowanego = null;
   window.grupyTrenera = "";
   window.zalogowanyTrenerName = "";
+  try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch(e) {}
 
   const komunikat = document.getElementById("komunikat");
   if (komunikat) komunikat.innerText = "";
@@ -3958,7 +3959,8 @@ async function zaloguj() {
     
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
-      window.zalogowanyTrenerName = String(data.trenerName || "").trim();
+      window.zalogowanyTrenerName = String(data.nazwisko || "").trim();
+      try { sessionStorage.setItem("zalogowanyTrenerName", window.zalogowanyTrenerName); } catch(e) {}
       goToView("trainerPanelView");
       return;
     }
@@ -5581,7 +5583,10 @@ async function trainerLoadRaportObecnosci_() {
 
   try {
     // ===== PODMIEŃ TYLKO TĘ JEDNĄ LINIJKĘ =====
-    const loggedTrainerName = String(window.zalogowanyTrenerName || "").trim();
+    const loggedTrainerName = String(
+      window.zalogowanyTrenerName ||
+      (function(){ try { return sessionStorage.getItem("zalogowanyTrenerName") || ""; } catch(e) { return ""; } })()
+    ).trim();
 
     if (!loggedTrainerName) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak nazwy zalogowanego trenera.</div>`;
