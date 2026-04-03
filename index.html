@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.67.4';
+  window.APP_BUILD = 'BETA APP v2.68';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -782,6 +782,7 @@ input[type="number"] {
       <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
       <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
       <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
+      <button class="full-btn" onclick="trainerPokazRaportObecnosci()">📋 Raport obecności</button>
       <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
     </div>
 
@@ -804,6 +805,16 @@ input[type="number"] {
       <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
     </div>
 
+<!-- TRAINER ATTENDANCE REPORT VIEW
+     Raport obecności zalogowanego trenera -->
+
+    <div id="trainerRaportObecnosciView" class="container hidden">
+      <h1>Raport obecności</h1>
+      <div id="trainerRaportObecnosciSummary" style="margin-bottom:10px;"></div>
+      <div id="trainerRaportObecnosciBody">Ładowanie...</div>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+    </div>
+  
     <!-- TRAINER ADD EVENT VIEW
      Ekran dodawania nowego wydarzenia przez trenera -->
     
@@ -3883,6 +3894,7 @@ function pokazLogowanie() {
   numerZalogowanego = null;
   grupaZalogowanego = null;
   window.grupyTrenera = "";
+  window.zalogowanyTrenerName = "";
 
   const komunikat = document.getElementById("komunikat");
   if (komunikat) komunikat.innerText = "";
@@ -3943,9 +3955,10 @@ async function zaloguj() {
     
       return;
     }
-
+    
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
+      window.zalogowanyTrenerName = String(data.trenerName || "").trim();
       goToView("trainerPanelView");
       return;
     }
@@ -5552,6 +5565,92 @@ async function trainerConfirmDeleteYes() {
       card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
     }
   }
+}
+
+  async function trainerPokazRaportObecnosci() {
+  goToView("trainerRaportObecnosciView");
+  await trainerLoadRaportObecnosci_();
+}
+
+async function trainerLoadRaportObecnosci_() {
+  const body = document.getElementById("trainerRaportObecnosciBody");
+  const sumEl = document.getElementById("trainerRaportObecnosciSummary");
+
+  if (body) body.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie…</div>`;
+  if (sumEl) sumEl.textContent = "";
+
+  try {
+    // ===== PODMIEŃ TYLKO TĘ JEDNĄ LINIJKĘ =====
+    const loggedTrainerName = String(window.zalogowanyTrenerName || "").trim();
+
+    if (!loggedTrainerName) {
+      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak nazwy zalogowanego trenera.</div>`;
+      if (sumEl) sumEl.textContent = "";
+      return;
+    }
+
+    const res = await apiClubGet("raportTrenerzy", {});
+
+    if (!res || res.success !== true || !Array.isArray(res.grid)) {
+      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu trenerów.</div>`;
+      if (sumEl) sumEl.textContent = "";
+      return;
+    }
+
+    const blocks = parseReportBlocksFromGrid_(res.grid);
+    if (!blocks.length) {
+      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak bloków MIESIĄC: w raporcie trenerów.</div>`;
+      if (sumEl) sumEl.textContent = "";
+      return;
+    }
+
+    blocks.reverse();
+
+    const needle = normalizeTrainerNameForReport_(loggedTrainerName);
+    let htmlAll = "";
+    let monthsCount = 0;
+    let entriesCount = 0;
+
+    for (const b of blocks) {
+      const trainers = parseTrainersSectionFromMonthBlock_(b.rows);
+      const mine = trainers.find(t => normalizeTrainerNameForReport_(t.name) === needle);
+
+      if (!mine) continue;
+
+      monthsCount++;
+      entriesCount += Array.isArray(mine.rows) ? mine.rows.length : 0;
+
+      htmlAll += `
+        <div class="card" style="padding:12px;text-align:left;margin-bottom:12px;">
+          <div style="font-weight:900;font-size:16px;margin-bottom:10px;">${escapeHtml_(b.monthLabel)}</div>
+          ${renderAdminRaportTrenerzyMonth_([mine])}
+        </div>
+      `;
+    }
+
+    if (!htmlAll) {
+      if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak wpisów obecności dla trenera: ${escapeHtml_(loggedTrainerName)}</div>`;
+      if (sumEl) sumEl.textContent = "";
+      return;
+    }
+
+    if (body) body.innerHTML = htmlAll;
+    if (sumEl) sumEl.textContent = `Trener: ${loggedTrainerName} • Obecności: ${entriesCount} • Miesięcy: ${monthsCount}`;
+
+  } catch (e) {
+    console.error(e);
+    if (body) body.innerHTML = `<div class="card" style="background:#2b1111;border-color:#933;color:#ffb3b3;">❌ Błąd pobierania raportu obecności</div>`;
+    if (sumEl) sumEl.textContent = "";
+  }
+}
+
+function normalizeTrainerNameForReport_(v) {
+  return String(v || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /* =================== KONIEC SEKTORA 130 =================== */ 
