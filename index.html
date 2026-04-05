@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.1';
+  window.APP_BUILD = 'BETA APP v2.69.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3927,6 +3927,8 @@ async function zaloguj() {
 
   try {
     const data = await apiClubPost({ mode: "login", numer: login, haslo });
+
+    console.log("ODPOWIEDŹ LOGOWANIA:", data);
 
     if (!data.success) {
       const err = data?.error || data?.message || "Błąd logowania";
