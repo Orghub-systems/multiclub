@@ -3928,8 +3928,6 @@ async function zaloguj() {
   try {
     const data = await apiClubPost({ mode: "login", numer: login, haslo });
 
-    console.log("ODPOWIEDŹ LOGOWANIA:", data);
-
     if (!data.success) {
       const err = data?.error || data?.message || "Błąd logowania";
       komunikat.innerText = "❌ " + err;
