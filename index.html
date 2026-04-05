@@ -8449,10 +8449,14 @@ function applyManualPushGroupsPopup() {
 
     const basePayload = {
       clubId: clubIdValue,
-      title: "OrgHub",
-      body,
-      url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}`,
-      tag: `orghub-${clubIdValue}`
+      title: "📣 OrgHub",
+      body: body,
+      url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}&source=push`,
+      tag: `orghub-${clubIdValue}`,
+      data: {
+        clubId: clubIdValue,
+        url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}&source=push`
+      }
     };
 
     if (mode === "single") {
