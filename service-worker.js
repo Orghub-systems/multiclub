@@ -99,26 +99,98 @@ self.addEventListener("fetch", (e) => {
 });
 
 /******************** PUSH: odbiór i kliknięcie ********************/
+async function readPushMeta_() {
+  try {
+    const metaResp = await caches.open("orghub-push-meta").then((cache) => cache.match("/push-meta.json"));
+    return metaResp ? await metaResp.json() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildClubPushUrl_(clubId, fallbackUrl) {
+  const cid = String(clubId || "").trim();
+  if (cid) {
+    return `https://${cid}.orghub.pl/?clubId=${encodeURIComponent(cid)}&source=push`;
+  }
+  return String(fallbackUrl || (self.location.origin + "/?source=push")).trim();
+}
+
+function normalizePushPayload_(rawPayload, meta) {
+  const payload = rawPayload && typeof rawPayload === "object" ? rawPayload : {};
+  const clubId =
+    String(
+      payload.clubId ||
+      (payload.data && payload.data.clubId) ||
+      (meta && meta.clubId) ||
+      ""
+    ).trim();
+
+  const numer =
+    String(
+      payload.numer ||
+      (payload.data && payload.data.numer) ||
+      (meta && meta.numer) ||
+      ""
+    ).trim();
+
+  const lines = [];
+
+  if (payload.body) lines.push(String(payload.body).trim());
+  if (payload.date) lines.push(`📅 ${String(payload.date).trim()}`);
+  if (payload.time) lines.push(`⏰ ${String(payload.time).trim()}`);
+  if (payload.groups) lines.push(`👥 ${String(payload.groups).trim()}`);
+  if (payload.trainers) lines.push(`🏒 ${String(payload.trainers).trim()}`);
+  if (payload.location) lines.push(`📍 ${String(payload.location).trim()}`);
+
+  const body = lines.filter(Boolean).join("\n") || "Masz nowe powiadomienie w OrgHub.";
+
+  const url = buildClubPushUrl_(
+    clubId,
+    payload.url || (payload.data && payload.data.url) || ""
+  );
+
+  return {
+    title: String(payload.title || "OrgHub").trim(),
+    body,
+    icon: String(
+      payload.icon ||
+      (clubId ? `https://${clubId}.orghub.pl/icon-192.png` : (self.location.origin + "/icon-192.png"))
+    ).trim(),
+    badge: String(
+      payload.badge ||
+      (clubId ? `https://${clubId}.orghub.pl/icon-192.png` : (self.location.origin + "/icon-192.png"))
+    ).trim(),
+    tag: String(payload.tag || (clubId ? `orghub-${clubId}` : "orghub")).trim(),
+    data: {
+      ...(payload.data || {}),
+      clubId,
+      numer,
+      url
+    }
+  };
+}
+
+/******************** PUSH: odbiór i kliknięcie ********************/
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let payload = null;
+    const meta = await readPushMeta_();
 
-    // 1) jeśli payload jednak jest — spróbuj go odczytać
+    // 1) spróbuj odczytać payload bezpośrednio
     try {
       payload = event.data ? await event.data.json() : null;
     } catch (e) {
-      payload = null;
+      try {
+        payload = event.data ? JSON.parse(event.data.text()) : null;
+      } catch (e2) {
+        payload = null;
+      }
     }
 
-    // 2) jeśli payloadu brak, pobierz wiadomość z Workera
+    // 2) jeśli brak payloadu, pobierz go z Workera
     if (!payload) {
       try {
-        const metaResp = await caches
-          .open("orghub-push-meta")
-          .then((cache) => cache.match("/push-meta.json"));
-
-        const meta = metaResp ? await metaResp.json() : null;
-
         const clubId = meta && meta.clubId ? String(meta.clubId).trim() : "";
         const numer  = meta && meta.numer  ? String(meta.numer).trim()  : "";
 
@@ -140,47 +212,57 @@ self.addEventListener("push", (event) => {
       }
     }
 
-    // 3) fallback
-    const title = (payload && payload.title) ? String(payload.title) : "OrgHub";
-    const body  = (payload && payload.body)  ? String(payload.body)  : "Push dotarł (brak/nieczytelny payload)";
-    const url   = (payload && payload.url)
-      ? String(payload.url)
-      : (self.location.origin + "/");
+    const n = normalizePushPayload_(payload, meta);
 
-    const options = {
-      body,
-      icon: (payload && payload.icon) ? String(payload.icon) : (self.location.origin + "/icon-192.png"),
-      badge: (payload && payload.badge) ? String(payload.badge) : (self.location.origin + "/icon-192.png"),
-      tag: (payload && payload.tag) ? String(payload.tag) : "orghub",
-      data: {
-        url,
-        ...((payload && payload.data) ? payload.data : {})
-      },
+    await self.registration.showNotification(n.title, {
+      body: n.body,
+      icon: n.icon,
+      badge: n.badge,
+      tag: n.tag,
+      data: n.data,
       renotify: true
-    };
-
-    await self.registration.showNotification(title, options);
+    });
   })());
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const url = (event.notification && event.notification.data && event.notification.data.url)
-    ? String(event.notification.data.url)
-    : (self.location.origin + "/");
-
   event.waitUntil((async () => {
+    const rawUrl =
+      event.notification &&
+      event.notification.data &&
+      event.notification.data.url
+        ? String(event.notification.data.url)
+        : "";
+
+    const rawClubId =
+      event.notification &&
+      event.notification.data &&
+      event.notification.data.clubId
+        ? String(event.notification.data.clubId)
+        : "";
+
+    const targetUrl = buildClubPushUrl_(rawClubId, rawUrl);
+    const target = new URL(targetUrl, self.location.origin).href;
+    const targetOrigin = new URL(target).origin;
+
     const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
 
     for (const c of allClients) {
-      if (c.url && c.url.startsWith(self.location.origin + "/")) {
-        await c.focus();
-        await c.navigate(url);
-        return;
-      }
+      try {
+        const clientUrl = new URL(c.url);
+
+        if (clientUrl.origin === targetOrigin) {
+          await c.focus();
+          if (c.url !== target) {
+            await c.navigate(target);
+          }
+          return;
+        }
+      } catch (e) {}
     }
 
-    await clients.openWindow(url);
+    await clients.openWindow(target);
   })());
 });
