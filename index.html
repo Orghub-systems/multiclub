@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69';
+  window.APP_BUILD = 'BETA APP v2.69.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8446,11 +8446,29 @@ function applyManualPushGroupsPopup() {
 
   try {
     if (msgEl) msgEl.textContent = "Wysyłanie...";
-
+    
+    const senderLabel =
+      window.__manualPushRole === "trainer"
+        ? `Trener ${String(
+            window.zalogowanyTrenerName ||
+            (function(){ try { return sessionStorage.getItem("zalogowanyTrenerName") || ""; } catch(e) { return ""; } })()
+          ).trim() || ""}`.trim()
+        : "Administrator";
+    
+    const targetLabel =
+      mode === "single"
+        ? "Ciebie"
+        : mode === "group"
+          ? `grupy ${Array.isArray(window.__manualPushGroups) ? window.__manualPushGroups.join(", ") : ""}`.trim()
+          : "całego klubu";
+    
+    const formattedBody =
+      `${senderLabel} przesyła wiadomość do ${targetLabel} o treści:\n\n"${body}"`;
+    
     const basePayload = {
       clubId: clubIdValue,
-      title: "📣 OrgHub",
-      body: body,
+      title: "📣 Nowa wiadomość",
+      body: formattedBody,
       url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}&source=push`,
       tag: `orghub-${clubIdValue}`,
       data: {
