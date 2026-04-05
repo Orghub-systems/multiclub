@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.9';
+  window.APP_BUILD = 'BETA APP v2.69.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6339,6 +6339,55 @@ function isHistoryModal_(modalId) {
     return false;
   }
 }
+
+function normalizeTimeForInput_(value) {
+  const s = String(value || "").trim();
+  if (!s) return "";
+
+  const m = s.match(/^(\d{1,2})[:.](\d{1,2})(?::(\d{1,2}))?$/);
+  if (m) {
+    const hh = String(m[1]).padStart(2, "0");
+    const mm = String(m[2]).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+
+  return "";
+}  
+
+function setTrainerEditPopupLoadingState_(isLoading) {
+  const ids = [
+    "editEventData",
+    "editEventStart",
+    "editEventEnd",
+    "editEventRodzaj",
+    "editEventStat",
+    "editEventRez",
+    "editTrener1",
+    "editTrener2",
+    "editTrener3",
+    "editTrener4",
+    "btnEditSave",
+    "btnEditPickGroups",
+    "btnEditPickTrenerzy"
+  ];
+
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    if (isLoading) {
+      el.disabled = true;
+      el.style.opacity = "0.55";
+      el.style.pointerEvents = "none";
+      el.style.filter = "grayscale(0.25)";
+    } else {
+      el.disabled = false;
+      el.style.opacity = "";
+      el.style.pointerEvents = "";
+      el.style.filter = "";
+    }
+  });
+}  
   
 // otwarcie popupu + wypełnienie pól + dociągnięcie trenerów i grup (bez psucia startu apki)
 async function trainerShowEditPopup(miesiac, col5) {
@@ -6359,29 +6408,32 @@ async function trainerShowEditPopup(miesiac, col5) {
   const r = document.getElementById("editEventRodzaj");
 
   if (d) d.value = cached?.dataISO || "";
-  if (s) s.value = cached?.start || "";
-  if (e) e.value = cached?.end || "";
+  if (s) s.value = normalizeTimeForInput_(cached?.start);
+  if (e) e.value = normalizeTimeForInput_(cached?.end);
   if (r) r.value = cached?.rodzaj || "";
 
-  // 2) reset UI (żeby nie pamiętało)
+  // 2) reset UI
   resetEditTrenerSelects_();
   resetEditGroups_();
 
-  // 3) pokaż popup od razu, ale z komunikatem "ładuję"
+  // 3) pokaż popup od razu
   if (pop) pop.style.display = "flex";
 
-  // ✅ zawsze podepnij klik do przycisku w tym popupie
+  // 4) zablokuj pola na czas ładowania
+  setTrainerEditPopupLoadingState_(true);
+
+  // 5) podepnij save
   const saveBtn = pop ? pop.querySelector("#btnEditSave") : null;
   if (saveBtn) saveBtn.onclick = trainerSaveEditEvent;
 
-  // ✅ nowy wpis historii dla głównego popupu edycji
+  // 6) wpis historii
   pushPaymentModalHistoryState_("trainerEditPopup");
 
-  // 4) załaduj opcje trenerów do selectów
-  await zaladujListeTrenerowDoEdycji();
-
-  // 5) pobierz szczegóły wydarzenia (trenerzy + grupy)
   try {
+    // 7) załaduj trenerów do selectów
+    await zaladujListeTrenerowDoEdycji();
+
+    // 8) pobierz szczegóły wydarzenia
     const treningId = `${editMiesiac}-${editCol5}`;
     const details = await apiClubGet("wydarzenieDetails", { treningId });
 
@@ -6393,7 +6445,6 @@ async function trainerShowEditPopup(miesiac, col5) {
       updateEditTrenerzySummary_();
       setEditGroups_(grupyArr);
 
-      // === ustaw checkboxy z backendu ===
       const chkStat = document.getElementById("editEventStat");
       const chkRez  = document.getElementById("editEventRez");
 
@@ -6401,13 +6452,16 @@ async function trainerShowEditPopup(miesiac, col5) {
       if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
 
       if (msg) msg.textContent = "";
-
     } else {
       if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów i grup.";
       console.warn("wydarzenieDetails:", details);
     }
   } catch (err) {
     if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów i grup.";
+    console.warn("trainerShowEditPopup error:", err);
+  } finally {
+    // 9) odblokuj pola po zakończeniu ładowania
+    setTrainerEditPopupLoadingState_(false);
   }
 }
 
