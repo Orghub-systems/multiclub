@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.2';
+  window.APP_BUILD = 'BETA APP v2.69.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -639,7 +639,7 @@ input[type="number"] {
     <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
     <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
     <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-    <button class="full-btn alt" onclick="goToView('playerSettingsView')">⚙️ Ustawienia</button>
+    <button class="full-btn" onclick="goToView('playerSettingsView')">🔔 Powiadomienia</button>
     <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
   </div>
 
@@ -759,14 +759,69 @@ input[type="number"] {
     <div id="clubIdBadge_settings" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
   </div>
 
-  <h1 style="margin:0 0 25px 0;">Ustawienia</h1>
+  <h1 style="margin:0 0 20px 0;">Powiadomienia</h1>
 
-  <div class="login-box">
-    <button id="btnEnablePush" class="full-btn">🔔 Włącz powiadomienia</button>
-    <button class="full-btn alt" onclick="appBack()"> ⬅ Powrót do menu </button>
+  <!-- PUSH -->
+  <div class="card" style="text-align:left; margin-bottom:16px;">
+    <div style="font-size:20px; font-weight:900; margin-bottom:10px;">🔔 Powiadomienia push</div>
+
+    <div style="opacity:.9; margin-bottom:14px;">
+      Otrzymuj powiadomienia o nowych wiadomościach i wydarzeniach w aplikacji.
+    </div>
+
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center;">
+      <button id="btnEnablePush" class="full-btn" style="margin:0; flex:1 1 220px;">
+        🔔 Włącz powiadomienia
+      </button>
+
+      <button
+        id="btnDisablePush"
+        class="full-btn alt hidden"
+        style="margin:0; flex:0 0 auto; min-width:120px;"
+        type="button"
+      >
+        Wyłącz
+      </button>
+    </div>
+
+    <p id="pushStatus" style="margin-top:14px;"></p>
+
+    <div
+      id="pushWarningBox"
+      class="hidden"
+      style="margin-top:12px; padding:12px; border-radius:12px; background:#5a3a00; border:1px solid #b97a00; color:#ffd98a;"
+    >
+      Twoja subskrypcja powiadomień push wygasła, włącz ją ponownie.
+    </div>
   </div>
 
-  <p id="pushStatus" style="margin-top:15px;"></p>
+  <!-- EMAIL -->
+  <div class="card" style="text-align:left; margin-bottom:16px;">
+    <div style="font-size:20px; font-weight:900; margin-bottom:10px;">✉️ Powiadomienia email</div>
+
+    <div style="opacity:.9; margin-bottom:14px;">
+      Otrzymuj wiadomości e-mail z ważnymi informacjami z klubu.
+    </div>
+
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center;">
+      <button id="btnEnableEmail" class="full-btn" style="margin:0; flex:1 1 220px;">
+        ✉️ Włącz powiadomienia email
+      </button>
+
+      <button
+        id="btnDisableEmail"
+        class="full-btn alt hidden"
+        style="margin:0; flex:0 0 auto; min-width:120px;"
+        type="button"
+      >
+        Wyłącz
+      </button>
+    </div>
+
+    <p id="emailStatus" style="margin-top:14px;"></p>
+  </div>
+
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót do menu</button>
 </div>
 
 <!-- =========================================================
