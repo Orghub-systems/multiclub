@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.5';
+  window.APP_BUILD = 'BETA APP v2.69.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3722,11 +3722,18 @@ window.submitSetupAndActivateClub = submitSetupAndActivateClub;
 
 const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
+function getCurrentNotificationLoginId_() {
+  const numer =
+    (typeof numerZalogowanego !== "undefined" && String(numerZalogowanego || "").trim()) ||
+    (window.numerZalogowanego && String(window.numerZalogowanego || "").trim()) ||
+    "";
+
+  return numer;
+}
+
 function getStoredPushConsent_() {
   try {
-    if (typeof window.userPushConsent === "boolean") {
-      return window.userPushConsent;
-    }
+    if (typeof window.userPushConsent === "boolean") return window.userPushConsent;
   } catch (e) {}
 
   try {
@@ -3744,6 +3751,26 @@ function setStoredPushConsent_(value) {
   try { sessionStorage.setItem("userPushConsent", v ? "1" : "0"); } catch (e) {}
 }
 
+function getStoredEmailConsent_() {
+  try {
+    if (typeof window.userEmailConsent === "boolean") return window.userEmailConsent;
+  } catch (e) {}
+
+  try {
+    const s = sessionStorage.getItem("userEmailConsent");
+    if (s === "1") return true;
+    if (s === "0") return false;
+  } catch (e) {}
+
+  return false;
+}
+
+function setStoredEmailConsent_(value) {
+  const v = !!value;
+  try { window.userEmailConsent = v; } catch (e) {}
+  try { sessionStorage.setItem("userEmailConsent", v ? "1" : "0"); } catch (e) {}
+}
+
 async function clearPushMetaCache_() {
   try {
     const cache = await caches.open("orghub-push-meta");
@@ -3752,6 +3779,71 @@ async function clearPushMetaCache_() {
     console.warn("clearPushMetaCache_ error", e);
   }
 }
+
+async function loadUserNotificationPrefsFromServer_() {
+  const loginId = getCurrentNotificationLoginId_();
+  if (!loginId) {
+    return { success: false, error: "Brak loginId" };
+  }
+
+  const res = await apiClubPost({
+    action: "getUserNotificationPrefs",
+    numer: loginId
+  });
+
+  if (res && res.success) {
+    setStoredPushConsent_(!!res.pushConsent);
+    setStoredEmailConsent_(!!res.emailConsent);
+  }
+
+  return res;
+}
+
+async function saveUserNotificationPrefsToServer_(opts) {
+  const loginId = getCurrentNotificationLoginId_();
+  if (!loginId) {
+    return { success: false, error: "Brak loginId" };
+  }
+
+  const payload = {
+    action: "setUserNotificationPrefs",
+    numer: loginId
+  };
+
+  if (Object.prototype.hasOwnProperty.call(opts || {}, "pushConsent")) {
+    payload.pushConsent = opts.pushConsent ? "true" : "false";
+  }
+
+  if (Object.prototype.hasOwnProperty.call(opts || {}, "emailConsent")) {
+    payload.emailConsent = opts.emailConsent ? "true" : "false";
+  }
+
+  const res = await apiClubPost(payload);
+
+  if (res && res.success) {
+    if (Object.prototype.hasOwnProperty.call(opts || {}, "pushConsent")) {
+      setStoredPushConsent_(!!res.pushConsent);
+    }
+    if (Object.prototype.hasOwnProperty.call(opts || {}, "emailConsent")) {
+      setStoredEmailConsent_(!!res.emailConsent);
+    }
+  }
+
+  return res;
+}
+
+window.openPlayerNotificationsView_ = async function openPlayerNotificationsView_() {
+  goToView("playerSettingsView");
+
+  try {
+    await loadUserNotificationPrefsFromServer_();
+  } catch (e) {
+    console.warn("loadUserNotificationPrefsFromServer_ error:", e);
+  }
+
+  await refreshPushButtonState_();
+  refreshEmailButtonState_();
+};
 
 function hookPushButton_() {
   const btnEnable = document.getElementById("btnEnablePush");
@@ -3765,6 +3857,21 @@ function hookPushButton_() {
   if (btnDisable && btnDisable.dataset.bound !== "1") {
     btnDisable.dataset.bound = "1";
     btnDisable.addEventListener("click", disablePushFlow_);
+  }
+}
+
+function hookEmailButtons_() {
+  const btnEnable = document.getElementById("btnEnableEmail");
+  const btnDisable = document.getElementById("btnDisableEmail");
+
+  if (btnEnable && btnEnable.dataset.bound !== "1") {
+    btnEnable.dataset.bound = "1";
+    btnEnable.addEventListener("click", enableEmailFlow_);
+  }
+
+  if (btnDisable && btnDisable.dataset.bound !== "1") {
+    btnDisable.dataset.bound = "1";
+    btnDisable.addEventListener("click", disableEmailFlow_);
   }
 }
 
@@ -3824,7 +3931,6 @@ async function refreshPushButtonState_() {
   if (btnDisable) btnDisable.classList.add("hidden");
   if (warningBox) warningBox.classList.add("hidden");
 
-  // 1) zgoda w aplikacji + aktywna subskrypcja urządzenia
   if (pushConsent && state.active) {
     btnEnable.textContent = "🟢 Powiadomienia aktywne";
     btnEnable.style.background = "#0f7a2a";
@@ -3836,7 +3942,6 @@ async function refreshPushButtonState_() {
     return;
   }
 
-  // 2) zgoda w aplikacji jest, ale subskrypcja urządzenia wygasła / zniknęła
   if (pushConsent && !state.active) {
     btnEnable.textContent = "🔔 Włącz ponownie powiadomienia";
     btnEnable.style.background = "#8b0000";
@@ -3856,7 +3961,6 @@ async function refreshPushButtonState_() {
     return;
   }
 
-  // 3) brak zgody w aplikacji, ale urządzenie ma jeszcze subskrypcję
   if (!pushConsent && state.active) {
     btnEnable.textContent = "🔔 Włącz powiadomienia";
     btnEnable.style.background = "#8b0000";
@@ -3868,7 +3972,6 @@ async function refreshPushButtonState_() {
     return;
   }
 
-  // 4) przeglądarka blokuje
   if (state.reason === "permission-denied") {
     btnEnable.textContent = "⛔ Powiadomienia zablokowane";
     btnEnable.style.background = "#5a0000";
@@ -3881,7 +3984,6 @@ async function refreshPushButtonState_() {
     return;
   }
 
-  // 5) wszystko wyłączone / brak aktywacji
   btnEnable.textContent = "🔔 Włącz powiadomienia";
   btnEnable.style.background = "#8b0000";
   btnEnable.style.borderColor = "#ff2b2b";
@@ -3902,6 +4004,43 @@ async function refreshPushButtonState_() {
   } else {
     status.textContent = "Powiadomienia push są wyłączone.";
   }
+}
+
+function refreshEmailButtonState_() {
+  const btnEnable = document.getElementById("btnEnableEmail");
+  const btnDisable = document.getElementById("btnDisableEmail");
+  const status = document.getElementById("emailStatus");
+
+  if (!btnEnable) return;
+
+  hookEmailButtons_();
+
+  const emailConsent = getStoredEmailConsent_();
+
+  btnEnable.style.background = "";
+  btnEnable.style.borderColor = "";
+  btnEnable.style.color = "";
+  btnEnable.disabled = false;
+
+  if (btnDisable) btnDisable.classList.add("hidden");
+
+  if (emailConsent) {
+    btnEnable.textContent = "🟢 Powiadomienia email aktywne";
+    btnEnable.style.background = "#0f7a2a";
+    btnEnable.style.borderColor = "#19a642";
+    btnEnable.style.color = "#ffffff";
+
+    if (btnDisable) btnDisable.classList.remove("hidden");
+    if (status) status.textContent = "Powiadomienia email są włączone.";
+    return;
+  }
+
+  btnEnable.textContent = "✉️ Włącz powiadomienia email";
+  btnEnable.style.background = "#8b0000";
+  btnEnable.style.borderColor = "#ff2b2b";
+  btnEnable.style.color = "#ffffff";
+
+  if (status) status.textContent = "Powiadomienia email są wyłączone.";
 }
 
 async function enablePushFlow_() {
@@ -3963,11 +4102,7 @@ async function enablePushFlow_() {
     window.clubId = cid;
     try { localStorage.setItem("clubId", cid); } catch (e) {}
 
-    const numer =
-      (typeof numerZalogowanego !== "undefined" && String(numerZalogowanego).trim()) ||
-      (window.numerZalogowanego && String(window.numerZalogowanego).trim()) ||
-      "";
-
+    const numer = getCurrentNotificationLoginId_();
     if (!numer) {
       alert("Brak numeru zawodnika (zaloguj się ponownie).");
       return;
@@ -4010,9 +4145,14 @@ async function enablePushFlow_() {
       console.warn("push-meta cache save error", e);
     }
 
-    setStoredPushConsent_(true);
+    const setRes = await saveUserNotificationPrefsToServer_({ pushConsent: true });
+    if (!setRes || setRes.success !== true) {
+      throw new Error(setRes?.error || "Nie udało się zapisać zgody push w aplikacji.");
+    }
+
+    await loadUserNotificationPrefsFromServer_();
     await refreshPushButtonState_();
-    alert("✅ Powiadomienia włączone.");
+    alert("✅ Powiadomienia push włączone.");
 
   } catch (e) {
     alert("❌ Push error: " + (e?.message || e));
@@ -4039,12 +4179,58 @@ async function disablePushFlow_() {
     }
 
     await clearPushMetaCache_();
-    setStoredPushConsent_(false);
+
+    const setRes = await saveUserNotificationPrefsToServer_({ pushConsent: false });
+    if (!setRes || setRes.success !== true) {
+      throw new Error(setRes?.error || "Nie udało się zapisać wyłączenia push w aplikacji.");
+    }
+
+    await loadUserNotificationPrefsFromServer_();
     await refreshPushButtonState_();
-    alert("✅ Powiadomienia wyłączone na tym urządzeniu.");
+    alert("✅ Powiadomienia push wyłączone.");
 
   } catch (e) {
     alert("❌ Nie udało się wyłączyć powiadomień: " + (e?.message || e));
+  } finally {
+    if (btnDisable) btnDisable.disabled = false;
+  }
+}
+
+async function enableEmailFlow_() {
+  const btnEnable = document.getElementById("btnEnableEmail");
+  if (btnEnable) btnEnable.disabled = true;
+
+  try {
+    const setRes = await saveUserNotificationPrefsToServer_({ emailConsent: true });
+    if (!setRes || setRes.success !== true) {
+      throw new Error(setRes?.error || "Nie udało się włączyć powiadomień email.");
+    }
+
+    await loadUserNotificationPrefsFromServer_();
+    refreshEmailButtonState_();
+    alert("✅ Powiadomienia email włączone.");
+  } catch (e) {
+    alert("❌ Błąd email: " + (e?.message || e));
+  } finally {
+    if (btnEnable) btnEnable.disabled = false;
+  }
+}
+
+async function disableEmailFlow_() {
+  const btnDisable = document.getElementById("btnDisableEmail");
+  if (btnDisable) btnDisable.disabled = true;
+
+  try {
+    const setRes = await saveUserNotificationPrefsToServer_({ emailConsent: false });
+    if (!setRes || setRes.success !== true) {
+      throw new Error(setRes?.error || "Nie udało się wyłączyć powiadomień email.");
+    }
+
+    await loadUserNotificationPrefsFromServer_();
+    refreshEmailButtonState_();
+    alert("✅ Powiadomienia email wyłączone.");
+  } catch (e) {
+    alert("❌ Błąd email: " + (e?.message || e));
   } finally {
     if (btnDisable) btnDisable.disabled = false;
   }
@@ -4055,13 +4241,15 @@ function urlBase64ToUint8Array_(base64String) {
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = atob(base64);
   const outputArray = new Uint8Array(rawData.length);
+
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
+
   return outputArray;
 }
 
-/* =================== KONIEC SEKTORA 80 =================== */ 
+/* =================== KONIEC SEKTORA 80 =================== */
 
 /* =================== 90 LOGOWANIE / REJESTRACJA =================== */
   
