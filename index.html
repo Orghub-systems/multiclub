@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.6';
+  window.APP_BUILD = 'BETA APP v2.69.7';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -639,64 +639,86 @@ input[type="number"] {
     <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
     <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
     <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-    <button class="full-btn" onclick="goToView('playerSettingsView'); refreshPushButtonState_();">🔔 Powiadomienia</button>
+
+    <button id="playerMenuNotificationsBtn" class="full-btn" onclick="openPlayerNotificationsView_()">🔔 Powiadomienia</button>
+
+    <div id="playerMenuPushAlertWrap" class="hidden" style="margin-top:-6px; margin-bottom:8px;">
+      <div
+        id="playerMenuPushAlertText"
+        style="
+          background:#5a0000;
+          border:1px solid #ff2b2b;
+          color:#ffffff;
+          border-radius:14px;
+          padding:10px 12px;
+          font-size:13px;
+          line-height:1.35;
+          font-weight:800;
+          text-align:center;
+          box-shadow:0 0 0 rgba(255,43,43,0);
+        "
+      >
+        Subskrypcja powiadomień push wygasła, włącz ją ponownie.
+      </div>
+    </div>
+
     <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
   </div>
 
   <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
-<!-- REKLAMA / PARTNER KLUBU -->
-<div id="clubAdContainer" style="display:none; margin-top:18px;">
-  <div style="width:100%; max-width:360px; margin:0 auto;">
+  <!-- REKLAMA / PARTNER KLUBU -->
+  <div id="clubAdContainer" style="display:none; margin-top:18px;">
+    <div style="width:100%; max-width:360px; margin:0 auto;">
 
-    <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
-      <div
-        id="clubAdBox"
-        style="
-          width:100%;
-          height:310px;
-          border-radius:18px;
-          overflow:hidden;
-          background:
-            linear-gradient(180deg,#232323 0%, #171717 100%);
-          background-size:cover;
-          background-position:center;
-          background-repeat:no-repeat;
-          box-shadow:0 10px 28px rgba(0,0,0,.45);
-          position:relative;
-        "
-      >
+      <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
         <div
-          id="clubAdFallbackText"
+          id="clubAdBox"
           style="
-            position:absolute;
-            inset:0;
-            display:flex;
-            align-items:flex-start;
-            justify-content:center;
-            padding-top:16px;
-            color:#fff;
-            font-size:14px;
-            font-weight:700;
-            text-align:center;
+            width:100%;
+            height:310px;
+            border-radius:18px;
+            overflow:hidden;
+            background:
+              linear-gradient(180deg,#232323 0%, #171717 100%);
+            background-size:cover;
+            background-position:center;
+            background-repeat:no-repeat;
+            box-shadow:0 10px 28px rgba(0,0,0,.45);
+            position:relative;
           "
         >
-          Partner klubu
+          <div
+            id="clubAdFallbackText"
+            style="
+              position:absolute;
+              inset:0;
+              display:flex;
+              align-items:flex-start;
+              justify-content:center;
+              padding-top:16px;
+              color:#fff;
+              font-size:14px;
+              font-weight:700;
+              text-align:center;
+            "
+          >
+            Partner klubu
+          </div>
         </div>
+      </a>
+
+      <div style="
+        font-size:12px;
+        opacity:.55;
+        margin-top:8px;
+        text-align:center;
+      ">
+        Partner klubu
       </div>
-    </a>
 
-    <div style="
-      font-size:12px;
-      opacity:.55;
-      margin-top:8px;
-      text-align:center;
-    ">
-      Partner klubu
     </div>
-
   </div>
-</div>
 
 </div>
     
@@ -3831,7 +3853,7 @@ async function saveUserNotificationPrefsToServer_(opts) {
 
   return res;
 }
-
+  
 window.openPlayerNotificationsView_ = async function openPlayerNotificationsView_() {
   goToView("playerSettingsView");
 
@@ -3841,8 +3863,7 @@ window.openPlayerNotificationsView_ = async function openPlayerNotificationsView
     console.warn("loadUserNotificationPrefsFromServer_ error:", e);
   }
 
-  await refreshPushButtonState_();
-  refreshEmailButtonState_();
+  await refreshPlayerNotificationsUi_();
 };
 
 function hookPushButton_() {
@@ -4251,6 +4272,88 @@ function urlBase64ToUint8Array_(base64String) {
 
 /* =================== KONIEC SEKTORA 80 =================== */
 
+/* =================== 81 POWIADOMIENIA ALERT =================== */  
+
+let __playerMenuPushAlertAnimation = null;
+
+async function refreshPlayerMenuPushAlert_() {
+  const btn = document.getElementById("playerMenuNotificationsBtn");
+  const wrap = document.getElementById("playerMenuPushAlertWrap");
+  const text = document.getElementById("playerMenuPushAlertText");
+
+  if (!btn || !wrap || !text) return;
+
+  const pushConsent = getStoredPushConsent_();
+  const state = await getPushState_();
+  const shouldWarn = !!pushConsent && !state.active;
+
+  wrap.classList.add("hidden");
+
+  btn.style.background = "";
+  btn.style.borderColor = "";
+  btn.style.color = "";
+  btn.style.boxShadow = "";
+  btn.style.transform = "";
+
+  if (__playerMenuPushAlertAnimation) {
+    try { __playerMenuPushAlertAnimation.cancel(); } catch (e) {}
+    __playerMenuPushAlertAnimation = null;
+  }
+
+  if (!shouldWarn) return;
+
+  wrap.classList.remove("hidden");
+  text.textContent = "Subskrypcja powiadomień push wygasła, włącz ją ponownie.";
+
+  btn.style.background = "#8b0000";
+  btn.style.borderColor = "#ff2b2b";
+  btn.style.color = "#ffffff";
+  btn.style.boxShadow = "0 0 0 0 rgba(255,43,43,.45)";
+
+  __playerMenuPushAlertAnimation = btn.animate(
+    [
+      {
+        boxShadow: "0 0 0 0 rgba(255,43,43,.10)",
+        transform: "scale(1)"
+      },
+      {
+        boxShadow: "0 0 16px 4px rgba(255,43,43,.55)",
+        transform: "scale(1.015)"
+      },
+      {
+        boxShadow: "0 0 0 0 rgba(255,43,43,.10)",
+        transform: "scale(1)"
+      }
+    ],
+    {
+      duration: 1100,
+      iterations: Infinity
+    }
+  );
+}
+
+async function refreshPlayerNotificationsUi_() {
+  try {
+    await refreshPushButtonState_();
+  } catch (e) {
+    console.warn("refreshPushButtonState_ error:", e);
+  }
+
+  try {
+    refreshEmailButtonState_();
+  } catch (e) {
+    console.warn("refreshEmailButtonState_ error:", e);
+  }
+
+  try {
+    await refreshPlayerMenuPushAlert_();
+  } catch (e) {
+    console.warn("refreshPlayerMenuPushAlert_ error:", e);
+  }
+}  
+
+/* =================== KONIEC SEKTORA 81 =================== */  
+
 /* =================== 90 LOGOWANIE / REJESTRACJA =================== */
   
 function pokazLogowanie() {
@@ -4275,7 +4378,6 @@ function pokazLogowanie() {
 function pokazRejestracjaSelect() { goToView("registerSelectView"); }
 function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
 function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
-
 async function zaloguj() {
   const login = document.getElementById("numer").value.trim();
   const haslo = document.getElementById("haslo").value.trim();
@@ -4324,6 +4426,13 @@ async function zaloguj() {
 
       goToView("playerMenuView");
       loadClubAd();
+
+      try {
+        await refreshPlayerMenuPushAlert_();
+      } catch (e) {
+        console.warn("refreshPlayerMenuPushAlert_ error:", e);
+      }
+
       return;
     }
 
