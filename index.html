@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.3';
+  window.APP_BUILD = 'BETA APP v2.69.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -639,7 +639,7 @@ input[type="number"] {
     <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
     <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
     <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-    <button class="full-btn" onclick="goToView('playerSettingsView')">🔔 Powiadomienia</button>
+    <button class="full-btn" onclick="goToView('playerSettingsView'); refreshPushButtonState_();">🔔 Powiadomienia</button>
     <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
   </div>
 
@@ -3719,19 +3719,53 @@ window.submitSetupAndActivateClub = submitSetupAndActivateClub;
 /* =================== KONIEC SEKTORA 70 =================== */    
   
 /* =================== 80 PUSH / POWIADOMIENIA =================== */
-  
+
 const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
-let __pushBtnBound = false;
+
+function getStoredPushConsent_() {
+  try {
+    if (typeof window.userPushConsent === "boolean") {
+      return window.userPushConsent;
+    }
+  } catch (e) {}
+
+  try {
+    const s = sessionStorage.getItem("userPushConsent");
+    if (s === "1") return true;
+    if (s === "0") return false;
+  } catch (e) {}
+
+  return false;
+}
+
+function setStoredPushConsent_(value) {
+  const v = !!value;
+  try { window.userPushConsent = v; } catch (e) {}
+  try { sessionStorage.setItem("userPushConsent", v ? "1" : "0"); } catch (e) {}
+}
+
+async function clearPushMetaCache_() {
+  try {
+    const cache = await caches.open("orghub-push-meta");
+    await cache.delete("/push-meta.json");
+  } catch (e) {
+    console.warn("clearPushMetaCache_ error", e);
+  }
+}
 
 function hookPushButton_() {
-  const btn = document.getElementById("btnEnablePush");
-  if (!btn) return;
+  const btnEnable = document.getElementById("btnEnablePush");
+  const btnDisable = document.getElementById("btnDisablePush");
 
-  // nie binduj 100 razy
-  if (btn.dataset.bound === "1") return;
-  btn.dataset.bound = "1";
+  if (btnEnable && btnEnable.dataset.bound !== "1") {
+    btnEnable.dataset.bound = "1";
+    btnEnable.addEventListener("click", enablePushFlow_);
+  }
 
-  btn.addEventListener("click", enablePushFlow_);
+  if (btnDisable && btnDisable.dataset.bound !== "1") {
+    btnDisable.dataset.bound = "1";
+    btnDisable.addEventListener("click", disablePushFlow_);
+  }
 }
 
 async function getPushState_() {
@@ -3770,53 +3804,95 @@ async function getPushState_() {
 }
 
 async function refreshPushButtonState_() {
-  const btn = document.getElementById("btnEnablePush");
+  const btnEnable = document.getElementById("btnEnablePush");
+  const btnDisable = document.getElementById("btnDisablePush");
   const status = document.getElementById("pushStatus");
-  if (!btn) return;
+  const warningBox = document.getElementById("pushWarningBox");
+
+  if (!btnEnable) return;
+
+  hookPushButton_();
 
   const state = await getPushState_();
+  const pushConsent = getStoredPushConsent_();
 
-  // wyczyść stare klasy/kolory inline
-  btn.style.background = "";
-  btn.style.borderColor = "";
-  btn.style.color = "";
-  btn.disabled = false;
+  btnEnable.style.background = "";
+  btnEnable.style.borderColor = "";
+  btnEnable.style.color = "";
+  btnEnable.disabled = false;
 
-  if (state.active) {
-    btn.textContent = "🟢 Powiadomienia aktywne";
-    btn.style.background = "#0f7a2a";
-    btn.style.borderColor = "#19a642";
-    btn.style.color = "#ffffff";
+  if (btnDisable) btnDisable.classList.add("hidden");
+  if (warningBox) warningBox.classList.add("hidden");
+
+  // 1) zgoda w aplikacji + aktywna subskrypcja urządzenia
+  if (pushConsent && state.active) {
+    btnEnable.textContent = "🟢 Powiadomienia aktywne";
+    btnEnable.style.background = "#0f7a2a";
+    btnEnable.style.borderColor = "#19a642";
+    btnEnable.style.color = "#ffffff";
+
+    if (btnDisable) btnDisable.classList.remove("hidden");
+    if (status) status.textContent = "Powiadomienia push są aktywne na tym urządzeniu.";
+    return;
+  }
+
+  // 2) zgoda w aplikacji jest, ale subskrypcja urządzenia wygasła / zniknęła
+  if (pushConsent && !state.active) {
+    btnEnable.textContent = "🔔 Włącz ponownie powiadomienia";
+    btnEnable.style.background = "#8b0000";
+    btnEnable.style.borderColor = "#ff2b2b";
+    btnEnable.style.color = "#ffffff";
+
+    if (btnDisable) btnDisable.classList.remove("hidden");
+    if (warningBox) warningBox.classList.remove("hidden");
 
     if (status) {
-      status.textContent = "Powiadomienia są aktywne na tym urządzeniu.";
+      if (state.reason === "permission-denied") {
+        status.textContent = "Masz włączone powiadomienia w aplikacji, ale przeglądarka je zablokowała.";
+      } else {
+        status.textContent = "Masz włączone powiadomienia w aplikacji, ale to urządzenie nie ma aktywnej subskrypcji.";
+      }
     }
     return;
   }
 
+  // 3) brak zgody w aplikacji, ale urządzenie ma jeszcze subskrypcję
+  if (!pushConsent && state.active) {
+    btnEnable.textContent = "🔔 Włącz powiadomienia";
+    btnEnable.style.background = "#8b0000";
+    btnEnable.style.borderColor = "#ff2b2b";
+    btnEnable.style.color = "#ffffff";
+
+    if (btnDisable) btnDisable.classList.remove("hidden");
+    if (status) status.textContent = "Powiadomienia są wyłączone w aplikacji, ale urządzenie ma jeszcze aktywną subskrypcję.";
+    return;
+  }
+
+  // 4) przeglądarka blokuje
   if (state.reason === "permission-denied") {
-    btn.textContent = "⛔ Powiadomienia zablokowane";
-    btn.style.background = "#5a0000";
-    btn.style.borderColor = "#a30000";
-    btn.style.color = "#ffffff";
+    btnEnable.textContent = "⛔ Powiadomienia zablokowane";
+    btnEnable.style.background = "#5a0000";
+    btnEnable.style.borderColor = "#a30000";
+    btnEnable.style.color = "#ffffff";
 
     if (status) {
-      status.textContent = "Powiadomienia są zablokowane w przeglądarce. Odblokuj je w ustawieniach strony.";
+      status.textContent = "Przeglądarka zablokowała powiadomienia. Odblokuj je w ustawieniach strony lub urządzenia.";
     }
     return;
   }
 
-  btn.textContent = "🔔 Włącz powiadomienia";
-  btn.style.background = "#8b0000";
-  btn.style.borderColor = "#ff2b2b";
-  btn.style.color = "#ffffff";
+  // 5) wszystko wyłączone / brak aktywacji
+  btnEnable.textContent = "🔔 Włącz powiadomienia";
+  btnEnable.style.background = "#8b0000";
+  btnEnable.style.borderColor = "#ff2b2b";
+  btnEnable.style.color = "#ffffff";
 
   if (!status) return;
 
   if (state.reason === "permission-not-granted") {
     status.textContent = "Powiadomienia są wyłączone. Kliknij przycisk, aby je włączyć.";
   } else if (state.reason === "no-subscription") {
-    status.textContent = "Brak aktywnej subskrypcji push. Kliknij przycisk, aby aktywować powiadomienia.";
+    status.textContent = "Brak aktywnej subskrypcji push.";
   } else if (state.reason === "no-sw") {
     status.textContent = "Ta przeglądarka nie obsługuje Service Workera.";
   } else if (state.reason === "no-pushmanager") {
@@ -3824,39 +3900,48 @@ async function refreshPushButtonState_() {
   } else if (state.reason === "no-notification") {
     status.textContent = "Ta przeglądarka nie obsługuje powiadomień.";
   } else {
-    status.textContent = "Powiadomienia nie są aktywne.";
+    status.textContent = "Powiadomienia push są wyłączone.";
   }
 }
-  
+
 async function enablePushFlow_() {
-  const btn = document.getElementById("btnEnablePush");
-  if (btn) btn.disabled = true;
+  const btnEnable = document.getElementById("btnEnablePush");
+  if (btnEnable) btnEnable.disabled = true;
 
   try {
-    if (!("serviceWorker" in navigator)) { alert("Brak Service Worker."); return; }
-    if (!("PushManager" in window)) { alert("Brak PushManager."); return; }
+    if (!("serviceWorker" in navigator)) {
+      alert("Brak Service Worker.");
+      return;
+    }
+
+    if (!("PushManager" in window)) {
+      alert("Brak PushManager.");
+      return;
+    }
 
     if ("Notification" in window && Notification.permission === "denied") {
-    alert("Powiadomienia są zablokowane w przeglądarce. Odblokuj je w ustawieniach strony, a potem spróbuj ponownie.");
-    return;
-  }
+      alert("Powiadomienia są zablokowane w przeglądarce. Odblokuj je w ustawieniach strony, a potem spróbuj ponownie.");
+      return;
+    }
 
-    // 1) zgoda
     const perm = await Notification.requestPermission();
-    if (perm !== "granted") { alert("Powiadomienia: brak zgody."); return; }
+    if (perm !== "granted") {
+      alert("Powiadomienia: brak zgody.");
+      return;
+    }
 
-    // 2) VAPID public z Workera
     const vapidRes = await fetch(PUSH_WORKER_URL + "/push/vapidPublic", { cache: "no-store" });
     const vapidJson = await vapidRes.json().catch(() => ({}));
     const publicKey = String(vapidJson?.publicKey || "").trim();
-    if (!publicKey) { alert("Brak VAPID_PUBLIC_KEY po stronie Workera."); return; }
 
-    // 3) SW ready
+    if (!publicKey) {
+      alert("Brak VAPID_PUBLIC_KEY po stronie Workera.");
+      return;
+    }
+
     const reg = await navigator.serviceWorker.ready;
 
-    // 4) istniejąca subskrypcja albo nowa
     let sub = await reg.pushManager.getSubscription();
-    
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -3864,71 +3949,104 @@ async function enablePushFlow_() {
       });
     }
 
-    // 5) clubId pewny
     const cid =
       (new URLSearchParams(location.search).get("clubId") || "").trim() ||
       (typeof clubId !== "undefined" && String(clubId).trim()) ||
       (window.clubId && String(window.clubId).trim()) ||
       (localStorage.getItem("clubId") || "").trim();
 
-    if (!cid) { alert("Brak clubId (URL/pamięć)."); return; }
-    window.clubId = cid;
-    try { localStorage.setItem("clubId", cid); } catch(e) {}
+    if (!cid) {
+      alert("Brak clubId (URL/pamięć).");
+      return;
+    }
 
-    // 6) numer pewny (po loginie MUSI być ustawione)
+    window.clubId = cid;
+    try { localStorage.setItem("clubId", cid); } catch (e) {}
+
     const numer =
       (typeof numerZalogowanego !== "undefined" && String(numerZalogowanego).trim()) ||
       (window.numerZalogowanego && String(window.numerZalogowanego).trim()) ||
       "";
 
-    if (!numer) { alert("Brak numeru zawodnika (zaloguj się ponownie)."); return; }
-    window.numerZalogowanego = numer; // ✅ utrwalenie
+    if (!numer) {
+      alert("Brak numeru zawodnika (zaloguj się ponownie).");
+      return;
+    }
 
-    // 7) zapis do KV
+    window.numerZalogowanego = numer;
+
     const payload = {
       clubId: String(cid),
       numer: String(numer),
       subscription: sub.toJSON(),
     };
 
-const saveRes = await fetch(PUSH_WORKER_URL + "/push/subscribe", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(payload),
-});
+    const saveRes = await fetch(PUSH_WORKER_URL + "/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-const saveJson = await saveRes.json().catch(() => ({}));
-if (!saveRes.ok || saveJson?.success === false) {
-  throw new Error(saveJson?.error || ("HTTP " + saveRes.status));
-}
+    const saveJson = await saveRes.json().catch(() => ({}));
+    if (!saveRes.ok || saveJson?.success === false) {
+      throw new Error(saveJson?.error || ("HTTP " + saveRes.status));
+    }
 
-// zapisz meta dla service workera: clubId + numer
-try {
-  const cache = await caches.open("orghub-push-meta");
-  await cache.put(
-    "/push-meta.json",
-    new Response(
-      JSON.stringify({
-        clubId: String(cid),
-        numer: String(numer)
-      }),
-      {
-        headers: { "Content-Type": "application/json" }
-      }
-    )
-  );
-} catch (e) {
-  console.warn("push-meta cache save error", e);
-}
+    try {
+      const cache = await caches.open("orghub-push-meta");
+      await cache.put(
+        "/push-meta.json",
+        new Response(
+          JSON.stringify({
+            clubId: String(cid),
+            numer: String(numer)
+          }),
+          {
+            headers: { "Content-Type": "application/json" }
+          }
+        )
+      );
+    } catch (e) {
+      console.warn("push-meta cache save error", e);
+    }
 
-console.log("✅ PUSH subscription:", sub);
-await refreshPushButtonState_();
-alert("✅ Powiadomienia włączone (subskrypcja zapisana).");
+    setStoredPushConsent_(true);
+    await refreshPushButtonState_();
+    alert("✅ Powiadomienia włączone.");
 
   } catch (e) {
     alert("❌ Push error: " + (e?.message || e));
   } finally {
-    if (btn) btn.disabled = false;
+    if (btnEnable) btnEnable.disabled = false;
+  }
+}
+
+async function disablePushFlow_() {
+  const btnDisable = document.getElementById("btnDisablePush");
+  if (btnDisable) btnDisable.disabled = true;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        try {
+          await sub.unsubscribe();
+        } catch (e) {
+          console.warn("unsubscribe error", e);
+        }
+      }
+    }
+
+    await clearPushMetaCache_();
+    setStoredPushConsent_(false);
+    await refreshPushButtonState_();
+    alert("✅ Powiadomienia wyłączone na tym urządzeniu.");
+
+  } catch (e) {
+    alert("❌ Nie udało się wyłączyć powiadomień: " + (e?.message || e));
+  } finally {
+    if (btnDisable) btnDisable.disabled = false;
   }
 }
 
@@ -3937,11 +4055,13 @@ function urlBase64ToUint8Array_(base64String) {
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = atob(base64);
   const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
   return outputArray;
 }
 
-/* =================== KONIEC SEKTORA 80 =================== */  
+/* =================== KONIEC SEKTORA 80 =================== */ 
 
 /* =================== 90 LOGOWANIE / REJESTRACJA =================== */
   
@@ -3950,7 +4070,14 @@ function pokazLogowanie() {
   grupaZalogowanego = null;
   window.grupyTrenera = "";
   window.zalogowanyTrenerName = "";
+  window.userPushConsent = false;
+  window.userEmailConsent = false;
+
   try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch(e) {}
+  try { sessionStorage.removeItem("userPushConsent"); } catch(e) {}
+  try { sessionStorage.removeItem("userEmailConsent"); } catch(e) {}
+
+  const komunikat = document.getElementById("komunikat");
 
   const komunikat = document.getElementById("komunikat");
   if (komunikat) komunikat.innerText = "";
@@ -3994,6 +4121,11 @@ async function zaloguj() {
     if (data.role === "zawodnik") {
       numerZalogowanego = data.login;
       grupaZalogowanego = data.grupa || "";
+      window.userPushConsent = !!data.pushConsent;
+      window.userEmailConsent = !!data.emailConsent;
+    
+      try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch(e) {}
+      try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch(e) {}
     
       // reset lokalnych cache po loginie zawodnika
       window.__platnosciCache = null;
