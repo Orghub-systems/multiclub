@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.3';
+  window.APP_BUILD = 'BETA APP v2.69.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -639,7 +639,7 @@ input[type="number"] {
     <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
     <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
     <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-    <button class="full-btn" onclick="goToView('playerSettingsView')">🔔 Powiadomienia</button>
+    <button class="full-btn" onclick="goToView('playerSettingsView'); refreshPushButtonState_();">🔔 Powiadomienia</button>
     <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
   </div>
 
@@ -3725,14 +3725,24 @@ let __pushBtnBound = false;
 
 function hookPushButton_() {
   const btn = document.getElementById("btnEnablePush");
-  if (!btn) return;
+  if (btn && btn.dataset.bound !== "1") {
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", enablePushFlow_);
+  }
 
-  // nie binduj 100 razy
+  hookPushDisableButton_();
+}
+
+function hookPushDisableButton_() {
+  const btn = document.getElementById("btnDisablePush");
+  if (!btn) return;
   if (btn.dataset.bound === "1") return;
   btn.dataset.bound = "1";
 
-  btn.addEventListener("click", enablePushFlow_);
-}
+  btn.addEventListener("click", () => {
+    alert("Wyłączanie powiadomień podepniemy w kolejnym kroku razem z zapisem checkboxa w GAS i usunięciem subskrypcji.");
+  });
+}  
 
 async function getPushState_() {
   try {
@@ -3769,31 +3779,88 @@ async function getPushState_() {
   }
 }
 
+function getStoredPushConsent_() {
+  try {
+    if (typeof window.userPushConsent === "boolean") return window.userPushConsent;
+  } catch (e) {}
+
+  try {
+    return sessionStorage.getItem("userPushConsent") === "1";
+  } catch (e) {}
+
+  return false;
+}  
+  
 async function refreshPushButtonState_() {
   const btn = document.getElementById("btnEnablePush");
+  const btnDisable = document.getElementById("btnDisablePush");
   const status = document.getElementById("pushStatus");
+  const warningBox = document.getElementById("pushWarningBox");
+
   if (!btn) return;
 
   const state = await getPushState_();
+  const pushConsent = getStoredPushConsent_();
 
-  // wyczyść stare klasy/kolory inline
   btn.style.background = "";
   btn.style.borderColor = "";
   btn.style.color = "";
   btn.disabled = false;
 
-  if (state.active) {
+  if (btnDisable) btnDisable.classList.add("hidden");
+  if (warningBox) warningBox.classList.add("hidden");
+
+  // 1) zgoda w GAS + aktywna subskrypcja urządzenia
+  if (pushConsent && state.active) {
     btn.textContent = "🟢 Powiadomienia aktywne";
     btn.style.background = "#0f7a2a";
     btn.style.borderColor = "#19a642";
     btn.style.color = "#ffffff";
 
-    if (status) {
-      status.textContent = "Powiadomienia są aktywne na tym urządzeniu.";
-    }
+    if (btnDisable) btnDisable.classList.remove("hidden");
+    if (status) status.textContent = "Powiadomienia push są aktywne na tym urządzeniu.";
+
     return;
   }
 
+  // 2) zgoda w GAS jest, ale urządzenie nie ma aktywnej subskrypcji
+  if (pushConsent && !state.active) {
+    btn.textContent = "🔔 Włącz ponownie powiadomienia";
+    btn.style.background = "#8b0000";
+    btn.style.borderColor = "#ff2b2b";
+    btn.style.color = "#ffffff";
+
+    if (btnDisable) btnDisable.classList.remove("hidden");
+    if (warningBox) warningBox.classList.remove("hidden");
+
+    if (status) {
+      if (state.reason === "permission-denied") {
+        status.textContent = "Masz włączone powiadomienia w koncie, ale przeglądarka je zablokowała.";
+      } else {
+        status.textContent = "Masz włączone powiadomienia w koncie, ale to urządzenie nie ma aktywnej subskrypcji.";
+      }
+    }
+
+    return;
+  }
+
+  // 3) brak zgody w GAS, ale przeglądarka nadal ma aktywną subskrypcję
+  if (!pushConsent && state.active) {
+    btn.textContent = "🔔 Włącz powiadomienia";
+    btn.style.background = "#8b0000";
+    btn.style.borderColor = "#ff2b2b";
+    btn.style.color = "#ffffff";
+
+    if (btnDisable) btnDisable.classList.remove("hidden");
+
+    if (status) {
+      status.textContent = "Powiadomienia są wyłączone w koncie, ale to urządzenie ma jeszcze aktywną subskrypcję.";
+    }
+
+    return;
+  }
+
+  // 4) wszystko wyłączone / nieaktywne
   if (state.reason === "permission-denied") {
     btn.textContent = "⛔ Powiadomienia zablokowane";
     btn.style.background = "#5a0000";
@@ -3801,7 +3868,7 @@ async function refreshPushButtonState_() {
     btn.style.color = "#ffffff";
 
     if (status) {
-      status.textContent = "Powiadomienia są zablokowane w przeglądarce. Odblokuj je w ustawieniach strony.";
+      status.textContent = "Przeglądarka zablokowała powiadomienia. Odblokuj je w ustawieniach strony lub urządzenia.";
     }
     return;
   }
@@ -3811,20 +3878,8 @@ async function refreshPushButtonState_() {
   btn.style.borderColor = "#ff2b2b";
   btn.style.color = "#ffffff";
 
-  if (!status) return;
-
-  if (state.reason === "permission-not-granted") {
-    status.textContent = "Powiadomienia są wyłączone. Kliknij przycisk, aby je włączyć.";
-  } else if (state.reason === "no-subscription") {
-    status.textContent = "Brak aktywnej subskrypcji push. Kliknij przycisk, aby aktywować powiadomienia.";
-  } else if (state.reason === "no-sw") {
-    status.textContent = "Ta przeglądarka nie obsługuje Service Workera.";
-  } else if (state.reason === "no-pushmanager") {
-    status.textContent = "Ta przeglądarka nie obsługuje powiadomień push.";
-  } else if (state.reason === "no-notification") {
-    status.textContent = "Ta przeglądarka nie obsługuje powiadomień.";
-  } else {
-    status.textContent = "Powiadomienia nie są aktywne.";
+  if (status) {
+    status.textContent = "Powiadomienia push są wyłączone.";
   }
 }
   
@@ -3950,7 +4005,14 @@ function pokazLogowanie() {
   grupaZalogowanego = null;
   window.grupyTrenera = "";
   window.zalogowanyTrenerName = "";
+  window.userPushConsent = false;
+  window.userEmailConsent = false;
+
   try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch(e) {}
+  try { sessionStorage.removeItem("userPushConsent"); } catch(e) {}
+  try { sessionStorage.removeItem("userEmailConsent"); } catch(e) {}
+
+  const komunikat = document.getElementById("komunikat");
 
   const komunikat = document.getElementById("komunikat");
   if (komunikat) komunikat.innerText = "";
@@ -3994,6 +4056,11 @@ async function zaloguj() {
     if (data.role === "zawodnik") {
       numerZalogowanego = data.login;
       grupaZalogowanego = data.grupa || "";
+      window.userPushConsent = !!data.pushConsent;
+      window.userEmailConsent = !!data.emailConsent;
+
+      try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch(e) {}
+      try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch(e) {}
     
       // reset lokalnych cache po loginie zawodnika
       window.__platnosciCache = null;
@@ -4015,7 +4082,13 @@ async function zaloguj() {
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
       window.zalogowanyTrenerName = String(data.nazwisko || "").trim();
+      window.userPushConsent = !!data.pushConsent;
+      window.userEmailConsent = !!data.emailConsent;
+    
       try { sessionStorage.setItem("zalogowanyTrenerName", window.zalogowanyTrenerName); } catch(e) {}
+      try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch(e) {}
+      try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch(e) {}
+    
       goToView("trainerPanelView");
       return;
     }
