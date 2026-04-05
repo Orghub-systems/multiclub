@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.4';
+  window.APP_BUILD = 'BETA APP v2.69.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4073,11 +4073,9 @@ function pokazLogowanie() {
   window.userPushConsent = false;
   window.userEmailConsent = false;
 
-  try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch(e) {}
-  try { sessionStorage.removeItem("userPushConsent"); } catch(e) {}
-  try { sessionStorage.removeItem("userEmailConsent"); } catch(e) {}
-
-  const komunikat = document.getElementById("komunikat");
+  try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch (e) {}
+  try { sessionStorage.removeItem("userPushConsent"); } catch (e) {}
+  try { sessionStorage.removeItem("userEmailConsent"); } catch (e) {}
 
   const komunikat = document.getElementById("komunikat");
   if (komunikat) komunikat.innerText = "";
@@ -4085,11 +4083,11 @@ function pokazLogowanie() {
   refreshClubBadge_();
   goToView("loginView");
 }
-  
+
 function pokazRejestracjaSelect() { goToView("registerSelectView"); }
 function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
 function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
-  
+
 async function zaloguj() {
   const login = document.getElementById("numer").value.trim();
   const haslo = document.getElementById("haslo").value.trim();
@@ -4100,6 +4098,7 @@ async function zaloguj() {
     goToView("orgHubLandingView");
     return;
   }
+
   if (!login || !haslo) {
     komunikat.innerText = "Podaj login i hasło.";
     return;
@@ -4123,11 +4122,10 @@ async function zaloguj() {
       grupaZalogowanego = data.grupa || "";
       window.userPushConsent = !!data.pushConsent;
       window.userEmailConsent = !!data.emailConsent;
-    
-      try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch(e) {}
-      try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch(e) {}
-    
-      // reset lokalnych cache po loginie zawodnika
+
+      try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
+      try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
+
       window.__platnosciCache = null;
       window.__prefetch = {
         t: 0,
@@ -4135,19 +4133,22 @@ async function zaloguj() {
         treningiP: null,
         statystykiP: null
       };
-    
-      // najpierw pokaż menu, dane dociągną się w tle
+
       goToView("playerMenuView");
-    
       loadClubAd();
-    
       return;
     }
-    
+
     if (data.role === "trener") {
       window.grupyTrenera = data.grupa || "";
       window.zalogowanyTrenerName = String(data.nazwisko || "").trim();
-      try { sessionStorage.setItem("zalogowanyTrenerName", window.zalogowanyTrenerName); } catch(e) {}
+      window.userPushConsent = !!data.pushConsent;
+      window.userEmailConsent = !!data.emailConsent;
+
+      try { sessionStorage.setItem("zalogowanyTrenerName", window.zalogowanyTrenerName); } catch (e) {}
+      try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
+      try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
+
       goToView("trainerPanelView");
       return;
     }
@@ -4158,7 +4159,6 @@ async function zaloguj() {
     }
 
     komunikat.innerText = "❌ Nieznana rola użytkownika.";
-
   } catch (e) {
     komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
   }
