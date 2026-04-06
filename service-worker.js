@@ -172,12 +172,54 @@ function normalizePushPayload_(rawPayload, meta) {
 }
 
 /******************** PUSH: odbiór i kliknięcie ********************/
+
+async function pullLatestPushMessage_(clubId, numer) {
+  const cid = String(clubId || "").trim();
+  const nr = String(numer || "").trim();
+  if (!cid || !nr) return null;
+
+  let latestMessage = null;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const pullUrl =
+        PUSH_CORE + "/push/pull"
+        + "?clubId=" + encodeURIComponent(cid)
+        + "&numer=" + encodeURIComponent(nr)
+        + "&_ts=" + Date.now();
+
+      const pullResp = await fetch(pullUrl, { cache: "no-store" });
+      const pullJson = await pullResp.json().catch(() => null);
+
+      if (pullJson && pullJson.success && pullJson.found && pullJson.message) {
+        latestMessage = pullJson.message;
+
+        const msgTs = Number(latestMessage.ts || 0);
+        const ageMs = msgTs > 0 ? (Date.now() - msgTs) : Number.MAX_SAFE_INTEGER;
+
+        // jeśli wiadomość jest świeża, bierzemy ją od razu
+        if (ageMs >= 0 && ageMs <= 15000) {
+          return latestMessage;
+        }
+      }
+    } catch (e) {
+      // lecimy dalej, bo kolejna próba może już trafić w świeży wpis KV
+    }
+
+    if (attempt < 4) {
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
+  }
+
+  return latestMessage;
+}
+
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let payload = null;
     const meta = await readPushMeta_();
 
-    // 1) spróbuj odczytać payload bezpośrednio
+    // 1) jeśli jest payload bezpośredni, spróbuj go odczytać
     try {
       payload = event.data ? await event.data.json() : null;
     } catch (e) {
@@ -188,24 +230,14 @@ self.addEventListener("push", (event) => {
       }
     }
 
-    // 2) jeśli brak payloadu, pobierz go z Workera
+    // 2) jeśli payloadu brak, pobierz świeżą wiadomość z Workera
     if (!payload) {
       try {
         const clubId = meta && meta.clubId ? String(meta.clubId).trim() : "";
         const numer  = meta && meta.numer  ? String(meta.numer).trim()  : "";
 
         if (clubId && numer) {
-          const pullUrl =
-            PUSH_CORE + "/push/pull"
-            + "?clubId=" + encodeURIComponent(clubId)
-            + "&numer=" + encodeURIComponent(numer);
-
-          const pullResp = await fetch(pullUrl, { cache: "no-store" });
-          const pullJson = await pullResp.json().catch(() => null);
-
-          if (pullJson && pullJson.success && pullJson.found && pullJson.message) {
-            payload = pullJson.message;
-          }
+          payload = await pullLatestPushMessage_(clubId, numer);
         }
       } catch (e) {
         payload = null;
