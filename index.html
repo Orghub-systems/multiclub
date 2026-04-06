@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.1';
+  window.APP_BUILD = 'BETA APP v2.70.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6526,6 +6526,8 @@ function setTrainerEditPopupLoadingState_(isLoading) {
     "btnEditSave",
     "btnEditPickGroups",
     "btnEditPickTrenerzy"
+    "editEventTrybDostepu",
+    "editEventPowolaniNums",
   ];
 
   ids.forEach(id => {
@@ -6573,6 +6575,14 @@ async function trainerShowEditPopup(miesiac, col5) {
   resetEditTrenerSelects_();
   resetEditGroups_();
 
+  const editTrybElReset = document.getElementById("editEventTrybDostepu");
+  const editPowolaniElReset = document.getElementById("editEventPowolaniNums");
+
+  if (editTrybElReset) editTrybElReset.value = "wszyscy";
+  if (editPowolaniElReset) editPowolaniElReset.value = "";
+
+  onEditEventTrybDostepuChange();
+
   // 3) pokaż popup od razu
   if (pop) pop.style.display = "flex";
 
@@ -6608,13 +6618,31 @@ async function trainerShowEditPopup(miesiac, col5) {
       if (chkStat) chkStat.checked = !!details.liczDoStatystyk;
       if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
 
+      const editTrybEl = document.getElementById("editEventTrybDostepu");
+      const editPowolaniEl = document.getElementById("editEventPowolaniNums");
+
+      if (editTrybEl) {
+        editTrybEl.value = details.powolaniaMode ? "powolania" : "wszyscy";
+      }
+
+      if (editPowolaniEl) {
+        editPowolaniEl.value = Array.isArray(details.powolani)
+          ? details.powolani
+              .map(x => String(x?.numer || "").trim())
+              .filter(Boolean)
+              .join(",")
+          : "";
+      }
+
+      onEditEventTrybDostepuChange();
+
       if (msg) msg.textContent = "";
     } else {
-      if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów i grup.";
+      if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów, grup i trybu wydarzenia.";
       console.warn("wydarzenieDetails:", details);
     }
   } catch (err) {
-    if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów i grup.";
+    if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów, grup i trybu wydarzenia.";
     console.warn("trainerShowEditPopup error:", err);
   } finally {
     // 9) odblokuj pola po zakończeniu ładowania
@@ -6732,6 +6760,7 @@ async function trainerSaveEditEvent() {
       if (msg) msg.textContent = "❌ Uzupełnij datę i godziny.";
       return;
     }
+
     if (start >= end) {
       if (msg) msg.textContent = "❌ Godzina końca musi być później niż start.";
       return;
@@ -6739,7 +6768,6 @@ async function trainerSaveEditEvent() {
 
     const treningId = `${editMiesiac}-${editCol5}`;
 
-    // trenerzy z selectów
     const trenerzyArr = [
       document.getElementById("editTrener1")?.value,
       document.getElementById("editTrener2")?.value,
@@ -6747,14 +6775,20 @@ async function trainerSaveEditEvent() {
       document.getElementById("editTrener4")?.value
     ].map(v => String(v || "").trim()).filter(Boolean);
 
-    // grupy z popupu
     const grupyArr = Array.from(selectedEditGroups || []);
     grupyArr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
     const grupyCsv = grupyArr.join(",");
 
-    // ✅ CHECKBOXY (EDYCJA)
     const liczDoStat = document.getElementById("editEventStat")?.checked ? 1 : 0;
     const rezerwacjaObiektu = document.getElementById("editEventRez")?.checked ? 1 : 0;
+
+    const trybDostepu = String(document.getElementById("editEventTrybDostepu")?.value || "wszyscy").trim().toLowerCase();
+    const powolani = normalizePowolaniNumsInput_(document.getElementById("editEventPowolaniNums")?.value || "");
+
+    if (trybDostepu === "powolania" && !powolani) {
+      if (msg) msg.textContent = "❌ Wpisz numery powołanych zawodników.";
+      return;
+    }
 
     const r = await apiClubPost({
       action: "edytujWydarzenie",
@@ -6765,18 +6799,11 @@ async function trainerSaveEditEvent() {
       rodzaj,
       trenerzy: trenerzyArr.join(", "),
       grupy: grupyCsv,
-
-      // ✅ ważne: nazwy MUSZĄ pasować do routera (p.liczDoStatystyk / p.rezerwacjaObiektu)
       liczDoStatystyk: liczDoStat,
-      rezerwacjaObiektu: rezerwacjaObiektu
+      rezerwacjaObiektu: rezerwacjaObiektu,
+      trybDostepu: trybDostepu,
+      powolani: powolani
     });
-
-    console.log("DEBUG SAVE:", {
-  treningId,
-  liczDoStat,
-  rezerwacjaObiektu,
-  response: r
-});
 
     if (r && (r.success || r.ok)) {
       if (msg) msg.textContent = "✅ Zapisano. Odświeżam listę…";
