@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70';
+  window.APP_BUILD = 'BETA APP v2.70.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -940,6 +940,23 @@ input[type="number"] {
         Wybierz grupy
       </button>
 
+      <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()">
+        <option value="wszyscy">Dostęp dla wszystkich</option>
+        <option value="powolania">Powołania</option>
+      </select>
+      
+      <div id="eventPowolaniWrap" class="hidden">
+        <textarea
+          id="eventPowolaniNums"
+          class="select-like-input"
+          placeholder="Numery powołanych, np. 22,31,47"
+          style="min-height:90px; resize:vertical;"
+        ></textarea>
+        <div style="font-size:12px; opacity:.7; margin-top:6px;">
+          Wpisz numery zawodników oddzielone przecinkami.
+        </div>
+      </div>
+      
       <!-- CHECKBOXY jak w edycji -->
       <label class="full-btn alt" for="eventRez">
         <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
@@ -1622,45 +1639,62 @@ input[type="number"] {
       <input id="editEventEnd" type="time">
       <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-<!-- TRENERZY: przycisk + popup -->
-<button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()">
-  Trener: Bez trenera
-</button>
-
-<!-- SILNIK (ukryte selecty - zostają dla logiki zapisu) -->
-<div style="display:none;">
-  <select id="editTrener1" onchange="onEditTrenerPick(1)"><option value="">Bez trenera</option></select>
-  <select id="editTrener2" onchange="onEditTrenerPick(2)"><option value="">Bez trenera</option></select>
-  <select id="editTrener3" onchange="onEditTrenerPick(3)"><option value="">Bez trenera</option></select>
-  <select id="editTrener4"><option value="">Bez trenera</option></select>
-</div>
+    <!-- TRENERZY: przycisk + popup -->
+    <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()">
+      Trener: Bez trenera
+    </button>
+    
+    <!-- SILNIK (ukryte selecty - zostają dla logiki zapisu) -->
+    <div style="display:none;">
+      <select id="editTrener1" onchange="onEditTrenerPick(1)"><option value="">Bez trenera</option></select>
+      <select id="editTrener2" onchange="onEditTrenerPick(2)"><option value="">Bez trenera</option></select>
+      <select id="editTrener3" onchange="onEditTrenerPick(3)"><option value="">Bez trenera</option></select>
+      <select id="editTrener4"><option value="">Bez trenera</option></select>
+    </div>
 
       <!-- GRUPY -->
       <button class="full-btn alt" id="btnEditPickGroups" type="button" onclick="openEditGroupsPopup()">
         Wybierz grupy
       </button>
 
-<label class="full-btn alt" for="editEventRez">
-  <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
-    <span style="flex:0 0 auto;">
-      <input id="editEventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
-    </span>
-    <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
-      Rezerwacja obiektu
-    </span>
-  </span>
-</label>
-
-<label class="full-btn alt" for="editEventStat">
-  <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
-    <span style="flex:0 0 auto;">
-      <input id="editEventStat" type="checkbox" style="transform:scale(1.35); margin:0;">
-    </span>
-    <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
-      Liczyć do statystyk
-    </span>
-  </span>
-</label>
+    <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()">
+      <option value="wszyscy">Dostęp dla wszystkich</option>
+      <option value="powolania">Powołania</option>
+    </select>
+    
+    <div id="editEventPowolaniWrap" class="hidden">
+      <textarea
+        id="editEventPowolaniNums"
+        class="select-like-input"
+        placeholder="Numery powołanych, np. 22,31,47"
+        style="min-height:90px; resize:vertical;"
+      ></textarea>
+      <div style="font-size:12px; opacity:.7; margin-top:6px;">
+        Wpisz numery zawodników oddzielone przecinkami.
+      </div>
+    </div>
+      
+    <label class="full-btn alt" for="editEventRez">
+      <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+        <span style="flex:0 0 auto;">
+          <input id="editEventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
+        </span>
+        <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+          Rezerwacja obiektu
+        </span>
+      </span>
+    </label>
+    
+    <label class="full-btn alt" for="editEventStat">
+      <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+        <span style="flex:0 0 auto;">
+          <input id="editEventStat" type="checkbox" style="transform:scale(1.35); margin:0;">
+        </span>
+        <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+          Liczyć do statystyk
+        </span>
+      </span>
+    </label>
     
     <div style="margin-top:10px;">
      <button class="full-btn" id="btnEditSave">💾 Zapisz zmiany</button>
@@ -5919,15 +5953,22 @@ function onTrenerPick(n) {
   }
 }
   
- function pokazDodajWydarzenie() {
+function pokazDodajWydarzenie() {
   goToView("trainerDodajWydarzenieView");
 
-  // ✅ wymuś start kalendarza i zegarów po wejściu do widoku
   try { initEventPickers_(); } catch (e) { console.warn("initEventPickers_ failed:", e); }
 
   resetTrenerSelects_();
   resetGroups_();
   zaladujListeTrenerow();
+
+  const trybEl = document.getElementById("eventTrybDostepu");
+  const powolaniEl = document.getElementById("eventPowolaniNums");
+
+  if (trybEl) trybEl.value = "wszyscy";
+  if (powolaniEl) powolaniEl.value = "";
+
+  onEventTrybDostepuChange();
 }
 
   /* ===== GRUPY: popup G1–G10 ===== */
@@ -5987,6 +6028,40 @@ function resetGroups_() {
 
 function validHour(hhmm) { return /^\d{2}:\d{2}$/.test(hhmm); }
 
+function normalizePowolaniNumsInput_(value) {
+  return String(value || "")
+    .split(/[,;|\n]+/g)
+    .map(s => String(s || "").trim())
+    .filter(Boolean)
+    .join(",");
+}
+
+function onEventTrybDostepuChange() {
+  const modeEl = document.getElementById("eventTrybDostepu");
+  const wrapEl = document.getElementById("eventPowolaniWrap");
+  if (!modeEl || !wrapEl) return;
+
+  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
+  if (mode === "powolania") {
+    wrapEl.classList.remove("hidden");
+  } else {
+    wrapEl.classList.add("hidden");
+  }
+}
+
+function onEditEventTrybDostepuChange() {
+  const modeEl = document.getElementById("editEventTrybDostepu");
+  const wrapEl = document.getElementById("editEventPowolaniWrap");
+  if (!modeEl || !wrapEl) return;
+
+  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
+  if (mode === "powolania") {
+    wrapEl.classList.remove("hidden");
+  } else {
+    wrapEl.classList.add("hidden");
+  }
+}
+  
 async function wyslijNoweWydarzenie() {
   const data = document.getElementById("eventData").value;
   const start = document.getElementById("eventStart").value;
@@ -6001,8 +6076,9 @@ async function wyslijNoweWydarzenie() {
   const grupy = Array.from(selectedGroups).join(",");
   const liczDoStat = document.getElementById("eventStat").checked;
   const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
+
   const trybDostepu = String(document.getElementById("eventTrybDostepu")?.value || "wszyscy").trim().toLowerCase();
-  const powolani = String(document.getElementById("eventPowolaniNums")?.value || "").trim();
+  const powolani = normalizePowolaniNumsInput_(document.getElementById("eventPowolaniNums")?.value || "");
 
   const msg = document.getElementById("eventMsg");
 
@@ -6022,7 +6098,7 @@ async function wyslijNoweWydarzenie() {
   }
 
   if (trybDostepu === "powolania" && !powolani) {
-    msg.innerText = "❌ Wybierz powołanych zawodników.";
+    msg.innerText = "❌ Wpisz numery powołanych zawodników.";
     return;
   }
 
@@ -6055,13 +6131,14 @@ async function wyslijNoweWydarzenie() {
       });
 
       const trybEl = document.getElementById("eventTrybDostepu");
-      if (trybEl) trybEl.value = "wszyscy";
-
       const powolaniEl = document.getElementById("eventPowolaniNums");
+
+      if (trybEl) trybEl.value = "wszyscy";
       if (powolaniEl) powolaniEl.value = "";
 
       resetTrenerSelects_();
       resetGroups_();
+      onEventTrybDostepuChange();
 
       setTimeout(() => trainerPokazWydarzenia(), 800);
     }
