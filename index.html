@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.13';
+  window.APP_BUILD = 'BETA APP v2.69.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3931,6 +3931,32 @@ async function getPushState_() {
   }
 }
 
+async function ensurePushMetaCache_(clubIdValue, numerValue) {
+  try {
+    const cid = String(clubIdValue || "").trim();
+    const nr = String(numerValue || "").trim();
+
+    if (!cid || !nr) return;
+    if (!("caches" in window)) return;
+
+    const cache = await caches.open("orghub-push-meta");
+    await cache.put(
+      "/push-meta.json",
+      new Response(
+        JSON.stringify({
+          clubId: cid,
+          numer: nr
+        }),
+        {
+          headers: { "Content-Type": "application/json" }
+        }
+      )
+    );
+  } catch (e) {
+    console.warn("ensurePushMetaCache_ error", e);
+  }
+}
+      
 async function refreshPushButtonState_() {
   const btnEnable = document.getElementById("btnEnablePush");
   const btnDisable = document.getElementById("btnDisablePush");
@@ -3953,6 +3979,8 @@ async function refreshPushButtonState_() {
   if (warningBox) warningBox.classList.add("hidden");
 
   if (pushConsent && state.active) {
+    await ensurePushMetaCache_(window.clubId || localStorage.getItem("clubId") || "", window.numerZalogowanego || numerZalogowanego || "");
+    
     btnEnable.textContent = "🟢 Powiadomienia aktywne";
     btnEnable.style.background = "#0f7a2a";
     btnEnable.style.borderColor = "#19a642";
