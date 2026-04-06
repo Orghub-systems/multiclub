@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.69.14';
+  window.APP_BUILD = 'BETA APP v2.70';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5476,14 +5476,12 @@ function renderTreningi(lista) {
 
     let y = 0, m = 0, d = 0;
 
-    // yyyy-mm-dd / yyyy.mm.dd
     if (/^\d{4}[-.]\d{2}[-.]\d{2}$/.test(dataStr)) {
       const parts = dataStr.split(/[-.]/);
       y = Number(parts[0]);
       m = Number(parts[1]);
       d = Number(parts[2]);
     }
-    // dd.mm.yyyy / dd-mm-yyyy
     else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(dataStr)) {
       const parts = dataStr.split(/[.-]/);
       d = Number(parts[0]);
@@ -5504,13 +5502,10 @@ function renderTreningi(lista) {
   }
 
   function isVisibleInApp_(t) {
-    // jeśli backend daje którąś z tych flag, respektujemy ją
     if (typeof t?.widocznoscWApce !== "undefined") return !!t.widocznoscWApce;
     if (typeof t?.widocznyWApce !== "undefined") return !!t.widocznyWApce;
     if (typeof t?.visible !== "undefined") return !!t.visible;
     if (typeof t?.appVisible !== "undefined") return !!t.appVisible;
-
-    // jeśli brak flagi w danych, nie blokujemy renderu
     return true;
   }
 
@@ -5518,10 +5513,8 @@ function renderTreningi(lista) {
 
   const listaPoFiltrowaniu = (Array.isArray(lista) ? lista : [])
     .filter(t => {
-      // 1) checkbox "Widoczność w apce"
       if (!isVisibleInApp_(t)) return false;
 
-      // 2) ukrycie wydarzenia po godzinie startu
       const startTs = parseEventDateTime_(t);
       if (!Number.isFinite(startTs)) return false;
       if (startTs < terazTs) return false;
@@ -5535,23 +5528,29 @@ function renderTreningi(lista) {
     return;
   }
 
-  div.innerHTML = listaPoFiltrowaniu.map(t => `
-    <div class="card">
-      <p>
-        <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
-        Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
-        Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; Zapisanych: ${t.zapisanych ?? 0}
-      </p>
+  div.innerHTML = listaPoFiltrowaniu.map(t => {
+    const isPowolanie = !!t.powolaniaMode;
+    const acceptedPowolanie = !!t.zaakceptowalPowolanie;
 
-      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-        <button 
-          id="btn-${t.id}" 
-          ${t.zapisany ? 'disabled' : ''} 
-          style="background:${t.zapisany ? '#2e7d32' : '#c62828'};color:white;border:none;"
-          onclick="zapiszSie('${t.id}')">
-          ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
-        </button>
+    const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
+    const countValue = t.zapisanych ?? 0;
 
+    const mainBtnDisabled = isPowolanie ? acceptedPowolanie : !!t.zapisany;
+    const mainBtnText = isPowolanie
+      ? (acceptedPowolanie ? "Powołanie zaakceptowane ✅" : "Akceptuję powołanie")
+      : (t.zapisany ? "Zapisano ✅" : "Zapisz się");
+
+    const mainBtnBg = isPowolanie
+      ? (acceptedPowolanie ? "#2e7d32" : "#1565c0")
+      : (t.zapisany ? "#2e7d32" : "#c62828");
+
+    const statusLine = isPowolanie
+      ? `<span style="display:inline-block;margin-top:4px;color:${acceptedPowolanie ? "#81c784" : "#90caf9"};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${acceptedPowolanie ? "Zaakceptowano" : "Oczekuje na akceptację"}</span><br>`
+      : "";
+
+    const secondBtnHtml = isPowolanie
+      ? ""
+      : `
         <button 
           id="wypisz-${t.id}" 
           ${t.zapisany ? '' : 'disabled'} 
@@ -5559,18 +5558,43 @@ function renderTreningi(lista) {
           onclick="wypiszSie('${t.id}')">
           Wypisz się
         </button>
+      `;
 
-        <button 
-          style="background:#333;" 
-          onclick="toggleZapisani('${t.id}')">
-          👥 Zapisani
-        </button>
+    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
+
+    return `
+      <div class="card">
+        <p>
+          <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
+          Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+          Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; ${countLabel}: ${countValue}<br>
+          ${statusLine}
+        </p>
+
+        <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+          <button 
+            id="btn-${t.id}" 
+            ${mainBtnDisabled ? 'disabled' : ''} 
+            style="background:${mainBtnBg};color:white;border:none;"
+            onclick="zapiszSie('${t.id}')">
+            ${mainBtnText}
+          </button>
+
+          ${secondBtnHtml}
+
+          <button 
+            style="background:#333;" 
+            onclick="toggleZapisani('${t.id}')">
+            ${toggleLabel}
+          </button>
+        </div>
+
+        <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
       </div>
-
-      <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
+  
 async function toggleZapisani(id) {
   const box = document.getElementById(`zapisani-${id}`);
   if (!box) return;
@@ -5977,28 +6001,50 @@ async function wyslijNoweWydarzenie() {
   const grupy = Array.from(selectedGroups).join(",");
   const liczDoStat = document.getElementById("eventStat").checked;
   const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
+  const trybDostepu = String(document.getElementById("eventTrybDostepu")?.value || "wszyscy").trim().toLowerCase();
+  const powolani = String(document.getElementById("eventPowolaniNums")?.value || "").trim();
+
   const msg = document.getElementById("eventMsg");
 
-  if (!data || !start || !rodzaj) { msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj."; return; }
-  if (!validHour(start) || !validHour(end)) { msg.innerText = "❌ Godzina w formacie HH:MM."; return; }
-  if (start >= end) { msg.innerText = "❌ Koniec musi być później niż start."; return; }
+  if (!data || !start || !rodzaj) {
+    msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj.";
+    return;
+  }
+
+  if (!validHour(start) || !validHour(end)) {
+    msg.innerText = "❌ Godzina w formacie HH:MM.";
+    return;
+  }
+
+  if (start >= end) {
+    msg.innerText = "❌ Koniec musi być później niż start.";
+    return;
+  }
+
+  if (trybDostepu === "powolania" && !powolani) {
+    msg.innerText = "❌ Wybierz powołanych zawodników.";
+    return;
+  }
 
   msg.innerText = "⏳ Dodawanie wydarzenia...";
+
   try {
-const r = await apiClubPost({
-  action: "dodajWydarzenie",
-  data,
-  godzStart: start,
-  godzKoniec: end,
-  rodzaj,
-  trener1,
-  trener2,
-  trener3,
-  trener4,
-  grupy,
-  liczDoStatystyk: String(liczDoStat),
-  rezerwacjaObiektu: rezerwacjaObiektu
-});
+    const r = await apiClubPost({
+      action: "dodajWydarzenie",
+      data,
+      godzStart: start,
+      godzKoniec: end,
+      rodzaj,
+      trener1,
+      trener2,
+      trener3,
+      trener4,
+      grupy,
+      liczDoStatystyk: String(liczDoStat),
+      rezerwacjaObiektu: rezerwacjaObiektu,
+      trybDostepu: trybDostepu,
+      powolani: powolani
+    });
 
     msg.innerText = r.message || "Nieznany wynik.";
 
@@ -6007,6 +6053,12 @@ const r = await apiClubPost({
         if (i.type !== "checkbox") i.value = "";
         else i.checked = false;
       });
+
+      const trybEl = document.getElementById("eventTrybDostepu");
+      if (trybEl) trybEl.value = "wszyscy";
+
+      const powolaniEl = document.getElementById("eventPowolaniNums");
+      if (powolaniEl) powolaniEl.value = "";
 
       resetTrenerSelects_();
       resetGroups_();
