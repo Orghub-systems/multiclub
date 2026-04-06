@@ -172,12 +172,94 @@ function normalizePushPayload_(rawPayload, meta) {
 }
 
 /******************** PUSH: odbiór i kliknięcie ********************/
+
+async function pullLatestPushMessage_(clubId, numer, minTs) {
+  const cid = String(clubId || "").trim();
+  const nr = String(numer || "").trim();
+  const minTimestamp = Number(minTs || 0);
+
+  if (!cid || !nr) return null;
+
+  let latestMessage = null;
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      const pullUrl =
+        PUSH_CORE + "/push/pull"
+        + "?clubId=" + encodeURIComponent(cid)
+        + "&numer=" + encodeURIComponent(nr)
+        + "&_ts=" + Date.now();
+
+      const pullResp = await fetch(pullUrl, { cache: "no-store" });
+      const pullJson = await pullResp.json().catch(() => null);
+
+      if (pullJson && pullJson.success && pullJson.found && pullJson.message) {
+        latestMessage = pullJson.message;
+
+        const msgTs = Number(latestMessage.ts || 0);
+
+        // bierzemy tylko wiadomość nowszą niż ostatnio pokazana
+        if (msgTs > minTimestamp) {
+          return latestMessage;
+        }
+      }
+    } catch (e) {
+      // następna próba
+    }
+
+    if (attempt < 7) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+  }
+
+  return null;
+}
+
+async function readLastShownPushTs_(clubId, numer) {
+  try {
+    const cid = String(clubId || "").trim();
+    const nr = String(numer || "").trim();
+    if (!cid || !nr) return 0;
+
+    const cache = await caches.open("orghub-push-meta");
+    const key = `/push-last-shown-${cid}-${nr}.json`;
+    const resp = await cache.match(key);
+    if (!resp) return 0;
+
+    const json = await resp.json().catch(() => null);
+    return Number(json?.ts || 0);
+  } catch (e) {
+    return 0;
+  }
+}
+
+async function writeLastShownPushTs_(clubId, numer, ts) {
+  try {
+    const cid = String(clubId || "").trim();
+    const nr = String(numer || "").trim();
+    const stamp = Number(ts || 0);
+    if (!cid || !nr || !stamp) return;
+
+    const cache = await caches.open("orghub-push-meta");
+    const key = `/push-last-shown-${cid}-${nr}.json`;
+
+    await cache.put(
+      key,
+      new Response(JSON.stringify({ ts: stamp }), {
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+  } catch (e) {
+    console.warn("writeLastShownPushTs_ error", e);
+  }
+}
+
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let payload = null;
     const meta = await readPushMeta_();
 
-    // 1) spróbuj odczytać payload bezpośrednio
+    // 1) jeśli payload jest bezpośrednio w pushu — spróbuj go odczytać
     try {
       payload = event.data ? await event.data.json() : null;
     } catch (e) {
@@ -188,24 +270,15 @@ self.addEventListener("push", (event) => {
       }
     }
 
-    // 2) jeśli brak payloadu, pobierz go z Workera
+    // 2) jeśli payloadu brak, pobierz tylko wiadomość nowszą niż ostatnio pokazana
     if (!payload) {
       try {
         const clubId = meta && meta.clubId ? String(meta.clubId).trim() : "";
         const numer  = meta && meta.numer  ? String(meta.numer).trim()  : "";
 
         if (clubId && numer) {
-          const pullUrl =
-            PUSH_CORE + "/push/pull"
-            + "?clubId=" + encodeURIComponent(clubId)
-            + "&numer=" + encodeURIComponent(numer);
-
-          const pullResp = await fetch(pullUrl, { cache: "no-store" });
-          const pullJson = await pullResp.json().catch(() => null);
-
-          if (pullJson && pullJson.success && pullJson.found && pullJson.message) {
-            payload = pullJson.message;
-          }
+          const lastShownTs = await readLastShownPushTs_(clubId, numer);
+          payload = await pullLatestPushMessage_(clubId, numer, lastShownTs);
         }
       } catch (e) {
         payload = null;
@@ -222,6 +295,32 @@ self.addEventListener("push", (event) => {
       data: n.data,
       renotify: true
     });
+
+    try {
+      const shownClubId =
+        String(
+          (payload && payload.clubId) ||
+          (payload && payload.data && payload.data.clubId) ||
+          (meta && meta.clubId) ||
+          ""
+        ).trim();
+
+      const shownNumer =
+        String(
+          (payload && payload.numer) ||
+          (payload && payload.data && payload.data.numer) ||
+          (meta && meta.numer) ||
+          ""
+        ).trim();
+
+      const shownTs = Number(payload?.ts || 0);
+
+      if (shownClubId && shownNumer && shownTs > 0) {
+        await writeLastShownPushTs_(shownClubId, shownNumer, shownTs);
+      }
+    } catch (e) {
+      console.warn("save shown push ts error", e);
+    }
   })());
 });
 
