@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.6';
+  window.APP_BUILD = 'BETA APP v2.70.7';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -920,7 +920,7 @@ input[type="number"] {
       </div>
 
       <!-- TRYB DOSTĘPU -->
-      <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()">
+      <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()" style="text-align:center; text-align-last:center; font-weight:700;">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
@@ -1642,7 +1642,7 @@ input[type="number"] {
       </div>
 
       <!-- TRYB DOSTĘPU -->
-      <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()">
+      <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()" style="text-align:center; text-align-last:center; font-weight:700;">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
@@ -1655,7 +1655,7 @@ input[type="number"] {
           Zawodnicy
         </button>
 
-        <div id="editEventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4;">
+        <div id="eventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4; text-align:center;">
           Nie wybrano zawodników
         </div>
       </div>
@@ -6029,11 +6029,11 @@ function onEventTrybDostepuChange() {
   const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
 
   if (mode === "powolania") {
-    groupsWrap.classList.add("hidden");
-    powolaniWrap.classList.remove("hidden");
+    groupsWrap.style.display = "none";
+    powolaniWrap.style.display = "block";
   } else {
-    groupsWrap.classList.remove("hidden");
-    powolaniWrap.classList.add("hidden");
+    groupsWrap.style.display = "block";
+    powolaniWrap.style.display = "none";
   }
 }
 
@@ -6046,14 +6046,14 @@ function onEditEventTrybDostepuChange() {
   const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
 
   if (mode === "powolania") {
-    groupsWrap.classList.add("hidden");
-    powolaniWrap.classList.remove("hidden");
+    groupsWrap.style.display = "none";
+    powolaniWrap.style.display = "block";
   } else {
-    groupsWrap.classList.remove("hidden");
-    powolaniWrap.classList.add("hidden");
+    groupsWrap.style.display = "block";
+    powolaniWrap.style.display = "none";
   }
 }
-
+  
 function updateAddTrenerzySummary_() {
   const btn = document.getElementById("btnPickAddTrenerzy");
   if (!btn) return;
