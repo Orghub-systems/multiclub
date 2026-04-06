@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.3';
+  window.APP_BUILD = 'BETA APP v2.70.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6525,6 +6525,8 @@ function setTrainerEditPopupLoadingState_(isLoading) {
     "editTrener4",
     "btnEditSave",
     "btnEditPickGroups",
+    "editEventTrybDostepu",
+    "editEventPowolaniNums",
     "btnEditPickTrenerzy"
   ];
 
@@ -6573,6 +6575,14 @@ async function trainerShowEditPopup(miesiac, col5) {
   resetEditTrenerSelects_();
   resetEditGroups_();
 
+  const editTrybElReset = document.getElementById("editEventTrybDostepu");
+  const editPowolaniElReset = document.getElementById("editEventPowolaniNums");
+
+  if (editTrybElReset) editTrybElReset.value = "wszyscy";
+  if (editPowolaniElReset) editPowolaniElReset.value = "";
+
+  onEditEventTrybDostepuChange();
+
   // 3) pokaż popup od razu
   if (pop) pop.style.display = "flex";
 
@@ -6608,13 +6618,31 @@ async function trainerShowEditPopup(miesiac, col5) {
       if (chkStat) chkStat.checked = !!details.liczDoStatystyk;
       if (chkRez)  chkRez.checked  = !!details.rezerwacjaObiektu;
 
+      const editTrybEl = document.getElementById("editEventTrybDostepu");
+      const editPowolaniEl = document.getElementById("editEventPowolaniNums");
+
+      if (editTrybEl) {
+        editTrybEl.value = details.powolaniaMode ? "powolania" : "wszyscy";
+      }
+
+      if (editPowolaniEl) {
+        editPowolaniEl.value = Array.isArray(details.powolani)
+          ? details.powolani
+              .map(x => String(x?.numer || "").trim())
+              .filter(Boolean)
+              .join(",")
+          : "";
+      }
+
+      onEditEventTrybDostepuChange();
+
       if (msg) msg.textContent = "";
     } else {
-      if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów i grup.";
+      if (msg) msg.textContent = "⚠️ Nie udało się wczytać trenerów, grup i trybu wydarzenia.";
       console.warn("wydarzenieDetails:", details);
     }
   } catch (err) {
-    if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów i grup.";
+    if (msg) msg.textContent = "⚠️ Błąd pobierania trenerów, grup i trybu wydarzenia.";
     console.warn("trainerShowEditPopup error:", err);
   } finally {
     // 9) odblokuj pola po zakończeniu ładowania
