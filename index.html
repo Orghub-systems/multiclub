@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.4';
+  window.APP_BUILD = 'BETA APP v2.70.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5963,11 +5963,9 @@ function pokazDodajWydarzenie() {
   zaladujListeTrenerow();
 
   const trybEl = document.getElementById("eventTrybDostepu");
-  const powolaniEl = document.getElementById("eventPowolaniNums");
-
   if (trybEl) trybEl.value = "wszyscy";
-  if (powolaniEl) powolaniEl.value = "";
 
+  setAddPowolaniNums_("");
   onEventTrybDostepuChange();
 }
 
@@ -6060,6 +6058,187 @@ function onEditEventTrybDostepuChange() {
   } else {
     wrapEl.classList.add("hidden");
   }
+}
+
+let selectedPowolaniAdd = new Set();
+let selectedPowolaniEdit = new Set();
+window.__powolaniPlayersCache = [];
+window.__powolaniPopupTarget = "add";
+
+async function ensurePowolaniPlayersLoaded_() {
+  if (Array.isArray(window.__powolaniPlayersCache) && window.__powolaniPlayersCache.length) {
+    return window.__powolaniPlayersCache;
+  }
+
+  const lista = await apiClubGet("listaZawodnikow", { grupy: "" });
+
+  const rows = (Array.isArray(lista) ? lista : [])
+    .map(z => ({
+      nr: String(z?.nr || "").trim(),
+      nazwisko: String(z?.nazwisko || "").trim()
+    }))
+    .filter(z => z.nr && z.nazwisko)
+    .sort((a, b) =>
+      a.nazwisko.localeCompare(b.nazwisko, "pl", { sensitivity: "base" }) ||
+      String(a.nr).localeCompare(String(b.nr), "pl", { numeric: true })
+    );
+
+  window.__powolaniPlayersCache = rows;
+  return rows;
+}
+
+function getPowolaniSetByTarget_(target) {
+  return target === "edit" ? selectedPowolaniEdit : selectedPowolaniAdd;
+}
+
+function syncPowolaniUi_(target) {
+  const isEdit = target === "edit";
+  const setRef = isEdit ? selectedPowolaniEdit : selectedPowolaniAdd;
+  const nums = Array.from(setRef).map(x => String(x || "").trim()).filter(Boolean).sort((a, b) => Number(a) - Number(b));
+
+  const hiddenEl = document.getElementById(isEdit ? "editEventPowolaniNums" : "eventPowolaniNums");
+  const btnEl = document.getElementById(isEdit ? "btnEditPickPowolani" : "btnPickPowolani");
+  const previewEl = document.getElementById(isEdit ? "editEventPowolaniPreview" : "eventPowolaniPreview");
+
+  if (hiddenEl) hiddenEl.value = nums.join(",");
+
+  if (btnEl) {
+    btnEl.textContent = nums.length ? `Zawodnicy: ${nums.length}` : "Zawodnicy";
+  }
+
+  if (previewEl) {
+    const cache = Array.isArray(window.__powolaniPlayersCache) ? window.__powolaniPlayersCache : [];
+    const labels = nums.map(nr => {
+      const found = cache.find(p => String(p.nr) === String(nr));
+      return found ? `${found.nazwisko} (#${found.nr})` : `#${nr}`;
+    });
+
+    previewEl.textContent = labels.length
+      ? "Wybrani: " + labels.join(", ")
+      : "Nie wybrano zawodników";
+  }
+}
+
+function setAddPowolaniNums_(raw) {
+  const nums = normalizePowolaniNumsInput_(raw).split(",").filter(Boolean);
+  selectedPowolaniAdd = new Set(nums);
+  syncPowolaniUi_("add");
+}
+
+function setEditPowolaniNums_(raw) {
+  const nums = normalizePowolaniNumsInput_(raw).split(",").filter(Boolean);
+  selectedPowolaniEdit = new Set(nums);
+  syncPowolaniUi_("edit");
+}
+
+function renderPowolaniPopupList_() {
+  const listEl = document.getElementById("powolaniPopupList");
+  if (!listEl) return;
+
+  const cache = Array.isArray(window.__powolaniPlayersCache) ? window.__powolaniPlayersCache : [];
+  const setRef = getPowolaniSetByTarget_(window.__powolaniPopupTarget);
+
+  const esc = (s) => String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  if (!cache.length) {
+    listEl.innerHTML = `<div class="card" style="background:#222;">Brak zawodników do wyświetlenia</div>`;
+    return;
+  }
+
+  listEl.innerHTML = cache.map(p => {
+    const checked = setRef.has(String(p.nr)) ? "checked" : "";
+    const searchText = `${p.nazwisko} ${p.nr}`.toLowerCase();
+
+    return `
+      <label
+        class="powolani-row"
+        data-search="${esc(searchText)}"
+        style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #333;border-radius:12px;background:#111;cursor:pointer;">
+        <span style="display:flex;flex-direction:column;align-items:flex-start;">
+          <span style="font-weight:700;">${esc(p.nazwisko)}</span>
+          <span style="font-size:12px;opacity:.75;">#${esc(p.nr)}</span>
+        </span>
+        <input
+          type="checkbox"
+          class="powolaniChk"
+          value="${esc(p.nr)}"
+          ${checked}
+          style="transform:scale(1.25);"
+        >
+      </label>
+    `;
+  }).join("");
+
+  filterPowolaniPopupList_();
+}
+
+function filterPowolaniPopupList_() {
+  const query = String(document.getElementById("powolaniPopupSearch")?.value || "").trim().toLowerCase();
+  const rows = Array.from(document.querySelectorAll("#powolaniPopupList .powolani-row"));
+
+  rows.forEach(row => {
+    const hay = String(row.getAttribute("data-search") || "");
+    row.style.display = !query || hay.includes(query) ? "flex" : "none";
+  });
+}
+
+async function openPowolaniPopup(target) {
+  window.__powolaniPopupTarget = target === "edit" ? "edit" : "add";
+
+  const popup = document.getElementById("powolaniPopup");
+  const listEl = document.getElementById("powolaniPopupList");
+  const searchEl = document.getElementById("powolaniPopupSearch");
+  const titleEl = document.getElementById("powolaniPopupTitle");
+
+  if (!popup || !listEl || !searchEl || !titleEl) return;
+
+  popup.classList.remove("hidden");
+  titleEl.textContent = window.__powolaniPopupTarget === "edit"
+    ? "Wybierz powołanych zawodników"
+    : "Wybierz zawodników";
+
+  searchEl.value = "";
+  listEl.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie zawodników...</div>`;
+
+  pushPaymentModalHistoryState_("powolaniPopup");
+
+  try {
+    await ensurePowolaniPlayersLoaded_();
+    renderPowolaniPopupList_();
+  } catch (err) {
+    console.error("openPowolaniPopup error:", err);
+    listEl.innerHTML = `<div class="card" style="background:#522;">❌ Błąd pobierania zawodników</div>`;
+  }
+}
+
+function closePowolaniPopup() {
+  if (isHistoryModal_("powolaniPopup")) {
+    history.back();
+    return;
+  }
+
+  const popup = document.getElementById("powolaniPopup");
+  if (popup) popup.classList.add("hidden");
+}
+
+function applyPowolaniPopup() {
+  const checked = Array.from(document.querySelectorAll("#powolaniPopupList .powolaniChk:checked"))
+    .map(el => String(el.value || "").trim())
+    .filter(Boolean);
+
+  if (window.__powolaniPopupTarget === "edit") {
+    selectedPowolaniEdit = new Set(checked);
+    syncPowolaniUi_("edit");
+  } else {
+    selectedPowolaniAdd = new Set(checked);
+    syncPowolaniUi_("add");
+  }
+
+  closePowolaniPopup();
 }
   
 async function wyslijNoweWydarzenie() {
