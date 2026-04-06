@@ -175,15 +175,16 @@ function normalizePushPayload_(rawPayload, meta) {
 }
 
 /******************** PUSH: odbiór i kliknięcie ********************/
-
-async function pullLatestPushMessage_(clubId, numer) {
+async function pullLatestPushMessage_(clubId, numer, minTs) {
   const cid = String(clubId || "").trim();
   const nr = String(numer || "").trim();
+  const minTimestamp = Number(minTs || 0);
+
   if (!cid || !nr) return null;
 
   let latestMessage = null;
 
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 10; attempt++) {
     try {
       const pullUrl =
         PUSH_CORE + "/push/pull"
@@ -196,21 +197,25 @@ async function pullLatestPushMessage_(clubId, numer) {
 
       if (pullJson && pullJson.success && pullJson.found && pullJson.message) {
         latestMessage = pullJson.message;
-        return latestMessage;
+
+        const msgTs = Number(latestMessage.ts || 0);
+        if (msgTs > minTimestamp) {
+          return latestMessage;
+        }
       }
     } catch (e) {
-      // kolejna próba
+      // następna próba
     }
 
-    if (attempt < 4) {
-      await new Promise(resolve => setTimeout(resolve, 350));
+    if (attempt < 9) {
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
 
   return latestMessage;
 }
 
-/* async function readLastShownPushTs_(clubId, numer) {
+async function readLastShownPushTs_(clubId, numer) {
   try {
     const cid = String(clubId || "").trim();
     const nr = String(numer || "").trim();
@@ -247,14 +252,13 @@ async function writeLastShownPushTs_(clubId, numer, ts) {
   } catch (e) {
     console.warn("writeLastShownPushTs_ error", e);
   }
-} */
+} 
 
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let payload = null;
     const meta = await readPushMeta_();
 
-    // 1) jeśli jest payload bezpośredni, spróbuj go odczytać
     try {
       payload = event.data ? await event.data.json() : null;
     } catch (e) {
@@ -265,14 +269,14 @@ self.addEventListener("push", (event) => {
       }
     }
 
-    // 2) jeśli payloadu brak, pobierz wiadomość z Workera
     if (!payload) {
       try {
         const clubId = meta && meta.clubId ? String(meta.clubId).trim() : "";
         const numer  = meta && meta.numer  ? String(meta.numer).trim()  : "";
 
         if (clubId && numer) {
-          payload = await pullLatestPushMessage_(clubId, numer);
+          const lastShownTs = await readLastShownPushTs_(clubId, numer);
+          payload = await pullLatestPushMessage_(clubId, numer, lastShownTs);
         }
       } catch (e) {
         payload = null;
@@ -289,6 +293,32 @@ self.addEventListener("push", (event) => {
       data: n.data,
       renotify: true
     });
+
+    try {
+      const shownClubId =
+        String(
+          (payload && payload.clubId) ||
+          (payload && payload.data && payload.data.clubId) ||
+          (meta && meta.clubId) ||
+          ""
+        ).trim();
+
+      const shownNumer =
+        String(
+          (payload && payload.numer) ||
+          (payload && payload.data && payload.data.numer) ||
+          (meta && meta.numer) ||
+          ""
+        ).trim();
+
+      const shownTs = Number(payload?.ts || 0);
+
+      if (shownClubId && shownNumer && shownTs > 0) {
+        await writeLastShownPushTs_(shownClubId, shownNumer, shownTs);
+      }
+    } catch (e) {
+      console.warn("save shown push ts error", e);
+    }
   })());
 });
 
