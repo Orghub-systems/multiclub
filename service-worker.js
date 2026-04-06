@@ -27,7 +27,10 @@ self.addEventListener("activate", (e) => {
     const keys = await caches.keys();
     await Promise.all(
       keys
-        .filter((key) => key !== CACHE_NAME)
+        .filter((key) =>
+          key !== CACHE_NAME &&
+          key !== "orghub-push-meta"
+        )
         .map((key) => caches.delete(key))
     );
     await self.clients.claim();
