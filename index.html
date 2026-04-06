@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.5';
+  window.APP_BUILD = 'BETA APP v2.70.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -906,58 +906,46 @@ input[type="number"] {
       <input id="eventEnd" type="time" step="60" autocomplete="off">
       <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-      <!-- TRENERZY (zostawiamy obecną logikę, tylko wygląd bardziej jak w edycji) -->
-      <div>
-        <div style="font-weight:800; margin-bottom:6px;">Trener 1</div>
-        <select id="eventTrener1" class="select-like-input" onchange="onTrenerPick(1)">
-          <option value="">— wybierz trenera —</option>
-        </select>
-      </div>
-
-      <div id="trener2Wrap" class="hidden">
-        <div style="font-weight:800; margin-bottom:6px;">Trener 2</div>
-        <select id="eventTrener2" class="select-like-input" onchange="onTrenerPick(2)">
-          <option value="">— kolejny trener —</option>
-        </select>
-      </div>
-
-      <div id="trener3Wrap" class="hidden">
-        <div style="font-weight:800; margin-bottom:6px;">Trener 3</div>
-        <select id="eventTrener3" class="select-like-input" onchange="onTrenerPick(3)">
-          <option value="">— kolejny trener —</option>
-        </select>
-      </div>
-
-      <div id="trener4Wrap" class="hidden">
-        <div style="font-weight:800; margin-bottom:6px;">Trener 4</div>
-        <select id="eventTrener4" class="select-like-input">
-          <option value="">— kolejny trener —</option>
-        </select>
-      </div>
-
-      <!-- GRUPY -->
-      <button class="full-btn alt" id="btnPickGroups" type="button" onclick="openGroupsPopup()">
-        Wybierz grupy
+      <!-- TRENERZY -->
+      <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()">
+        Trenerzy
       </button>
 
+      <!-- SILNIK (ukryte selecty) -->
+      <div style="display:none;">
+        <select id="eventTrener1"><option value="">— wybierz trenera —</option></select>
+        <select id="eventTrener2"><option value="">— kolejny trener —</option></select>
+        <select id="eventTrener3"><option value="">— kolejny trener —</option></select>
+        <select id="eventTrener4"><option value="">— kolejny trener —</option></select>
+      </div>
+
+      <!-- TRYB DOSTĘPU -->
       <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
-      
+
+      <!-- POWOŁANI -->
       <div id="eventPowolaniWrap" class="hidden">
-        <textarea
-          id="eventPowolaniNums"
-          class="select-like-input"
-          placeholder="Numery powołanych, np. 22,31,47"
-          style="min-height:90px; resize:vertical;"
-        ></textarea>
-        <div style="font-size:12px; opacity:.7; margin-top:6px;">
-          Wpisz numery zawodników oddzielone przecinkami.
+        <input id="eventPowolaniNums" type="hidden">
+
+        <button class="full-btn alt" id="btnPickPowolani" type="button" onclick="openPowolaniPopup('add')">
+          Zawodnicy
+        </button>
+
+        <div id="eventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4;">
+          Nie wybrano zawodników
         </div>
       </div>
-      
-      <!-- CHECKBOXY jak w edycji -->
+
+      <!-- GRUPY -->
+      <div id="eventGroupsWrap">
+        <button class="full-btn alt" id="btnPickGroups" type="button" onclick="openGroupsPopup()">
+          Grupy
+        </button>
+      </div>
+
+      <!-- CHECKBOXY -->
       <label class="full-btn alt" for="eventRez">
         <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
           <span style="flex:0 0 auto;">
@@ -1633,77 +1621,83 @@ input[type="number"] {
 ">
   <div class="popup-card" style="max-width:360px;width:100%; text-align:left;">
     <p style="margin:0 0 10px 0;"><b>Edytuj wydarzenie</b></p>
+
     <div class="login-box" style="margin-top:10px;">
       <input id="editEventData" type="date">
       <input id="editEventStart" type="time">
       <input id="editEventEnd" type="time">
       <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-    <!-- TRENERZY: przycisk + popup -->
-    <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()">
-      Trener: Bez trenera
-    </button>
-    
-    <!-- SILNIK (ukryte selecty - zostają dla logiki zapisu) -->
-    <div style="display:none;">
-      <select id="editTrener1" onchange="onEditTrenerPick(1)"><option value="">Bez trenera</option></select>
-      <select id="editTrener2" onchange="onEditTrenerPick(2)"><option value="">Bez trenera</option></select>
-      <select id="editTrener3" onchange="onEditTrenerPick(3)"><option value="">Bez trenera</option></select>
-      <select id="editTrener4"><option value="">Bez trenera</option></select>
-    </div>
-
-      <!-- GRUPY -->
-      <button class="full-btn alt" id="btnEditPickGroups" type="button" onclick="openEditGroupsPopup()">
-        Wybierz grupy
+      <!-- TRENERZY -->
+      <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()">
+        Trenerzy
       </button>
 
-    <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()">
-      <option value="wszyscy">Dostęp dla wszystkich</option>
-      <option value="powolania">Powołania</option>
-    </select>
-    
-    <div id="editEventPowolaniWrap" class="hidden">
-      <textarea
-        id="editEventPowolaniNums"
-        class="select-like-input"
-        placeholder="Numery powołanych, np. 22,31,47"
-        style="min-height:90px; resize:vertical;"
-      ></textarea>
-      <div style="font-size:12px; opacity:.7; margin-top:6px;">
-        Wpisz numery zawodników oddzielone przecinkami.
+      <!-- SILNIK (ukryte selecty) -->
+      <div style="display:none;">
+        <select id="editTrener1" onchange="onEditTrenerPick(1)"><option value="">Bez trenera</option></select>
+        <select id="editTrener2" onchange="onEditTrenerPick(2)"><option value="">Bez trenera</option></select>
+        <select id="editTrener3" onchange="onEditTrenerPick(3)"><option value="">Bez trenera</option></select>
+        <select id="editTrener4"><option value="">Bez trenera</option></select>
       </div>
-    </div>
-      
-    <label class="full-btn alt" for="editEventRez">
-      <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
-        <span style="flex:0 0 auto;">
-          <input id="editEventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
-        </span>
-        <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
-          Rezerwacja obiektu
-        </span>
-      </span>
-    </label>
-    
-    <label class="full-btn alt" for="editEventStat">
-      <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
-        <span style="flex:0 0 auto;">
-          <input id="editEventStat" type="checkbox" style="transform:scale(1.35); margin:0;">
-        </span>
-        <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
-          Liczyć do statystyk
-        </span>
-      </span>
-    </label>
-    
-    <div style="margin-top:10px;">
-     <button class="full-btn" id="btnEditSave">💾 Zapisz zmiany</button>
-      <button class="full-btn alt" onclick="trainerHideEditPopup()">Anuluj</button>
-    </div>
 
-    <p id="editEventMsg" style="margin-top:10px;"></p>
+      <!-- TRYB DOSTĘPU -->
+      <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()">
+        <option value="wszyscy">Dostęp dla wszystkich</option>
+        <option value="powolania">Powołania</option>
+      </select>
+
+      <!-- POWOŁANI -->
+      <div id="editEventPowolaniWrap" class="hidden">
+        <input id="editEventPowolaniNums" type="hidden">
+
+        <button class="full-btn alt" id="btnEditPickPowolani" type="button" onclick="openPowolaniPopup('edit')">
+          Zawodnicy
+        </button>
+
+        <div id="editEventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4;">
+          Nie wybrano zawodników
+        </div>
+      </div>
+
+      <!-- GRUPY -->
+      <div id="editEventGroupsWrap">
+        <button class="full-btn alt" id="btnEditPickGroups" type="button" onclick="openEditGroupsPopup()">
+          Grupy
+        </button>
+      </div>
+
+      <!-- CHECKBOXY -->
+      <label class="full-btn alt" for="editEventRez">
+        <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+          <span style="flex:0 0 auto;">
+            <input id="editEventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
+          </span>
+          <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+            Rezerwacja obiektu
+          </span>
+        </span>
+      </label>
+
+      <label class="full-btn alt" for="editEventStat">
+        <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+          <span style="flex:0 0 auto;">
+            <input id="editEventStat" type="checkbox" style="transform:scale(1.35); margin:0;">
+          </span>
+          <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+            Liczyć do statystyk
+          </span>
+        </span>
+      </label>
+
+      <div style="margin-top:10px;">
+        <button class="full-btn" id="btnEditSave">💾 Zapisz zmiany</button>
+        <button class="full-btn alt" onclick="trainerHideEditPopup()">Anuluj</button>
+      </div>
+
+      <p id="editEventMsg" style="margin-top:10px;"></p>
+    </div>
   </div>
- </div>
 </div>
 
   <!-- TRAINER EDIT GROUPS POPUP
@@ -1776,6 +1770,79 @@ input[type="number"] {
   </div>
 </div>
 
+<div id="addTrenerzyPopup" class="hidden" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  z-index:2200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+">
+  <div class="popup-card" style="max-width:420px;width:100%;text-align:left;">
+    <p style="margin:0 0 10px 0;"><b>Wybierz trenerów</b></p>
+
+    <div class="login-box" style="margin-top:10px;">
+      <div style="font-weight:800; margin-bottom:6px;">Trener 1</div>
+      <select id="pickAddTrener1" class="select-like-input">
+        <option value="">— wybierz trenera —</option>
+      </select>
+
+      <div style="font-weight:800; margin:12px 0 6px 0;">Trener 2</div>
+      <select id="pickAddTrener2" class="select-like-input">
+        <option value="">— kolejny trener —</option>
+      </select>
+
+      <div style="font-weight:800; margin:12px 0 6px 0;">Trener 3</div>
+      <select id="pickAddTrener3" class="select-like-input">
+        <option value="">— kolejny trener —</option>
+      </select>
+
+      <div style="font-weight:800; margin:12px 0 6px 0;">Trener 4</div>
+      <select id="pickAddTrener4" class="select-like-input">
+        <option value="">— kolejny trener —</option>
+      </select>
+
+      <div style="margin-top:12px;">
+        <button class="full-btn" type="button" onclick="applyAddTrenerzyPopup()">Zastosuj</button>
+        <button class="full-btn alt" type="button" onclick="closeAddTrenerzyPopup()">Anuluj</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="powolaniPopup" class="hidden" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  z-index:2200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+">
+  <div class="popup-card" style="max-width:420px;width:100%;text-align:left;">
+    <p id="powolaniPopupTitle" style="margin:0 0 10px 0;"><b>Wybierz zawodników</b></p>
+
+    <input
+      id="powolaniPopupSearch"
+      type="text"
+      placeholder="Szukaj po nazwisku lub numerze"
+      oninput="filterPowolaniPopupList_()"
+      autocomplete="off"
+    >
+
+    <div
+      id="powolaniPopupList"
+      style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;margin-top:10px;">
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="full-btn" type="button" onclick="applyPowolaniPopup()">Zastosuj</button>
+      <button class="full-btn alt" type="button" onclick="closePowolaniPopup()">Anuluj</button>
+    </div>
+  </div>
+</div>
+  
 <!-- =========================================================
      OVERLAYS: ADMIN
      Popupy i modale administratora
@@ -5952,7 +6019,118 @@ function onTrenerPick(n) {
     else nextWrap.classList.add("hidden");
   }
 }
-  
+
+function onEventTrybDostepuChange() {
+  const modeEl = document.getElementById("eventTrybDostepu");
+  const groupsWrap = document.getElementById("eventGroupsWrap");
+  const powolaniWrap = document.getElementById("eventPowolaniWrap");
+  if (!modeEl || !groupsWrap || !powolaniWrap) return;
+
+  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
+
+  if (mode === "powolania") {
+    groupsWrap.classList.add("hidden");
+    powolaniWrap.classList.remove("hidden");
+  } else {
+    groupsWrap.classList.remove("hidden");
+    powolaniWrap.classList.add("hidden");
+  }
+}
+
+function onEditEventTrybDostepuChange() {
+  const modeEl = document.getElementById("editEventTrybDostepu");
+  const groupsWrap = document.getElementById("editEventGroupsWrap");
+  const powolaniWrap = document.getElementById("editEventPowolaniWrap");
+  if (!modeEl || !groupsWrap || !powolaniWrap) return;
+
+  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
+
+  if (mode === "powolania") {
+    groupsWrap.classList.add("hidden");
+    powolaniWrap.classList.remove("hidden");
+  } else {
+    groupsWrap.classList.remove("hidden");
+    powolaniWrap.classList.add("hidden");
+  }
+}
+
+function updateAddTrenerzySummary_() {
+  const btn = document.getElementById("btnPickAddTrenerzy");
+  if (!btn) return;
+
+  const arr = [
+    document.getElementById("eventTrener1")?.value,
+    document.getElementById("eventTrener2")?.value,
+    document.getElementById("eventTrener3")?.value,
+    document.getElementById("eventTrener4")?.value
+  ].map(v => String(v || "").trim()).filter(Boolean);
+
+  if (!arr.length) {
+    btn.textContent = "Trenerzy";
+  } else if (arr.length === 1) {
+    btn.textContent = "Trenerzy: " + arr[0];
+  } else {
+    btn.textContent = "Trenerzy: " + arr.join(", ");
+  }
+}
+
+function syncAddTrenerzyPopupOptions_() {
+  const pairs = [
+    ["eventTrener1", "pickAddTrener1"],
+    ["eventTrener2", "pickAddTrener2"],
+    ["eventTrener3", "pickAddTrener3"],
+    ["eventTrener4", "pickAddTrener4"]
+  ];
+
+  pairs.forEach(([fromId, toId]) => {
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    if (!from || !to) return;
+
+    to.innerHTML = from.innerHTML;
+    to.value = from.value || "";
+  });
+}
+
+function openAddTrenerzyPopup() {
+  syncAddTrenerzyPopupOptions_();
+
+  const pop = document.getElementById("addTrenerzyPopup");
+  if (!pop) return;
+
+  pop.classList.remove("hidden");
+  pushPaymentModalHistoryState_("addTrenerzyPopup");
+}
+
+function closeAddTrenerzyPopup() {
+  if (isHistoryModal_("addTrenerzyPopup")) {
+    history.back();
+    return;
+  }
+
+  const pop = document.getElementById("addTrenerzyPopup");
+  if (pop) pop.classList.add("hidden");
+}
+
+function applyAddTrenerzyPopup() {
+  const pairs = [
+    ["pickAddTrener1", "eventTrener1"],
+    ["pickAddTrener2", "eventTrener2"],
+    ["pickAddTrener3", "eventTrener3"],
+    ["pickAddTrener4", "eventTrener4"]
+  ];
+
+  pairs.forEach(([fromId, toId]) => {
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    if (!from || !to) return;
+    to.value = from.value || "";
+  });
+
+  updateAddTrenerzySummary_();
+  closeAddTrenerzyPopup();
+}
+    
 function pokazDodajWydarzenie() {
   goToView("trainerDodajWydarzenieView");
 
@@ -5966,6 +6144,7 @@ function pokazDodajWydarzenie() {
   if (trybEl) trybEl.value = "wszyscy";
 
   setAddPowolaniNums_("");
+  updateAddTrenerzySummary_();
   onEventTrybDostepuChange();
 }
 
@@ -6706,6 +6885,7 @@ function setTrainerEditPopupLoadingState_(isLoading) {
     "btnEditPickGroups",
     "editEventTrybDostepu",
     "editEventPowolaniNums",
+    "btnEditPickPowolani",
     "btnEditPickTrenerzy"
   ];
 
