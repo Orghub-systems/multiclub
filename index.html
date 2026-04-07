@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.2';
+  window.APP_BUILD = 'BETA APP v2.71.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9765,7 +9765,7 @@ function applyManualPushGroupsPopup() {
   closeManualPushGroupsPopup();
 }
 
-  async function sendManualPush() {
+async function sendManualPush() {
   const mode = (document.getElementById("manualPushMode")?.value || "single").trim();
   const numer = (document.getElementById("manualPushNumer")?.value || "").trim();
   const clubIdValue = (document.getElementById("manualPushClub")?.value || "").trim();
@@ -9796,103 +9796,55 @@ function applyManualPushGroupsPopup() {
 
   try {
     if (msgEl) msgEl.textContent = "Wysyłanie...";
-    
-    const senderLabel =
+
+    const senderRole =
       window.__manualPushRole === "trainer"
-        ? `Trener ${String(
+        ? "trainer"
+        : "admin";
+
+    const senderName =
+      senderRole === "trainer"
+        ? String(
             window.zalogowanyTrenerName ||
             (function(){ try { return sessionStorage.getItem("zalogowanyTrenerName") || ""; } catch(e) { return ""; } })()
-          ).trim() || ""}`.trim()
+          ).trim()
         : "Administrator";
-    
-    const targetLabel =
-      mode === "single"
-        ? "Ciebie"
-        : mode === "group"
-          ? `grupy ${Array.isArray(window.__manualPushGroups) ? window.__manualPushGroups.join(", ") : ""}`.trim()
-          : "całego klubu";
-    
-    const formattedBody =
-      `${senderLabel} przesyła wiadomość do ${targetLabel} o treści:\n\n"${body}"`;
-    
-    const basePayload = {
+
+    const res = await apiClubPost({
+      action: "manualPushSend",
       clubId: clubIdValue,
-      title: "📣 Nowa wiadomość",
-      body: formattedBody,
-      url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}&source=push`,
-      tag: `orghub-${clubIdValue}`,
-      data: {
-        clubId: clubIdValue,
-        url: `https://${clubIdValue}.orghub.pl/?clubId=${encodeURIComponent(clubIdValue)}&source=push`
-      }
-    };
+      mode: mode,
+      numer: numer,
+      group: mode === "group"
+        ? (Array.isArray(window.__manualPushGroups) ? window.__manualPushGroups.join(",") : "")
+        : "",
+      body: body,
+      senderRole: senderRole,
+      senderName: senderName
+    });
 
-    if (mode === "single") {
-      const res = await fetch(PUSH_WORKER_URL + "/push/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...basePayload,
-          mode: "single",
-          numer: numer
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data?.success === false) {
-        throw new Error(data?.error || ("HTTP " + res.status));
-      }
-    }
-
-    else if (mode === "group") {
-      const groups = Array.isArray(window.__manualPushGroups) ? window.__manualPushGroups : [];
-
-      for (const group of groups) {
-        const res = await fetch(PUSH_WORKER_URL + "/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...basePayload,
-            mode: "group",
-            group: group
-          })
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || data?.success === false) {
-          throw new Error(data?.error || ("Błąd dla grupy " + group));
-        }
-      }
-    }
-
-    else {
-      const res = await fetch(PUSH_WORKER_URL + "/push/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...basePayload,
-          mode: "all"
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data?.success === false) {
-        throw new Error(data?.error || ("HTTP " + res.status));
-      }
+    if (!res || res.success !== true) {
+      throw new Error(res?.error || "Błąd wysyłki");
     }
 
     if (msgEl) {
       if (mode === "group") {
-        msgEl.textContent = "✅ Powiadomienie wysłane do wybranych grup";
+        msgEl.textContent = "✅ Powiadomienie zapisane i wysłane do wybranych grup";
       } else if (mode === "single") {
-        msgEl.textContent = "✅ Powiadomienie wysłane do zawodnika";
+        msgEl.textContent = "✅ Powiadomienie zapisane i wysłane do zawodnika";
       } else {
-        msgEl.textContent = "✅ Powiadomienie wysłane do całego klubu";
+        msgEl.textContent = "✅ Powiadomienie zapisane i wysłane do całego klubu";
       }
     }
 
     const bodyEl = document.getElementById("manualPushBody");
     if (bodyEl) bodyEl.value = "";
+
+    try {
+      await refreshPlayerNotificationsBell_();
+    } catch (e) {
+      console.warn("refreshPlayerNotificationsBell_ error:", e);
+    }
 
   } catch (err) {
     console.error("sendManualPush error:", err);
