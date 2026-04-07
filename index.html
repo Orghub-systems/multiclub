@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.9';
+  window.APP_BUILD = 'BETA APP v2.70.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -906,7 +906,7 @@ input[type="number"] {
       <input id="eventEnd" type="time" step="60" autocomplete="off">
       <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-      <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()">
+      <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()" style="text-align:left; padding-left:16px;">
         Trenerzy
       </button>
 
@@ -917,7 +917,7 @@ input[type="number"] {
         <select id="eventTrener4"><option value="">— kolejny trener —</option></select>
       </div>
 
-      <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()" style="text-align:center; text-align-last:center; font-weight:700;">
+      <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()" style="text-align:left; text-align-last:left; font-weight:700; padding-left:16px;">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
@@ -925,7 +925,7 @@ input[type="number"] {
       <div id="eventPowolaniWrap" style="display:none;">
         <input id="eventPowolaniNums" type="hidden">
 
-        <button class="full-btn alt" id="btnPickPowolani" type="button" onclick="openPowolaniPopup('add')">
+        <button class="full-btn alt" id="btnPickPowolani" type="button" onclick="openPowolaniPopup('add')" style="text-align:left; padding-left:16px;">
           Zawodnicy
         </button>
 
@@ -935,7 +935,7 @@ input[type="number"] {
       </div>
 
       <div id="eventGroupsWrap" style="display:block;">
-        <button class="full-btn alt" id="btnPickGroups" type="button" onclick="openGroupsPopup()">
+        <button class="full-btn alt" id="btnPickGroups" type="button" onclick="openGroupsPopup()" style="text-align:left; padding-left:16px;">
           Grupy
         </button>
       </div>
@@ -1622,7 +1622,7 @@ input[type="number"] {
       <input id="editEventEnd" type="time">
       <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-      <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()">
+      <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()" style="text-align:left; padding-left:16px;">
         Trenerzy
       </button>
 
@@ -1633,7 +1633,7 @@ input[type="number"] {
         <select id="editTrener4"><option value="">Bez trenera</option></select>
       </div>
 
-      <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()" style="text-align:center; text-align-last:center; font-weight:700;">
+      <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()" style="text-align:left; text-align-last:left; font-weight:700; padding-left:16px;">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
@@ -1645,13 +1645,13 @@ input[type="number"] {
           Zawodnicy
         </button>
 
-        <div id="editEventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4; text-align:center;">
+        <button class="full-btn alt" id="btnEditPickPowolani" type="button" onclick="openPowolaniPopup('edit')" style="text-align:left; padding-left:16px;">
           Nie wybrano zawodników
         </div>
       </div>
 
       <div id="editEventGroupsWrap" style="display:block;">
-        <button class="full-btn alt" id="btnEditPickGroups" type="button" onclick="openEditGroupsPopup()">
+        <button class="full-btn alt" id="btnEditPickGroups" type="button" onclick="openEditGroupsPopup()" style="text-align:left; padding-left:16px;">
           Grupy
         </button>
       </div>
@@ -6223,10 +6223,7 @@ async function ensurePowolaniPlayersLoaded_() {
       nazwisko: String(z?.nazwisko || "").trim()
     }))
     .filter(z => z.nr && z.nazwisko)
-    .sort((a, b) =>
-      a.nazwisko.localeCompare(b.nazwisko, "pl", { sensitivity: "base" }) ||
-      String(a.nr).localeCompare(String(b.nr), "pl", { numeric: true })
-    );
+    .sort((a, b) => Number(a.nr) - Number(b.nr));
 
   window.__powolaniPlayersCache = rows;
   return rows;
