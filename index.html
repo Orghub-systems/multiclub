@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.10';
+  window.APP_BUILD = 'BETA APP v2.70.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5715,15 +5715,39 @@ async function zapiszSie(id) {
   const wypiszBtn = document.getElementById(`wypisz-${id}`);
   const box = document.getElementById(`zapisani-${id}`);
 
+  if (!btn) return;
+
   btn.classList.add("loading");
+
   try {
-    const r = await apiClubGet("zapisz", { numer: numerZalogowanego, treningId: id });
-    if (r.ok) {
-      btn.innerText = "Zapisano ✅";
+    const r = await apiClubGet("zapisz", {
+      numer: numerZalogowanego,
+      treningId: id
+    });
+
+    if (r && r.ok) {
+      const isPowolanieAccept = !!r.accepted;
+
+      if (isPowolanieAccept) {
+        btn.innerText = "Powołanie zaakceptowane ✅";
+      } else {
+        btn.innerText = "Zapisano ✅";
+      }
+
       btn.disabled = true;
-      wypiszBtn.disabled = false;
-      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
-    } else alert(r.message);
+
+      if (wypiszBtn) {
+        wypiszBtn.disabled = false;
+      }
+
+      if (box && !box.classList.contains("hidden")) {
+        await odswiezListeZapisanych(id);
+      }
+
+      return;
+    }
+
+    alert((r && r.message) ? r.message : "Nie udało się zapisać.");
   } catch (err) {
     alert("Błąd połączenia: " + err);
   } finally {
