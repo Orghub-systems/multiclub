@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.1';
+  window.APP_BUILD = 'BETA APP v2.71.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -846,6 +846,34 @@ input[type="number"] {
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót do menu</button>
 </div>
 
+<!-- PLAYER NOTIFICATIONS VIEW
+     Skrzynka wiadomości zawodnika -->
+<div id="playerNotificationsView" class="container hidden">
+
+  <h1 style="margin:0 0 18px 0;">Powiadomienia</h1>
+
+  <div
+    id="playerNotificationsList"
+    class="login-box"
+    style="
+      width:100%;
+      max-width:420px;
+      margin:0 auto 16px auto;
+      padding:14px;
+      box-sizing:border-box;
+      text-align:left;
+    "
+  >
+    <div style="opacity:.75; text-align:center;">Ładowanie powiadomień...</div>
+  </div>
+
+  <div class="login-box" style="padding:0; background:none; border:none; box-shadow:none;">
+    <button class="full-btn" onclick="openPlayerNotificationSettingsView_()">⚙️ Ustawienia powiadomień</button>
+    <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;">⬅ Wróć</button>
+  </div>
+
+</div>
+  
 <!-- =========================================================
      TRAINER VIEWS
      Główne ekrany panelu trenera
@@ -3944,6 +3972,14 @@ async function saveUserNotificationPrefsToServer_(opts) {
 }
   
 window.openPlayerNotificationsView_ = async function openPlayerNotificationsView_() {
+  goToView("playerNotificationsView");
+
+  await refreshPlayerNotificationsList_();
+  await markAllPlayerNotificationsRead_();
+  await refreshPlayerNotificationsBell_();
+};
+
+window.openPlayerNotificationSettingsView_ = async function openPlayerNotificationSettingsView_() {
   goToView("playerSettingsView");
 
   try {
@@ -3953,7 +3989,7 @@ window.openPlayerNotificationsView_ = async function openPlayerNotificationsView
   }
 
   await refreshPlayerNotificationsUi_();
-};
+};  
 
 function hookPushButton_() {
   const btnEnable = document.getElementById("btnEnablePush");
@@ -4441,6 +4477,196 @@ function urlBase64ToUint8Array_(base64String) {
   return outputArray;
 }
 
+function ensurePlayerNotificationsPulseStyle_() {
+  if (document.getElementById("playerNotificationsPulseStyle")) return;
+
+  const style = document.createElement("style");
+  style.id = "playerNotificationsPulseStyle";
+  style.textContent = `
+    @keyframes playerNotificationsPulse {
+      0%   { box-shadow: 0 0 0 rgba(255,43,43,0); transform: scale(1); }
+      50%  { box-shadow: 0 0 18px rgba(255,43,43,.45); transform: scale(1.02); }
+      100% { box-shadow: 0 0 0 rgba(255,43,43,0); transform: scale(1); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function escapeHtml_(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatNotificationDate_(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function fetchPlayerNotificationsList_() {
+  const numer = getCurrentNotificationLoginId_();
+  if (!numer) return { success: false, error: "Brak numeru zawodnika", items: [] };
+
+  const res = await apiClubPost({
+    action: "notificationsList",
+    numer: numer
+  });
+
+  return res || { success: false, error: "Brak odpowiedzi", items: [] };
+}
+
+async function fetchPlayerNotificationsUnreadSummary_() {
+  const numer = getCurrentNotificationLoginId_();
+  if (!numer) return { success: false, unreadCount: 0 };
+
+  const res = await apiClubPost({
+    action: "notificationsUnreadSummary",
+    numer: numer
+  });
+
+  return res || { success: false, unreadCount: 0 };
+}
+
+async function markAllPlayerNotificationsRead_() {
+  const numer = getCurrentNotificationLoginId_();
+  if (!numer) return { success: false, error: "Brak numeru zawodnika" };
+
+  const res = await apiClubPost({
+    action: "notificationsMarkRead",
+    numer: numer,
+    mode: "all"
+  });
+
+  return res || { success: false };
+}
+
+function renderPlayerNotificationsList_(items) {
+  const box = document.getElementById("playerNotificationsList");
+  if (!box) return;
+
+  const rows = Array.isArray(items) ? items : [];
+
+  if (!rows.length) {
+    box.innerHTML = `
+      <div style="text-align:center; opacity:.75; padding:14px 8px;">
+        Brak wiadomości.
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = rows.map(function (it) {
+    const title = escapeHtml_(it.title || "Powiadomienie");
+    const body = escapeHtml_(it.body || "").replace(/\n/g, "<br>");
+    const sourceName = escapeHtml_(it.sourceName || it.sourceRole || "OrgHub");
+    const createdAt = escapeHtml_(formatNotificationDate_(it.createdAt || it.created_at || ""));
+    const unread = !!it.isUnread;
+
+    return `
+      <div
+        style="
+          border:1px solid ${unread ? "#ff2b2b" : "#2b2b2b"};
+          border-radius:14px;
+          padding:12px;
+          margin-bottom:10px;
+          background:${unread ? "rgba(139,0,0,.18)" : "rgba(255,255,255,.04)"};
+        "
+      >
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
+          <div style="font-weight:900; font-size:15px; line-height:1.25;">
+            ${title}
+          </div>
+          <div style="font-size:11px; opacity:.7; white-space:nowrap;">
+            ${createdAt}
+          </div>
+        </div>
+
+        <div style="font-size:12px; opacity:.8; margin-bottom:8px;">
+          Od: <b>${sourceName}</b>
+        </div>
+
+        <div style="font-size:14px; line-height:1.45;">
+          ${body}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function refreshPlayerNotificationsList_() {
+  const box = document.getElementById("playerNotificationsList");
+  if (box) {
+    box.innerHTML = `<div style="text-align:center; opacity:.75; padding:14px 8px;">Ładowanie powiadomień...</div>`;
+  }
+
+  try {
+    const res = await fetchPlayerNotificationsList_();
+
+    if (!res || res.success !== true) {
+      if (box) {
+        box.innerHTML = `
+          <div style="text-align:center; color:#ffb3b3; padding:14px 8px;">
+            Nie udało się pobrać powiadomień.
+          </div>
+        `;
+      }
+      return;
+    }
+
+    renderPlayerNotificationsList_(res.items || []);
+  } catch (e) {
+    console.warn("refreshPlayerNotificationsList_ error", e);
+    if (box) {
+      box.innerHTML = `
+        <div style="text-align:center; color:#ffb3b3; padding:14px 8px;">
+          Błąd pobierania powiadomień.
+        </div>
+      `;
+    }
+  }
+}
+
+async function refreshPlayerNotificationsBell_() {
+  const btn = document.getElementById("playerMenuNotificationsBtn");
+  if (!btn) return;
+
+  ensurePlayerNotificationsPulseStyle_();
+
+  const baseLabel = "🔔 Powiadomienia";
+  btn.textContent = baseLabel;
+  btn.style.animation = "";
+  btn.style.background = "";
+  btn.style.borderColor = "";
+  btn.style.color = "";
+
+  try {
+    const res = await fetchPlayerNotificationsUnreadSummary_();
+    const unread = Number(res?.unreadCount || 0);
+
+    if (unread > 0) {
+      btn.textContent = `🔔 Powiadomienia (${unread})`;
+      btn.style.background = "#8b0000";
+      btn.style.borderColor = "#ff2b2b";
+      btn.style.color = "#ffffff";
+      btn.style.animation = "playerNotificationsPulse 1s infinite";
+      return;
+    }
+
+    btn.textContent = baseLabel;
+  } catch (e) {
+    console.warn("refreshPlayerNotificationsBell_ error", e);
+    btn.textContent = baseLabel;
+  }
+}
+  
 /* =================== KONIEC SEKTORA 80 =================== */
 
 /* =================== 81 POWIADOMIENIA ALERT =================== */  
