@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.8';
+  window.APP_BUILD = 'BETA APP v2.70.9';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -906,12 +906,10 @@ input[type="number"] {
       <input id="eventEnd" type="time" step="60" autocomplete="off">
       <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-      <!-- TRENERZY -->
       <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()">
         Trenerzy
       </button>
 
-      <!-- SILNIK (ukryte selecty) -->
       <div style="display:none;">
         <select id="eventTrener1"><option value="">— wybierz trenera —</option></select>
         <select id="eventTrener2"><option value="">— kolejny trener —</option></select>
@@ -919,33 +917,29 @@ input[type="number"] {
         <select id="eventTrener4"><option value="">— kolejny trener —</option></select>
       </div>
 
-      <!-- TRYB DOSTĘPU -->
       <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()" style="text-align:center; text-align-last:center; font-weight:700;">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
 
-      <!-- POWOŁANI -->
-      <div id="eventPowolaniWrap" class="hidden">
+      <div id="eventPowolaniWrap" style="display:none;">
         <input id="eventPowolaniNums" type="hidden">
 
         <button class="full-btn alt" id="btnPickPowolani" type="button" onclick="openPowolaniPopup('add')">
           Zawodnicy
         </button>
 
-        <div id="eventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4;">
+        <div id="eventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4; text-align:center;">
           Nie wybrano zawodników
         </div>
       </div>
 
-      <!-- GRUPY -->
-      <div id="eventGroupsWrap">
+      <div id="eventGroupsWrap" style="display:block;">
         <button class="full-btn alt" id="btnPickGroups" type="button" onclick="openGroupsPopup()">
           Grupy
         </button>
       </div>
 
-      <!-- CHECKBOXY -->
       <label class="full-btn alt" for="eventRez">
         <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
           <span style="flex:0 0 auto;">
@@ -1628,12 +1622,10 @@ input[type="number"] {
       <input id="editEventEnd" type="time">
       <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
-      <!-- TRENERZY -->
       <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()">
         Trenerzy
       </button>
 
-      <!-- SILNIK (ukryte selecty) -->
       <div style="display:none;">
         <select id="editTrener1" onchange="onEditTrenerPick(1)"><option value="">Bez trenera</option></select>
         <select id="editTrener2" onchange="onEditTrenerPick(2)"><option value="">Bez trenera</option></select>
@@ -1641,33 +1633,29 @@ input[type="number"] {
         <select id="editTrener4"><option value="">Bez trenera</option></select>
       </div>
 
-      <!-- TRYB DOSTĘPU -->
       <select id="editEventTrybDostepu" class="select-like-input" onchange="onEditEventTrybDostepuChange()" style="text-align:center; text-align-last:center; font-weight:700;">
         <option value="wszyscy">Dostęp dla wszystkich</option>
         <option value="powolania">Powołania</option>
       </select>
 
-      <!-- POWOŁANI -->
-      <div id="editEventPowolaniWrap" class="hidden">
+      <div id="editEventPowolaniWrap" style="display:none;">
         <input id="editEventPowolaniNums" type="hidden">
 
         <button class="full-btn alt" id="btnEditPickPowolani" type="button" onclick="openPowolaniPopup('edit')">
           Zawodnicy
         </button>
 
-        <div id="eventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4; text-align:center;">
+        <div id="editEventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4; text-align:center;">
           Nie wybrano zawodników
         </div>
       </div>
 
-      <!-- GRUPY -->
-      <div id="editEventGroupsWrap">
+      <div id="editEventGroupsWrap" style="display:block;">
         <button class="full-btn alt" id="btnEditPickGroups" type="button" onclick="openEditGroupsPopup()">
           Grupy
         </button>
       </div>
 
-      <!-- CHECKBOXY -->
       <label class="full-btn alt" for="editEventRez">
         <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
           <span style="flex:0 0 auto;">
@@ -6181,28 +6169,40 @@ function normalizePowolaniNumsInput_(value) {
 
 function onEventTrybDostepuChange() {
   const modeEl = document.getElementById("eventTrybDostepu");
-  const wrapEl = document.getElementById("eventPowolaniWrap");
-  if (!modeEl || !wrapEl) return;
+  const groupsWrap = document.getElementById("eventGroupsWrap");
+  const groupsBtn = document.getElementById("btnPickGroups");
+  const powolaniWrap = document.getElementById("eventPowolaniWrap");
+  const powolaniBtn = document.getElementById("btnPickPowolani");
+  const powolaniPreview = document.getElementById("eventPowolaniPreview");
 
-  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
-  if (mode === "powolania") {
-    wrapEl.classList.remove("hidden");
-  } else {
-    wrapEl.classList.add("hidden");
-  }
+  if (!modeEl) return;
+
+  const showPowolania = String(modeEl.value || "").trim().toLowerCase() === "powolania";
+
+  if (groupsWrap) groupsWrap.style.display = showPowolania ? "none" : "block";
+  if (groupsBtn) groupsBtn.style.display = showPowolania ? "none" : "";
+  if (powolaniWrap) powolaniWrap.style.display = showPowolania ? "block" : "none";
+  if (powolaniBtn) powolaniBtn.style.display = showPowolania ? "" : "";
+  if (powolaniPreview) powolaniPreview.style.display = showPowolania ? "block" : "none";
 }
 
 function onEditEventTrybDostepuChange() {
   const modeEl = document.getElementById("editEventTrybDostepu");
-  const wrapEl = document.getElementById("editEventPowolaniWrap");
-  if (!modeEl || !wrapEl) return;
+  const groupsWrap = document.getElementById("editEventGroupsWrap");
+  const groupsBtn = document.getElementById("btnEditPickGroups");
+  const powolaniWrap = document.getElementById("editEventPowolaniWrap");
+  const powolaniBtn = document.getElementById("btnEditPickPowolani");
+  const powolaniPreview = document.getElementById("editEventPowolaniPreview");
 
-  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
-  if (mode === "powolania") {
-    wrapEl.classList.remove("hidden");
-  } else {
-    wrapEl.classList.add("hidden");
-  }
+  if (!modeEl) return;
+
+  const showPowolania = String(modeEl.value || "").trim().toLowerCase() === "powolania";
+
+  if (groupsWrap) groupsWrap.style.display = showPowolania ? "none" : "block";
+  if (groupsBtn) groupsBtn.style.display = showPowolania ? "none" : "";
+  if (powolaniWrap) powolaniWrap.style.display = showPowolania ? "block" : "none";
+  if (powolaniBtn) powolaniBtn.style.display = showPowolania ? "" : "";
+  if (powolaniPreview) powolaniPreview.style.display = showPowolania ? "block" : "none";
 }
 
 let selectedPowolaniAdd = new Set();
