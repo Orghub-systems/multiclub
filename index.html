@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.12';
+  window.APP_BUILD = 'BETA APP v2.71';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4045,7 +4045,43 @@ async function ensurePushMetaCache_(clubIdValue, numerValue) {
     console.warn("ensurePushMetaCache_ error", e);
   }
 }
-      
+
+async function syncExistingPushSubscriptionToWorker_(subscription, clubIdValue, numerValue) {
+  try {
+    const cid = String(clubIdValue || "").trim();
+    const nr = String(numerValue || "").trim();
+
+    const subJson =
+      subscription && typeof subscription.toJSON === "function"
+        ? subscription.toJSON()
+        : subscription;
+
+    if (!cid || !nr || !subJson?.endpoint) {
+      return { success: false, skipped: true };
+    }
+
+    const saveRes = await fetch(PUSH_WORKER_URL + "/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clubId: cid,
+        numer: nr,
+        subscription: subJson
+      }),
+    });
+
+    const saveJson = await saveRes.json().catch(() => ({}));
+    if (!saveRes.ok || saveJson?.success === false) {
+      throw new Error(saveJson?.error || ("HTTP " + saveRes.status));
+    }
+
+    return saveJson;
+  } catch (e) {
+    console.warn("syncExistingPushSubscriptionToWorker_ error", e);
+    return { success: false, error: String(e?.message || e) };
+  }
+}
+  
 async function refreshPushButtonState_() {
   const btnEnable = document.getElementById("btnEnablePush");
   const btnDisable = document.getElementById("btnDisablePush");
@@ -4067,9 +4103,20 @@ async function refreshPushButtonState_() {
   if (btnDisable) btnDisable.classList.add("hidden");
   if (warningBox) warningBox.classList.add("hidden");
 
-  if (pushConsent && state.active) {
-    await ensurePushMetaCache_(window.clubId || localStorage.getItem("clubId") || "", window.numerZalogowanego || numerZalogowanego || "");
-    
+    if (pushConsent && state.active) {
+    const activeClubId =
+      window.clubId ||
+      localStorage.getItem("clubId") ||
+      "";
+
+    const activeNumer =
+      window.numerZalogowanego ||
+      numerZalogowanego ||
+      "";
+
+    await ensurePushMetaCache_(activeClubId, activeNumer);
+    await syncExistingPushSubscriptionToWorker_(state.subscription, activeClubId, activeNumer);
+
     btnEnable.textContent = "🟢 Powiadomienia aktywne";
     btnEnable.style.background = "#0f7a2a";
     btnEnable.style.borderColor = "#19a642";
