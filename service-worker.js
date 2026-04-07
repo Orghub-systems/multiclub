@@ -253,33 +253,47 @@ async function writeLastShownPushTs_(clubId, numer, ts) {
     console.warn("writeLastShownPushTs_ error", e);
   }
 } 
-
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
-    let payload = null;
+    let eventPayload = null;
     const meta = await readPushMeta_();
 
     try {
-      payload = event.data ? await event.data.json() : null;
+      eventPayload = event.data ? await event.data.json() : null;
     } catch (e) {
       try {
-        payload = event.data ? JSON.parse(event.data.text()) : null;
+        eventPayload = event.data ? JSON.parse(event.data.text()) : null;
       } catch (e2) {
-        payload = null;
+        eventPayload = null;
       }
     }
 
-    if (!payload) {
-      try {
-        const clubId = meta && meta.clubId ? String(meta.clubId).trim() : "";
-        const numer  = meta && meta.numer  ? String(meta.numer).trim()  : "";
+    const routeClubId = String(
+      (eventPayload && eventPayload.clubId) ||
+      (eventPayload && eventPayload.data && eventPayload.data.clubId) ||
+      (meta && meta.clubId) ||
+      ""
+    ).trim();
 
-        if (clubId && numer) {
-          const lastShownTs = await readLastShownPushTs_(clubId, numer);
-          payload = await pullLatestPushMessage_(clubId, numer, lastShownTs);
+    const routeNumer = String(
+      (eventPayload && eventPayload.numer) ||
+      (eventPayload && eventPayload.data && eventPayload.data.numer) ||
+      (meta && meta.numer) ||
+      ""
+    ).trim();
+
+    let payload = eventPayload;
+
+    if (routeClubId && routeNumer) {
+      try {
+        const lastShownTs = await readLastShownPushTs_(routeClubId, routeNumer);
+        const pulled = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
+
+        if (pulled && pulled.ts) {
+          payload = pulled;
         }
       } catch (e) {
-        payload = null;
+        console.warn("push pullLatest error", e);
       }
     }
 
@@ -295,21 +309,19 @@ self.addEventListener("push", (event) => {
     });
 
     try {
-      const shownClubId =
-        String(
-          (payload && payload.clubId) ||
-          (payload && payload.data && payload.data.clubId) ||
-          (meta && meta.clubId) ||
-          ""
-        ).trim();
+      const shownClubId = String(
+        (payload && payload.clubId) ||
+        (payload && payload.data && payload.data.clubId) ||
+        (meta && meta.clubId) ||
+        ""
+      ).trim();
 
-      const shownNumer =
-        String(
-          (payload && payload.numer) ||
-          (payload && payload.data && payload.data.numer) ||
-          (meta && meta.numer) ||
-          ""
-        ).trim();
+      const shownNumer = String(
+        (payload && payload.numer) ||
+        (payload && payload.data && payload.data.numer) ||
+        (meta && meta.numer) ||
+        ""
+      ).trim();
 
       const shownTs = Number(payload?.ts || 0);
 
