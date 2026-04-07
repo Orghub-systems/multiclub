@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.11';
+  window.APP_BUILD = 'BETA APP v2.70.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6081,13 +6081,14 @@ function openAddTrenerzyPopup() {
 }
 
 function closeAddTrenerzyPopup() {
-  if (isHistoryModal_("addTrenerzyPopup")) {
-    history.back();
-    return;
-  }
-
   const pop = document.getElementById("addTrenerzyPopup");
   if (pop) pop.classList.add("hidden");
+
+  if (isHistoryModal_("addTrenerzyPopup")) {
+    setTimeout(() => {
+      try { history.back(); } catch (e) {}
+    }, 0);
+  }
 }
 
 function applyAddTrenerzyPopup() {
@@ -6382,13 +6383,14 @@ async function openPowolaniPopup(target) {
 }
 
 function closePowolaniPopup() {
-  if (isHistoryModal_("powolaniPopup")) {
-    history.back();
-    return;
-  }
-
   const popup = document.getElementById("powolaniPopup");
   if (popup) popup.classList.add("hidden");
+
+  if (isHistoryModal_("powolaniPopup")) {
+    setTimeout(() => {
+      try { history.back(); } catch (e) {}
+    }, 0);
+  }
 }
 
 function applyPowolaniPopup() {
