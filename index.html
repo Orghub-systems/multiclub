@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.70.7';
+  window.APP_BUILD = 'BETA APP v2.70.8';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6017,40 +6017,6 @@ function onTrenerPick(n) {
   if (nextWrap) {
     if (picked) nextWrap.classList.remove("hidden");
     else nextWrap.classList.add("hidden");
-  }
-}
-
-function onEventTrybDostepuChange() {
-  const modeEl = document.getElementById("eventTrybDostepu");
-  const groupsWrap = document.getElementById("eventGroupsWrap");
-  const powolaniWrap = document.getElementById("eventPowolaniWrap");
-  if (!modeEl || !groupsWrap || !powolaniWrap) return;
-
-  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
-
-  if (mode === "powolania") {
-    groupsWrap.style.display = "none";
-    powolaniWrap.style.display = "block";
-  } else {
-    groupsWrap.style.display = "block";
-    powolaniWrap.style.display = "none";
-  }
-}
-
-function onEditEventTrybDostepuChange() {
-  const modeEl = document.getElementById("editEventTrybDostepu");
-  const groupsWrap = document.getElementById("editEventGroupsWrap");
-  const powolaniWrap = document.getElementById("editEventPowolaniWrap");
-  if (!modeEl || !groupsWrap || !powolaniWrap) return;
-
-  const mode = String(modeEl.value || "wszyscy").trim().toLowerCase();
-
-  if (mode === "powolania") {
-    groupsWrap.style.display = "none";
-    powolaniWrap.style.display = "block";
-  } else {
-    groupsWrap.style.display = "block";
-    powolaniWrap.style.display = "none";
   }
 }
   
