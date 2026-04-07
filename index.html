@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71';
+  window.APP_BUILD = 'BETA APP v2.71.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4265,13 +4265,20 @@ async function enablePushFlow_() {
 
     const reg = await navigator.serviceWorker.ready;
 
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        try {
+          await sub.unsubscribe();
+        } catch (e) {
+          console.warn("old subscription unsubscribe error", e);
+        }
+        sub = null;
+      }
+      
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array_(publicKey),
       });
-    }
 
     const cid =
       (new URLSearchParams(location.search).get("clubId") || "").trim() ||
