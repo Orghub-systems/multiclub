@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.12';
+  window.APP_BUILD = 'BETA APP v2.71.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4532,15 +4532,25 @@ async function markAllPlayerNotificationsRead_() {
   return res || { success: false };
 }
 
-async function deletePlayerNotification_(btnEl, id) {
+function deletePlayerNotification_(ev, btnEl, id) {
+  try {
+    if (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (typeof ev.stopImmediatePropagation === "function") {
+        ev.stopImmediatePropagation();
+      }
+    }
+  } catch (e) {}
+
   const msgId = String(id || "").trim();
-  if (!msgId) return;
+  if (!msgId) return false;
 
   const rowEl = btnEl ? btnEl.closest(".player-notification-card") : null;
 
   // znika od razu z UI
   if (rowEl) {
-    rowEl.style.transition = "opacity 0.2s ease, transform 0.2s ease, height 0.2s ease, margin 0.2s ease, padding 0.2s ease";
+    rowEl.style.transition = "opacity 0.2s ease, transform 0.2s ease";
     rowEl.style.opacity = "0";
     rowEl.style.transform = "scale(0.98)";
     rowEl.style.pointerEvents = "none";
@@ -4561,21 +4571,25 @@ async function deletePlayerNotification_(btnEl, id) {
     }, 180);
   }
 
-  // backend w tle
-  try {
-    const numer = getCurrentNotificationLoginId_();
-    const res = await apiClubPost({
-      action: "notificationsDelete",
-      numer: numer,
-      ids: msgId
-    });
+  // backend leci w tle
+  (async () => {
+    try {
+      const numer = getCurrentNotificationLoginId_();
+      const res = await apiClubPost({
+        action: "notificationsDelete",
+        numer: numer,
+        ids: msgId
+      });
 
-    if (!res || res.success !== true) {
-      throw new Error(res?.error || "Nie udało się usunąć wiadomości");
+      if (!res || res.success !== true) {
+        throw new Error(res?.error || "Nie udało się usunąć wiadomości");
+      }
+    } catch (e) {
+      console.error("deletePlayerNotification_ error", e);
     }
-  } catch (e) {
-    console.error("deletePlayerNotification_ error", e);
-  }
+  })();
+
+  return false;
 }
   
 function renderPlayerNotificationsList_(items) {
@@ -4634,7 +4648,7 @@ function renderPlayerNotificationsList_(items) {
           <button
             class="full-btn alt"
             type="button"
-            onclick="deletePlayerNotification_(this, '${id}')"
+            onclick="return deletePlayerNotification_(event, this, '${id}')"
             style="margin:0; width:auto; min-width:110px; padding:10px 14px;"
           >
             🗑 Usuń
