@@ -287,16 +287,22 @@ self.addEventListener("push", (event) => {
     if (routeClubId && routeNumer) {
       try {
         const lastShownTs = await readLastShownPushTs_(routeClubId, routeNumer);
-        const pulled = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
-
-        if (pulled && pulled.ts) {
+    
+        let pulled = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
+    
+        if (!pulled || !pulled.ts || Number(pulled.ts) <= Number(lastShownTs || 0)) {
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          pulled = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
+        }
+    
+        if (pulled && pulled.ts && Number(pulled.ts) > Number(lastShownTs || 0)) {
           payload = pulled;
         }
       } catch (e) {
         console.warn("push pullLatest error", e);
       }
     }
-
+    
     const n = normalizePushPayload_(payload, meta);
 
     await self.registration.showNotification(n.title, {
