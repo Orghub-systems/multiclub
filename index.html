@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.3';
+  window.APP_BUILD = 'BETA APP v2.71.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4806,13 +4806,19 @@ async function zaloguj() {
 
     if (data.role === "zawodnik") {
       numerZalogowanego = data.login;
+      window.numerZalogowanego = data.login;
       grupaZalogowanego = data.grupa || "";
       window.userPushConsent = !!data.pushConsent;
       window.userEmailConsent = !!data.emailConsent;
-
+    
       try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
       try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
-
+    
+      await ensurePushMetaCache_(
+        window.clubId || localStorage.getItem("clubId") || clubId || "",
+        window.numerZalogowanego || numerZalogowanego || data.login || ""
+      );
+    
       window.__platnosciCache = null;
       window.__prefetch = {
         t: 0,
@@ -4820,16 +4826,16 @@ async function zaloguj() {
         treningiP: null,
         statystykiP: null
       };
-
+    
       goToView("playerMenuView");
       loadClubAd();
-
+    
       try {
         await refreshPlayerMenuPushAlert_();
       } catch (e) {
         console.warn("refreshPlayerMenuPushAlert_ error:", e);
       }
-
+    
       return;
     }
 
