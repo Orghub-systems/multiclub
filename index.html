@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.14';
+  window.APP_BUILD = 'BETA APP v2.71.15';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4650,37 +4650,23 @@ function renderPlayerNotificationsList_(items) {
 
 async function refreshPlayerNotificationsList_() {
   const box = document.getElementById("playerNotificationsList");
-  if (box) {
-    box.innerHTML = `<div style="text-align:center; opacity:.75; padding:14px 8px;">Ładowanie powiadomień...</div>`;
-  }
+  if (!box) return;
 
   try {
     const res = await fetchPlayerNotificationsList_();
 
     if (!res || res.success !== true) {
-      if (box) {
-        box.innerHTML = `
-          <div style="text-align:center; color:#ffb3b3; padding:14px 8px;">
-            Nie udało się pobrać powiadomień.
-          </div>
-        `;
-      }
-      return;
+      console.warn("refreshPlayerNotificationsList_: brak poprawnej odpowiedzi", res);
+      return; // nic nie ruszamy na ekranie
     }
 
     renderPlayerNotificationsList_(res.items || []);
   } catch (e) {
     console.warn("refreshPlayerNotificationsList_ error", e);
-    if (box) {
-      box.innerHTML = `
-        <div style="text-align:center; color:#ffb3b3; padding:14px 8px;">
-          Błąd pobierania powiadomień.
-        </div>
-      `;
-    }
+    // nic nie ruszamy na ekranie
   }
 }
-
+  
 function ensurePlayerNotificationsBellStyle_() {
   let style = document.getElementById("playerNotificationsBellStyle");
 
