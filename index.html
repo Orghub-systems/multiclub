@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.4';
+  window.APP_BUILD = 'BETA APP v2.71.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4484,9 +4484,45 @@ function ensurePlayerNotificationsPulseStyle_() {
   style.id = "playerNotificationsPulseStyle";
   style.textContent = `
     @keyframes playerNotificationsPulse {
-      0%   { box-shadow: 0 0 0 rgba(255,43,43,0); transform: scale(1); }
-      50%  { box-shadow: 0 0 18px rgba(255,43,43,.45); transform: scale(1.02); }
-      100% { box-shadow: 0 0 0 rgba(255,43,43,0); transform: scale(1); }
+      0% {
+        transform: scale(1);
+        box-shadow:
+          0 0 0 0 rgba(255,43,43,0.00),
+          0 0 0 0 rgba(255,43,43,0.00);
+        filter: brightness(1);
+      }
+
+      25% {
+        transform: scale(1.03);
+        box-shadow:
+          0 0 0 6px rgba(255,43,43,0.20),
+          0 0 18px 4px rgba(255,43,43,0.30);
+        filter: brightness(1.06);
+      }
+
+      50% {
+        transform: scale(1.055);
+        box-shadow:
+          0 0 0 12px rgba(255,43,43,0.10),
+          0 0 28px 8px rgba(255,43,43,0.45);
+        filter: brightness(1.12);
+      }
+
+      75% {
+        transform: scale(1.03);
+        box-shadow:
+          0 0 0 7px rgba(255,43,43,0.10),
+          0 0 20px 5px rgba(255,43,43,0.28);
+        filter: brightness(1.07);
+      }
+
+      100% {
+        transform: scale(1);
+        box-shadow:
+          0 0 0 0 rgba(255,43,43,0.00),
+          0 0 0 0 rgba(255,43,43,0.00);
+        filter: brightness(1);
+      }
     }
   `;
   document.head.appendChild(style);
@@ -4641,11 +4677,12 @@ async function refreshPlayerNotificationsBell_() {
   ensurePlayerNotificationsPulseStyle_();
 
   const baseLabel = "🔔 Powiadomienia";
-  btn.textContent = baseLabel;
-  btn.style.animation = "";
-  btn.style.background = "";
-  btn.style.borderColor = "";
-  btn.style.color = "";
+    btn.textContent = baseLabel;
+    btn.style.animation = "";
+    btn.style.background = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+    btn.style.fontWeight = "";
 
   try {
     const res = await fetchPlayerNotificationsUnreadSummary_();
@@ -4653,10 +4690,11 @@ async function refreshPlayerNotificationsBell_() {
 
     if (unread > 0) {
       btn.textContent = `🔔 Powiadomienia (${unread})`;
-      btn.style.background = "#8b0000";
-      btn.style.borderColor = "#ff2b2b";
+      btn.style.background = "linear-gradient(180deg, #a30000 0%, #6f0000 100%)";
+      btn.style.borderColor = "#ff3b3b";
       btn.style.color = "#ffffff";
-      btn.style.animation = "playerNotificationsPulse 1s infinite";
+      btn.style.fontWeight = "900";
+      btn.style.animation = "playerNotificationsPulse 1.15s infinite";
       return;
     }
 
