@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.15';
+  window.APP_BUILD = 'BETA APP v2.71.16';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3975,10 +3975,18 @@ window.openPlayerNotificationsView_ = async function openPlayerNotificationsView
   goToView("playerNotificationsView");
   bindPlayerNotificationsListActions_();
 
+  // 1. najpierw pokaż aktualny stan z backendu
   await refreshPlayerNotificationsList_();
-  await markAllPlayerNotificationsRead_();
-  await refreshPlayerNotificationsList_();
-  await refreshPlayerNotificationsBell_();
+
+  // 2. oznacz jako przeczytane już PO wyrenderowaniu,
+  //    ale bez odświeżania listy na ekranie
+  markAllPlayerNotificationsRead_()
+    .then(function () {
+      return refreshPlayerNotificationsBell_();
+    })
+    .catch(function (e) {
+      console.warn("markAllPlayerNotificationsRead_ error:", e);
+    });
 };
 
 window.openPlayerNotificationSettingsView_ = async function openPlayerNotificationSettingsView_() {
