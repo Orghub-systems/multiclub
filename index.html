@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.6';
+  window.APP_BUILD = 'BETA APP v2.71.7';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4656,33 +4656,69 @@ async function refreshPlayerNotificationsList_() {
   }
 }
 
+function applyPlayerNotificationsBlinkState_(btn, isAlertOn, unread) {
+  if (!btn) return;
+
+  btn.textContent = `🔔 Powiadomienia (${unread})`;
+  btn.style.fontWeight = "900";
+  btn.style.color = "#ffffff";
+  btn.style.transition = "background-color 0.45s ease, border-color 0.45s ease, box-shadow 0.45s ease";
+
+  if (isAlertOn) {
+    btn.style.backgroundColor = "#8b0000";
+    btn.style.borderColor = "#ff2b2b";
+    btn.style.boxShadow = "0 0 18px rgba(255,43,43,0.45)";
+  } else {
+    btn.style.backgroundColor = "#111111";
+    btn.style.borderColor = "#2b2b2b";
+    btn.style.boxShadow = "0 0 0 rgba(255,43,43,0)";
+  }
+}
+
+function stopPlayerNotificationsBlink_() {
+  if (window.__playerNotificationsBlinkTimer) {
+    clearInterval(window.__playerNotificationsBlinkTimer);
+    window.__playerNotificationsBlinkTimer = null;
+  }
+  window.__playerNotificationsBlinkState = false;
+}
+
+function startPlayerNotificationsBlink_(btn, unread) {
+  stopPlayerNotificationsBlink_();
+
+  window.__playerNotificationsBlinkState = false;
+  applyPlayerNotificationsBlinkState_(btn, false, unread);
+
+  window.__playerNotificationsBlinkTimer = setInterval(() => {
+    window.__playerNotificationsBlinkState = !window.__playerNotificationsBlinkState;
+    applyPlayerNotificationsBlinkState_(btn, window.__playerNotificationsBlinkState, unread);
+  }, 1000);
+}
+  
 async function refreshPlayerNotificationsBell_() {
   const btn = document.getElementById("playerMenuNotificationsBtn");
   if (!btn) return;
 
-  ensurePlayerNotificationsPulseStyle_();
-
   const baseLabel = "🔔 Powiadomienia";
-    btn.textContent = baseLabel;
-    btn.style.animation = "";
-    btn.style.background = "";
-    btn.style.borderColor = "";
-    btn.style.color = "";
-    btn.style.fontWeight = "";
-    btn.style.boxShadow = "";
-    btn.style.transform = "";
+
+  stopPlayerNotificationsBlink_();
+
+  btn.textContent = baseLabel;
+  btn.style.background = "";
+  btn.style.backgroundColor = "";
+  btn.style.borderColor = "";
+  btn.style.color = "";
+  btn.style.fontWeight = "";
+  btn.style.boxShadow = "";
+  btn.style.transform = "";
+  btn.style.transition = "";
 
   try {
     const res = await fetchPlayerNotificationsUnreadSummary_();
     const unread = Number(res?.unreadCount || 0);
 
     if (unread > 0) {
-      btn.textContent = `🔔 Powiadomienia (${unread})`;
-      btn.style.background = "#111111";
-      btn.style.borderColor = "#2b2b2b";
-      btn.style.color = "#ffffff";
-      btn.style.fontWeight = "900";
-      btn.style.animation = "playerNotificationsPulse 2s infinite";
+      startPlayerNotificationsBlink_(btn, unread);
       return;
     }
 
