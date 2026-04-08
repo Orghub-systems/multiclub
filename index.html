@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.72.1';
+  window.APP_BUILD = 'BETA APP v2.72.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5192,15 +5192,10 @@ async function zaloguj() {
       grupaZalogowanego = data.grupa || "";
       window.userPushConsent = !!data.pushConsent;
       window.userEmailConsent = !!data.emailConsent;
-
+    
       try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
       try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
-
-      await ensurePushMetaCache_(
-        window.clubId || localStorage.getItem("clubId") || clubId || "",
-        window.numerZalogowanego || numerZalogowanego || data.login || ""
-      );
-
+    
       window.__platnosciCache = null;
       window.__prefetch = {
         t: 0,
@@ -5208,47 +5203,102 @@ async function zaloguj() {
         treningiP: null,
         statystykiP: null
       };
-
+    
+      // 1. natychmiast pokaż ekran
       goToView("playerMenuView");
       loadClubAd();
-
-      const activeClubId =
-        window.clubId ||
-        localStorage.getItem("clubId") ||
-        clubId ||
-        "";
-
-      let renderedLocal = false;
-
+    
+      // 2. natychmiast pokaż minimum z danych logowania
       try {
-        const localSnapshot = await readPlayerMenuSnapshotLocal_(activeClubId, data.login);
-        if (localSnapshot) {
-          await renderPlayerMenuFromSnapshot_(localSnapshot);
-          renderedLocal = true;
+        const activeClubId =
+          window.clubId ||
+          localStorage.getItem("clubId") ||
+          clubId ||
+          "";
+    
+        const fastSnapshot = buildLocalPlayerMenuSnapshotFromLogin_(activeClubId, data);
+    
+        const numerLabel = document.getElementById("playerNumerLabel");
+        if (numerLabel) numerLabel.textContent = String(data.login || "").trim();
+    
+        const badge = document.getElementById("clubIdBadge_menu");
+        if (badge) badge.textContent = String(activeClubId || "").trim().toUpperCase();
+    
+        setPlayerMenuHintText_("playerMenuPaymentsHint", fastSnapshot?.payments?.label || "", false);
+        setPlayerMenuHintText_("playerMenuEventsHint", fastSnapshot?.events?.label || "", false);
+        setPlayerMenuHintText_("playerMenuStatsHint", fastSnapshot?.stats?.label || "", false);
+    
+        if (typeof fastSnapshot.unreadCount === "number") {
+          setPlayerNotificationsButtonState_(fastSnapshot.unreadCount);
         }
       } catch (e) {
-        console.warn("readPlayerMenuSnapshotLocal_ error:", e);
+        console.warn("fast menu render error:", e);
       }
-
-      if (!renderedLocal) {
-        try {
-          const fallbackSnapshot = buildLocalPlayerMenuSnapshotFromLogin_(activeClubId, data);
-          await savePlayerMenuSnapshotLocal_(activeClubId, data.login, fallbackSnapshot);
-          await renderPlayerMenuFromSnapshot_(fallbackSnapshot);
-        } catch (e) {
-          console.warn("fallback player menu snapshot error:", e);
-        }
-      }
-
-      try {
-        const freshSnapshot = await syncPlayerMenuSnapshotFromServer_(activeClubId, data.login);
-        if (freshSnapshot) {
-          await renderPlayerMenuFromSnapshot_(freshSnapshot);
-        }
-      } catch (e) {
-        console.warn("syncPlayerMenuSnapshotFromServer_ error:", e);
-      }
-
+    
+      // 3. cała reszta dopiero po pierwszym paint
+      requestAnimationFrame(() => {
+        requestAnimationFrame(async () => {
+          try {
+            const activeClubId =
+              window.clubId ||
+              localStorage.getItem("clubId") ||
+              clubId ||
+              "";
+    
+            await ensurePushMetaCache_(
+              activeClubId,
+              window.numerZalogowanego || numerZalogowanego || data.login || ""
+            );
+    
+            let renderedLocal = false;
+    
+            try {
+              const localSnapshot = await readPlayerMenuSnapshotLocal_(activeClubId, data.login);
+              if (localSnapshot) {
+                await renderPlayerMenuFromSnapshot_(localSnapshot);
+                renderedLocal = true;
+              }
+            } catch (e) {
+              console.warn("readPlayerMenuSnapshotLocal_ error:", e);
+            }
+    
+            if (!renderedLocal) {
+              try {
+                const fallbackSnapshot = buildLocalPlayerMenuSnapshotFromLogin_(activeClubId, data);
+                await savePlayerMenuSnapshotLocal_(activeClubId, data.login, fallbackSnapshot);
+                await renderPlayerMenuFromSnapshot_(fallbackSnapshot);
+              } catch (e) {
+                console.warn("fallback player menu snapshot error:", e);
+              }
+            }
+    
+            try {
+              const freshSnapshot = await syncPlayerMenuSnapshotFromServer_(activeClubId, data.login);
+              if (freshSnapshot) {
+                await renderPlayerMenuFromSnapshot_(freshSnapshot);
+              }
+            } catch (e) {
+              console.warn("syncPlayerMenuSnapshotFromServer_ error:", e);
+            }
+    
+            try {
+              await refreshPlayerMenuPushAlert_();
+            } catch (e) {
+              console.warn("refreshPlayerMenuPushAlert_ error:", e);
+            }
+    
+            try {
+              await refreshPlayerNotificationsBell_();
+            } catch (e) {
+              console.warn("refreshPlayerNotificationsBell_ error:", e);
+            }
+    
+          } catch (e) {
+            console.warn("post-login background init error:", e);
+          }
+        });
+      });
+    
       return;
     }
 
