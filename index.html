@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.13';
+  window.APP_BUILD = 'BETA APP v2.71.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3973,6 +3973,7 @@ async function saveUserNotificationPrefsToServer_(opts) {
 
 window.openPlayerNotificationsView_ = async function openPlayerNotificationsView_() {
   goToView("playerNotificationsView");
+  bindPlayerNotificationsListActions_();
 
   await refreshPlayerNotificationsList_();
   await markAllPlayerNotificationsRead_();
@@ -4532,19 +4533,9 @@ async function markAllPlayerNotificationsRead_() {
   return res || { success: false };
 }
 
-function deletePlayerNotification_(ev, btnEl, id) {
-  try {
-    if (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (typeof ev.stopImmediatePropagation === "function") {
-        ev.stopImmediatePropagation();
-      }
-    }
-  } catch (e) {}
-
+function deletePlayerNotification_(btnEl, id) {
   const msgId = String(id || "").trim();
-  if (!msgId) return false;
+  if (!msgId) return;
 
   const rowEl = btnEl ? btnEl.closest(".player-notification-card") : null;
 
@@ -4571,7 +4562,7 @@ function deletePlayerNotification_(ev, btnEl, id) {
     }, 180);
   }
 
-  // backend leci w tle
+  // backend w tle
   (async () => {
     try {
       const numer = getCurrentNotificationLoginId_();
@@ -4588,8 +4579,6 @@ function deletePlayerNotification_(ev, btnEl, id) {
       console.error("deletePlayerNotification_ error", e);
     }
   })();
-
-  return false;
 }
   
 function renderPlayerNotificationsList_(items) {
@@ -4646,9 +4635,9 @@ function renderPlayerNotificationsList_(items) {
 
         <div style="display:flex; justify-content:flex-end;">
           <button
-            class="full-btn alt"
+            class="full-btn alt player-notification-delete-btn"
             type="button"
-            onclick="return deletePlayerNotification_(event, this, '${id}')"
+            data-notification-id="${id}"
             style="margin:0; width:auto; min-width:110px; padding:10px 14px;"
           >
             🗑 Usuń
@@ -4817,6 +4806,27 @@ function startPlayerNotificationsBellLoop_() {
 async function refreshPlayerNotificationsBell_() {
   const unread = await fetchAndStorePlayerNotificationsUnread_();
   setPlayerNotificationsButtonState_(unread);
+}
+
+function bindPlayerNotificationsListActions_() {
+  const box = document.getElementById("playerNotificationsList");
+  if (!box || box.dataset.boundDelete === "1") return;
+
+  box.dataset.boundDelete = "1";
+
+  box.addEventListener("click", function (ev) {
+    const btn = ev.target.closest(".player-notification-delete-btn");
+    if (!btn) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (typeof ev.stopImmediatePropagation === "function") {
+      ev.stopImmediatePropagation();
+    }
+
+    const msgId = String(btn.dataset.notificationId || "").trim();
+    deletePlayerNotification_(btn, msgId);
+  });
 }
   
 /* =================== KONIEC SEKTORA 80 =================== */
