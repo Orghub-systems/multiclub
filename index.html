@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.9';
+  window.APP_BUILD = 'BETA APP v2.71.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4658,48 +4658,38 @@ async function refreshPlayerNotificationsList_() {
   }
 }
 
-function stopPlayerNotificationsBlink_() {
-  if (window.__playerNotificationsBlinkTimer) {
-    clearInterval(window.__playerNotificationsBlinkTimer);
-    window.__playerNotificationsBlinkTimer = null;
+function setPlayerNotificationsButtonState_(unread, blinkOn) {
+  const btn = document.getElementById("playerMenuNotificationsBtn");
+  if (!btn) return;
+
+  const unreadCount = Math.max(0, Number(unread || 0));
+
+  if (unreadCount <= 0) {
+    btn.textContent = "🔔 Powiadomienia";
+    btn.style.background = "";
+    btn.style.backgroundColor = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+    btn.style.fontWeight = "";
+    btn.style.boxShadow = "";
+    btn.style.transform = "";
+    btn.style.transition = "";
+    return;
   }
-  window.__playerNotificationsBlinkState = false;
-}
-
-function resetPlayerNotificationsButton_() {
-  const btn = document.getElementById("playerMenuNotificationsBtn");
-  if (!btn) return;
-
-  btn.textContent = "🔔 Powiadomienia";
-  btn.style.background = "";
-  btn.style.backgroundColor = "";
-  btn.style.borderColor = "";
-  btn.style.color = "";
-  btn.style.fontWeight = "";
-  btn.style.boxShadow = "";
-  btn.style.transform = "";
-  btn.style.transition = "";
-}
-
-function applyPlayerNotificationsBlinkFrame_(unread) {
-  const btn = document.getElementById("playerMenuNotificationsBtn");
-  if (!btn) return;
-
-  const on = !!window.__playerNotificationsBlinkState;
 
   btn.style.fontWeight = "900";
   btn.style.color = "#ffffff";
   btn.style.transition = "all 0.35s ease";
 
-  if (on) {
-    btn.textContent = `🚨 Powiadomienia (${unread})`;
+  if (blinkOn) {
+    btn.textContent = `🚨 Powiadomienia (${unreadCount})`;
     btn.style.background = "#a30000";
     btn.style.backgroundColor = "#a30000";
     btn.style.borderColor = "#ff2b2b";
     btn.style.boxShadow = "0 0 22px rgba(255,43,43,0.55)";
     btn.style.transform = "scale(1.03)";
   } else {
-    btn.textContent = `🔔 Powiadomienia (${unread})`;
+    btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
     btn.style.background = "#111111";
     btn.style.backgroundColor = "#111111";
     btn.style.borderColor = "#2b2b2b";
@@ -4708,67 +4698,83 @@ function applyPlayerNotificationsBlinkFrame_(unread) {
   }
 }
 
-function startPlayerNotificationsBlink_(unread) {
-  stopPlayerNotificationsBlink_();
+async function fetchAndStorePlayerNotificationsUnread_() {
+  try {
+    const res = await fetchPlayerNotificationsUnreadSummary_();
+    const unread = Math.max(0, Number(res?.unreadCount || 0));
+    window.__playerNotificationsUnread = unread;
+    return unread;
+  } catch (e) {
+    console.warn("fetchAndStorePlayerNotificationsUnread_ error", e);
+    window.__playerNotificationsUnread = 0;
+    return 0;
+  }
+}
 
-  window.__playerNotificationsBlinkState = false;
-  applyPlayerNotificationsBlinkFrame_(unread);
+function stopPlayerNotificationsBellLoop_() {
+  if (window.__playerNotificationsBellLoop) {
+    clearInterval(window.__playerNotificationsBellLoop);
+    window.__playerNotificationsBellLoop = null;
+  }
 
-  window.__playerNotificationsBlinkTimer = setInterval(function () {
-    window.__playerNotificationsBlinkState = !window.__playerNotificationsBlinkState;
-    applyPlayerNotificationsBlinkFrame_(unread);
-  }, 1000); // 1s ciemny + 1s czerwony = pełny cykl 2s
+  window.__playerNotificationsUnread = 0;
+  window.__playerNotificationsBlinkOn = false;
+  window.__playerNotificationsBellTick = 0;
+  window.__playerNotificationsBellBusy = false;
+
+  setPlayerNotificationsButtonState_(0, false);
+}
+
+function startPlayerNotificationsBellLoop_() {
+  stopPlayerNotificationsBellLoop_();
+
+  window.__playerNotificationsUnread = 0;
+  window.__playerNotificationsBlinkOn = false;
+  window.__playerNotificationsBellTick = 0;
+  window.__playerNotificationsBellBusy = false;
+
+  const tick = async function () {
+    const playerMenu = document.getElementById("playerMenuView");
+    const isVisible = !!(playerMenu && !playerMenu.classList.contains("hidden"));
+    if (!isVisible) return;
+    if (window.__playerNotificationsBellBusy) return;
+
+    window.__playerNotificationsBellBusy = true;
+
+    try {
+      window.__playerNotificationsBellTick = Number(window.__playerNotificationsBellTick || 0) + 1;
+
+      if (window.__playerNotificationsBellTick === 1 || window.__playerNotificationsBellTick % 5 === 0) {
+        await fetchAndStorePlayerNotificationsUnread_();
+      }
+
+      const unread = Math.max(0, Number(window.__playerNotificationsUnread || 0));
+
+      if (unread > 0) {
+        window.__playerNotificationsBlinkOn = !window.__playerNotificationsBlinkOn;
+        setPlayerNotificationsButtonState_(unread, !!window.__playerNotificationsBlinkOn);
+      } else {
+        window.__playerNotificationsBlinkOn = false;
+        setPlayerNotificationsButtonState_(0, false);
+      }
+    } finally {
+      window.__playerNotificationsBellBusy = false;
+    }
+  };
+
+  tick();
+
+  window.__playerNotificationsBellLoop = setInterval(function () {
+    tick().catch(function (e) {
+      console.warn("player notifications bell loop error", e);
+    });
+  }, 1000); // 1 s ciemny + 1 s czerwony = pełny cykl 2 s
 }
 
 async function refreshPlayerNotificationsBell_() {
-  const btn = document.getElementById("playerMenuNotificationsBtn");
-  if (!btn) return;
-
-  stopPlayerNotificationsBlink_();
-  resetPlayerNotificationsButton_();
-
-  try {
-    const res = await fetchPlayerNotificationsUnreadSummary_();
-    const unread = Number(res?.unreadCount || 0);
-
-    console.log("refreshPlayerNotificationsBell_ unread =", unread, res);
-
-    if (unread > 0) {
-      startPlayerNotificationsBlink_(unread);
-      return;
-    }
-
-    resetPlayerNotificationsButton_();
-  } catch (e) {
-    console.warn("refreshPlayerNotificationsBell_ error", e);
-    resetPlayerNotificationsButton_();
-  }
-}
-
-function stopPlayerNotificationsBellWatcher_() {
-  if (window.__playerNotificationsBellWatcher) {
-    clearInterval(window.__playerNotificationsBellWatcher);
-    window.__playerNotificationsBellWatcher = null;
-  }
-}
-
-function startPlayerNotificationsBellWatcher_() {
-  stopPlayerNotificationsBellWatcher_();
-
-  refreshPlayerNotificationsBell_().catch(function (e) {
-    console.warn("startPlayerNotificationsBellWatcher_ initial error", e);
-  });
-
-  window.__playerNotificationsBellWatcher = setInterval(function () {
-    const playerMenu = document.getElementById("playerMenuView");
-    const isVisible = !!(playerMenu && !playerMenu.classList.contains("hidden"));
-
-    if (!isVisible) return;
-
-    refreshPlayerNotificationsBell_().catch(function (e) {
-      console.warn("player notifications bell watcher error", e);
-    });
-  }, 4000);
+  const unread = await fetchAndStorePlayerNotificationsUnread_();
+  window.__playerNotificationsBlinkOn = false;
+  setPlayerNotificationsButtonState_(unread, false);
 }
   
 /* =================== KONIEC SEKTORA 80 =================== */
@@ -4858,8 +4864,7 @@ async function refreshPlayerNotificationsUi_() {
 /* =================== 90 LOGOWANIE / REJESTRACJA =================== */
   
 function pokazLogowanie() {
-  stopPlayerNotificationsBellWatcher_();
-  stopPlayerNotificationsBlink_();
+  stopPlayerNotificationsBellLoop_();
   
   numerZalogowanego = null;
   grupaZalogowanego = null;
@@ -4945,9 +4950,9 @@ async function zaloguj() {
       }
       
       try {
-        startPlayerNotificationsBellWatcher_();
+        startPlayerNotificationsBellLoop_();
       } catch (e) {
-        console.warn("startPlayerNotificationsBellWatcher_ error:", e);
+        console.warn("startPlayerNotificationsBellLoop_ error:", e);
       }
     
       return;
