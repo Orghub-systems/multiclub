@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.19';
+  window.APP_BUILD = 'BETA APP v2.72.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2332,6 +2332,209 @@ function applyTheme_(theme) {
 
   } catch (e) {}
 }
+
+/* =================== APP SESSION / LOCAL =================== */
+
+const ORGHUB_SESSION_KEY = "orghub_app_session_v1";
+
+function saveAppSession_(sessionObj) {
+  try {
+    if (!sessionObj || typeof sessionObj !== "object") return false;
+    localStorage.setItem(ORGHUB_SESSION_KEY, JSON.stringify(sessionObj));
+    return true;
+  } catch (e) {
+    console.warn("saveAppSession_ error", e);
+    return false;
+  }
+}
+
+function loadAppSession_() {
+  try {
+    const raw = localStorage.getItem(ORGHUB_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (e) {
+    console.warn("loadAppSession_ error", e);
+    return null;
+  }
+}
+
+function clearAppSession_() {
+  try {
+    localStorage.removeItem(ORGHUB_SESSION_KEY);
+  } catch (e) {
+    console.warn("clearAppSession_ error", e);
+  }
+}
+
+function applyAppSessionToGlobals_(sess) {
+  const s = sess || {};
+
+  if (s.clubId) {
+    window.clubId = String(s.clubId || "").trim();
+    saveClubId_(window.clubId);
+  }
+
+  if (s.role === "zawodnik") {
+    numerZalogowanego = String(s.loginId || "").trim();
+    window.numerZalogowanego = String(s.loginId || "").trim();
+    grupaZalogowanego = String(s.grupa || "").trim();
+  } else {
+    numerZalogowanego = null;
+    window.numerZalogowanego = "";
+    grupaZalogowanego = null;
+  }
+
+  if (s.role === "trener") {
+    window.grupyTrenera = String(s.grupa || "").trim();
+    window.zalogowanyTrenerName = String(s.displayName || "").trim();
+    try { sessionStorage.setItem("zalogowanyTrenerName", window.zalogowanyTrenerName); } catch (e) {}
+  } else {
+    window.grupyTrenera = "";
+    window.zalogowanyTrenerName = "";
+    try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch (e) {}
+  }
+
+  window.userPushConsent = !!s.pushConsent;
+  window.userEmailConsent = !!s.emailConsent;
+
+  try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
+  try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
+}
+
+function openPanelFromAppSession_(sess) {
+  const s = sess || {};
+  const role = String(s.role || "").trim();
+
+  refreshClubBadge_();
+
+  if (role === "zawodnik") {
+    goToView("playerMenuView", { replace: true });
+
+    const numerLabel = document.getElementById("playerNumerLabel");
+    if (numerLabel) {
+      numerLabel.textContent = String(s.loginId || "").trim();
+    }
+
+    const badge = document.getElementById("clubIdBadge_menu");
+    if (badge) {
+      badge.textContent = String(s.clubId || "").trim().toUpperCase();
+    }
+
+    loadClubAd();
+
+    refreshPlayerMenuPushAlert_().catch(function (e) {
+      console.warn("refreshPlayerMenuPushAlert_ error:", e);
+    });
+
+    refreshPlayerNotificationsBell_().catch(function (e) {
+      console.warn("refreshPlayerNotificationsBell_ error:", e);
+    });
+
+    return;
+  }
+
+  if (role === "trener") {
+    goToView("trainerPanelView", { replace: true });
+    return;
+  }
+
+  if (role === "admin") {
+    goToView("adminPanelView", { replace: true });
+    return;
+  }
+
+  goToView("loginView", { replace: true });
+}
+
+async function validateStoredSessionInBackground_(sess) {
+  const s = sess || {};
+  const cid = String(s.clubId || "").trim();
+  const token = String(s.sessionToken || "").trim();
+
+  if (!cid || !token) {
+    clearAppSession_();
+    if (getClubIdFromUrl_()) {
+      goToView("loginView", { replace: true });
+    } else {
+      goToView("orgHubLandingView", { replace: true });
+    }
+    return false;
+  }
+
+  try {
+    const res = await apiClubPost({
+      action: "validateSession",
+      sessionToken: token
+    });
+
+    if (!res || res.success !== true || res.valid !== true) {
+      clearAppSession_();
+
+      numerZalogowanego = null;
+      window.numerZalogowanego = "";
+      grupaZalogowanego = null;
+      window.grupyTrenera = "";
+      window.zalogowanyTrenerName = "";
+      window.userPushConsent = false;
+      window.userEmailConsent = false;
+
+      try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch (e) {}
+      try { sessionStorage.removeItem("userPushConsent"); } catch (e) {}
+      try { sessionStorage.removeItem("userEmailConsent"); } catch (e) {}
+
+      goToView("loginView", { replace: true });
+      return false;
+    }
+
+    const freshSession = {
+      ...s,
+      expiresAt: res.expiresAt || s.expiresAt || "",
+      validatedAt: new Date().toISOString()
+    };
+
+    saveAppSession_(freshSession);
+    return true;
+  } catch (e) {
+    console.warn("validateStoredSessionInBackground_ error", e);
+    return false;
+  }
+}
+
+async function logoutAppSession_() {
+  const sess = loadAppSession_();
+  const token = String(sess?.sessionToken || "").trim();
+
+  clearAppSession_();
+
+  numerZalogowanego = null;
+  window.numerZalogowanego = "";
+  grupaZalogowanego = null;
+  window.grupyTrenera = "";
+  window.zalogowanyTrenerName = "";
+  window.userPushConsent = false;
+  window.userEmailConsent = false;
+
+  try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch (e) {}
+  try { sessionStorage.removeItem("userPushConsent"); } catch (e) {}
+  try { sessionStorage.removeItem("userEmailConsent"); } catch (e) {}
+
+  if (token) {
+    try {
+      await apiClubPost({
+        action: "logoutSession",
+        sessionToken: token
+      });
+    } catch (e) {
+      console.warn("logoutSession backend error", e);
+    }
+  }
+
+  pokazLogowanie();
+}
+
+/* =================== KONIEC APP SESSION / LOCAL =================== */
   
 /* =================== KONIEC SEKTORA 30 =================== */
 
@@ -2725,7 +2928,7 @@ window.addEventListener("popstate", (event) => {
 
 /* =================== 60 APP BOOT / START =================== */
 
-// Wstępne pobranie danych reklamy klubu  
+// Wstępne pobranie danych reklamy klubu
 async function preloadClubAd() {
   try {
     const clubId = getClubIdFromUrl_();
@@ -2752,19 +2955,17 @@ async function preloadClubAd() {
   }
 }
 
-// Start aplikacji i ustawienie widoku początkowego 
+// Start aplikacji i ustawienie widoku początkowego
 async function startApp_() {
   const clubFromUrl = getClubIdFromUrl_();
 
   preloadClubAd();
 
-  // jeśli NIE ma clubId w URL → to jest link ogólny: reset + odblokuj konfigurację
   if (!clubFromUrl) {
     saveClubId_("");
     unlockCfg_();
     clearLocalClubConfig();
   } else {
-    // jeśli jest clubId → ustaw i zapamiętaj stabilnie
     saveClubId_(clubFromUrl);
   }
 
@@ -2773,15 +2974,12 @@ async function startApp_() {
   const effectiveClubId = (clubFromUrl || clubId || "").trim();
   const localTheme = loadTheme_();
 
-  // 1) jeśli mamy zapisany lokalny branding klubu → użyj go od razu
   if (effectiveClubId && localTheme) {
     applyTheme_(localTheme);
   } else if (!effectiveClubId) {
     document.body.style.backgroundColor = "#ffffff";
   }
 
-  // 2) jeśli mamy clubId, ale nie mamy jeszcze theme lokalnie,
-  //    pobierz lekki branding startowy przed pokazaniem loginu
   if (effectiveClubId && !localTheme) {
     try {
       const boot = await apiClubGet("brandingBoot", {});
@@ -2799,11 +2997,32 @@ async function startApp_() {
     }
   }
 
-  // 3) pokaż widok dopiero po zastosowaniu theme lokalnego lub brandingBoot
   refreshClubBadge_();
-  goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
 
-  // 4) lekkie odświeżenie theme w tle — tylko jeśli mamy clubId i theme już istniał lokalnie
+  // ========= NOWE: szybkie wejście z lokalnej sesji =========
+  const savedSession = loadAppSession_();
+  const sessionForThisClub =
+    savedSession &&
+    effectiveClubId &&
+    String(savedSession.clubId || "").trim() === effectiveClubId
+      ? savedSession
+      : null;
+
+  if (sessionForThisClub) {
+    applyAppSessionToGlobals_(sessionForThisClub);
+    openPanelFromAppSession_(sessionForThisClub);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        validateStoredSessionInBackground_(sessionForThisClub).catch(function (e) {
+          console.warn("validateStoredSessionInBackground_ error", e);
+        });
+      });
+    });
+  } else {
+    goToView(effectiveClubId ? "loginView" : "orgHubLandingView", { replace: true });
+  }
+
   if (effectiveClubId && localTheme) {
     try {
       const boot = await apiClubGet("brandingBoot", {});
@@ -4936,15 +5155,27 @@ async function zaloguj() {
       grupaZalogowanego = data.grupa || "";
       window.userPushConsent = !!data.pushConsent;
       window.userEmailConsent = !!data.emailConsent;
-    
+
       try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
       try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
-    
+
       await ensurePushMetaCache_(
         window.clubId || localStorage.getItem("clubId") || clubId || "",
         window.numerZalogowanego || numerZalogowanego || data.login || ""
       );
-    
+
+      saveAppSession_({
+        clubId: String(window.clubId || localStorage.getItem("clubId") || clubId || "").trim(),
+        role: "zawodnik",
+        loginId: String(data.login || "").trim(),
+        grupa: String(data.grupa || "").trim(),
+        pushConsent: !!data.pushConsent,
+        emailConsent: !!data.emailConsent,
+        sessionToken: String(data.sessionToken || "").trim(),
+        expiresAt: String(data.sessionExpiresAt || "").trim(),
+        validatedAt: new Date().toISOString()
+      });
+
       window.__platnosciCache = null;
       window.__prefetch = {
         t: 0,
@@ -4952,22 +5183,22 @@ async function zaloguj() {
         treningiP: null,
         statystykiP: null
       };
-    
+
       goToView("playerMenuView");
       loadClubAd();
-      
+
       try {
         await refreshPlayerMenuPushAlert_();
       } catch (e) {
         console.warn("refreshPlayerMenuPushAlert_ error:", e);
       }
-      
+
       try {
         await refreshPlayerNotificationsBell_();
       } catch (e) {
         console.warn("refreshPlayerNotificationsBell_ error:", e);
       }
-    
+
       return;
     }
 
@@ -4981,11 +5212,37 @@ async function zaloguj() {
       try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
       try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
 
+      saveAppSession_({
+        clubId: String(window.clubId || localStorage.getItem("clubId") || clubId || "").trim(),
+        role: "trener",
+        loginId: String(data.login || login || "").trim(),
+        grupa: String(data.grupa || "").trim(),
+        displayName: String(data.nazwisko || "").trim(),
+        pushConsent: !!data.pushConsent,
+        emailConsent: !!data.emailConsent,
+        sessionToken: String(data.sessionToken || "").trim(),
+        expiresAt: String(data.sessionExpiresAt || "").trim(),
+        validatedAt: new Date().toISOString()
+      });
+
       goToView("trainerPanelView");
       return;
     }
 
     if (data.role === "admin") {
+      saveAppSession_({
+        clubId: String(window.clubId || localStorage.getItem("clubId") || clubId || "").trim(),
+        role: "admin",
+        loginId: String(data.login || login || "").trim(),
+        grupa: "",
+        displayName: "Administrator",
+        pushConsent: !!data.pushConsent,
+        emailConsent: !!data.emailConsent,
+        sessionToken: String(data.sessionToken || "").trim(),
+        expiresAt: String(data.sessionExpiresAt || "").trim(),
+        validatedAt: new Date().toISOString()
+      });
+
       goToView("adminPanelView");
       return;
     }
