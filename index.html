@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.5';
+  window.APP_BUILD = 'BETA APP v2.71.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4476,56 +4476,42 @@ function urlBase64ToUint8Array_(base64String) {
 
   return outputArray;
 }
-
 function ensurePlayerNotificationsPulseStyle_() {
-  if (document.getElementById("playerNotificationsPulseStyle")) return;
+  let style = document.getElementById("playerNotificationsPulseStyle");
 
-  const style = document.createElement("style");
-  style.id = "playerNotificationsPulseStyle";
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "playerNotificationsPulseStyle";
+    document.head.appendChild(style);
+  }
+
   style.textContent = `
     @keyframes playerNotificationsPulse {
       0% {
+        background: #111111;
+        border-color: #2b2b2b;
+        color: #ffffff;
+        box-shadow: 0 0 0 rgba(255,43,43,0);
         transform: scale(1);
-        box-shadow:
-          0 0 0 0 rgba(255,43,43,0.00),
-          0 0 0 0 rgba(255,43,43,0.00);
-        filter: brightness(1);
-      }
-
-      25% {
-        transform: scale(1.03);
-        box-shadow:
-          0 0 0 6px rgba(255,43,43,0.20),
-          0 0 18px 4px rgba(255,43,43,0.30);
-        filter: brightness(1.06);
       }
 
       50% {
-        transform: scale(1.055);
-        box-shadow:
-          0 0 0 12px rgba(255,43,43,0.10),
-          0 0 28px 8px rgba(255,43,43,0.45);
-        filter: brightness(1.12);
-      }
-
-      75% {
-        transform: scale(1.03);
-        box-shadow:
-          0 0 0 7px rgba(255,43,43,0.10),
-          0 0 20px 5px rgba(255,43,43,0.28);
-        filter: brightness(1.07);
+        background: #8b0000;
+        border-color: #ff2b2b;
+        color: #ffffff;
+        box-shadow: 0 0 18px rgba(255,43,43,0.45);
+        transform: scale(1.015);
       }
 
       100% {
+        background: #111111;
+        border-color: #2b2b2b;
+        color: #ffffff;
+        box-shadow: 0 0 0 rgba(255,43,43,0);
         transform: scale(1);
-        box-shadow:
-          0 0 0 0 rgba(255,43,43,0.00),
-          0 0 0 0 rgba(255,43,43,0.00);
-        filter: brightness(1);
       }
     }
   `;
-  document.head.appendChild(style);
 }
 
 function escapeHtml_(value) {
@@ -4683,6 +4669,8 @@ async function refreshPlayerNotificationsBell_() {
     btn.style.borderColor = "";
     btn.style.color = "";
     btn.style.fontWeight = "";
+    btn.style.boxShadow = "";
+    btn.style.transform = "";
 
   try {
     const res = await fetchPlayerNotificationsUnreadSummary_();
@@ -4690,11 +4678,11 @@ async function refreshPlayerNotificationsBell_() {
 
     if (unread > 0) {
       btn.textContent = `🔔 Powiadomienia (${unread})`;
-      btn.style.background = "linear-gradient(180deg, #a30000 0%, #6f0000 100%)";
-      btn.style.borderColor = "#ff3b3b";
+      btn.style.background = "#111111";
+      btn.style.borderColor = "#2b2b2b";
       btn.style.color = "#ffffff";
       btn.style.fontWeight = "900";
-      btn.style.animation = "playerNotificationsPulse 1.15s infinite";
+      btn.style.animation = "playerNotificationsPulse 2s infinite";
       return;
     }
 
