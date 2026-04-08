@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.18';
+  window.APP_BUILD = 'BETA APP v2.71.19';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9902,38 +9902,56 @@ function applyManualPushGroupsPopup() {
 
   closeManualPushGroupsPopup();
 }
+function setTransientManualPushMessage_(text, isError) {
+  const msgEl = document.getElementById("manualPushMsg");
+  if (!msgEl) return;
+
+  if (window.__manualPushMsgTimer) {
+    clearTimeout(window.__manualPushMsgTimer);
+    window.__manualPushMsgTimer = null;
+  }
+
+  msgEl.textContent = String(text || "");
+  msgEl.style.color = isError ? "#ffb3b3" : "#ffffff";
+
+  if (!isError && text) {
+    window.__manualPushMsgTimer = setTimeout(() => {
+      msgEl.textContent = "";
+      window.__manualPushMsgTimer = null;
+    }, 2500);
+  }
+}
 
 async function sendManualPush() {
   const mode = (document.getElementById("manualPushMode")?.value || "single").trim();
   const numer = (document.getElementById("manualPushNumer")?.value || "").trim();
   const clubIdValue = (document.getElementById("manualPushClub")?.value || "").trim();
   const body = (document.getElementById("manualPushBody")?.value || "").trim();
-  const msgEl = document.getElementById("manualPushMsg");
 
-  if (msgEl) msgEl.textContent = "";
+  setTransientManualPushMessage_("", false);
 
   if (!clubIdValue) {
-    if (msgEl) msgEl.textContent = "Brak clubId";
+    setTransientManualPushMessage_("Brak clubId", true);
     return;
   }
 
   if (!body) {
-    if (msgEl) msgEl.textContent = "Podaj treść powiadomienia";
+    setTransientManualPushMessage_("Podaj treść powiadomienia", true);
     return;
   }
 
   if (mode === "single" && !numer) {
-    if (msgEl) msgEl.textContent = "Podaj numer zawodnika";
+    setTransientManualPushMessage_("Podaj numer zawodnika", true);
     return;
   }
 
   if (mode === "group" && (!window.__manualPushGroups || !window.__manualPushGroups.length)) {
-    if (msgEl) msgEl.textContent = "Wybierz przynajmniej jedną grupę";
+    setTransientManualPushMessage_("Wybierz przynajmniej jedną grupę", true);
     return;
   }
 
   try {
-    if (msgEl) msgEl.textContent = "Wysyłanie...";
+    setTransientManualPushMessage_("Wysyłanie...", false);
 
     const senderRole =
       window.__manualPushRole === "trainer"
@@ -9944,7 +9962,13 @@ async function sendManualPush() {
       senderRole === "trainer"
         ? String(
             window.zalogowanyTrenerName ||
-            (function(){ try { return sessionStorage.getItem("zalogowanyTrenerName") || ""; } catch(e) { return ""; } })()
+            (function () {
+              try {
+                return sessionStorage.getItem("zalogowanyTrenerName") || "";
+              } catch (e) {
+                return "";
+              }
+            })()
           ).trim()
         : "Administrator";
 
@@ -9965,14 +9989,12 @@ async function sendManualPush() {
       throw new Error(res?.error || "Błąd wysyłki");
     }
 
-    if (msgEl) {
-      if (mode === "group") {
-        msgEl.textContent = "✅ Powiadomienie zapisane i wysłane do wybranych grup";
-      } else if (mode === "single") {
-        msgEl.textContent = "✅ Powiadomienie zapisane i wysłane do zawodnika";
-      } else {
-        msgEl.textContent = "✅ Powiadomienie zapisane i wysłane do całego klubu";
-      }
+    if (mode === "group") {
+      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do wybranych grup", false);
+    } else if (mode === "single") {
+      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do zawodnika", false);
+    } else {
+      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do całego klubu", false);
     }
 
     const bodyEl = document.getElementById("manualPushBody");
@@ -9986,7 +10008,7 @@ async function sendManualPush() {
 
   } catch (err) {
     console.error("sendManualPush error:", err);
-    if (msgEl) msgEl.textContent = "❌ " + (err?.message || "Błąd wysyłki");
+    setTransientManualPushMessage_("❌ " + (err?.message || "Błąd wysyłki"), true);
   }
 }
 
