@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.7';
+  window.APP_BUILD = 'BETA APP v2.71.8';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3863,8 +3863,8 @@ const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
 function getCurrentNotificationLoginId_() {
   const numer =
-    (typeof numerZalogowanego !== "undefined" && String(numerZalogowanego || "").trim()) ||
     (window.numerZalogowanego && String(window.numerZalogowanego || "").trim()) ||
+    (typeof numerZalogowanego !== "undefined" && String(numerZalogowanego || "").trim()) ||
     "";
 
   return numer;
@@ -3970,12 +3970,13 @@ async function saveUserNotificationPrefsToServer_(opts) {
 
   return res;
 }
-  
+
 window.openPlayerNotificationsView_ = async function openPlayerNotificationsView_() {
   goToView("playerNotificationsView");
 
   await refreshPlayerNotificationsList_();
   await markAllPlayerNotificationsRead_();
+  await refreshPlayerNotificationsList_();
   await refreshPlayerNotificationsBell_();
 };
 
@@ -3989,7 +3990,7 @@ window.openPlayerNotificationSettingsView_ = async function openPlayerNotificati
   }
 
   await refreshPlayerNotificationsUi_();
-};  
+};
 
 function hookPushButton_() {
   const btnEnable = document.getElementById("btnEnablePush");
@@ -4117,7 +4118,7 @@ async function syncExistingPushSubscriptionToWorker_(subscription, clubIdValue, 
     return { success: false, error: String(e?.message || e) };
   }
 }
-  
+
 async function refreshPushButtonState_() {
   const btnEnable = document.getElementById("btnEnablePush");
   const btnDisable = document.getElementById("btnDisablePush");
@@ -4139,7 +4140,7 @@ async function refreshPushButtonState_() {
   if (btnDisable) btnDisable.classList.add("hidden");
   if (warningBox) warningBox.classList.add("hidden");
 
-    if (pushConsent && state.active) {
+  if (pushConsent && state.active) {
     const activeClubId =
       window.clubId ||
       localStorage.getItem("clubId") ||
@@ -4301,20 +4302,20 @@ async function enablePushFlow_() {
 
     const reg = await navigator.serviceWorker.ready;
 
-      let sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        try {
-          await sub.unsubscribe();
-        } catch (e) {
-          console.warn("old subscription unsubscribe error", e);
-        }
-        sub = null;
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      try {
+        await sub.unsubscribe();
+      } catch (e) {
+        console.warn("old subscription unsubscribe error", e);
       }
-      
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array_(publicKey),
-      });
+      sub = null;
+    }
+
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array_(publicKey),
+    });
 
     const cid =
       (new URLSearchParams(location.search).get("clubId") || "").trim() ||
@@ -4381,7 +4382,6 @@ async function enablePushFlow_() {
     await loadUserNotificationPrefsFromServer_();
     await refreshPushButtonState_();
     alert("✅ Powiadomienia push włączone.");
-
   } catch (e) {
     alert("❌ Push error: " + (e?.message || e));
   } finally {
@@ -4416,7 +4416,6 @@ async function disablePushFlow_() {
     await loadUserNotificationPrefsFromServer_();
     await refreshPushButtonState_();
     alert("✅ Powiadomienia push wyłączone.");
-
   } catch (e) {
     alert("❌ Nie udało się wyłączyć powiadomień: " + (e?.message || e));
   } finally {
@@ -4475,43 +4474,6 @@ function urlBase64ToUint8Array_(base64String) {
   }
 
   return outputArray;
-}
-function ensurePlayerNotificationsPulseStyle_() {
-  let style = document.getElementById("playerNotificationsPulseStyle");
-
-  if (!style) {
-    style = document.createElement("style");
-    style.id = "playerNotificationsPulseStyle";
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `
-    @keyframes playerNotificationsPulse {
-      0% {
-        background: #111111;
-        border-color: #2b2b2b;
-        color: #ffffff;
-        box-shadow: 0 0 0 rgba(255,43,43,0);
-        transform: scale(1);
-      }
-
-      50% {
-        background: #8b0000;
-        border-color: #ff2b2b;
-        color: #ffffff;
-        box-shadow: 0 0 18px rgba(255,43,43,0.45);
-        transform: scale(1.015);
-      }
-
-      100% {
-        background: #111111;
-        border-color: #2b2b2b;
-        color: #ffffff;
-        box-shadow: 0 0 0 rgba(255,43,43,0);
-        transform: scale(1);
-      }
-    }
-  `;
 }
 
 function escapeHtml_(value) {
@@ -4574,12 +4536,13 @@ function renderPlayerNotificationsList_(items) {
   const box = document.getElementById("playerNotificationsList");
   if (!box) return;
 
-  const rows = Array.isArray(items) ? items : [];
+  const allRows = Array.isArray(items) ? items : [];
+  const rows = allRows.filter(function (it) { return !!it.isUnread; });
 
   if (!rows.length) {
     box.innerHTML = `
       <div style="text-align:center; opacity:.75; padding:14px 8px;">
-        Brak wiadomości.
+        Brak nowych wiadomości.
       </div>
     `;
     return;
@@ -4590,16 +4553,15 @@ function renderPlayerNotificationsList_(items) {
     const body = escapeHtml_(it.body || "").replace(/\n/g, "<br>");
     const sourceName = escapeHtml_(it.sourceName || it.sourceRole || "OrgHub");
     const createdAt = escapeHtml_(formatNotificationDate_(it.createdAt || it.created_at || ""));
-    const unread = !!it.isUnread;
 
     return `
       <div
         style="
-          border:1px solid ${unread ? "#ff2b2b" : "#2b2b2b"};
+          border:1px solid #ff2b2b;
           border-radius:14px;
           padding:12px;
           margin-bottom:10px;
-          background:${unread ? "rgba(139,0,0,.18)" : "rgba(255,255,255,.04)"};
+          background:rgba(139,0,0,.18);
         "
       >
         <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
@@ -4656,25 +4618,6 @@ async function refreshPlayerNotificationsList_() {
   }
 }
 
-function applyPlayerNotificationsBlinkState_(btn, isAlertOn, unread) {
-  if (!btn) return;
-
-  btn.textContent = `🔔 Powiadomienia (${unread})`;
-  btn.style.fontWeight = "900";
-  btn.style.color = "#ffffff";
-  btn.style.transition = "background-color 0.45s ease, border-color 0.45s ease, box-shadow 0.45s ease";
-
-  if (isAlertOn) {
-    btn.style.backgroundColor = "#8b0000";
-    btn.style.borderColor = "#ff2b2b";
-    btn.style.boxShadow = "0 0 18px rgba(255,43,43,0.45)";
-  } else {
-    btn.style.backgroundColor = "#111111";
-    btn.style.borderColor = "#2b2b2b";
-    btn.style.boxShadow = "0 0 0 rgba(255,43,43,0)";
-  }
-}
-
 function stopPlayerNotificationsBlink_() {
   if (window.__playerNotificationsBlinkTimer) {
     clearInterval(window.__playerNotificationsBlinkTimer);
@@ -4683,27 +4626,11 @@ function stopPlayerNotificationsBlink_() {
   window.__playerNotificationsBlinkState = false;
 }
 
-function startPlayerNotificationsBlink_(btn, unread) {
-  stopPlayerNotificationsBlink_();
-
-  window.__playerNotificationsBlinkState = false;
-  applyPlayerNotificationsBlinkState_(btn, false, unread);
-
-  window.__playerNotificationsBlinkTimer = setInterval(() => {
-    window.__playerNotificationsBlinkState = !window.__playerNotificationsBlinkState;
-    applyPlayerNotificationsBlinkState_(btn, window.__playerNotificationsBlinkState, unread);
-  }, 1000);
-}
-  
-async function refreshPlayerNotificationsBell_() {
+function resetPlayerNotificationsButton_() {
   const btn = document.getElementById("playerMenuNotificationsBtn");
   if (!btn) return;
 
-  const baseLabel = "🔔 Powiadomienia";
-
-  stopPlayerNotificationsBlink_();
-
-  btn.textContent = baseLabel;
+  btn.textContent = "🔔 Powiadomienia";
   btn.style.background = "";
   btn.style.backgroundColor = "";
   btn.style.borderColor = "";
@@ -4712,23 +4639,67 @@ async function refreshPlayerNotificationsBell_() {
   btn.style.boxShadow = "";
   btn.style.transform = "";
   btn.style.transition = "";
+}
+
+function applyPlayerNotificationsBlinkFrame_(unread) {
+  const btn = document.getElementById("playerMenuNotificationsBtn");
+  if (!btn) return;
+
+  const on = !!window.__playerNotificationsBlinkState;
+
+  btn.style.fontWeight = "900";
+  btn.style.color = "#ffffff";
+  btn.style.transition = "all 0.35s ease";
+
+  if (on) {
+    btn.textContent = `🚨 Powiadomienia (${unread})`;
+    btn.style.background = "#a30000";
+    btn.style.backgroundColor = "#a30000";
+    btn.style.borderColor = "#ff2b2b";
+    btn.style.boxShadow = "0 0 22px rgba(255,43,43,0.55)";
+    btn.style.transform = "scale(1.03)";
+  } else {
+    btn.textContent = `🔔 Powiadomienia (${unread})`;
+    btn.style.background = "#111111";
+    btn.style.backgroundColor = "#111111";
+    btn.style.borderColor = "#2b2b2b";
+    btn.style.boxShadow = "none";
+    btn.style.transform = "scale(1)";
+  }
+}
+
+function startPlayerNotificationsBlink_(unread) {
+  stopPlayerNotificationsBlink_();
+
+  window.__playerNotificationsBlinkState = false;
+  applyPlayerNotificationsBlinkFrame_(unread);
+
+  window.__playerNotificationsBlinkTimer = setInterval(function () {
+    window.__playerNotificationsBlinkState = !window.__playerNotificationsBlinkState;
+    applyPlayerNotificationsBlinkFrame_(unread);
+  }, 1000); // 1s ciemny + 1s czerwony = pełny cykl 2s
+}
+
+async function refreshPlayerNotificationsBell_() {
+  stopPlayerNotificationsBlink_();
+  resetPlayerNotificationsButton_();
 
   try {
     const res = await fetchPlayerNotificationsUnreadSummary_();
     const unread = Number(res?.unreadCount || 0);
 
     if (unread > 0) {
-      startPlayerNotificationsBlink_(btn, unread);
+      startPlayerNotificationsBlink_(unread);
       return;
     }
 
-    btn.textContent = baseLabel;
+    resetPlayerNotificationsButton_();
   } catch (e) {
     console.warn("refreshPlayerNotificationsBell_ error", e);
-    btn.textContent = baseLabel;
+    resetPlayerNotificationsButton_();
   }
 }
-  
+
 /* =================== KONIEC SEKTORA 80 =================== */
 
 /* =================== 81 POWIADOMIENIA ALERT =================== */  
@@ -4891,11 +4862,17 @@ async function zaloguj() {
     
       goToView("playerMenuView");
       loadClubAd();
-    
+      
       try {
         await refreshPlayerMenuPushAlert_();
       } catch (e) {
         console.warn("refreshPlayerMenuPushAlert_ error:", e);
+      }
+      
+      try {
+        await refreshPlayerNotificationsBell_();
+      } catch (e) {
+        console.warn("refreshPlayerNotificationsBell_ error:", e);
       }
     
       return;
