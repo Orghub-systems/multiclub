@@ -182,9 +182,9 @@ async function pullLatestPushMessage_(clubId, numer, minTs) {
 
   if (!cid || !nr) return null;
 
-  let latestMessage = null;
+  let bestMessage = null;
 
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 8; attempt++) {
     try {
       const pullUrl =
         PUSH_CORE + "/push/pull"
@@ -196,23 +196,29 @@ async function pullLatestPushMessage_(clubId, numer, minTs) {
       const pullJson = await pullResp.json().catch(() => null);
 
       if (pullJson && pullJson.success && pullJson.found && pullJson.message) {
-        latestMessage = pullJson.message;
+        const msg = pullJson.message;
+        const msgTs = Number(msg?.ts || 0);
+        const hasTitle = !!String(msg?.title || "").trim();
+        const hasBody = !!String(msg?.body || "").trim();
 
-        const msgTs = Number(latestMessage.ts || 0);
-        if (msgTs > minTimestamp) {
-          return latestMessage;
+        if (hasTitle || hasBody) {
+          bestMessage = msg;
+        }
+
+        if ((hasTitle || hasBody) && msgTs > minTimestamp) {
+          return msg;
         }
       }
     } catch (e) {
-      // następna próba
+      // kolejna próba
     }
 
-    if (attempt < 9) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+    if (attempt < 7) {
+      await new Promise(resolve => setTimeout(resolve, 350));
     }
   }
 
-  return latestMessage;
+  return bestMessage;
 }
 
 async function readLastShownPushTs_(clubId, numer) {
@@ -253,6 +259,7 @@ async function writeLastShownPushTs_(clubId, numer, ts) {
     console.warn("writeLastShownPushTs_ error", e);
   }
 } 
+
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let eventPayload = null;
@@ -282,28 +289,51 @@ self.addEventListener("push", (event) => {
       ""
     ).trim();
 
-    let payload = eventPayload;
+    let payload = null;
+    let lastShownTs = 0;
 
     if (routeClubId && routeNumer) {
       try {
-        const lastShownTs = await readLastShownPushTs_(routeClubId, routeNumer);
-    
-        let pulled = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
-    
-        if (!pulled || !pulled.ts || Number(pulled.ts) <= Number(lastShownTs || 0)) {
+        lastShownTs = await readLastShownPushTs_(routeClubId, routeNumer);
+
+        payload = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
+
+        const hasGoodPayload =
+          !!payload &&
+          (
+            !!String(payload.title || "").trim() ||
+            !!String(payload.body || "").trim()
+          ) &&
+          Number(payload.ts || 0) > Number(lastShownTs || 0);
+
+        if (!hasGoodPayload) {
           await new Promise(resolve => setTimeout(resolve, 1200));
-          pulled = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
-        }
-    
-        if (pulled && pulled.ts && Number(pulled.ts) > Number(lastShownTs || 0)) {
-          payload = pulled;
+          payload = await pullLatestPushMessage_(routeClubId, routeNumer, lastShownTs);
         }
       } catch (e) {
         console.warn("push pullLatest error", e);
       }
     }
-    
-    const n = normalizePushPayload_(payload, meta);
+
+    const finalPayload =
+      (payload &&
+        (String(payload.title || "").trim() || String(payload.body || "").trim()) &&
+        Number(payload.ts || 0) > Number(lastShownTs || 0))
+        ? payload
+        : {
+            title: "OrgHub",
+            body: "Otwórz aplikację, aby odczytać wiadomość.",
+            icon: "",
+            badge: "",
+            tag: routeClubId ? `orghub-${routeClubId}` : "orghub",
+            data: {
+              clubId: routeClubId,
+              numer: routeNumer,
+              url: buildClubPushUrl_(routeClubId, "")
+            }
+          };
+
+    const n = normalizePushPayload_(finalPayload, meta);
 
     await self.registration.showNotification(n.title, {
       body: n.body,
@@ -313,6 +343,32 @@ self.addEventListener("push", (event) => {
       data: n.data,
       renotify: true
     });
+
+    try {
+      const shownClubId = String(
+        (finalPayload && finalPayload.clubId) ||
+        (finalPayload && finalPayload.data && finalPayload.data.clubId) ||
+        (meta && meta.clubId) ||
+        ""
+      ).trim();
+
+      const shownNumer = String(
+        (finalPayload && finalPayload.numer) ||
+        (finalPayload && finalPayload.data && finalPayload.data.numer) ||
+        (meta && meta.numer) ||
+        ""
+      ).trim();
+
+      const shownTs = Number(finalPayload?.ts || 0);
+
+      if (shownClubId && shownNumer && shownTs > 0) {
+        await writeLastShownPushTs_(shownClubId, shownNumer, shownTs);
+      }
+    } catch (e) {
+      console.warn("save shown push ts error", e);
+    }
+  })());
+});
 
     try {
       const shownClubId = String(
