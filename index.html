@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.10';
+  window.APP_BUILD = 'BETA APP v2.71.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4658,44 +4658,71 @@ async function refreshPlayerNotificationsList_() {
   }
 }
 
-function setPlayerNotificationsButtonState_(unread, blinkOn) {
+function ensurePlayerNotificationsBellStyle_() {
+  let style = document.getElementById("playerNotificationsBellStyle");
+
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "playerNotificationsBellStyle";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    @keyframes playerNotificationsSoftPulse {
+      0% {
+        background: #171717;
+        border-color: #2f2f2f;
+        box-shadow: 0 0 0 rgba(255,43,43,0);
+        transform: scale(1);
+      }
+      50% {
+        background: #8b0000;
+        border-color: #ff2b2b;
+        box-shadow: 0 0 18px rgba(255,43,43,0.35);
+        transform: scale(1.015);
+      }
+      100% {
+        background: #171717;
+        border-color: #2f2f2f;
+        box-shadow: 0 0 0 rgba(255,43,43,0);
+        transform: scale(1);
+      }
+    }
+
+    .player-notifications-alert {
+      animation: playerNotificationsSoftPulse 2s ease-in-out infinite;
+      font-weight: 900 !important;
+      color: #ffffff !important;
+      transition: none !important;
+    }
+  `;
+}
+
+function setPlayerNotificationsButtonState_(unread) {
   const btn = document.getElementById("playerMenuNotificationsBtn");
   if (!btn) return;
 
+  ensurePlayerNotificationsBellStyle_();
+
   const unreadCount = Math.max(0, Number(unread || 0));
+
+  btn.classList.remove("player-notifications-alert");
+  btn.style.background = "";
+  btn.style.backgroundColor = "";
+  btn.style.borderColor = "";
+  btn.style.color = "";
+  btn.style.fontWeight = "";
+  btn.style.boxShadow = "";
+  btn.style.transform = "";
+  btn.style.transition = "";
 
   if (unreadCount <= 0) {
     btn.textContent = "🔔 Powiadomienia";
-    btn.style.background = "";
-    btn.style.backgroundColor = "";
-    btn.style.borderColor = "";
-    btn.style.color = "";
-    btn.style.fontWeight = "";
-    btn.style.boxShadow = "";
-    btn.style.transform = "";
-    btn.style.transition = "";
     return;
   }
 
-  btn.style.fontWeight = "900";
-  btn.style.color = "#ffffff";
-  btn.style.transition = "all 0.35s ease";
-
-  if (blinkOn) {
-    btn.textContent = `🚨 Powiadomienia (${unreadCount})`;
-    btn.style.background = "#a30000";
-    btn.style.backgroundColor = "#a30000";
-    btn.style.borderColor = "#ff2b2b";
-    btn.style.boxShadow = "0 0 22px rgba(255,43,43,0.55)";
-    btn.style.transform = "scale(1.03)";
-  } else {
-    btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
-    btn.style.background = "#111111";
-    btn.style.backgroundColor = "#111111";
-    btn.style.borderColor = "#2b2b2b";
-    btn.style.boxShadow = "none";
-    btn.style.transform = "scale(1)";
-  }
+  btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
+  btn.classList.add("player-notifications-alert");
 }
 
 async function fetchAndStorePlayerNotificationsUnread_() {
@@ -4718,20 +4745,13 @@ function stopPlayerNotificationsBellLoop_() {
   }
 
   window.__playerNotificationsUnread = 0;
-  window.__playerNotificationsBlinkOn = false;
-  window.__playerNotificationsBellTick = 0;
   window.__playerNotificationsBellBusy = false;
 
-  setPlayerNotificationsButtonState_(0, false);
+  setPlayerNotificationsButtonState_(0);
 }
 
 function startPlayerNotificationsBellLoop_() {
   stopPlayerNotificationsBellLoop_();
-
-  window.__playerNotificationsUnread = 0;
-  window.__playerNotificationsBlinkOn = false;
-  window.__playerNotificationsBellTick = 0;
-  window.__playerNotificationsBellBusy = false;
 
   const tick = async function () {
     const playerMenu = document.getElementById("playerMenuView");
@@ -4742,39 +4762,27 @@ function startPlayerNotificationsBellLoop_() {
     window.__playerNotificationsBellBusy = true;
 
     try {
-      window.__playerNotificationsBellTick = Number(window.__playerNotificationsBellTick || 0) + 1;
-
-      if (window.__playerNotificationsBellTick === 1 || window.__playerNotificationsBellTick % 5 === 0) {
-        await fetchAndStorePlayerNotificationsUnread_();
-      }
-
-      const unread = Math.max(0, Number(window.__playerNotificationsUnread || 0));
-
-      if (unread > 0) {
-        window.__playerNotificationsBlinkOn = !window.__playerNotificationsBlinkOn;
-        setPlayerNotificationsButtonState_(unread, !!window.__playerNotificationsBlinkOn);
-      } else {
-        window.__playerNotificationsBlinkOn = false;
-        setPlayerNotificationsButtonState_(0, false);
-      }
+      const unread = await fetchAndStorePlayerNotificationsUnread_();
+      setPlayerNotificationsButtonState_(unread);
     } finally {
       window.__playerNotificationsBellBusy = false;
     }
   };
 
-  tick();
+  tick().catch(function (e) {
+    console.warn("player notifications bell init error", e);
+  });
 
   window.__playerNotificationsBellLoop = setInterval(function () {
     tick().catch(function (e) {
       console.warn("player notifications bell loop error", e);
     });
-  }, 1000); // 1 s ciemny + 1 s czerwony = pełny cykl 2 s
+  }, 5000);
 }
 
 async function refreshPlayerNotificationsBell_() {
   const unread = await fetchAndStorePlayerNotificationsUnread_();
-  window.__playerNotificationsBlinkOn = false;
-  setPlayerNotificationsButtonState_(unread, false);
+  setPlayerNotificationsButtonState_(unread);
 }
   
 /* =================== KONIEC SEKTORA 80 =================== */
