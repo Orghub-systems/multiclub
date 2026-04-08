@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.11';
+  window.APP_BUILD = 'BETA APP v2.71.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4532,13 +4532,36 @@ async function markAllPlayerNotificationsRead_() {
   return res || { success: false };
 }
 
-async function deletePlayerNotification_(id) {
+async function deletePlayerNotification_(btnEl, id) {
   const msgId = String(id || "").trim();
   if (!msgId) return;
 
-  const ok = confirm("Usunąć tę wiadomość?");
-  if (!ok) return;
+  const rowEl = btnEl ? btnEl.closest(".player-notification-card") : null;
 
+  // znika od razu z UI
+  if (rowEl) {
+    rowEl.style.transition = "opacity 0.2s ease, transform 0.2s ease, height 0.2s ease, margin 0.2s ease, padding 0.2s ease";
+    rowEl.style.opacity = "0";
+    rowEl.style.transform = "scale(0.98)";
+    rowEl.style.pointerEvents = "none";
+
+    setTimeout(() => {
+      if (rowEl && rowEl.parentNode) {
+        rowEl.remove();
+
+        const box = document.getElementById("playerNotificationsList");
+        if (box && !box.querySelector(".player-notification-card")) {
+          box.innerHTML = `
+            <div style="text-align:center; opacity:.75; padding:14px 8px;">
+              Brak wiadomości.
+            </div>
+          `;
+        }
+      }
+    }, 180);
+  }
+
+  // backend w tle
   try {
     const numer = getCurrentNotificationLoginId_();
     const res = await apiClubPost({
@@ -4550,12 +4573,8 @@ async function deletePlayerNotification_(id) {
     if (!res || res.success !== true) {
       throw new Error(res?.error || "Nie udało się usunąć wiadomości");
     }
-
-    await refreshPlayerNotificationsList_();
-    await refreshPlayerNotificationsBell_();
   } catch (e) {
     console.error("deletePlayerNotification_ error", e);
-    alert("❌ " + (e?.message || "Błąd usuwania wiadomości"));
   }
 }
   
@@ -4584,6 +4603,7 @@ function renderPlayerNotificationsList_(items) {
 
     return `
       <div
+        class="player-notification-card"
         style="
           border:1px solid ${unread ? "#ff2b2b" : "#3a3a3a"};
           border-radius:14px;
@@ -4614,7 +4634,7 @@ function renderPlayerNotificationsList_(items) {
           <button
             class="full-btn alt"
             type="button"
-            onclick="deletePlayerNotification_('${id}')"
+            onclick="deletePlayerNotification_(this, '${id}')"
             style="margin:0; width:auto; min-width:110px; padding:10px 14px;"
           >
             🗑 Usuń
