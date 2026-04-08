@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.8';
+  window.APP_BUILD = 'BETA APP v2.71.9';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4532,41 +4532,70 @@ async function markAllPlayerNotificationsRead_() {
   return res || { success: false };
 }
 
+async function deletePlayerNotification_(id) {
+  const msgId = String(id || "").trim();
+  if (!msgId) return;
+
+  const ok = confirm("Usunąć tę wiadomość?");
+  if (!ok) return;
+
+  try {
+    const numer = getCurrentNotificationLoginId_();
+    const res = await apiClubPost({
+      action: "notificationsDelete",
+      numer: numer,
+      ids: msgId
+    });
+
+    if (!res || res.success !== true) {
+      throw new Error(res?.error || "Nie udało się usunąć wiadomości");
+    }
+
+    await refreshPlayerNotificationsList_();
+    await refreshPlayerNotificationsBell_();
+  } catch (e) {
+    console.error("deletePlayerNotification_ error", e);
+    alert("❌ " + (e?.message || "Błąd usuwania wiadomości"));
+  }
+}
+  
 function renderPlayerNotificationsList_(items) {
   const box = document.getElementById("playerNotificationsList");
   if (!box) return;
 
-  const allRows = Array.isArray(items) ? items : [];
-  const rows = allRows.filter(function (it) { return !!it.isUnread; });
+  const rows = Array.isArray(items) ? items : [];
 
   if (!rows.length) {
     box.innerHTML = `
       <div style="text-align:center; opacity:.75; padding:14px 8px;">
-        Brak nowych wiadomości.
+        Brak wiadomości.
       </div>
     `;
     return;
   }
 
   box.innerHTML = rows.map(function (it) {
+    const id = escapeHtml_(it.id || "");
     const title = escapeHtml_(it.title || "Powiadomienie");
     const body = escapeHtml_(it.body || "").replace(/\n/g, "<br>");
     const sourceName = escapeHtml_(it.sourceName || it.sourceRole || "OrgHub");
     const createdAt = escapeHtml_(formatNotificationDate_(it.createdAt || it.created_at || ""));
+    const unread = !!it.isUnread;
 
     return `
       <div
         style="
-          border:1px solid #ff2b2b;
+          border:1px solid ${unread ? "#ff2b2b" : "#3a3a3a"};
           border-radius:14px;
           padding:12px;
           margin-bottom:10px;
-          background:rgba(139,0,0,.18);
+          background:${unread ? "rgba(139,0,0,.18)" : "rgba(255,255,255,.05)"};
+          opacity:${unread ? "1" : ".88"};
         "
       >
         <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
           <div style="font-weight:900; font-size:15px; line-height:1.25;">
-            ${title}
+            ${title}${unread ? ` <span style="font-size:11px; color:#ff7b7b;">• nowe</span>` : ``}
           </div>
           <div style="font-size:11px; opacity:.7; white-space:nowrap;">
             ${createdAt}
@@ -4577,8 +4606,19 @@ function renderPlayerNotificationsList_(items) {
           Od: <b>${sourceName}</b>
         </div>
 
-        <div style="font-size:14px; line-height:1.45;">
+        <div style="font-size:14px; line-height:1.45; margin-bottom:10px;">
           ${body}
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button
+            class="full-btn alt"
+            type="button"
+            onclick="deletePlayerNotification_('${id}')"
+            style="margin:0; width:auto; min-width:110px; padding:10px 14px;"
+          >
+            🗑 Usuń
+          </button>
         </div>
       </div>
     `;
@@ -4681,12 +4721,17 @@ function startPlayerNotificationsBlink_(unread) {
 }
 
 async function refreshPlayerNotificationsBell_() {
+  const btn = document.getElementById("playerMenuNotificationsBtn");
+  if (!btn) return;
+
   stopPlayerNotificationsBlink_();
   resetPlayerNotificationsButton_();
 
   try {
     const res = await fetchPlayerNotificationsUnreadSummary_();
     const unread = Number(res?.unreadCount || 0);
+
+    console.log("refreshPlayerNotificationsBell_ unread =", unread, res);
 
     if (unread > 0) {
       startPlayerNotificationsBlink_(unread);
@@ -4700,6 +4745,32 @@ async function refreshPlayerNotificationsBell_() {
   }
 }
 
+function stopPlayerNotificationsBellWatcher_() {
+  if (window.__playerNotificationsBellWatcher) {
+    clearInterval(window.__playerNotificationsBellWatcher);
+    window.__playerNotificationsBellWatcher = null;
+  }
+}
+
+function startPlayerNotificationsBellWatcher_() {
+  stopPlayerNotificationsBellWatcher_();
+
+  refreshPlayerNotificationsBell_().catch(function (e) {
+    console.warn("startPlayerNotificationsBellWatcher_ initial error", e);
+  });
+
+  window.__playerNotificationsBellWatcher = setInterval(function () {
+    const playerMenu = document.getElementById("playerMenuView");
+    const isVisible = !!(playerMenu && !playerMenu.classList.contains("hidden"));
+
+    if (!isVisible) return;
+
+    refreshPlayerNotificationsBell_().catch(function (e) {
+      console.warn("player notifications bell watcher error", e);
+    });
+  }, 4000);
+}
+  
 /* =================== KONIEC SEKTORA 80 =================== */
 
 /* =================== 81 POWIADOMIENIA ALERT =================== */  
@@ -4787,6 +4858,9 @@ async function refreshPlayerNotificationsUi_() {
 /* =================== 90 LOGOWANIE / REJESTRACJA =================== */
   
 function pokazLogowanie() {
+  stopPlayerNotificationsBellWatcher_();
+  stopPlayerNotificationsBlink_();
+  
   numerZalogowanego = null;
   grupaZalogowanego = null;
   window.grupyTrenera = "";
@@ -4808,6 +4882,7 @@ function pokazLogowanie() {
 function pokazRejestracjaSelect() { goToView("registerSelectView"); }
 function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
 function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
+  
 async function zaloguj() {
   const login = document.getElementById("numer").value.trim();
   const haslo = document.getElementById("haslo").value.trim();
@@ -4870,9 +4945,9 @@ async function zaloguj() {
       }
       
       try {
-        await refreshPlayerNotificationsBell_();
+        startPlayerNotificationsBellWatcher_();
       } catch (e) {
-        console.warn("refreshPlayerNotificationsBell_ error:", e);
+        console.warn("startPlayerNotificationsBellWatcher_ error:", e);
       }
     
       return;
