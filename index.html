@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.72.2';
+  window.APP_BUILD = 'BETA APP v2.71.19';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -635,70 +635,35 @@ input[type="number"] {
 
   <h1 style="margin:0 0 25px 0;">Panel zawodnika</h1>
 
-<div class="login-box">
-  <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
-  <div
-    id="playerMenuPaymentsHint"
-    style="
-      margin:-2px 0 12px 0;
-      font-size:13px;
-      line-height:1.35;
-      opacity:.82;
-      min-height:18px;
-      text-align:center;
-    "
-  ></div>
+  <div class="login-box">
+    <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
+    <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
+    <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
 
-  <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
-  <div
-    id="playerMenuEventsHint"
-    style="
-      margin:-2px 0 12px 0;
-      font-size:13px;
-      line-height:1.35;
-      opacity:.82;
-      min-height:18px;
-      text-align:center;
-    "
-  ></div>
+    <button id="playerMenuNotificationsBtn" class="full-btn" onclick="openPlayerNotificationsView_()">🔔 Powiadomienia</button>
 
-  <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
-  <div
-    id="playerMenuStatsHint"
-    style="
-      margin:-2px 0 12px 0;
-      font-size:13px;
-      line-height:1.35;
-      opacity:.82;
-      min-height:18px;
-      text-align:center;
-    "
-  ></div>
-
-  <button id="playerMenuNotificationsBtn" class="full-btn" onclick="openPlayerNotificationsView_()">🔔 Powiadomienia</button>
-
-  <div id="playerMenuPushAlertWrap" class="hidden" style="margin-top:12px; margin-bottom:8px;">
-    <div
-      id="playerMenuPushAlertText"
-      style="
-        background:#5a0000;
-        border:1px solid #ff2b2b;
-        color:#ffffff;
-        border-radius:14px;
-        padding:10px 12px;
-        font-size:13px;
-        line-height:1.35;
-        font-weight:800;
-        text-align:center;
-        box-shadow:0 0 0 rgba(255,43,43,0);
-      "
-    >
-      Subskrypcja powiadomień push wygasła, włącz ją ponownie.
+    <div id="playerMenuPushAlertWrap" class="hidden" style="margin-top:12px; margin-bottom:8px;">
+      <div
+        id="playerMenuPushAlertText"
+        style="
+          background:#5a0000;
+          border:1px solid #ff2b2b;
+          color:#ffffff;
+          border-radius:14px;
+          padding:10px 12px;
+          font-size:13px;
+          line-height:1.35;
+          font-weight:800;
+          text-align:center;
+          box-shadow:0 0 0 rgba(255,43,43,0);
+        "
+      >
+        Subskrypcja powiadomień push wygasła, włącz ją ponownie.
+      </div>
     </div>
-  </div>
 
-  <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
-</div>
+    <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
+  </div>
 
   <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
@@ -2207,227 +2172,6 @@ window.__adminPendingPayCol = null;
 
 // Label oczekującej płatności administratora  
 window.__adminPendingPayLabel = "";
-
-const ORGHUB_LOCAL_DB_NAME = "orghub_local_cache";
-const ORGHUB_LOCAL_DB_VERSION = 1;
-const ORGHUB_LOCAL_STORE_SNAPSHOTS = "snapshots";
-
-function openOrgHubLocalDb_() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(ORGHUB_LOCAL_DB_NAME, ORGHUB_LOCAL_DB_VERSION);
-
-    req.onupgradeneeded = function (ev) {
-      const db = ev.target.result;
-
-      if (!db.objectStoreNames.contains(ORGHUB_LOCAL_STORE_SNAPSHOTS)) {
-        db.createObjectStore(ORGHUB_LOCAL_STORE_SNAPSHOTS, { keyPath: "key" });
-      }
-    };
-
-    req.onsuccess = function () {
-      resolve(req.result);
-    };
-
-    req.onerror = function () {
-      reject(req.error || new Error("IndexedDB open error"));
-    };
-  });
-}
-
-function buildPlayerMenuSnapshotKey_(clubIdValue, numerValue) {
-  const cid = String(clubIdValue || "").trim().toLowerCase();
-  const nr = String(numerValue || "").trim();
-  return `orghub:${cid}:player:${nr}:menu`;
-}
-
-async function savePlayerMenuSnapshotLocal_(clubIdValue, numerValue, snapshot) {
-  const cid = String(clubIdValue || "").trim();
-  const nr = String(numerValue || "").trim();
-  if (!cid || !nr || !snapshot || typeof snapshot !== "object") return false;
-
-  const db = await openOrgHubLocalDb_();
-  const tx = db.transaction(ORGHUB_LOCAL_STORE_SNAPSHOTS, "readwrite");
-  const store = tx.objectStore(ORGHUB_LOCAL_STORE_SNAPSHOTS);
-
-  const record = {
-    key: buildPlayerMenuSnapshotKey_(cid, nr),
-    clubId: cid,
-    numer: nr,
-    scope: "player_menu",
-    updatedAt: new Date().toISOString(),
-    snapshot: snapshot
-  };
-
-  store.put(record);
-
-  return await new Promise((resolve, reject) => {
-    tx.oncomplete = function () { resolve(true); };
-    tx.onerror = function () { reject(tx.error || new Error("IndexedDB write error")); };
-    tx.onabort = function () { reject(tx.error || new Error("IndexedDB write abort")); };
-  });
-}
-
-async function readPlayerMenuSnapshotLocal_(clubIdValue, numerValue) {
-  const cid = String(clubIdValue || "").trim();
-  const nr = String(numerValue || "").trim();
-  if (!cid || !nr) return null;
-
-  const db = await openOrgHubLocalDb_();
-  const tx = db.transaction(ORGHUB_LOCAL_STORE_SNAPSHOTS, "readonly");
-  const store = tx.objectStore(ORGHUB_LOCAL_STORE_SNAPSHOTS);
-
-  const req = store.get(buildPlayerMenuSnapshotKey_(cid, nr));
-
-  return await new Promise((resolve, reject) => {
-    req.onsuccess = function () {
-      resolve(req.result?.snapshot || null);
-    };
-    req.onerror = function () {
-      reject(req.error || new Error("IndexedDB read error"));
-    };
-  });
-}
-
-function buildLocalPlayerMenuSnapshotFromLogin_(clubIdValue, loginData) {
-  const cid = String(clubIdValue || "").trim();
-  const data = loginData || {};
-
-  return {
-    version: Number(data.playerMenuVersion || 0),
-    clubId: cid,
-    numer: String(data.login || "").trim(),
-    grupa: String(data.grupa || "").trim(),
-    unreadCount: Number(data.unreadCount || 0),
-    pushAlert: false,
-    pushConsent: !!data.pushConsent,
-    emailConsent: !!data.emailConsent,
-    clubBadge: String(cid || "").trim().toUpperCase(),
-
-    events: {
-      upcomingCount: 0,
-      hasInvitations: false,
-      nextEvent: null,
-      label: "Ładowanie wydarzeń..."
-    },
-
-    payments: {
-      hasDebt: false,
-      label: "Ładowanie płatności..."
-    },
-
-    stats: {
-      totalTrainings: 0,
-      latestMonth: "",
-      latestMonthTrainings: 0,
-      label: "Ładowanie statystyk..."
-    }
-  };
-}
-
-function setPlayerMenuHintText_(elementId, text, isAlert) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-
-  const txt = String(text || "").trim();
-  el.textContent = txt || "";
-
-  if (!txt) {
-    el.style.color = "";
-    el.style.fontWeight = "";
-    el.style.opacity = ".82";
-    return;
-  }
-
-  el.style.color = isAlert ? "#ff9d9d" : "";
-  el.style.fontWeight = isAlert ? "800" : "";
-  el.style.opacity = isAlert ? "1" : ".82";
-}
-  
-async function renderPlayerMenuFromSnapshot_(snapshot) {
-  const snap = snapshot && typeof snapshot === "object" ? snapshot : {};
-
-  const numer = String(
-    snap.numer ||
-    window.numerZalogowanego ||
-    numerZalogowanego ||
-    ""
-  ).trim();
-
-  const clubBadge = String(
-    snap.clubBadge ||
-    window.clubId ||
-    localStorage.getItem("clubId") ||
-    clubId ||
-    ""
-  ).trim().toUpperCase();
-
-  const numerLabel = document.getElementById("playerNumerLabel");
-  if (numerLabel) {
-    numerLabel.textContent = numer || "";
-  }
-
-  const badge = document.getElementById("clubIdBadge_menu");
-  if (badge) {
-    badge.textContent = clubBadge || "";
-  }
-
-  const paymentsLabel = String(
-    (snap.payments && snap.payments.label) ||
-    ""
-  ).trim();
-
-  const eventsLabel = String(
-    (snap.events && snap.events.label) ||
-    ""
-  ).trim();
-
-  const statsLabel = String(
-    (snap.stats && snap.stats.label) ||
-    ""
-  ).trim();
-
-  const paymentsAlert = !!(snap.payments && snap.payments.hasDebt);
-  const eventsAlert = !!(snap.events && snap.events.hasInvitations);
-
-  setPlayerMenuHintText_("playerMenuPaymentsHint", paymentsLabel, paymentsAlert);
-  setPlayerMenuHintText_("playerMenuEventsHint", eventsLabel, eventsAlert);
-  setPlayerMenuHintText_("playerMenuStatsHint", statsLabel, false);
-
-  try {
-    if (typeof snap.unreadCount === "number") {
-      setPlayerNotificationsButtonState_(snap.unreadCount);
-    } else {
-      await refreshPlayerNotificationsBell_();
-    }
-  } catch (e) {
-    console.warn("renderPlayerMenuFromSnapshot_ bell error:", e);
-  }
-
-  try {
-    await refreshPlayerMenuPushAlert_();
-  } catch (e) {
-    console.warn("renderPlayerMenuFromSnapshot_ push alert error:", e);
-  }
-}
-
-async function syncPlayerMenuSnapshotFromServer_(clubIdValue, numerValue) {
-  const cid = String(clubIdValue || "").trim();
-  const nr = String(numerValue || "").trim();
-  if (!cid || !nr) return null;
-
-  // TODO: backend action do dodania w GAS
-  const res = await apiClubPost({
-    action: "playerMenuSnapshot",
-    numer: nr
-  });
-
-  if (!res || res.success !== true || !res.snapshot) {
-    return null;
-  }
-
-  await savePlayerMenuSnapshotLocal_(cid, nr, res.snapshot);
-  return res.snapshot;
-}  
 
 /* =================== KONIEC SEKTORA 10 =================== */
   
@@ -5196,6 +4940,11 @@ async function zaloguj() {
       try { sessionStorage.setItem("userPushConsent", window.userPushConsent ? "1" : "0"); } catch (e) {}
       try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
     
+      await ensurePushMetaCache_(
+        window.clubId || localStorage.getItem("clubId") || clubId || "",
+        window.numerZalogowanego || numerZalogowanego || data.login || ""
+      );
+    
       window.__platnosciCache = null;
       window.__prefetch = {
         t: 0,
@@ -5204,100 +4953,20 @@ async function zaloguj() {
         statystykiP: null
       };
     
-      // 1. natychmiast pokaż ekran
       goToView("playerMenuView");
       loadClubAd();
-    
-      // 2. natychmiast pokaż minimum z danych logowania
+      
       try {
-        const activeClubId =
-          window.clubId ||
-          localStorage.getItem("clubId") ||
-          clubId ||
-          "";
-    
-        const fastSnapshot = buildLocalPlayerMenuSnapshotFromLogin_(activeClubId, data);
-    
-        const numerLabel = document.getElementById("playerNumerLabel");
-        if (numerLabel) numerLabel.textContent = String(data.login || "").trim();
-    
-        const badge = document.getElementById("clubIdBadge_menu");
-        if (badge) badge.textContent = String(activeClubId || "").trim().toUpperCase();
-    
-        setPlayerMenuHintText_("playerMenuPaymentsHint", fastSnapshot?.payments?.label || "", false);
-        setPlayerMenuHintText_("playerMenuEventsHint", fastSnapshot?.events?.label || "", false);
-        setPlayerMenuHintText_("playerMenuStatsHint", fastSnapshot?.stats?.label || "", false);
-    
-        if (typeof fastSnapshot.unreadCount === "number") {
-          setPlayerNotificationsButtonState_(fastSnapshot.unreadCount);
-        }
+        await refreshPlayerMenuPushAlert_();
       } catch (e) {
-        console.warn("fast menu render error:", e);
+        console.warn("refreshPlayerMenuPushAlert_ error:", e);
       }
-    
-      // 3. cała reszta dopiero po pierwszym paint
-      requestAnimationFrame(() => {
-        requestAnimationFrame(async () => {
-          try {
-            const activeClubId =
-              window.clubId ||
-              localStorage.getItem("clubId") ||
-              clubId ||
-              "";
-    
-            await ensurePushMetaCache_(
-              activeClubId,
-              window.numerZalogowanego || numerZalogowanego || data.login || ""
-            );
-    
-            let renderedLocal = false;
-    
-            try {
-              const localSnapshot = await readPlayerMenuSnapshotLocal_(activeClubId, data.login);
-              if (localSnapshot) {
-                await renderPlayerMenuFromSnapshot_(localSnapshot);
-                renderedLocal = true;
-              }
-            } catch (e) {
-              console.warn("readPlayerMenuSnapshotLocal_ error:", e);
-            }
-    
-            if (!renderedLocal) {
-              try {
-                const fallbackSnapshot = buildLocalPlayerMenuSnapshotFromLogin_(activeClubId, data);
-                await savePlayerMenuSnapshotLocal_(activeClubId, data.login, fallbackSnapshot);
-                await renderPlayerMenuFromSnapshot_(fallbackSnapshot);
-              } catch (e) {
-                console.warn("fallback player menu snapshot error:", e);
-              }
-            }
-    
-            try {
-              const freshSnapshot = await syncPlayerMenuSnapshotFromServer_(activeClubId, data.login);
-              if (freshSnapshot) {
-                await renderPlayerMenuFromSnapshot_(freshSnapshot);
-              }
-            } catch (e) {
-              console.warn("syncPlayerMenuSnapshotFromServer_ error:", e);
-            }
-    
-            try {
-              await refreshPlayerMenuPushAlert_();
-            } catch (e) {
-              console.warn("refreshPlayerMenuPushAlert_ error:", e);
-            }
-    
-            try {
-              await refreshPlayerNotificationsBell_();
-            } catch (e) {
-              console.warn("refreshPlayerNotificationsBell_ error:", e);
-            }
-    
-          } catch (e) {
-            console.warn("post-login background init error:", e);
-          }
-        });
-      });
+      
+      try {
+        await refreshPlayerNotificationsBell_();
+      } catch (e) {
+        console.warn("refreshPlayerNotificationsBell_ error:", e);
+      }
     
       return;
     }
