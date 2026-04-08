@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.71.16';
+  window.APP_BUILD = 'BETA APP v2.71.17';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4755,53 +4755,21 @@ async function fetchAndStorePlayerNotificationsUnread_() {
   }
 }
 
-function stopPlayerNotificationsBellLoop_() {
-  if (window.__playerNotificationsBellLoop) {
-    clearInterval(window.__playerNotificationsBellLoop);
-    window.__playerNotificationsBellLoop = null;
-  }
-
-  window.__playerNotificationsUnread = 0;
-  window.__playerNotificationsBellBusy = false;
-
-  setPlayerNotificationsButtonState_(0);
-}
-
-function startPlayerNotificationsBellLoop_() {
-  stopPlayerNotificationsBellLoop_();
-
-  const tick = async function () {
-    const playerMenu = document.getElementById("playerMenuView");
-    const isVisible = !!(playerMenu && !playerMenu.classList.contains("hidden"));
-    if (!isVisible) return;
-    if (window.__playerNotificationsBellBusy) return;
-
-    window.__playerNotificationsBellBusy = true;
-
-    try {
-      const unread = await fetchAndStorePlayerNotificationsUnread_();
-      setPlayerNotificationsButtonState_(unread);
-    } finally {
-      window.__playerNotificationsBellBusy = false;
-    }
-  };
-
-  tick().catch(function (e) {
-    console.warn("player notifications bell init error", e);
-  });
-
-  window.__playerNotificationsBellLoop = setInterval(function () {
-    tick().catch(function (e) {
-      console.warn("player notifications bell loop error", e);
-    });
-  }, 5000);
-}
-
 async function refreshPlayerNotificationsBell_() {
-  const unread = await fetchAndStorePlayerNotificationsUnread_();
-  setPlayerNotificationsButtonState_(unread);
-}
+  const btn = document.getElementById("playerMenuNotificationsBtn");
+  if (!btn) return;
 
+  try {
+    const res = await fetchPlayerNotificationsUnreadSummary_();
+    const unread = Math.max(0, Number(res?.unreadCount || 0));
+
+    setPlayerNotificationsButtonState_(unread);
+  } catch (e) {
+    console.warn("refreshPlayerNotificationsBell_ error", e);
+    setPlayerNotificationsButtonState_(0);
+  }
+}
+  
 function bindPlayerNotificationsListActions_() {
   const box = document.getElementById("playerNotificationsList");
   if (!box || box.dataset.boundDelete === "1") return;
@@ -4910,7 +4878,6 @@ async function refreshPlayerNotificationsUi_() {
 /* =================== 90 LOGOWANIE / REJESTRACJA =================== */
   
 function pokazLogowanie() {
-  stopPlayerNotificationsBellLoop_();
   
   numerZalogowanego = null;
   grupaZalogowanego = null;
@@ -4996,9 +4963,9 @@ async function zaloguj() {
       }
       
       try {
-        startPlayerNotificationsBellLoop_();
+        await refreshPlayerNotificationsBell_();
       } catch (e) {
-        console.warn("startPlayerNotificationsBellLoop_ error:", e);
+        console.warn("refreshPlayerNotificationsBell_ error:", e);
       }
     
       return;
