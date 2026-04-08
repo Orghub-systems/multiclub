@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.72';
+  window.APP_BUILD = 'BETA APP v2.72.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -635,35 +635,70 @@ input[type="number"] {
 
   <h1 style="margin:0 0 25px 0;">Panel zawodnika</h1>
 
-  <div class="login-box">
-    <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
-    <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
-    <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
+<div class="login-box">
+  <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
+  <div
+    id="playerMenuPaymentsHint"
+    style="
+      margin:-2px 0 12px 0;
+      font-size:13px;
+      line-height:1.35;
+      opacity:.82;
+      min-height:18px;
+      text-align:center;
+    "
+  ></div>
 
-    <button id="playerMenuNotificationsBtn" class="full-btn" onclick="openPlayerNotificationsView_()">🔔 Powiadomienia</button>
+  <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
+  <div
+    id="playerMenuEventsHint"
+    style="
+      margin:-2px 0 12px 0;
+      font-size:13px;
+      line-height:1.35;
+      opacity:.82;
+      min-height:18px;
+      text-align:center;
+    "
+  ></div>
 
-    <div id="playerMenuPushAlertWrap" class="hidden" style="margin-top:12px; margin-bottom:8px;">
-      <div
-        id="playerMenuPushAlertText"
-        style="
-          background:#5a0000;
-          border:1px solid #ff2b2b;
-          color:#ffffff;
-          border-radius:14px;
-          padding:10px 12px;
-          font-size:13px;
-          line-height:1.35;
-          font-weight:800;
-          text-align:center;
-          box-shadow:0 0 0 rgba(255,43,43,0);
-        "
-      >
-        Subskrypcja powiadomień push wygasła, włącz ją ponownie.
-      </div>
+  <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
+  <div
+    id="playerMenuStatsHint"
+    style="
+      margin:-2px 0 12px 0;
+      font-size:13px;
+      line-height:1.35;
+      opacity:.82;
+      min-height:18px;
+      text-align:center;
+    "
+  ></div>
+
+  <button id="playerMenuNotificationsBtn" class="full-btn" onclick="openPlayerNotificationsView_()">🔔 Powiadomienia</button>
+
+  <div id="playerMenuPushAlertWrap" class="hidden" style="margin-top:12px; margin-bottom:8px;">
+    <div
+      id="playerMenuPushAlertText"
+      style="
+        background:#5a0000;
+        border:1px solid #ff2b2b;
+        color:#ffffff;
+        border-radius:14px;
+        padding:10px 12px;
+        font-size:13px;
+        line-height:1.35;
+        font-weight:800;
+        text-align:center;
+        box-shadow:0 0 0 rgba(255,43,43,0);
+      "
+    >
+      Subskrypcja powiadomień push wygasła, włącz ją ponownie.
     </div>
-
-    <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
   </div>
+
+  <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Wyloguj</button>
+</div>
 
   <p style="opacity:.8; margin-top:18px;">Zalogowany numer: <b id="playerNumerLabel"></b></p>
 
@@ -2266,13 +2301,58 @@ function buildLocalPlayerMenuSnapshotFromLogin_(clubIdValue, loginData) {
     pushAlert: false,
     pushConsent: !!data.pushConsent,
     emailConsent: !!data.emailConsent,
-    clubBadge: String(cid || "").trim().toUpperCase()
+    clubBadge: String(cid || "").trim().toUpperCase(),
+
+    events: {
+      upcomingCount: 0,
+      hasInvitations: false,
+      nextEvent: null,
+      label: "Ładowanie wydarzeń..."
+    },
+
+    payments: {
+      hasDebt: false,
+      label: "Ładowanie płatności..."
+    },
+
+    stats: {
+      totalTrainings: 0,
+      latestMonth: "",
+      latestMonthTrainings: 0,
+      label: "Ładowanie statystyk..."
+    }
   };
 }
 
+function setPlayerMenuHintText_(elementId, text, isAlert) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  const txt = String(text || "").trim();
+  el.textContent = txt || "";
+
+  if (!txt) {
+    el.style.color = "";
+    el.style.fontWeight = "";
+    el.style.opacity = ".82";
+    return;
+  }
+
+  el.style.color = isAlert ? "#ff9d9d" : "";
+  el.style.fontWeight = isAlert ? "800" : "";
+  el.style.opacity = isAlert ? "1" : ".82";
+}
+  
 async function renderPlayerMenuFromSnapshot_(snapshot) {
   const snap = snapshot && typeof snapshot === "object" ? snapshot : {};
-  const numer = String(snap.numer || window.numerZalogowanego || numerZalogowanego || "").trim();
+
+  const numer = String(
+    snap.numer ||
+    window.numerZalogowanego ||
+    numerZalogowanego ||
+    ""
+  ).trim();
+
   const clubBadge = String(
     snap.clubBadge ||
     window.clubId ||
@@ -2290,6 +2370,28 @@ async function renderPlayerMenuFromSnapshot_(snapshot) {
   if (badge) {
     badge.textContent = clubBadge || "";
   }
+
+  const paymentsLabel = String(
+    (snap.payments && snap.payments.label) ||
+    ""
+  ).trim();
+
+  const eventsLabel = String(
+    (snap.events && snap.events.label) ||
+    ""
+  ).trim();
+
+  const statsLabel = String(
+    (snap.stats && snap.stats.label) ||
+    ""
+  ).trim();
+
+  const paymentsAlert = !!(snap.payments && snap.payments.hasDebt);
+  const eventsAlert = !!(snap.events && snap.events.hasInvitations);
+
+  setPlayerMenuHintText_("playerMenuPaymentsHint", paymentsLabel, paymentsAlert);
+  setPlayerMenuHintText_("playerMenuEventsHint", eventsLabel, eventsAlert);
+  setPlayerMenuHintText_("playerMenuStatsHint", statsLabel, false);
 
   try {
     if (typeof snap.unreadCount === "number") {
