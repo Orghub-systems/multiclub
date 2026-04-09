@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.72.2';
+  window.APP_BUILD = 'BETA APP v2.73';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9043,6 +9043,69 @@ function escapeHtml_(s) {
     .replace(/'/g, "&#39;");
 }
 
+function buildSystemPrzelewyResultMessage_(res) {
+  if (!res) return "✅ Zaksięgowano.";
+
+  if (res.message) {
+    return String(res.message).trim();
+  }
+
+  if (res.apply_result && res.apply_result.message) {
+    return String(res.apply_result.message).trim();
+  }
+
+  const playerName = String(
+    res.player_name ||
+    res.apply_result?.player_name ||
+    ""
+  ).trim();
+
+  const playerNo = String(
+    res.player_no ||
+    res.matched_player_no ||
+    res.apply_result?.numer ||
+    ""
+  ).trim();
+
+  const amount = Number(
+    res.amount_transfer ||
+    res.apply_result?.booked_amount ||
+    0
+  );
+
+  const header = String(
+    res.payment_header ||
+    res.apply_result?.label ||
+    ""
+  ).trim();
+
+  const who = playerName
+    ? `${playerName} (${playerNo})`
+    : (playerNo ? `nr ${playerNo}` : "zawodnika");
+
+  if (amount > 0 && header) {
+    return `✅ Zaksięgowałem ${who} – ${header} – ${amount.toFixed(2).replace(".", ",")} zł.`;
+  }
+
+  return `✅ Zaksięgowałem ${who}.`;
+}
+
+function buildSystemPrzelewyAutoReportHtml_(res) {
+  const items = Array.isArray(res?.confirmed_items) ? res.confirmed_items : [];
+  if (!items.length) {
+    return "";
+  }
+
+  return items.map(function (it) {
+    const name = escapeHtml_(String(it.player_name || "").trim());
+    const no = escapeHtml_(String(it.player_no || "").trim());
+    const amount = Number(it.amount_transfer || 0).toFixed(2).replace(".", ",");
+    const msg = escapeHtml_(String(it.message || "").trim());
+
+    return `<div style="margin-top:6px;">• ${name ? `${name} (${no})` : `nr ${no}`} — ${amount} zł${msg ? ` — ${msg}` : ""}</div>`;
+  }).join("");
+}  
+  
 async function adminIgnoreSystemPrzelew(row) {
   const ok = confirm("Oznaczyć ten przelew jako nieważny i ukryć go z listy?");
   if (!ok) return;
@@ -9072,14 +9135,23 @@ async function adminIgnoreSystemPrzelew(row) {
 }
   
 async function adminConfirmSystemPrzelew(row, suggestedPlayerNo, kind, period) {
+  const msg = document.getElementById("adminSystemPrzelewyMsg");
+  const rowEl = document.getElementById(`systemPrzelewRow_${row}`);
+
   try {
     let numer = String(suggestedPlayerNo || "").trim();
 
-    // jeśli nie ma sugestii zawodnika → fallback ręczny
     if (!numer) {
       numer = prompt("Podaj numer zawodnika:");
       if (!numer) return;
       numer = String(numer).trim();
+    }
+
+    if (msg) msg.textContent = "⏳ Księguję...";
+
+    if (rowEl) {
+      rowEl.style.opacity = "0.65";
+      rowEl.style.pointerEvents = "none";
     }
 
     const res = await apiClubPost({
@@ -9091,14 +9163,25 @@ async function adminConfirmSystemPrzelew(row, suggestedPlayerNo, kind, period) {
     });
 
     if (!res || res.success === false) {
-      alert("❌ " + (res?.error || "Błąd"));
+      if (rowEl) {
+        rowEl.style.opacity = "1";
+        rowEl.style.pointerEvents = "";
+      }
+      if (msg) msg.textContent = "❌ " + (res?.error || "Błąd");
       return;
     }
+
+    const successMsg = buildSystemPrzelewyResultMessage_(res);
+    if (msg) msg.textContent = successMsg;
 
     adminRemoveSystemPrzelewRow_(row);
 
   } catch (e) {
-    alert("❌ Błąd: " + (e?.message || e));
+    if (rowEl) {
+      rowEl.style.opacity = "1";
+      rowEl.style.pointerEvents = "";
+    }
+    if (msg) msg.textContent = "❌ Błąd: " + (e?.message || e);
   }
 }
 
@@ -9220,6 +9303,7 @@ function adminCloseManualSystemPrzelew() {
   modal.classList.add("hidden");
   modal.style.display = "none";
 }
+  
 async function adminSaveManualSystemPrzelew() {
   const row = Number(window.__adminSystemPrzelewManual?.row || 0);
   const playerSelectEl = document.getElementById("adminSystemPrzelewManualPlayerSelect");
@@ -9227,6 +9311,7 @@ async function adminSaveManualSystemPrzelew() {
   const periodEl = document.getElementById("adminSystemPrzelewManualPeriod");
   const msgEl = document.getElementById("adminSystemPrzelewManualMsg");
   const saveBtn = document.getElementById("adminSystemPrzelewManualSaveBtn");
+  const globalMsg = document.getElementById("adminSystemPrzelewyMsg");
 
   if (!(row >= 2)) {
     if (msgEl) msgEl.textContent = "❌ Błędny wiersz przelewu";
@@ -9254,9 +9339,9 @@ async function adminSaveManualSystemPrzelew() {
     if (saveBtn) {
       saveBtn.disabled = true;
       saveBtn.style.opacity = "0.65";
-      saveBtn.textContent = "⏳ Zapisuję…";
+      saveBtn.textContent = "⏳ Księguję...";
     }
-    if (msgEl) msgEl.textContent = "";
+    if (msgEl) msgEl.textContent = "⏳ Księguję...";
 
     const res = await apiClubPost({
       action: "system_przelewy_confirm",
@@ -9270,6 +9355,9 @@ async function adminSaveManualSystemPrzelew() {
       if (msgEl) msgEl.textContent = "❌ " + (res?.error || "Błąd");
       return;
     }
+
+    const successMsg = buildSystemPrzelewyResultMessage_(res);
+    if (globalMsg) globalMsg.textContent = successMsg;
 
     adminCloseManualSystemPrzelew();
     adminRemoveSystemPrzelewRow_(row);
@@ -9286,11 +9374,20 @@ async function adminSaveManualSystemPrzelew() {
 }
   
 async function adminSplitMixedPayment(row, playerNo) {
+  const msg = document.getElementById("adminSystemPrzelewyMsg");
+  const rowEl = document.getElementById(`systemPrzelewRow_${row}`);
+
   try {
     const numer = String(playerNo || "").trim();
     if (!numer) {
-      alert("❌ Brak sugerowanego zawodnika do rozbicia płatności");
+      if (msg) msg.textContent = "❌ Brak sugerowanego zawodnika do rozbicia płatności";
       return;
+    }
+
+    if (msg) msg.textContent = "⏳ Księguję...";
+    if (rowEl) {
+      rowEl.style.opacity = "0.65";
+      rowEl.style.pointerEvents = "none";
     }
 
     const res = await apiClubPost({
@@ -9300,14 +9397,33 @@ async function adminSplitMixedPayment(row, playerNo) {
     });
 
     if (!res || res.success === false) {
-      alert("❌ " + (res?.error || "Błąd"));
+      if (rowEl) {
+        rowEl.style.opacity = "1";
+        rowEl.style.pointerEvents = "";
+      }
+      if (msg) msg.textContent = "❌ " + (res?.error || "Błąd");
       return;
+    }
+
+    const parts = Array.isArray(res.results) ? res.results : [];
+    if (parts.length) {
+      const summary = parts.map(function (x) {
+        const header = String(x.payment_header || "").trim();
+        return header || `${x.kind}/${x.period}`;
+      }).join(", ");
+      if (msg) msg.textContent = `✅ Rozbiłem płatność dla nr ${numer}: ${summary}`;
+    } else {
+      if (msg) msg.textContent = `✅ Rozbiłem płatność dla nr ${numer}`;
     }
 
     adminRemoveSystemPrzelewRow_(row);
 
   } catch (e) {
-    alert("❌ Błąd: " + (e?.message || e));
+    if (rowEl) {
+      rowEl.style.opacity = "1";
+      rowEl.style.pointerEvents = "";
+    }
+    if (msg) msg.textContent = "❌ Błąd: " + (e?.message || e);
   }
 }
 
@@ -9376,6 +9492,30 @@ function adminHandleBankFileSelect(event) {
   adminSendBankFileToServer(file);
 }
 
+function buildImportConfirmedItemsHtml_(items) {
+  const rows = Array.isArray(items) ? items : [];
+  if (!rows.length) return "";
+
+  return rows.map(function (it) {
+    const name = escapeHtml_(String(it.player_name || "").trim());
+    const no = escapeHtml_(String(it.player_no || "").trim());
+    const amount = Number(it.amount_transfer || 0).toFixed(2).replace(".", ",");
+    const message = escapeHtml_(String(it.message || "").trim());
+
+    const who = name
+      ? `${name} (${no})`
+      : (no ? `nr ${no}` : "zawodnik");
+
+    return `
+      <div style="margin-top:8px; padding:8px 10px; border:1px solid #333; border-radius:10px; background:rgba(255,255,255,.04); text-align:left;">
+        <div style="font-weight:700;">${who}</div>
+        <div style="margin-top:4px; opacity:.9;">Kwota przelewu: <b>${amount} zł</b></div>
+        ${message ? `<div style="margin-top:4px; opacity:.85;">${message}</div>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+  
 function adminSendBankFileToServer(file) {
   const msg = document.getElementById("adminBankImportMsg");
 
@@ -9400,6 +9540,10 @@ function adminSendBankFileToServer(file) {
         body.innerHTML = "<div class='card' style='background:#222;'>⏳ Importuję wyciąg bankowy...</div>";
       }
 
+      if (msg) {
+        msg.textContent = "⏳ Importuję i księguję przelewy...";
+      }
+
       const response = await apiClubPost({
         action: "system_przelewy_upload_import",
         filename: file.name,
@@ -9407,28 +9551,15 @@ function adminSendBankFileToServer(file) {
         fileBase64: base64
       });
 
-      if (response && response.success) {
-        showImportResultPopup({
-          added: response.added || 0,
-          duplicates: response.duplicates || 0,
-          autoConfirmed: response.autoConfirmed || 0,
-          autoConfirmErrors: response.autoConfirmErrors || 0,
-          matchedAuto: response.matchedAuto || 0,
-          matchCandidate: response.matchCandidate || 0,
-          mixedReview: response.mixedReview || 0,
-          unmatched: response.unmatched || 0
-        });
-      }
-
-      console.log("SYSTEM_PRZELEWY upload response:", response);   
+      console.log("SYSTEM_PRZELEWY upload response:", response);
 
       if (response && response.debug) {
-      console.log("BANK HEADERS:", response.debug.headers);
-      console.log("BANK PREVIEW ROWS:", response.debug.previewRows);
-      console.log("TRANSFERS DETECTED:", response.debug.transfersDetected);
-      console.log("SAMPLE TRANSFERS:", response.debug.sampleTransfers);
-    }
-      
+        console.log("BANK HEADERS:", response.debug.headers);
+        console.log("BANK PREVIEW ROWS:", response.debug.previewRows);
+        console.log("TRANSFERS DETECTED:", response.debug.transfersDetected);
+        console.log("SAMPLE TRANSFERS:", response.debug.sampleTransfers);
+      }
+
       if (!response || response.success !== true) {
         throw new Error(
           (response && (response.message || response.error)) ||
@@ -9436,18 +9567,32 @@ function adminSendBankFileToServer(file) {
         );
       }
 
-      const added = Number(response.added || 0);
-      const duplicates = Number(response.duplicates || 0);
+      const confirmedItems =
+        response?.debug?.autoApplySummary?.confirmed_items ||
+        [];
+
+      showImportResultPopup({
+        added: response.added || 0,
+        duplicates: response.duplicates || 0,
+        autoConfirmed: response.autoConfirmed || 0,
+        autoConfirmErrors: response.autoConfirmErrors || 0,
+        matchedAuto: response.matchedAuto || 0,
+        matchCandidate: response.matchCandidate || 0,
+        mixedReview: response.mixedReview || 0,
+        unmatched: response.unmatched || 0,
+        confirmedItems: confirmedItems
+      });
 
       if (msg) {
-      msg.innerHTML = "";
-    }
+        msg.textContent = "";
+      }
 
       if (typeof adminOpenSystemPrzelewy === "function") {
         adminOpenSystemPrzelewy();
       } else if (typeof loadAdminSystemPrzelewy === "function") {
         loadAdminSystemPrzelewy();
       }
+
     } catch (err) {
       console.error("❌ Upload/import wyciągu error:", err);
       if (msg) {
@@ -9463,6 +9608,7 @@ function adminSendBankFileToServer(file) {
 
   reader.readAsDataURL(file);
 }
+  
 function showImportResultPopup(summary) {
   summary = summary || {};
 
@@ -9474,21 +9620,32 @@ function showImportResultPopup(summary) {
   const matchCandidate = Number(summary.matchCandidate || 0);
   const mixedReview = Number(summary.mixedReview || 0);
   const unmatched = Number(summary.unmatched || 0);
-
-  const txt =
-    "Dodano: " + added + "\n" +
-    "Duplikaty: " + duplicates + "\n" +
-    "Zaksięgowano automatycznie: " + autoConfirmed + "\n" +
-    "Błędy auto-księgowania: " + autoConfirmErrors + "\n" +
-    "MATCHED_AUTO: " + matchedAuto + "\n" +
-    "MATCH_CANDIDATE: " + matchCandidate + "\n" +
-    "MIXED_REVIEW: " + mixedReview + "\n" +
-    "UNMATCHED: " + unmatched;
+  const confirmedItems = Array.isArray(summary.confirmedItems) ? summary.confirmedItems : [];
 
   const popup = document.getElementById("importResultPopup");
   const text = document.getElementById("importResultText");
 
-  if (text) text.innerText = txt;
+  const detailsHtml = buildImportConfirmedItemsHtml_(confirmedItems);
+
+  const html =
+    `<div style="text-align:left; line-height:1.5;">
+      <div>Dodano: <b>${added}</b></div>
+      <div>Duplikaty: <b>${duplicates}</b></div>
+      <div>Zaksięgowano automatycznie: <b>${autoConfirmed}</b></div>
+      <div>Błędy auto-księgowania: <b>${autoConfirmErrors}</b></div>
+      <div>MATCHED_AUTO: <b>${matchedAuto}</b></div>
+      <div>MATCH_CANDIDATE: <b>${matchCandidate}</b></div>
+      <div>MIXED_REVIEW: <b>${mixedReview}</b></div>
+      <div>UNMATCHED: <b>${unmatched}</b></div>
+    </div>`
+    + (detailsHtml
+      ? `<div style="margin-top:16px; text-align:left;">
+           <div style="font-weight:800; margin-bottom:8px;">Szczegóły auto-księgowania</div>
+           ${detailsHtml}
+         </div>`
+      : "");
+
+  if (text) text.innerHTML = html;
   if (popup) popup.classList.remove("hidden");
 }
 
