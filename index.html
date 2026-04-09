@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73';
+  window.APP_BUILD = 'BETA APP v2.73.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9466,6 +9466,10 @@ function adminHandleBankFileSelect(event) {
 
   const msg = document.getElementById("adminBankImportMsg");
 
+  if (msg) {
+    msg.textContent = "";
+  }
+
   if (!file) {
     if (msg) msg.textContent = "Nie wybrano pliku.";
     return;
@@ -9483,11 +9487,6 @@ function adminHandleBankFileSelect(event) {
     if (msg) msg.textContent = "Nieobsługiwany format pliku. Dozwolone: XLS, XLSX, CSV.";
     return;
   }
-
-    const body = document.getElementById("adminSystemPrzelewyBody");
-    if (body) {
-      body.innerHTML = "<div class='card' style='background:#222;'>⏳ Importuję wyciąg bankowy...</div>";
-    }
 
   adminSendBankFileToServer(file);
 }
@@ -9537,11 +9536,11 @@ function adminSendBankFileToServer(file) {
 
       const body = document.getElementById("adminSystemPrzelewyBody");
       if (body) {
-        body.innerHTML = "<div class='card' style='background:#222;'>⏳ Importuję wyciąg bankowy...</div>";
+        body.innerHTML = "<div class='card' style='background:#222;'>⏳ Importuję i księguję przelewy...</div>";
       }
 
       if (msg) {
-        msg.textContent = "⏳ Importuję i księguję przelewy...";
+        msg.textContent = "";
       }
 
       const response = await apiClubPost({
