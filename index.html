@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.72.2';
+  window.APP_BUILD = 'BETA APP v2.73.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9376,6 +9376,30 @@ function adminHandleBankFileSelect(event) {
   adminSendBankFileToServer(file);
 }
 
+function buildImportConfirmedItemsHtml_(items) {
+  const rows = Array.isArray(items) ? items : [];
+  if (!rows.length) return "";
+
+  return rows.map(function (it) {
+    const name = escapeHtml_(String(it.player_name || "").trim());
+    const no = escapeHtml_(String(it.player_no || "").trim());
+    const amount = Number(it.amount_transfer || 0).toFixed(2).replace(".", ",");
+    const message = escapeHtml_(String(it.message || "").trim());
+
+    const who = name
+      ? `${name} (${no})`
+      : (no ? `nr ${no}` : "zawodnik");
+
+    return `
+      <div style="margin-top:8px; padding:8px 10px; border:1px solid #333; border-radius:10px; background:rgba(255,255,255,.04); text-align:left;">
+        <div style="font-weight:700;">${who}</div>
+        <div style="margin-top:4px; opacity:.9;">Kwota przelewu: <b>${amount} zł</b></div>
+        ${message ? `<div style="margin-top:4px; opacity:.85;">${message}</div>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+  
 function adminSendBankFileToServer(file) {
   const msg = document.getElementById("adminBankImportMsg");
 
@@ -9407,28 +9431,15 @@ function adminSendBankFileToServer(file) {
         fileBase64: base64
       });
 
-      if (response && response.success) {
-        showImportResultPopup({
-          added: response.added || 0,
-          duplicates: response.duplicates || 0,
-          autoConfirmed: response.autoConfirmed || 0,
-          autoConfirmErrors: response.autoConfirmErrors || 0,
-          matchedAuto: response.matchedAuto || 0,
-          matchCandidate: response.matchCandidate || 0,
-          mixedReview: response.mixedReview || 0,
-          unmatched: response.unmatched || 0
-        });
-      }
-
-      console.log("SYSTEM_PRZELEWY upload response:", response);   
+      console.log("SYSTEM_PRZELEWY upload response:", response);
 
       if (response && response.debug) {
-      console.log("BANK HEADERS:", response.debug.headers);
-      console.log("BANK PREVIEW ROWS:", response.debug.previewRows);
-      console.log("TRANSFERS DETECTED:", response.debug.transfersDetected);
-      console.log("SAMPLE TRANSFERS:", response.debug.sampleTransfers);
-    }
-      
+        console.log("BANK HEADERS:", response.debug.headers);
+        console.log("BANK PREVIEW ROWS:", response.debug.previewRows);
+        console.log("TRANSFERS DETECTED:", response.debug.transfersDetected);
+        console.log("SAMPLE TRANSFERS:", response.debug.sampleTransfers);
+      }
+
       if (!response || response.success !== true) {
         throw new Error(
           (response && (response.message || response.error)) ||
@@ -9436,18 +9447,31 @@ function adminSendBankFileToServer(file) {
         );
       }
 
-      const added = Number(response.added || 0);
-      const duplicates = Number(response.duplicates || 0);
+      const confirmedItems =
+        response?.debug?.autoApplySummary?.confirmed_items ||
+        [];
+
+      showImportResultPopup({
+        added: response.added || 0,
+        duplicates: response.duplicates || 0,
+        autoConfirmed: response.autoConfirmed || 0,
+        autoConfirmErrors: response.autoConfirmErrors || 0,
+        matchedAuto: response.matchedAuto || 0,
+        matchCandidate: response.matchCandidate || 0,
+        mixedReview: response.mixedReview || 0,
+        unmatched: response.unmatched || 0,
+        confirmedItems: confirmedItems
+      });
 
       if (msg) {
-      msg.innerHTML = "";
-    }
-
-      if (typeof adminOpenSystemPrzelewy === "function") {
-        adminOpenSystemPrzelewy();
-      } else if (typeof loadAdminSystemPrzelewy === "function") {
-        loadAdminSystemPrzelewy();
+        msg.innerHTML = "";
       }
+
+      // WAŻNE:
+      // Nie odświeżamy tutaj od razu listy przelewów.
+      // Refresh robimy dopiero po zamknięciu popupu.
+      return;
+
     } catch (err) {
       console.error("❌ Upload/import wyciągu error:", err);
       if (msg) {
@@ -9463,6 +9487,7 @@ function adminSendBankFileToServer(file) {
 
   reader.readAsDataURL(file);
 }
+  
 function showImportResultPopup(summary) {
   summary = summary || {};
 
@@ -9474,21 +9499,32 @@ function showImportResultPopup(summary) {
   const matchCandidate = Number(summary.matchCandidate || 0);
   const mixedReview = Number(summary.mixedReview || 0);
   const unmatched = Number(summary.unmatched || 0);
-
-  const txt =
-    "Dodano: " + added + "\n" +
-    "Duplikaty: " + duplicates + "\n" +
-    "Zaksięgowano automatycznie: " + autoConfirmed + "\n" +
-    "Błędy auto-księgowania: " + autoConfirmErrors + "\n" +
-    "MATCHED_AUTO: " + matchedAuto + "\n" +
-    "MATCH_CANDIDATE: " + matchCandidate + "\n" +
-    "MIXED_REVIEW: " + mixedReview + "\n" +
-    "UNMATCHED: " + unmatched;
+  const confirmedItems = Array.isArray(summary.confirmedItems) ? summary.confirmedItems : [];
 
   const popup = document.getElementById("importResultPopup");
   const text = document.getElementById("importResultText");
 
-  if (text) text.innerText = txt;
+  const detailsHtml = buildImportConfirmedItemsHtml_(confirmedItems);
+
+  const html =
+    `<div style="text-align:left; line-height:1.5;">
+      <div>Dodano: <b>${added}</b></div>
+      <div>Duplikaty: <b>${duplicates}</b></div>
+      <div>Zaksięgowano automatycznie: <b>${autoConfirmed}</b></div>
+      <div>Błędy auto-księgowania: <b>${autoConfirmErrors}</b></div>
+      <div>MATCHED_AUTO: <b>${matchedAuto}</b></div>
+      <div>MATCH_CANDIDATE: <b>${matchCandidate}</b></div>
+      <div>MIXED_REVIEW: <b>${mixedReview}</b></div>
+      <div>UNMATCHED: <b>${unmatched}</b></div>
+    </div>`
+    + (detailsHtml
+      ? `<div style="margin-top:16px; text-align:left;">
+           <div style="font-weight:800; margin-bottom:8px;">Szczegóły auto-księgowania</div>
+           ${detailsHtml}
+         </div>`
+      : "");
+
+  if (text) text.innerHTML = html;
   if (popup) popup.classList.remove("hidden");
 }
 
@@ -9499,8 +9535,8 @@ function closeImportPopup() {
   const msg = document.getElementById("adminBankImportMsg");
   if (msg) msg.textContent = "";
 
-  if (typeof adminOpenSystemPrzelewyView === "function") {
-    adminOpenSystemPrzelewyView();
+  if (typeof adminOpenSystemPrzelewy === "function") {
+    adminOpenSystemPrzelewy();
   }
 }
   
