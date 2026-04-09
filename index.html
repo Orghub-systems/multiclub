@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.14';
+  window.APP_BUILD = 'BETA APP v2.73.15';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9468,33 +9468,48 @@ function adminSendBankFileToServer(file) {
     return;
   }
 
-  let phaseTimer = null;
+  let progressInterval = null;
+  let processingStartedAt = 0;
 
-  function setImportStage(stage) {
+  function stopProgressTimer() {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
+  }
+
+  function setImportStage(stage, extraText) {
     let html = "";
 
-    if (stage === 1) {
+    if (stage === "reading") {
       html = `
-        <div>⏳ Ładuję plik...</div>
-        <div style="opacity:.55;">Ładuję przelewy...</div>
-        <div style="opacity:.55;">Księguję wpłaty...</div>
+        <div>⏳ Odczytuję plik...</div>
       `;
-    } else if (stage === 2) {
+    } else if (stage === "uploading") {
       html = `
-        <div>✅ Ładuję plik...</div>
-        <div>⏳ Ładuję przelewy...</div>
-        <div style="opacity:.55;">Księguję wpłaty...</div>
+        <div>✅ Odczytuję plik...</div>
+        <div>⏳ Wysyłam plik do serwera...</div>
       `;
-    } else if (stage === 3) {
+    } else if (stage === "processing") {
+      const seconds = Math.max(0, Math.floor((Date.now() - processingStartedAt) / 1000));
       html = `
-        <div>✅ Ładuję plik...</div>
-        <div>✅ Ładuję przelewy...</div>
-        <div>⏳ Księguję wpłaty...</div>
+        <div>✅ Odczytuję plik...</div>
+        <div>✅ Wysyłam plik do serwera...</div>
+        <div>⏳ Przetwarzam wyciąg i księguję wpłaty... ${seconds}s</div>
+        ${extraText ? `<div style="margin-top:8px; opacity:.8;">${extraText}</div>` : ""}
+      `;
+    } else if (stage === "done") {
+      html = `
+        <div>✅ Import zakończony.</div>
+      `;
+    } else if (stage === "error") {
+      html = `
+        <div>❌ ${extraText || "Wystąpił błąd importu."}</div>
       `;
     }
 
     if (msg) {
-      msg.innerHTML = html;
+      msg.innerHTML = "";
     }
 
     if (body) {
@@ -9506,7 +9521,7 @@ function adminSendBankFileToServer(file) {
     }
   }
 
-  setImportStage(1);
+  setImportStage("reading");
 
   const reader = new FileReader();
 
@@ -9519,11 +9534,14 @@ function adminSendBankFileToServer(file) {
         throw new Error("Nie udało się odczytać pliku.");
       }
 
-      setImportStage(2);
+      setImportStage("uploading");
 
-      phaseTimer = setTimeout(function() {
-        setImportStage(3);
-      }, 900);
+      processingStartedAt = Date.now();
+      setImportStage("processing", "To może potrwać kilkanaście sekund przy większym wyciągu.");
+
+      progressInterval = setInterval(function() {
+        setImportStage("processing", "To może potrwać kilkanaście sekund przy większym wyciągu.");
+      }, 1000);
 
       const response = await apiClubPost({
         action: "system_przelewy_upload_import",
@@ -9532,10 +9550,7 @@ function adminSendBankFileToServer(file) {
         fileBase64: base64
       });
 
-      if (phaseTimer) {
-        clearTimeout(phaseTimer);
-        phaseTimer = null;
-      }
+      stopProgressTimer();
 
       const confirmedItemsTop = Array.isArray(response?.confirmedItems) ? response.confirmedItems : [];
       const confirmedItemsDebug = Array.isArray(response?.debug?.autoApplySummary?.confirmed_items)
@@ -9570,6 +9585,8 @@ function adminSendBankFileToServer(file) {
         response?.debug?.autoApplySummary?.confirmed_items ||
         [];
 
+      setImportStage("done");
+
       showImportResultPopup({
         added: response.added || 0,
         duplicates: response.duplicates || 0,
@@ -9589,12 +9606,15 @@ function adminSendBankFileToServer(file) {
       return;
 
     } catch (err) {
-      if (phaseTimer) {
-        clearTimeout(phaseTimer);
-        phaseTimer = null;
-      }
+      stopProgressTimer();
 
       console.error("❌ Upload/import wyciągu error:", err);
+
+      setImportStage(
+        "error",
+        "Błąd importu: " + (err && err.message ? err.message : err)
+      );
+
       if (msg) {
         msg.textContent = "Błąd importu: " + (err && err.message ? err.message : err);
       }
@@ -9602,12 +9622,11 @@ function adminSendBankFileToServer(file) {
   };
 
   reader.onerror = function() {
-    if (phaseTimer) {
-      clearTimeout(phaseTimer);
-      phaseTimer = null;
-    }
+    stopProgressTimer();
 
     console.error("❌ FileReader error");
+    setImportStage("error", "Nie udało się odczytać pliku.");
+
     if (msg) msg.textContent = "Nie udało się odczytać pliku.";
   };
 
