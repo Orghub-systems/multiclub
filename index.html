@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.11';
+  window.APP_BUILD = 'BETA APP v2.73.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9383,8 +9383,8 @@ function buildImportConfirmedItemsHtml_(items) {
   return rows.map(function (it) {
     const name = escapeHtml_(String(it.player_name || "").trim());
     const no = escapeHtml_(String(it.player_no || "").trim());
-    const amount = Number(it.amount_transfer || 0).toFixed(2).replace(".", ",");
-    const message = escapeHtml_(String(it.message || "").trim());
+    const amount = Number(it.amount || 0).toFixed(2).replace(".", ",");
+    const label = escapeHtml_(String(it.payment_label || it.payment_header || "").trim());
 
     const who = name
       ? `${name} (${no})`
@@ -9394,31 +9394,7 @@ function buildImportConfirmedItemsHtml_(items) {
       <div style="margin-top:8px; padding:8px 10px; border:1px solid #333; border-radius:10px; background:rgba(255,255,255,.04); text-align:left;">
         <div style="font-weight:700;">${who}</div>
         <div style="margin-top:4px; opacity:.9;">Kwota przelewu: <b>${amount} zł</b></div>
-        ${message ? `<div style="margin-top:4px; opacity:.85;">${message}</div>` : ""}
-      </div>
-    `;
-  }).join("");
-}
-
-function buildImportConfirmedItemsHtml_(items) {
-  const rows = Array.isArray(items) ? items : [];
-  if (!rows.length) return "";
-
-  return rows.map(function (it) {
-    const name = escapeHtml_(String(it.player_name || "").trim());
-    const no = escapeHtml_(String(it.player_no || "").trim());
-    const amount = Number(it.amount_transfer || 0).toFixed(2).replace(".", ",");
-    const message = escapeHtml_(String(it.message || "").trim());
-
-    const who = name
-      ? `${name} (${no})`
-      : (no ? `nr ${no}` : "zawodnik");
-
-    return `
-      <div style="margin-top:8px; padding:8px 10px; border:1px solid #333; border-radius:10px; background:rgba(255,255,255,.04); text-align:left;">
-        <div style="font-weight:700;">${who}</div>
-        <div style="margin-top:4px; opacity:.9;">Kwota przelewu: <b>${amount} zł</b></div>
-        ${message ? `<div style="margin-top:4px; opacity:.85;">${message}</div>` : ""}
+        ${label ? `<div style="margin-top:4px; opacity:.85;">${label}</div>` : ""}
       </div>
     `;
   }).join("");
