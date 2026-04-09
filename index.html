@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.12';
+  window.APP_BUILD = 'BETA APP v2.73.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9384,7 +9384,21 @@ function buildImportConfirmedItemsHtml_(items) {
     const name = escapeHtml_(String(it.player_name || "").trim());
     const no = escapeHtml_(String(it.player_no || "").trim());
     const amount = Number(it.amount || 0).toFixed(2).replace(".", ",");
-    const label = escapeHtml_(String(it.payment_label || it.payment_header || "").trim());
+    const rawKind = String(it.payment_kind || "").trim().toLowerCase();
+    const kindLabel =
+      rawKind === "skladka" ? "Składka" :
+      rawKind === "zajecia" ? "Zajęcia dodatkowe" :
+      "";
+    
+    const rawPeriodLabel = String(it.payment_label || "").trim();
+    const rawHeaderLabel = String(it.payment_header || "").trim();
+    
+    const labelText =
+      kindLabel && rawPeriodLabel
+        ? `${kindLabel} ${rawPeriodLabel}`
+        : (rawHeaderLabel || rawPeriodLabel || kindLabel);
+    
+    const label = escapeHtml_(labelText);
 
     const who = name
       ? `${name} (${no})`
