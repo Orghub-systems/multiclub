@@ -9455,6 +9455,18 @@ function adminSendBankFileToServer(file) {
         fileBase64: base64
       });
 
+      const confirmedItemsTop = Array.isArray(response?.confirmedItems) ? response.confirmedItems : [];
+      const confirmedItemsDebug = Array.isArray(response?.debug?.autoApplySummary?.confirmed_items)
+        ? response.debug.autoApplySummary.confirmed_items
+        : [];
+      
+      console.log("AUTO REPORT CHECK", {
+        topLen: confirmedItemsTop.length,
+        debugLen: confirmedItemsDebug.length,
+        topSample: confirmedItemsTop[0] || null,
+        debugSample: confirmedItemsDebug[0] || null
+      });
+
       console.log("SYSTEM_PRZELEWY upload response:", response);
 
       if (response && response.debug) {
