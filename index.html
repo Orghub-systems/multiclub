@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.13';
+  window.APP_BUILD = 'BETA APP v2.73.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8921,6 +8921,7 @@ function renderAdminSystemPrzelewTile_(p) {
   const suggestedParts = Array.isArray(p.suggested_parts) ? p.suggested_parts : [];
 
   const titleData = encodeURIComponent(titleRaw);
+  const suggestedNameData = encodeURIComponent(suggestedNameRaw);
 
   const suggestionHtml =
     suggestedNo && suggestedName
@@ -8957,7 +8958,7 @@ function renderAdminSystemPrzelewTile_(p) {
       confirmBtn = `
         <button class="full-btn"
           style="margin-top:10px; background:#0f7a2a; border-color:#19a642;"
-          onclick="adminConfirmSystemPrzelew(${rowNo}, '${suggestedNo}', '${kind}', '${period}')">
+          onclick="adminConfirmSystemPrzelew(this, ${rowNo}, '${suggestedNo}', '${kind}', '${period}', decodeURIComponent('${suggestedNameData}'), ${amount})">
           Zatwierdź jako #${suggestedNo} ${suggestedName}
         </button>
       `;
@@ -8965,7 +8966,7 @@ function renderAdminSystemPrzelewTile_(p) {
       confirmBtn = `
         <button class="full-btn"
           style="margin-top:10px;"
-          onclick="adminConfirmSystemPrzelew(${rowNo}, '', '${kind}', '${period}')">
+          onclick="adminConfirmSystemPrzelew(this, ${rowNo}, '', '${kind}', '${period}', '', ${amount})">
           Zatwierdź płatność
         </button>
       `;
@@ -9071,15 +9072,40 @@ async function adminIgnoreSystemPrzelew(row) {
   }
 }
   
-async function adminConfirmSystemPrzelew(row, suggestedPlayerNo, kind, period) {
+async function adminConfirmSystemPrzelew(btn, row, suggestedPlayerNo, kind, period, suggestedPlayerName, amount) {
+  const msg = document.getElementById("adminSystemPrzelewyMsg");
+  const body = document.getElementById("adminSystemPrzelewyBody");
+  const btnEl = btn && btn.tagName ? btn : null;
+
+  const originalBtnText = btnEl ? btnEl.textContent : "";
+  const originalBtnOpacity = btnEl ? btnEl.style.opacity : "";
+
   try {
     let numer = String(suggestedPlayerNo || "").trim();
 
-    // jeśli nie ma sugestii zawodnika → fallback ręczny
     if (!numer) {
       numer = prompt("Podaj numer zawodnika:");
       if (!numer) return;
       numer = String(numer).trim();
+    }
+
+    const kindRaw = String(kind || "").trim().toUpperCase();
+    const kindLabel =
+      kindRaw === "S" || kindRaw === "SKLADKA" ? "Składka" :
+      kindRaw === "Z" || kindRaw === "ZAJECIA" ? "Zajęcia dodatkowe" :
+      (kindRaw || "Płatność");
+
+    const who = String(suggestedPlayerName || "").trim() || (numer ? `nr ${numer}` : "zawodnik");
+    const amountLabel = Number(amount || 0).toFixed(2).replace(".", ",");
+
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.style.opacity = "0.7";
+      btnEl.textContent = "⏳ Księguję wpłatę...";
+    }
+
+    if (msg) {
+      msg.textContent = "⏳ Księguję wpłatę...";
     }
 
     const res = await apiClubPost({
@@ -9091,14 +9117,33 @@ async function adminConfirmSystemPrzelew(row, suggestedPlayerNo, kind, period) {
     });
 
     if (!res || res.success === false) {
-      alert("❌ " + (res?.error || "Błąd"));
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.style.opacity = originalBtnOpacity;
+        btnEl.textContent = originalBtnText;
+      }
+      if (msg) {
+        msg.textContent = "❌ " + (res?.error || "Błąd księgowania");
+      }
       return;
     }
 
     adminRemoveSystemPrzelewRow_(row);
 
+    const count = body ? body.querySelectorAll('[id^="systemPrzelewRow_"]').length : 0;
+    if (msg) {
+      msg.textContent = `Do obsługi: ${count} • ✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`;
+    }
+
   } catch (e) {
-    alert("❌ Błąd: " + (e?.message || e));
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.style.opacity = originalBtnOpacity;
+      btnEl.textContent = originalBtnText;
+    }
+    if (msg) {
+      msg.textContent = "❌ Błąd: " + (e?.message || e);
+    }
   }
 }
 
@@ -9416,11 +9461,52 @@ function buildImportConfirmedItemsHtml_(items) {
   
 function adminSendBankFileToServer(file) {
   const msg = document.getElementById("adminBankImportMsg");
+  const body = document.getElementById("adminSystemPrzelewyBody");
 
   if (!file) {
     if (msg) msg.textContent = "Błąd: brak pliku do wysłania.";
     return;
   }
+
+  let phaseTimer = null;
+
+  function setImportStage(stage) {
+    let html = "";
+
+    if (stage === 1) {
+      html = `
+        <div>⏳ Ładuję plik...</div>
+        <div style="opacity:.55;">Ładuję przelewy...</div>
+        <div style="opacity:.55;">Księguję wpłaty...</div>
+      `;
+    } else if (stage === 2) {
+      html = `
+        <div>✅ Ładuję plik...</div>
+        <div>⏳ Ładuję przelewy...</div>
+        <div style="opacity:.55;">Księguję wpłaty...</div>
+      `;
+    } else if (stage === 3) {
+      html = `
+        <div>✅ Ładuję plik...</div>
+        <div>✅ Ładuję przelewy...</div>
+        <div>⏳ Księguję wpłaty...</div>
+      `;
+    }
+
+    if (msg) {
+      msg.innerHTML = html;
+    }
+
+    if (body) {
+      body.innerHTML = `
+        <div class="card" style="background:#222; text-align:left;">
+          ${html}
+        </div>
+      `;
+    }
+  }
+
+  setImportStage(1);
 
   const reader = new FileReader();
 
@@ -9433,10 +9519,11 @@ function adminSendBankFileToServer(file) {
         throw new Error("Nie udało się odczytać pliku.");
       }
 
-      const body = document.getElementById("adminSystemPrzelewyBody");
-      if (body) {
-        body.innerHTML = "<div class='card' style='background:#222;'>⏳ Importuję wyciąg bankowy...</div>";
-      }
+      setImportStage(2);
+
+      phaseTimer = setTimeout(function() {
+        setImportStage(3);
+      }, 900);
 
       const response = await apiClubPost({
         action: "system_przelewy_upload_import",
@@ -9445,11 +9532,16 @@ function adminSendBankFileToServer(file) {
         fileBase64: base64
       });
 
+      if (phaseTimer) {
+        clearTimeout(phaseTimer);
+        phaseTimer = null;
+      }
+
       const confirmedItemsTop = Array.isArray(response?.confirmedItems) ? response.confirmedItems : [];
       const confirmedItemsDebug = Array.isArray(response?.debug?.autoApplySummary?.confirmed_items)
         ? response.debug.autoApplySummary.confirmed_items
         : [];
-      
+
       console.log("AUTO REPORT CHECK", {
         topLen: confirmedItemsTop.length,
         debugLen: confirmedItemsDebug.length,
@@ -9494,12 +9586,14 @@ function adminSendBankFileToServer(file) {
         msg.innerHTML = "";
       }
 
-      // Ważne:
-      // nie odświeżamy tutaj od razu listy przelewów.
-      // Zrobimy to dopiero po zamknięciu popupu.
       return;
 
     } catch (err) {
+      if (phaseTimer) {
+        clearTimeout(phaseTimer);
+        phaseTimer = null;
+      }
+
       console.error("❌ Upload/import wyciągu error:", err);
       if (msg) {
         msg.textContent = "Błąd importu: " + (err && err.message ? err.message : err);
@@ -9508,6 +9602,11 @@ function adminSendBankFileToServer(file) {
   };
 
   reader.onerror = function() {
+    if (phaseTimer) {
+      clearTimeout(phaseTimer);
+      phaseTimer = null;
+    }
+
     console.error("❌ FileReader error");
     if (msg) msg.textContent = "Nie udało się odczytać pliku.";
   };
