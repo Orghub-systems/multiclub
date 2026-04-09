@@ -9517,6 +9517,13 @@ function showImportResultPopup(summary) {
   const popup = document.getElementById("importResultPopup");
   const text = document.getElementById("importResultText");
 
+    if (text) {
+    text.style.maxHeight = "70vh";
+    text.style.overflowY = "auto";
+    text.style.webkitOverflowScrolling = "touch";
+    text.style.paddingRight = "6px";
+  }
+
   const detailsHtml = buildImportConfirmedItemsHtml_(confirmedItems);
 
   const html =
