@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.1';
+  window.APP_BUILD = 'BETA APP v2.73.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9586,14 +9586,19 @@ function adminSendBankFileToServer(file) {
         msg.textContent = "";
       }
 
-      if (typeof adminOpenSystemPrzelewy === "function") {
-        adminOpenSystemPrzelewy();
-      } else if (typeof loadAdminSystemPrzelewy === "function") {
-        loadAdminSystemPrzelewy();
-      }
+      // UWAGA:
+      // NIE odświeżamy tutaj od razu listy przelewów.
+      // Zrobimy to dopiero po zamknięciu popupu wyniku.
+      return;
 
     } catch (err) {
       console.error("❌ Upload/import wyciągu error:", err);
+
+      const body = document.getElementById("adminSystemPrzelewyBody");
+      if (body) {
+        body.innerHTML = `<div class="card" style="background:#700;">❌ Błąd importu: ${err && err.message ? err.message : err}</div>`;
+      }
+
       if (msg) {
         msg.textContent = "Błąd importu: " + (err && err.message ? err.message : err);
       }
@@ -9602,6 +9607,12 @@ function adminSendBankFileToServer(file) {
 
   reader.onerror = function() {
     console.error("❌ FileReader error");
+
+    const body = document.getElementById("adminSystemPrzelewyBody");
+    if (body) {
+      body.innerHTML = `<div class="card" style="background:#700;">❌ Nie udało się odczytać pliku.</div>`;
+    }
+
     if (msg) msg.textContent = "Nie udało się odczytać pliku.";
   };
 
@@ -9655,8 +9666,8 @@ function closeImportPopup() {
   const msg = document.getElementById("adminBankImportMsg");
   if (msg) msg.textContent = "";
 
-  if (typeof adminOpenSystemPrzelewyView === "function") {
-    adminOpenSystemPrzelewyView();
+  if (typeof adminOpenSystemPrzelewy === "function") {
+    adminOpenSystemPrzelewy();
   }
 }
   
