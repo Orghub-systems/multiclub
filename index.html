@@ -9402,6 +9402,7 @@ function buildImportConfirmedItemsHtml_(items) {
   
 function adminSendBankFileToServer(file) {
   const msg = document.getElementById("adminBankImportMsg");
+  const reqId = "imp_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
 
   if (!file) {
     if (msg) msg.textContent = "Błąd: brak pliku do wysłania.";
@@ -9419,6 +9420,13 @@ function adminSendBankFileToServer(file) {
         throw new Error("Nie udało się odczytać pliku.");
       }
 
+      console.log(`[IMPORT START][${reqId}]`, {
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || "",
+        base64Length: base64.length
+      });
+
       const body = document.getElementById("adminSystemPrzelewyBody");
       if (body) {
         body.innerHTML = "<div class='card' style='background:#222;'>⏳ Importuję wyciąg bankowy...</div>";
@@ -9426,19 +9434,13 @@ function adminSendBankFileToServer(file) {
 
       const response = await apiClubPost({
         action: "system_przelewy_upload_import",
+        requestId: reqId,
         filename: file.name,
         mimeType: file.type || "",
         fileBase64: base64
       });
 
-      console.log("SYSTEM_PRZELEWY upload response:", response);
-
-      if (response && response.debug) {
-        console.log("BANK HEADERS:", response.debug.headers);
-        console.log("BANK PREVIEW ROWS:", response.debug.previewRows);
-        console.log("TRANSFERS DETECTED:", response.debug.transfersDetected);
-        console.log("SAMPLE TRANSFERS:", response.debug.sampleTransfers);
-      }
+      console.log(`[IMPORT RESPONSE][${reqId}]`, response);
 
       if (!response || response.success !== true) {
         throw new Error(
@@ -9447,47 +9449,49 @@ function adminSendBankFileToServer(file) {
         );
       }
 
-      const confirmedItems =
-        response?.debug?.autoApplySummary?.confirmed_items ||
-        [];
-
-      showImportResultPopup({
-        added: response.added || 0,
-        duplicates: response.duplicates || 0,
-        autoConfirmed: response.autoConfirmed || 0,
-        autoConfirmErrors: response.autoConfirmErrors || 0,
-        matchedAuto: response.matchedAuto || 0,
-        matchCandidate: response.matchCandidate || 0,
-        mixedReview: response.mixedReview || 0,
-        unmatched: response.unmatched || 0,
-        confirmedItems: confirmedItems
-      });
+      if (response && response.success) {
+        showImportResultPopup({
+          added: response.added || 0,
+          duplicates: response.duplicates || 0,
+          autoConfirmed: response.autoConfirmed || 0,
+          autoConfirmErrors: response.autoConfirmErrors || 0,
+          matchedAuto: response.matchedAuto || 0,
+          matchCandidate: response.matchCandidate || 0,
+          mixedReview: response.mixedReview || 0,
+          unmatched: response.unmatched || 0
+        });
+      }
 
       if (msg) {
         msg.innerHTML = "";
       }
 
-      // WAŻNE:
-      // Nie odświeżamy tutaj od razu listy przelewów.
-      // Refresh robimy dopiero po zamknięciu popupu.
-      return;
+      if (typeof adminOpenSystemPrzelewy === "function") {
+        adminOpenSystemPrzelewy();
+      } else if (typeof loadAdminSystemPrzelewy === "function") {
+        loadAdminSystemPrzelewy();
+      }
 
     } catch (err) {
-      console.error("❌ Upload/import wyciągu error:", err);
+      console.error(`[IMPORT ERROR][${reqId}]`, {
+        name: err?.name || "",
+        message: err?.message || err,
+        stack: err?.stack || ""
+      });
+
       if (msg) {
         msg.textContent = "Błąd importu: " + (err && err.message ? err.message : err);
       }
     }
   };
 
-  reader.onerror = function() {
-    console.error("❌ FileReader error");
+  reader.onerror = function(err) {
+    console.error(`[IMPORT FILEREADER ERROR][${reqId}]`, err);
     if (msg) msg.textContent = "Nie udało się odczytać pliku.";
   };
 
   reader.readAsDataURL(file);
 }
-  
 function showImportResultPopup(summary) {
   summary = summary || {};
 
