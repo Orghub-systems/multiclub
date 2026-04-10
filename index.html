@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.16';
+  window.APP_BUILD = 'BETA APP v2.74';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1091,7 +1091,7 @@ input[type="number"] {
 <div id="adminZawodnikView" class="container hidden">
   <h1 id="adminZawodnikTitle">Zawodnik</h1>
 
-  <button class="full-btn" onclick="adminOpenGroups()">Grupy</button>
+ <button class="full-btn" onclick="adminOpenPlayerInfo()">Informacje o zawodniku</button>
  <button class="full-btn" onclick="adminOpenStats();">Statystyki</button>
   <button class="full-btn" onclick="adminOpenPayments()">Płatności</button>
 
@@ -1099,6 +1099,46 @@ input[type="number"] {
 
   <p id="adminZawodnikMsg" style="margin-top:10px;"></p>
 </div>
+
+<div id="adminZawodnikInfoView" class="container hidden">
+  <h1 id="adminZawodnikInfoTitle">Informacje o zawodniku</h1>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Data dołączenia</div>
+    <div id="adminInfoJoinDate" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Grupy</div>
+    <div id="adminInfoGrupy" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+    <button class="full-btn" style="margin-top:12px;" onclick="adminOpenGroups()">Edytuj grupy</button>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Adres email</div>
+    <div id="adminInfoEmail" style="margin-top:4px; font-size:18px; font-weight:800; word-break:break-word;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <label style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <input id="adminInfoAccess" type="checkbox" style="transform:scale(1.2);" onchange="adminToggleAccessFromInfo(this.checked)">
+      <span>Dostęp do aplikacji</span>
+    </label>
+
+    <label style="display:flex; align-items:center; gap:10px; margin-bottom:12px; opacity:.85;">
+      <input id="adminInfoPushConsent" type="checkbox" style="transform:scale(1.2);" disabled>
+      <span>Zgoda na powiadomienia push (tylko podgląd)</span>
+    </label>
+
+    <label style="display:flex; align-items:center; gap:10px; opacity:.85;">
+      <input id="adminInfoEmailConsent" type="checkbox" style="transform:scale(1.2);" disabled>
+      <span>Zgoda na powiadomienia email (tylko podgląd)</span>
+    </label>
+  </div>
+
+  <p id="adminInfoMsg" style="margin-top:10px;"></p>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>  
     
 <!-- ADMIN GROUPS VIEW
      Ekran edycji grup przypisanych do zawodnika -->
@@ -7883,9 +7923,11 @@ async function adminPokazZawodnikow() {
       const joinDate = String(z.joinDate || "");
       const joinDateSafe = joinDate.replace(/'/g, "\\'");
 
-      const access = (z.dostepDoApki !== undefined) ? adminBool_(z.dostepDoApki)
-                   : (z.access !== undefined) ? adminBool_(z.access)
-                   : false;
+      const access =
+        z.dostepDoApki === true ||
+        z.dostepDoApki === 1 ||
+        String(z.dostepDoApki || "").trim() === "1" ||
+        String(z.dostepDoApki || "").trim().toUpperCase() === "TRUE";
 
       return `
         <div class="card" style="text-align:left; cursor:pointer;"
@@ -7899,7 +7941,6 @@ async function adminPokazZawodnikow() {
             <div style="display:flex; gap:10px; align-items:center;"
                  onclick="event.stopPropagation();">
 
-              <!-- CHECKBOX DOSTĘPU -->
               <label style="display:flex; gap:6px; align-items:center; white-space:nowrap;">
                 <input type="checkbox"
                        ${access ? "checked" : ""}
@@ -7909,7 +7950,6 @@ async function adminPokazZawodnikow() {
                 <span style="opacity:0.9;">Dostęp do aplikacji</span>
               </label>
 
-              <!-- USUŃ ZAWODNIKA -->
               <button
                 style="background:#700; border:1px solid #a00; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer;"
                 onclick="event.stopPropagation(); adminOpenDeletePopup('${nr}','${nazwSafe}')">
@@ -7991,26 +8031,29 @@ async function adminDoDeletePlayer() {
   }
 }
 
-  async function adminSetAccessFromList(nr, isOn) {
+async function adminSetAccessFromList(nr, checked) {
   const numer = String(nr || "").trim();
-  if (!numer) return;
 
   try {
-    const r = await apiClubPost({
+    const res = await apiClubPost({
       action: "adminSetAppAccess",
-      numer,
-      access: isOn ? 1 : 0
+      numer: numer,
+      access: checked ? "TRUE" : "FALSE"
     });
 
-    if (!r || !(r.success || r.ok)) {
-      alert("❌ Nie zapisano dostępu: " + (r?.error || r?.message || JSON.stringify(r)));
+    if (!res || res.success === false) {
+      alert("❌ " + (res?.error || "Nie udało się zmienić dostępu"));
+      await adminPokazZawodnikow();
       return;
     }
 
-    // opcjonalnie: cichy sukces (bez alertów), ale na razie niech krzyknie jak trzeba
-    // alert("✅ Zapisano dostęp");
+    if (window.__adminCache && window.__adminCache[numer] && window.__adminCache[numer].info) {
+      window.__adminCache[numer].info.dostepDoApki = !!checked;
+    }
+
   } catch (e) {
-    alert("❌ Błąd połączenia: " + (e?.message || e));
+    alert("❌ " + (e?.message || e));
+    await adminPokazZawodnikow();
   }
 }
 
@@ -8019,72 +8062,202 @@ async function adminDoDeletePlayer() {
 /* =================== 160 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
 
 // ---- Otwarcie okna zawodnika (wywołasz z listy zawodników) ----
-function adminOpenZawodnik(nr, nazwisko, joinDate) {
-  // kontekst zawodnika dla admina
+  
+async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   window.__adminSelectedNr = String(nr || "").trim();
   window.__adminSelectedNazwisko = String(nazwisko || "").trim();
   window.__adminSelectedJoinDate = String(joinDate || "").trim();
 
-  // przełącz na widok (NOWE OKNO)
   goToView("adminZawodnikView");
 
-  // ustaw tytuł w tym widoku
   const title = document.getElementById("adminZawodnikTitle");
   if (title) {
     title.textContent = `Zawodnik #${window.__adminSelectedNr} — ${window.__adminSelectedNazwisko || "—"}`;
-
-    let joinEl = document.getElementById("adminZawodnikJoinDate");
-    if (!joinEl) {
-      joinEl = document.createElement("p");
-      joinEl.id = "adminZawodnikJoinDate";
-      joinEl.style.margin = "10px 0 18px 0";
-      joinEl.style.opacity = "0.95";
-      joinEl.style.fontSize = "18px";
-      joinEl.style.fontWeight = "700";
-      joinEl.style.textAlign = "center";
-      title.insertAdjacentElement("afterend", joinEl);
-    }
-
-    joinEl.textContent = `Dołączył/a: ${window.__adminSelectedJoinDate || "—"}`;
   }
 
-  // wyczyść komunikaty / boxy, jeśli istnieją
   const msg = document.getElementById("adminZawodnikMsg");
   if (msg) msg.textContent = "";
 
-  // =================== PREFETCH ADMIN (cache w RAM) ===================
   if (!window.__adminCache) window.__adminCache = {};
   const key = String(window.__adminSelectedNr || "").trim();
   if (!window.__adminCache[key]) window.__adminCache[key] = { ts: Date.now() };
 
-  // Odpal w tle (nie blokuje UI)
   (async () => {
     try {
       const nr2 = String(window.__adminSelectedNr || "").trim();
       if (!nr2) return;
 
-      // 1) Grupy
+      if (window.__adminCache[nr2].info === undefined) {
+        window.__adminCache[nr2].info = await apiClubPost({
+          action: "adminPlayerInfo",
+          numer: nr2
+        });
+      }
+
       if (window.__adminCache[nr2].grupy === undefined) {
         window.__adminCache[nr2].grupy = await apiClubGet("adminGrupy", { numer: nr2 });
       }
 
-      // 2) Statystyki (zwykły endpoint zawodnika)
+      if (window.__adminCache[nr2].prefs === undefined) {
+        window.__adminCache[nr2].prefs = await apiClubPost({
+          action: "getUserNotificationPrefs",
+          loginId: nr2
+        });
+      }
+
       if (window.__adminCache[nr2].staty === undefined) {
         window.__adminCache[nr2].staty = await apiClubGet("statystyki", { numer: nr2 });
       }
 
-      // 3) Płatności admin
       if (window.__adminCache[nr2].platnosci === undefined) {
         window.__adminCache[nr2].platnosci = await apiClubGet("platnosciAdmin", { numer: nr2 });
       }
-
-      // console.log("✅ Prefetch done:", nr2, window.__adminCache[nr2]);
 
     } catch (e) {
       console.warn("Prefetch admin failed:", e);
     }
   })();
 }
+
+async function adminOpenPlayerInfo() {
+  const nr = String(window.__adminSelectedNr || "").trim();
+  const nazwisko = String(window.__adminSelectedNazwisko || "").trim();
+
+  goToView("adminZawodnikInfoView");
+
+  const title = document.getElementById("adminZawodnikInfoTitle");
+  const msg = document.getElementById("adminInfoMsg");
+  const joinEl = document.getElementById("adminInfoJoinDate");
+  const grupyEl = document.getElementById("adminInfoGrupy");
+  const emailEl = document.getElementById("adminInfoEmail");
+  const accessEl = document.getElementById("adminInfoAccess");
+  const pushEl = document.getElementById("adminInfoPushConsent");
+  const emailConsentEl = document.getElementById("adminInfoEmailConsent");
+
+  if (title) {
+    title.textContent = `Informacje — #${nr}${nazwisko ? " — " + nazwisko : ""}`;
+  }
+
+  if (msg) msg.textContent = "⏳ Ładuję dane zawodnika...";
+  if (joinEl) joinEl.textContent = "—";
+  if (grupyEl) grupyEl.textContent = "—";
+  if (emailEl) emailEl.textContent = "—";
+  if (accessEl) accessEl.checked = false;
+  if (pushEl) pushEl.checked = false;
+  if (emailConsentEl) emailConsentEl.checked = false;
+
+  if (!window.__adminCache) window.__adminCache = {};
+  if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
+
+  try {
+    let infoRes = window.__adminCache[nr].info;
+    if (!infoRes) {
+      infoRes = await apiClubPost({
+        action: "adminPlayerInfo",
+        numer: nr
+      });
+      window.__adminCache[nr].info = infoRes;
+    }
+
+    let grupyRes = window.__adminCache[nr].grupy;
+    if (!grupyRes) {
+      grupyRes = await apiClubGet("adminGrupy", { numer: nr });
+      window.__adminCache[nr].grupy = grupyRes;
+    }
+
+    let prefsRes = window.__adminCache[nr].prefs;
+    if (!prefsRes) {
+      prefsRes = await apiClubPost({
+        action: "getUserNotificationPrefs",
+        loginId: nr
+      });
+      window.__adminCache[nr].prefs = prefsRes;
+    }
+
+    if (!infoRes || !infoRes.success) {
+      if (msg) msg.textContent = "❌ " + (infoRes?.error || "Nie udało się pobrać danych zawodnika");
+      return;
+    }
+
+    const joinDate = String(infoRes.joinDate || window.__adminSelectedJoinDate || "").trim() || "—";
+    const email = String(infoRes.email || "").trim() || "—";
+    const grupy = String((grupyRes && grupyRes.success ? grupyRes.grupy : infoRes.grupy) || "").trim() || "—";
+
+    const access =
+      infoRes.dostepDoApki === true ||
+      infoRes.dostepDoApki === 1 ||
+      String(infoRes.dostepDoApki || "").trim() === "1" ||
+      String(infoRes.dostepDoApki || "").trim().toUpperCase() === "TRUE";
+
+    const pushConsent =
+      prefsRes && (
+        prefsRes.pushConsent === true ||
+        prefsRes.pushConsent === 1 ||
+        String(prefsRes.pushConsent || "").trim() === "1" ||
+        String(prefsRes.pushConsent || "").trim().toUpperCase() === "TRUE"
+      );
+
+    const emailConsent =
+      prefsRes && (
+        prefsRes.emailConsent === true ||
+        prefsRes.emailConsent === 1 ||
+        String(prefsRes.emailConsent || "").trim() === "1" ||
+        String(prefsRes.emailConsent || "").trim().toUpperCase() === "TRUE"
+      );
+
+    if (joinEl) joinEl.textContent = joinDate;
+    if (grupyEl) grupyEl.textContent = grupy;
+    if (emailEl) emailEl.textContent = email;
+    if (accessEl) accessEl.checked = !!access;
+    if (pushEl) pushEl.checked = !!pushConsent;
+    if (emailConsentEl) emailConsentEl.checked = !!emailConsent;
+
+    if (msg) msg.textContent = "";
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+
+async function adminToggleAccessFromInfo(checked) {
+  const nr = String(window.__adminSelectedNr || "").trim();
+  const msg = document.getElementById("adminInfoMsg");
+  const accessEl = document.getElementById("adminInfoAccess");
+
+  if (!nr) {
+    if (msg) msg.textContent = "❌ Brak numeru zawodnika";
+    if (accessEl) accessEl.checked = !checked;
+    return;
+  }
+
+  if (msg) msg.textContent = "⏳ Zmieniam dostęp do aplikacji...";
+
+  try {
+    const res = await apiClubPost({
+      action: "adminSetAppAccess",
+      numer: nr,
+      access: checked ? "TRUE" : "FALSE"
+    });
+
+    if (!res || res.success === false) {
+      if (accessEl) accessEl.checked = !checked;
+      if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zmienić dostępu");
+      return;
+    }
+
+    if (window.__adminCache && window.__adminCache[nr] && window.__adminCache[nr].info) {
+      window.__adminCache[nr].info.dostepDoApki = !!checked;
+    }
+
+    if (msg) msg.textContent = "✅ Zapisano zmianę dostępu";
+
+  } catch (e) {
+    if (accessEl) accessEl.checked = !checked;
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+  
+  
 // =================== GRUPY ===================
 let __adminGroupsSet = new Set();
 
