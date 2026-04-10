@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.1';
+  window.APP_BUILD = 'BETA APP v2.74.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1100,6 +1100,9 @@ input[type="number"] {
   <p id="adminZawodnikMsg" style="margin-top:10px;"></p>
 </div>
 
+<!-- ADMIN PLAYER CARD VIEW INFO
+     Karta informacji o zawodniku -->  
+
 <div id="adminZawodnikInfoView" class="container hidden">
   <h1 id="adminZawodnikInfoTitle">Informacje o zawodniku</h1>
 
@@ -1120,25 +1123,27 @@ input[type="number"] {
   </div>
 
   <div class="card" style="text-align:left; margin-bottom:12px;">
-    <label style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-      <input id="adminInfoAccess" type="checkbox" style="transform:scale(1.2);" onchange="adminToggleAccessFromInfo(this.checked)">
+    <div style="opacity:.75; font-size:13px; margin-bottom:10px;">Statusy</div>
+
+    <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
       <span>Dostęp do aplikacji</span>
+      <input id="adminInfoAccess" type="checkbox" style="transform:scale(1.2);" onchange="adminToggleAccessFromInfo(this.checked)">
     </label>
 
-    <label style="display:flex; align-items:center; gap:10px; margin-bottom:12px; opacity:.85;">
-      <input id="adminInfoPushConsent" type="checkbox" style="transform:scale(1.2);" disabled>
-      <span>Zgoda na powiadomienia push (tylko podgląd)</span>
-    </label>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+      <span>Zgoda na powiadomienia push</span>
+      <span id="adminInfoPushBadge" style="font-weight:800;">—</span>
+    </div>
 
-    <label style="display:flex; align-items:center; gap:10px; opacity:.85;">
-      <input id="adminInfoEmailConsent" type="checkbox" style="transform:scale(1.2);" disabled>
-      <span>Zgoda na powiadomienia email (tylko podgląd)</span>
-    </label>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <span>Zgoda na powiadomienia email</span>
+      <span id="adminInfoEmailBadge" style="font-weight:800;">—</span>
+    </div>
   </div>
 
   <p id="adminInfoMsg" style="margin-top:10px;"></p>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
-</div>  
+</div>
     
 <!-- ADMIN GROUPS VIEW
      Ekran edycji grup przypisanych do zawodnika -->
@@ -8116,8 +8121,8 @@ async function adminOpenPlayerInfo() {
   const grupyEl = document.getElementById("adminInfoGrupy");
   const emailEl = document.getElementById("adminInfoEmail");
   const accessEl = document.getElementById("adminInfoAccess");
-  const pushEl = document.getElementById("adminInfoPushConsent");
-  const emailConsentEl = document.getElementById("adminInfoEmailConsent");
+  const pushBadge = document.getElementById("adminInfoPushBadge");
+  const emailBadge = document.getElementById("adminInfoEmailBadge");
 
   if (title) {
     title.textContent = `Informacje — #${nr}${nazwisko ? " — " + nazwisko : ""}`;
@@ -8128,8 +8133,8 @@ async function adminOpenPlayerInfo() {
   if (grupyEl) grupyEl.textContent = "—";
   if (emailEl) emailEl.textContent = "—";
   if (accessEl) accessEl.checked = false;
-  if (pushEl) pushEl.checked = false;
-  if (emailConsentEl) emailConsentEl.checked = false;
+  adminRenderConsentBadge_(pushBadge, false, "AKTYWNA", "BRAK ZGODY");
+  adminRenderConsentBadge_(emailBadge, false, "AKTYWNA", "BRAK ZGODY");
 
   if (!window.__adminCache) window.__adminCache = {};
   if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
@@ -8194,8 +8199,9 @@ async function adminOpenPlayerInfo() {
     if (grupyEl) grupyEl.textContent = grupy;
     if (emailEl) emailEl.textContent = email;
     if (accessEl) accessEl.checked = !!access;
-    if (pushEl) pushEl.checked = !!pushConsent;
-    if (emailConsentEl) emailConsentEl.checked = !!emailConsent;
+
+    adminRenderConsentBadge_(pushBadge, !!pushConsent, "AKTYWNA", "BRAK ZGODY");
+    adminRenderConsentBadge_(emailBadge, !!emailConsent, "AKTYWNA", "BRAK ZGODY");
 
     if (msg) msg.textContent = "";
 
@@ -8203,6 +8209,18 @@ async function adminOpenPlayerInfo() {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
 }
+
+function adminRenderConsentBadge_(el, enabled, yesText, noText) {
+  if (!el) return;
+
+  if (enabled) {
+    el.textContent = yesText || "TAK";
+    el.style.color = "#7dff9b";
+  } else {
+    el.textContent = noText || "NIE";
+    el.style.color = "#ff8b8b";
+  }
+}  
 
 async function adminToggleAccessFromInfo(checked) {
   const nr = String(window.__adminSelectedNr || "").trim();
@@ -8230,11 +8248,18 @@ async function adminToggleAccessFromInfo(checked) {
       return;
     }
 
-    if (window.__adminCache && window.__adminCache[nr] && window.__adminCache[nr].info) {
+    if (!window.__adminCache) window.__adminCache = {};
+    if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
+
+    if (window.__adminCache[nr].info && typeof window.__adminCache[nr].info === "object") {
       window.__adminCache[nr].info.dostepDoApki = !!checked;
     }
 
-    if (msg) msg.textContent = "✅ Zapisano zmianę dostępu";
+    if (msg) {
+      msg.textContent = checked
+        ? "✅ Dostęp do aplikacji został włączony"
+        : "✅ Dostęp do aplikacji został wyłączony";
+    }
 
   } catch (e) {
     if (accessEl) accessEl.checked = !checked;
