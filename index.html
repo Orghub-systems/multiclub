@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.73.15';
+  window.APP_BUILD = 'BETA APP v2.73.16';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9128,12 +9128,11 @@ async function adminConfirmSystemPrzelew(btn, row, suggestedPlayerNo, kind, peri
       return;
     }
 
-    adminRemoveSystemPrzelewRow_(row);
-
-    const count = body ? body.querySelectorAll('[id^="systemPrzelewRow_"]').length : 0;
     if (msg) {
-      msg.textContent = `Do obsługi: ${count} • ✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`;
+      msg.textContent = `✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`;
     }
+    
+    await adminOpenSystemPrzelewy();
 
   } catch (e) {
     if (btnEl) {
@@ -9265,6 +9264,7 @@ function adminCloseManualSystemPrzelew() {
   modal.classList.add("hidden");
   modal.style.display = "none";
 }
+  
 async function adminSaveManualSystemPrzelew() {
   const row = Number(window.__adminSystemPrzelewManual?.row || 0);
   const playerSelectEl = document.getElementById("adminSystemPrzelewManualPlayerSelect");
@@ -9316,8 +9316,14 @@ async function adminSaveManualSystemPrzelew() {
       return;
     }
 
-    adminCloseManualSystemPrzelew();
-    adminRemoveSystemPrzelewRow_(row);
+      adminCloseManualSystemPrzelew();
+      
+      const listMsg = document.getElementById("adminSystemPrzelewyMsg");
+      if (listMsg) {
+        listMsg.textContent = "✅ Zaksięgowano ręcznie. Odświeżam listę...";
+      }
+      
+      await adminOpenSystemPrzelewy();
 
   } catch (e) {
     if (msgEl) msgEl.textContent = "❌ Błąd: " + (e?.message || e);
