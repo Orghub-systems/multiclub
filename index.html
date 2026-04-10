@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74';
+  window.APP_BUILD = 'BETA APP v2.74.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7923,12 +7923,6 @@ async function adminPokazZawodnikow() {
       const joinDate = String(z.joinDate || "");
       const joinDateSafe = joinDate.replace(/'/g, "\\'");
 
-      const access =
-        z.dostepDoApki === true ||
-        z.dostepDoApki === 1 ||
-        String(z.dostepDoApki || "").trim() === "1" ||
-        String(z.dostepDoApki || "").trim().toUpperCase() === "TRUE";
-
       return `
         <div class="card" style="text-align:left; cursor:pointer;"
              onclick="adminOpenZawodnik('${nr}','${nazwSafe}','${joinDateSafe}')">
@@ -7938,24 +7932,15 @@ async function adminPokazZawodnikow() {
               <b>#${nr}</b> — ${nazw}
             </div>
 
-            <div style="display:flex; gap:10px; align-items:center;"
+           <div style="display:flex; gap:10px; align-items:center;"
                  onclick="event.stopPropagation();">
-
-              <label style="display:flex; gap:6px; align-items:center; white-space:nowrap;">
-                <input type="checkbox"
-                       ${access ? "checked" : ""}
-                       onchange="adminSetAccessFromList('${nr}', this.checked)"
-                       onclick="event.stopPropagation();"
-                       style="transform:scale(1.15);">
-                <span style="opacity:0.9;">Dostęp do aplikacji</span>
-              </label>
-
+            
               <button
                 style="background:#700; border:1px solid #a00; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer;"
                 onclick="event.stopPropagation(); adminOpenDeletePopup('${nr}','${nazwSafe}')">
                 Usuń zawodnika
               </button>
-
+            
             </div>
           </div>
 
@@ -8373,29 +8358,79 @@ if (msg) msg.textContent = "";
 async function adminSaveGrupyLocal() {
   const nr = String(window.__adminSelectedNr || "").trim();
   const msg = document.getElementById("adminGrupyMsg");
-  if (!nr) { if (msg) msg.textContent = "❌ Brak numeru zawodnika."; return; }
+  if (!nr) {
+    if (msg) msg.textContent = "❌ Brak numeru zawodnika.";
+    return;
+  }
 
-  // Zbieramy checkboxy z widoku adminGrupyView (u Ciebie są w HTML)
   const picks = document.querySelectorAll("#adminGrupyView .adminGrupaChk");
   const arr = [];
-  picks.forEach(ch => { if (ch.checked) arr.push(String(ch.value || "").trim()); });
+  picks.forEach(ch => {
+    if (ch.checked) arr.push(String(ch.value || "").trim());
+  });
 
-  // Format zapisu: "G1,G3" (bez spacji) – najbezpieczniej do arkusza
   const grupyCsv = arr
     .filter(Boolean)
-    .sort((a,b)=>Number(String(a).replace("G",""))-Number(String(b).replace("G","")))
+    .sort((a, b) => Number(String(a).replace("G", "")) - Number(String(b).replace("G", "")))
     .join(",");
 
   if (msg) msg.textContent = "⏳ Zapisuję…";
 
   try {
-    const r = await apiClubPost({ action:"adminSetGrupy", numer: nr, grupy: grupyCsv });
+    const r = await apiClubPost({
+      action: "adminSetGrupy",
+      numer: nr,
+      grupy: grupyCsv
+    });
+
     if (!r || !(r.success || r.ok)) {
       if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
       return;
     }
 
+    if (!window.__adminCache) window.__adminCache = {};
+    if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
+
+    window.__adminCache[nr].grupy = {
+      success: true,
+      numer: nr,
+      grupy: grupyCsv
+    };
+
+    if (window.__adminCache[nr].info && typeof window.__adminCache[nr].info === "object") {
+      window.__adminCache[nr].info.grupy = grupyCsv;
+    }
+
+    const infoGrupyEl = document.getElementById("adminInfoGrupy");
+    if (infoGrupyEl) {
+      infoGrupyEl.textContent = grupyCsv || "—";
+    }
+
     if (msg) msg.textContent = "✅ Zapisane: " + (grupyCsv || "—");
+
+    (async () => {
+      try {
+        const fresh = await apiClubGet("adminGrupy", { numer: nr });
+        if (fresh && fresh.success) {
+          if (!window.__adminCache) window.__adminCache = {};
+          if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
+
+          window.__adminCache[nr].grupy = fresh;
+
+          if (window.__adminCache[nr].info && typeof window.__adminCache[nr].info === "object") {
+            window.__adminCache[nr].info.grupy = String(fresh.grupy || "").trim();
+          }
+
+          const infoGrupyEl2 = document.getElementById("adminInfoGrupy");
+          if (infoGrupyEl2) {
+            infoGrupyEl2.textContent = String(fresh.grupy || "").trim() || "—";
+          }
+        }
+      } catch (e) {
+        console.warn("adminGrupy refresh failed:", e);
+      }
+    })();
+
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   }
