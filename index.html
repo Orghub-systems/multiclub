@@ -7855,6 +7855,14 @@ async function trainerSaveEditEvent() {
  
  /* =================== 150 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
 
+function adminBool_(v) {
+  if (v === true || v === 1) return true;
+  if (v === false || v === 0 || v === null || v === undefined) return false;
+
+  const s = String(v || "").trim().toLowerCase();
+  return s === "true" || s === "1" || s === "tak" || s === "yes";
+}
+  
 async function adminPokazZawodnikow() {
   goToView("adminZawodnicyView");
   const box = document.getElementById("adminListaZawodnikow");
@@ -7875,9 +7883,9 @@ async function adminPokazZawodnikow() {
       const joinDate = String(z.joinDate || "");
       const joinDateSafe = joinDate.replace(/'/g, "\\'");
 
-      const access = (z.dostepDoApki !== undefined) ? !!z.dostepDoApki
-                   : (z.access !== undefined) ? !!z.access
-                   : true;
+      const access = (z.dostepDoApki !== undefined) ? adminBool_(z.dostepDoApki)
+                   : (z.access !== undefined) ? adminBool_(z.access)
+                   : false;
 
       return `
         <div class="card" style="text-align:left; cursor:pointer;"
@@ -8137,7 +8145,7 @@ function adminRenderGroupsGrid_() {
 
 async function adminOpenGroups() {
   const nr = String(window.__adminSelectedNr || "").trim();
-  const nazw = String(window.__adminSelectedNazw || "").trim();
+  const nazw = String(window.__adminSelectedNazwisko || "").trim();
 
   goToView("adminGrupyView");
 
@@ -8278,6 +8286,7 @@ async function adminApplyGroupsPopup() {
     if (msg) msg.textContent = "✅ Zapisane: " + (grupyCsv || "—");
     setTimeout(adminCloseGroupsPopup, 350);
   } catch (e) {
+    
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   }
 }
