@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.9';
+  window.APP_BUILD = 'BETA APP v2.74.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6439,22 +6439,14 @@ async function toggleZapisani(id) {
           const hasAccepted = typeof p?.accepted === "boolean";
         
           if (!hasAccepted) {
-            return `
-              <li style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
-                <span>${nazwisko}</span>
-                <span></span>
-              </li>
-            `;
+            return `<li style="color:#fff;">${nazwisko}</li>`;
           }
         
-          return `
-            <li style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
-              <span>${nazwisko}</span>
-              <span style="font-weight:700;white-space:nowrap;${p.accepted ? "color:#81c784;" : "color:#ffcc80;"}">
-                — ${p.accepted ? "zaakceptował ✅" : "oczekuje ⏳"}
-              </span>
-            </li>
-          `;
+          if (p.accepted) {
+            return `<li style="color:#fff;font-weight:700;">${nazwisko} ✅</li>`;
+          }
+        
+          return `<li style="color:rgba(255,255,255,.42);">${nazwisko}</li>`;
         }).join('')}
       </ul>
     </div>`;
