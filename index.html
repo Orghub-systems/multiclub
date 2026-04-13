@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.5';
+  window.APP_BUILD = 'BETA APP v2.74.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6385,7 +6385,9 @@ function renderTreningi(lista) {
       <div class="card">
         <p>
           <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
+          ${t.dataKoniec && t.dataKoniec !== t.data ? `Do: <b>${t.dataKoniec}</b><br>` : ""}
           Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+          ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
           Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; ${countLabel}: ${countValue}<br>
           ${statusLine}
         </p>
