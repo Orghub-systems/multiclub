@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.3';
+  window.APP_BUILD = 'BETA APP v2.74.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6446,24 +6446,16 @@ async function zapiszSie(id) {
     });
 
     if (r && r.ok) {
-      const isPowolanieAccept = !!r.accepted;
-
-      if (isPowolanieAccept) {
-        btn.innerText = "Powołanie zaakceptowane ✅";
-      } else {
-        btn.innerText = "Zapisano ✅";
-      }
-
-      btn.disabled = true;
-
-      if (wypiszBtn) {
-        wypiszBtn.disabled = false;
-      }
-
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
 
+      const lista = await apiClubGet("treningi", {
+        grupa: grupaZalogowanego,
+        numer: numerZalogowanego
+      });
+
+      renderTreningi(lista);
       return;
     }
 
