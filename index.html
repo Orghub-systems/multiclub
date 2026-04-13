@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.2';
+  window.APP_BUILD = 'BETA APP v2.74.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8072,35 +8072,46 @@ async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   const key = String(window.__adminSelectedNr || "").trim();
   if (!window.__adminCache[key]) window.__adminCache[key] = { ts: Date.now() };
 
+  // Prefetch tylko tego, co potrzebne do ekranu "Informacje o zawodniku"
   (async () => {
     try {
       const nr2 = String(window.__adminSelectedNr || "").trim();
       if (!nr2) return;
 
+      const tasks = [];
+
       if (window.__adminCache[nr2].info === undefined) {
-        window.__adminCache[nr2].info = await apiClubPost({
-          action: "adminPlayerInfo",
-          numer: nr2
-        });
+        tasks.push(
+          apiClubPost({
+            action: "adminPlayerInfo",
+            numer: nr2
+          }).then(res => {
+            window.__adminCache[nr2].info = res;
+          })
+        );
       }
 
       if (window.__adminCache[nr2].grupy === undefined) {
-        window.__adminCache[nr2].grupy = await apiClubGet("adminGrupy", { numer: nr2 });
+        tasks.push(
+          apiClubGet("adminGrupy", { numer: nr2 }).then(res => {
+            window.__adminCache[nr2].grupy = res;
+          })
+        );
       }
 
       if (window.__adminCache[nr2].prefs === undefined) {
-        window.__adminCache[nr2].prefs = await apiClubPost({
-          action: "getUserNotificationPrefs",
-          loginId: nr2
-        });
+        tasks.push(
+          apiClubPost({
+            action: "getUserNotificationPrefs",
+            loginId: nr2
+          }).then(res => {
+            window.__adminCache[nr2].prefs = res;
+          })
+        );
       }
 
-      if (window.__adminCache[nr2].staty === undefined) {
-        window.__adminCache[nr2].staty = await apiClubGet("statystyki", { numer: nr2 });
-      }
-
-      if (window.__adminCache[nr2].platnosci === undefined) {
-        window.__adminCache[nr2].platnosci = await apiClubGet("platnosciAdmin", { numer: nr2 });
+      if (tasks.length) {
+        await Promise.all(tasks);
       }
 
     } catch (e) {
@@ -8140,29 +8151,45 @@ async function adminOpenPlayerInfo() {
   if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
 
   try {
-    let infoRes = window.__adminCache[nr].info;
-    if (!infoRes) {
-      infoRes = await apiClubPost({
-        action: "adminPlayerInfo",
-        numer: nr
-      });
-      window.__adminCache[nr].info = infoRes;
+    const tasks = [];
+
+    if (!window.__adminCache[nr].info) {
+      tasks.push(
+        apiClubPost({
+          action: "adminPlayerInfo",
+          numer: nr
+        }).then(res => {
+          window.__adminCache[nr].info = res;
+        })
+      );
     }
 
-    let grupyRes = window.__adminCache[nr].grupy;
-    if (!grupyRes) {
-      grupyRes = await apiClubGet("adminGrupy", { numer: nr });
-      window.__adminCache[nr].grupy = grupyRes;
+    if (!window.__adminCache[nr].grupy) {
+      tasks.push(
+        apiClubGet("adminGrupy", { numer: nr }).then(res => {
+          window.__adminCache[nr].grupy = res;
+        })
+      );
     }
 
-    let prefsRes = window.__adminCache[nr].prefs;
-    if (!prefsRes) {
-      prefsRes = await apiClubPost({
-        action: "getUserNotificationPrefs",
-        loginId: nr
-      });
-      window.__adminCache[nr].prefs = prefsRes;
+    if (!window.__adminCache[nr].prefs) {
+      tasks.push(
+        apiClubPost({
+          action: "getUserNotificationPrefs",
+          loginId: nr
+        }).then(res => {
+          window.__adminCache[nr].prefs = res;
+        })
+      );
     }
+
+    if (tasks.length) {
+      await Promise.all(tasks);
+    }
+
+    const infoRes = window.__adminCache[nr].info;
+    const grupyRes = window.__adminCache[nr].grupy;
+    const prefsRes = window.__adminCache[nr].prefs;
 
     if (!infoRes || !infoRes.success) {
       if (msg) msg.textContent = "❌ " + (infoRes?.error || "Nie udało się pobrać danych zawodnika");
