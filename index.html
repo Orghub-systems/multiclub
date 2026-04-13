@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.4';
+  window.APP_BUILD = 'BETA APP v2.74.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -929,10 +929,20 @@ input[type="number"] {
   <div class="popup-card" style="max-width:360px;width:100%; text-align:left; margin:0 auto;">
     <div class="login-box" style="margin-top:10px;">
 
+      <div style="font-size:13px; opacity:.8; margin-bottom:4px;">Data rozpoczęcia wydarzenia</div>
       <input id="eventData" type="date" autocomplete="off">
+      
+      <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Data zakończenia wydarzenia</div>
+      <input id="eventDataEnd" type="date" autocomplete="off" data-autofill="1">
+      
+      <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Godzina rozpoczęcia</div>
       <input id="eventStart" type="time" step="60" autocomplete="off">
+      
+      <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Godzina zakończenia</div>
       <input id="eventEnd" type="time" step="60" autocomplete="off">
+      
       <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
+      <input id="eventMiejsce" type="text" placeholder="Miejsce wydarzenia">
 
       <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()" style="text-align:left; padding-left:16px;">
         Trenerzy
@@ -6834,6 +6844,17 @@ function pokazDodajWydarzenie() {
   const trybEl = document.getElementById("eventTrybDostepu");
   if (trybEl) trybEl.value = "wszyscy";
 
+  const startDateEl = document.getElementById("eventData");
+  const endDateEl = document.getElementById("eventDataEnd");
+  const miejsceEl = document.getElementById("eventMiejsce");
+
+  if (startDateEl) startDateEl.value = "";
+  if (endDateEl) {
+    endDateEl.value = "";
+    endDateEl.dataset.autofill = "1";
+  }
+  if (miejsceEl) miejsceEl.value = "";
+
   setAddPowolaniNums_("");
   updateAddTrenerzySummary_();
   onEventTrybDostepuChange();
@@ -7123,9 +7144,11 @@ function applyPowolaniPopup() {
   
 async function wyslijNoweWydarzenie() {
   const data = document.getElementById("eventData").value;
+  let dataKoniec = document.getElementById("eventDataEnd")?.value || "";
   const start = document.getElementById("eventStart").value;
   const end = document.getElementById("eventEnd").value;
   const rodzaj = document.getElementById("eventRodzaj").value;
+  const miejsce = document.getElementById("eventMiejsce")?.value || "";
 
   const trener1 = document.getElementById("eventTrener1").value;
   const trener2 = document.getElementById("eventTrener2")?.value || "";
@@ -7141,8 +7164,15 @@ async function wyslijNoweWydarzenie() {
 
   const msg = document.getElementById("eventMsg");
 
-  if (!data || !start || !rodzaj) {
-    msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj.";
+  if (!dataKoniec) dataKoniec = data;
+
+  if (!data || !dataKoniec || !start || !end || !rodzaj) {
+    msg.innerText = "Uzupełnij: daty, godziny i rodzaj wydarzenia.";
+    return;
+  }
+
+  if (dataKoniec < data) {
+    msg.innerText = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
     return;
   }
 
@@ -7157,7 +7187,7 @@ async function wyslijNoweWydarzenie() {
   }
 
   if (trybDostepu === "powolania" && !powolani) {
-    msg.innerText = "❌ Wpisz numery powołanych zawodników.";
+    msg.innerText = "❌ Wybierz powołanych zawodników.";
     return;
   }
 
@@ -7167,9 +7197,11 @@ async function wyslijNoweWydarzenie() {
     const r = await apiClubPost({
       action: "dodajWydarzenie",
       data,
+      dataKoniec,
       godzStart: start,
       godzKoniec: end,
       rodzaj,
+      miejsce,
       trener1,
       trener2,
       trener3,
@@ -7191,9 +7223,11 @@ async function wyslijNoweWydarzenie() {
 
       const trybEl = document.getElementById("eventTrybDostepu");
       const powolaniEl = document.getElementById("eventPowolaniNums");
+      const endDateEl = document.getElementById("eventDataEnd");
 
       if (trybEl) trybEl.value = "wszyscy";
       if (powolaniEl) powolaniEl.value = "";
+      if (endDateEl) endDateEl.dataset.autofill = "1";
 
       resetTrenerSelects_();
       resetGroups_();
@@ -7208,12 +7242,54 @@ async function wyslijNoweWydarzenie() {
 }
 
 function initEventPickers_() {
-  const elDate = document.getElementById("eventData");
-  if (elDate && window.flatpickr && !elDate._flatpickr) {
-    flatpickr(elDate, {
+  const elStart = document.getElementById("eventData");
+  const elEnd = document.getElementById("eventDataEnd");
+
+  if (elStart && window.flatpickr && !elStart._flatpickr) {
+    flatpickr(elStart, {
       dateFormat: "Y-m-d",
-      allowInput: true
+      allowInput: true,
+      onChange: function(selectedDates, dateStr) {
+        const endEl = document.getElementById("eventDataEnd");
+        if (!endEl) return;
+
+        const autoFill = String(endEl.dataset.autofill || "1") === "1";
+        if (autoFill || !endEl.value) {
+          endEl.value = dateStr;
+        }
+      }
     });
+  }
+
+  if (elEnd && window.flatpickr && !elEnd._flatpickr) {
+    flatpickr(elEnd, {
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      onChange: function() {
+        const endEl = document.getElementById("eventDataEnd");
+        if (endEl) endEl.dataset.autofill = "0";
+      }
+    });
+  }
+
+  if (elStart && !window.flatpickr && !elStart.dataset.boundStartSync) {
+    elStart.addEventListener("input", function() {
+      const endEl = document.getElementById("eventDataEnd");
+      if (!endEl) return;
+
+      const autoFill = String(endEl.dataset.autofill || "1") === "1";
+      if (autoFill || !endEl.value) {
+        endEl.value = elStart.value;
+      }
+    });
+    elStart.dataset.boundStartSync = "1";
+  }
+
+  if (elEnd && !window.flatpickr && !elEnd.dataset.boundEndSync) {
+    elEnd.addEventListener("input", function() {
+      elEnd.dataset.autofill = "0";
+    });
+    elEnd.dataset.boundEndSync = "1";
   }
 }
   
