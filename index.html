@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.8';
+  window.APP_BUILD = 'BETA APP v2.74.9';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6437,12 +6437,24 @@ async function toggleZapisani(id) {
         ${lista.map(p => {
           const nazwisko = String(p?.nazwisko || "").trim();
           const hasAccepted = typeof p?.accepted === "boolean";
-    
+        
           if (!hasAccepted) {
-            return `<li>${nazwisko}</li>`;
+            return `
+              <li style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
+                <span>${nazwisko}</span>
+                <span></span>
+              </li>
+            `;
           }
-    
-          return `<li>${nazwisko} ${p.accepted ? '<span style="color:#81c784;font-weight:700;">— zaakceptował ✅</span>' : '<span style="color:#ffcc80;font-weight:700;">— oczekuje ⏳</span>'}</li>`;
+        
+          return `
+            <li style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
+              <span>${nazwisko}</span>
+              <span style="font-weight:700;white-space:nowrap;${p.accepted ? "color:#81c784;" : "color:#ffcc80;"}">
+                — ${p.accepted ? "zaakceptował ✅" : "oczekuje ⏳"}
+              </span>
+            </li>
+          `;
         }).join('')}
       </ul>
     </div>`;
