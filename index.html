@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.22';
+  window.APP_BUILD = 'BETA APP v2.74.23';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9888,11 +9888,25 @@ async function adminConfirmSystemPrzelew(btn, row, suggestedPlayerNo, kind, peri
       return;
     }
 
+    const rowEl = document.getElementById(`systemPrzelewRow_${row}`);
+    if (rowEl) {
+      rowEl.remove();
+    } else if (btnEl) {
+      const fallbackRow = btnEl.closest('[id^="systemPrzelewRow_"]');
+      if (fallbackRow) fallbackRow.remove();
+    }
+
+    const remaining = body ? body.querySelectorAll('[id^="systemPrzelewRow_"]').length : 0;
+
+    if (remaining === 0 && body) {
+      body.innerHTML = "<div class='card' style='background:#123a1a;'>✅ Brak przelewów do obsługi.</div>";
+    }
+
     if (msg) {
       msg.textContent = `✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`;
     }
-    
-    await adminOpenSystemPrzelewy();
+
+    adminUpdateSystemPrzelewyCount_();
 
   } catch (e) {
     if (btnEl) {
