@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.12';
+  window.APP_BUILD = 'BETA APP v2.74.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1024,7 +1024,7 @@ input[type="number"] {
       <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
       <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
       <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
-      <button class="full-btn" type="button" onclick="adminOpenSystemPrzelewy()"> System przelewy </button>
+      <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
       <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
     </div>
 
@@ -1213,7 +1213,31 @@ input[type="number"] {
 
   <p id="adminStatsMsg" style="margin-top:10px;"></p>
 </div>
-    
+
+<!-- ADMIN OBSŁUGA PLATNOSCI VIEW
+     Ekran obsługi płatności admina -->
+  
+<div id="adminObslugaPlatnosciView" class="container hidden">
+  <h1>Obsługa płatności</h1>
+
+  <button class="full-btn" type="button" onclick="adminOpenSystemPrzelewy()">🏦 System przelewy</button>
+  <button class="full-btn" type="button" onclick="goToView('adminPlatnosciZawodnikowView')">📩 Płatności zawodników</button>
+  <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
+</div>
+
+<!-- ADMIN PLATNOSCI ZAWODNIKÓWVIEW
+     Ekran płatnoścI zawodników panel admina -->
+  
+  <div id="adminPlatnosciZawodnikowView" class="container hidden">
+  <h1>Płatności zawodników</h1>
+
+  <div class="card">
+    Moduł w przygotowaniu.
+  </div>
+
+  <button class="full-btn alt" type="button" onclick="goToView('adminObslugaPlatnosciView')">⬅ Powrót</button>
+</div>
+  
 <!-- ADMIN PAYMENTS VIEW
      Ekran płatności wybranego zawodnika -->
 
