@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.15';
+  window.APP_BUILD = 'BETA APP v2.74.16';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8881,20 +8881,7 @@ function renderPaymentTile_(p) {
   const labelData = encodeURIComponent(labelTxt);
   const typData = encodeURIComponent(typTxt);
 
-  const btn = (!paid && !isZwolniony)
-    ? `<button class="full-btn adminPayBtn"
-            style="margin-top:10px;"
-            data-col="${Number.isFinite(colNum) ? colNum : ""}"
-            data-label="${labelData}"
-            data-typ="${typData}"
-            onclick="adminConfirmPayment(
-              Number(this.dataset.col),
-              decodeURIComponent(this.dataset.label || ''),
-              decodeURIComponent(this.dataset.typ || '')
-            )">
-           Zarejestruj płatność
-         </button>`
-    : "";
+  const btn = "";
 
   return `
     <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
@@ -9309,16 +9296,38 @@ function renderAdminDebtTile_(p) {
   const suma = Number(p.suma || 0);
 
   const zaleglosci = Array.isArray(p.zaleglosci) ? p.zaleglosci : [];
-
+  
   const detailsHtml = zaleglosci.map(z => {
     const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
-    const label = escapeHtml_(String(z.label || ""));
+    const labelTxt = String(z.label || "");
+    const label = escapeHtml_(labelTxt);
     const brakuje = Number(z.brakuje || 0);
-
+    const col = Number(z.col || 0);
+    const typRaw = String(z.typ || "").trim();
+  
     return `
-      <div style="margin-top:6px; font-size:15px; line-height:1.35;">
-        • <b>${typ}</b> — ${label}: <b>${formatMoneyPLN_(brakuje)}</b>
-      </div>
+      <button
+        type="button"
+        data-col="${Number.isFinite(col) ? col : ""}"
+        data-label="${encodeURIComponent(labelTxt)}"
+        data-typ="${encodeURIComponent(typRaw)}"
+        onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
+        style="
+          display:block;
+          width:100%;
+          margin-top:8px;
+          padding:10px 12px;
+          border-radius:12px;
+          border:1px solid #444;
+          background:#161616;
+          color:#fff;
+          text-align:left;
+          font-size:15px;
+          font-weight:600;
+          cursor:pointer;
+        ">
+        ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
+      </button>
     `;
   }).join("");
 
@@ -9353,6 +9362,27 @@ function renderAdminDebtTile_(p) {
     </div>
   `;
 }
+
+function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
+  const numer = decodeURIComponent(String(numerEncoded || ""));
+  if (!numer) {
+    alert("❌ Brak numeru zawodnika.");
+    return;
+  }
+
+  const col = Number(btnEl?.dataset?.col || 0);
+  const label = decodeURIComponent(String(btnEl?.dataset?.label || ""));
+  const typ = decodeURIComponent(String(btnEl?.dataset?.typ || ""));
+
+  if (!col) {
+    alert("❌ Brak kolumny płatności.");
+    return;
+  }
+
+  window.__adminSelectedNr = numer;
+
+  adminConfirmPayment(col, label, typ);
+}  
 
 async function adminSendPaymentReminder(numerEncoded, btnEl) {
   const numer = decodeURIComponent(String(numerEncoded || ""));
