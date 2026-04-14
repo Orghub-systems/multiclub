@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.18';
+  window.APP_BUILD = 'BETA APP v2.74.19';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9085,7 +9085,7 @@ async function adminDoConfirmPayment() {
     }
 
     adminCancelConfirmPayment();
-    await adminOpenPayments();
+    await adminOpenPlatnosciZawodnikowView();
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
@@ -9155,7 +9155,7 @@ async function adminMarkPaymentAsZW() {
     }
 
     adminCancelConfirmPayment();
-    await adminOpenPayments();
+    await adminOpenPlatnosciZawodnikowView();
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
