@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.19';
+  window.APP_BUILD = 'BETA APP v2.74.20';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8135,10 +8135,20 @@ function adminCloseDeletePopup() {
   window.__adminDeleteNr = "";
   window.__adminDeleteNazw = "";
 }
-
 async function adminDoDeletePlayer() {
   const numer = String(window.__adminDeleteNr || "").trim();
-  if (!numer) { adminCloseDeletePopup(); return; }
+  if (!numer) {
+    const modal = document.getElementById("adminDeletePopup");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+      modal.style.visibility = "";
+      modal.style.opacity = "";
+    }
+    window.__adminDeleteNr = "";
+    window.__adminDeleteNazw = "";
+    return;
+  }
 
   const btn = document.querySelector("#adminDeletePopup .full-btn.green");
   if (btn) {
@@ -8155,14 +8165,23 @@ async function adminDoDeletePlayer() {
       return;
     }
 
-    adminCloseDeletePopup();
-    adminPokazZawodnikow();
+    const modal = document.getElementById("adminDeletePopup");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+      modal.style.visibility = "";
+      modal.style.opacity = "";
+    }
+
+    window.__adminDeleteNr = "";
+    window.__adminDeleteNazw = "";
+
+    await adminPokazZawodnikow();
 
   } catch (e) {
     alert("❌ Błąd połączenia: " + (e?.message || e));
 
   } finally {
-    // KROK 3B — RESET (zawsze)
     if (btn) {
       btn.textContent = "TAK";
       btn.disabled = false;
