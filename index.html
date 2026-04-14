@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.23';
+  window.APP_BUILD = 'BETA APP v2.74.24';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9902,11 +9902,7 @@ async function adminConfirmSystemPrzelew(btn, row, suggestedPlayerNo, kind, peri
       body.innerHTML = "<div class='card' style='background:#123a1a;'>✅ Brak przelewów do obsługi.</div>";
     }
 
-    if (msg) {
-      msg.textContent = `✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`;
-    }
-
-    adminUpdateSystemPrzelewyCount_();
+    adminUpdateSystemPrzelewyCount_(`✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`);
 
   } catch (e) {
     if (btnEl) {
@@ -9920,13 +9916,22 @@ async function adminConfirmSystemPrzelew(btn, row, suggestedPlayerNo, kind, peri
   }
 }
 
-function adminUpdateSystemPrzelewyCount_() {
+function adminUpdateSystemPrzelewyCount_(statusText) {
   const msg = document.getElementById("adminSystemPrzelewyMsg");
   const body = document.getElementById("adminSystemPrzelewyBody");
   if (!msg || !body) return;
 
   const count = body.querySelectorAll('[id^="systemPrzelewRow_"]').length;
-  msg.textContent = `Do obsługi: ${count}`;
+  const countText = `Do obsługi: ${count}`;
+
+  const safeStatus = String(statusText || "").trim();
+
+  if (safeStatus) {
+    msg.textContent = `${safeStatus} • ${countText}`;
+    return;
+  }
+
+  msg.textContent = countText;
 }
   
 /* ---------------------    Ręczne księgowanie   ---------------------------*/
