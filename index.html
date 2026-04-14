@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.13';
+  window.APP_BUILD = 'BETA APP v2.74.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1221,22 +1221,21 @@ input[type="number"] {
   <h1>Obsługa płatności</h1>
 
   <button class="full-btn" type="button" onclick="adminOpenSystemPrzelewy()">🏦 System przelewy</button>
-  <button class="full-btn" type="button" onclick="goToView('adminPlatnosciZawodnikowView')">📩 Płatności zawodników</button>
+  <button class="full-btn" type="button" onclick="adminOpenPlatnosciZawodnikowView()">📩 Płatności zawodników</button>
   <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN PLATNOSCI ZAWODNIKÓWVIEW
      Ekran płatnoścI zawodników panel admina -->
   
-  <div id="adminPlatnosciZawodnikowView" class="container hidden">
-  <h1>Płatności zawodników</h1>
-
-  <div class="card">
-    Moduł w przygotowaniu.
-  </div>
-
-  <button class="full-btn alt" type="button" onclick="goToView('adminObslugaPlatnosciView')">⬅ Powrót</button>
-</div>
+    <div id="adminPlatnosciZawodnikowView" class="container hidden">
+      <h1>Płatności zawodników</h1>
+    
+      <div id="adminPlatnosciZawodnikowMsg" style="margin-bottom:10px;"></div>
+      <div id="adminPlatnosciZawodnikowBody"></div>
+    
+      <button class="full-btn alt" type="button" onclick="goToView('adminObslugaPlatnosciView')">⬅ Powrót</button>
+    </div>
   
 <!-- ADMIN PAYMENTS VIEW
      Ekran płatności wybranego zawodnika -->
@@ -9258,6 +9257,152 @@ function adminCancelConfirmPayment() {
 
 /* =================== KONIEC SEKTORA 170 =================== */
 
+/* =================== 171 ADMIN PŁATNOSCI ZAWODNIKÓW KLUBU =================== */  
+
+async function adminOpenPlatnosciZawodnikowView() {
+  goToView("adminPlatnosciZawodnikowView");
+
+  const body = document.getElementById("adminPlatnosciZawodnikowBody");
+  const msg = document.getElementById("adminPlatnosciZawodnikowMsg");
+
+  if (msg) msg.textContent = "";
+  if (body) body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+
+  try {
+    const res = await apiClubGet("adminListaZaleglosciPlatnosci", { t: Date.now() });
+    renderAdminPlatnosciZawodnikow_(res);
+  } catch (e) {
+    if (body) {
+      body.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+    }
+  }
+}
+
+function renderAdminPlatnosciZawodnikow_(res) {
+  const body = document.getElementById("adminPlatnosciZawodnikowBody");
+  const msg = document.getElementById("adminPlatnosciZawodnikowMsg");
+  if (!body) return;
+
+  if (!res || res.success !== true) {
+    body.innerHTML = `<div class="card" style="background:#700;">❌ ${res?.error || "Nie udało się pobrać zaległości."}</div>`;
+    return;
+  }
+
+  const items = Array.isArray(res.items) ? res.items : [];
+
+  if (msg) {
+    msg.innerHTML = `<div class="card" style="background:#111;">Liczba zawodników z zaległościami: <b>${items.length}</b></div>`;
+  }
+
+  if (!items.length) {
+    body.innerHTML = `<div class="card" style="background:#123a1a;">✅ Brak zaległości.</div>`;
+    return;
+  }
+
+  body.innerHTML = items.map(renderAdminDebtTile_).join("");
+}
+
+function renderAdminDebtTile_(p) {
+  const numer = String(p.numer || "").trim();
+  const nazwisko = escapeHtml_(String(p.nazwisko || ""));
+  const email = String(p.email || "").trim();
+  const suma = Number(p.suma || 0);
+
+  const zaleglosci = Array.isArray(p.zaleglosci) ? p.zaleglosci : [];
+
+  const detailsHtml = zaleglosci.map(z => {
+    const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
+    const label = escapeHtml_(String(z.label || ""));
+    const brakuje = Number(z.brakuje || 0);
+
+    return `
+      <div style="margin-top:6px; font-size:15px; line-height:1.35;">
+        • <b>${typ}</b> — ${label}: <b>${formatMoneyPLN_(brakuje)}</b>
+      </div>
+    `;
+  }).join("");
+
+  const btnHtml = email
+    ? `<button class="full-btn"
+         style="margin:0; background:#8b0000; border:1px solid #ff2b2b; width:auto; min-width:210px;"
+         onclick="adminSendPaymentReminder('${encodeURIComponent(numer)}', this)">
+         Wyślij ponaglenie
+       </button>`
+    : `<button class="full-btn"
+         style="margin:0; background:#444; border:1px solid #666; width:auto; min-width:210px; opacity:.7;"
+         disabled>
+         Brak e-maila
+       </button>`;
+
+  return `
+    <div class="card" style="background:#111; text-align:left; margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:240px;">
+          <div style="font-size:20px; font-weight:800;">#${escapeHtml_(numer)} — ${nazwisko}</div>
+          <div style="opacity:.75; margin-top:4px;">${email ? escapeHtml_(email) : "Brak adresu e-mail"}</div>
+          <div style="margin-top:10px;">${detailsHtml}</div>
+          <div style="margin-top:12px; font-size:18px; font-weight:800; color:#ff7c7c;">
+            Razem zaległości: ${formatMoneyPLN_(suma)}
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:flex-end; min-width:210px;">
+          ${btnHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function adminSendPaymentReminder(numerEncoded, btnEl) {
+  const numer = decodeURIComponent(String(numerEncoded || ""));
+  if (!numer) return alert("❌ Brak numeru zawodnika.");
+
+  const ok = confirm(`Wysłać ponaglenie płatności dla zawodnika #${numer}?`);
+  if (!ok) return;
+
+  const oldHtml = btnEl ? btnEl.innerHTML : "";
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = "⏳ Wysyłanie...";
+  }
+
+  try {
+    const res = await apiClubPost({
+      action: "adminSendPaymentReminder",
+      numer: numer
+    });
+
+    if (!res || res.success !== true) {
+      throw new Error(res?.error || "Nie udało się wysłać wiadomości.");
+    }
+
+    alert(`✅ Ponaglenie wysłane do: ${res.email || "adresu zawodnika"}`);
+  } catch (e) {
+    alert(`❌ ${e?.message || e}`);
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = oldHtml || "Wyślij ponaglenie";
+    }
+  }
+}
+
+function formatMoneyPLN_(value) {
+  const num = Number(value || 0);
+  return `${num.toFixed(2).replace(".", ",")} zł`;
+}
+
+function escapeHtml_(txt) {
+  return String(txt || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+  
 /* =================== 180 ADMIN / SYSTEM PRZELEWY / IMPORT =================== */  
 // =================== SYSTEM PRZELEWY ===================
 
