@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.17';
+  window.APP_BUILD = 'BETA APP v2.74.18';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9384,19 +9384,17 @@ function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
 
   adminConfirmPayment(col, label, typ);
 }  
-
+  
 async function adminSendPaymentReminder(numerEncoded, btnEl) {
-  const numer = decodeURIComponent(String(numerEncoded || ""));
-  if (!numer) return alert("❌ Brak numeru zawodnika.");
+  const numer = decodeURIComponent(String(numerEncoded || "")).trim();
+  if (!numer || !btnEl) return;
 
-  const ok = confirm(`Wysłać ponaglenie płatności dla zawodnika #${numer}?`);
-  if (!ok) return;
+  const oldHtml = btnEl.innerHTML;
+  const oldDisabled = !!btnEl.disabled;
 
-  const oldHtml = btnEl ? btnEl.innerHTML : "";
-  if (btnEl) {
-    btnEl.disabled = true;
-    btnEl.innerHTML = "⏳ Wysyłanie...";
-  }
+  btnEl.disabled = true;
+  btnEl.style.opacity = "0.75";
+  btnEl.innerHTML = "⏳ Wysyłanie...";
 
   try {
     const res = await apiClubPost({
@@ -9408,14 +9406,26 @@ async function adminSendPaymentReminder(numerEncoded, btnEl) {
       throw new Error(res?.error || "Nie udało się wysłać wiadomości.");
     }
 
-    alert(`✅ Ponaglenie wysłane do: ${res.email || "adresu zawodnika"}`);
+    btnEl.innerHTML = "✅ Wysłano";
+    btnEl.style.opacity = "1";
+
+    setTimeout(() => {
+      btnEl.disabled = oldDisabled;
+      btnEl.innerHTML = oldHtml || "Wyślij ponaglenie";
+      btnEl.style.opacity = "";
+    }, 2200);
+
   } catch (e) {
-    alert(`❌ ${e?.message || e}`);
-  } finally {
-    if (btnEl) {
+    console.error("adminSendPaymentReminder error:", e);
+
+    btnEl.innerHTML = "❌ Błąd wysyłki";
+    btnEl.style.opacity = "1";
+
+    setTimeout(() => {
       btnEl.disabled = false;
       btnEl.innerHTML = oldHtml || "Wyślij ponaglenie";
-    }
+      btnEl.style.opacity = "";
+    }, 2600);
   }
 }
 
