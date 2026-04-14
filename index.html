@@ -324,7 +324,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.20';
+  window.APP_BUILD = 'BETA APP v2.74.21';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9058,7 +9058,6 @@ function adminConfirmPayment(colNum, label, typ) {
     opacity: getComputedStyle(modal).opacity
   });
 }
-
 async function adminDoConfirmPayment() {
   const activeModal = String(window.__adminActivePayModal || "adminPayConfirmModal");
   const payType = String(window.__adminPendingPayType || "").trim().toLowerCase();
@@ -9103,8 +9102,58 @@ async function adminDoConfirmPayment() {
       return;
     }
 
-    adminCancelConfirmPayment();
-    await adminOpenPlatnosciZawodnikowView();
+    const modalIds = [
+      "adminPayConfirmModal",
+      "adminPayConfirmSkladkaModal"
+    ];
+
+    modalIds.forEach(id => {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+      modal.style.visibility = "";
+      modal.style.opacity = "";
+    });
+
+    const msgIds = [
+      "adminPayConfirmMsg",
+      "adminPayConfirmSkladkaMsg"
+    ];
+
+    msgIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = "";
+    });
+
+    const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
+      ? window.__adminPlatnosciZawodnikowCache
+      : [];
+
+    const updated = cache
+      .map(player => {
+        if (String(player.numer || "").trim() !== nr) return player;
+
+        const oldDebts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
+        const newDebts = oldDebts.filter(item => Number(item.col || 0) !== col);
+        const newSum = newDebts.reduce((acc, item) => acc + Number(item.brakuje || 0), 0);
+
+        return {
+          ...player,
+          zaleglosci: newDebts,
+          suma: newSum
+        };
+      })
+      .filter(player => {
+        const debts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
+        return debts.length > 0;
+      });
+
+    window.__adminPlatnosciZawodnikowCache = updated;
+    renderAdminPlatnosciZawodnikow_({
+      success: true,
+      items: updated
+    });
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
@@ -9173,8 +9222,58 @@ async function adminMarkPaymentAsZW() {
       return;
     }
 
-    adminCancelConfirmPayment();
-    await adminOpenPlatnosciZawodnikowView();
+    const modalIds = [
+      "adminPayConfirmModal",
+      "adminPayConfirmSkladkaModal"
+    ];
+
+    modalIds.forEach(id => {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+      modal.style.visibility = "";
+      modal.style.opacity = "";
+    });
+
+    const msgIds = [
+      "adminPayConfirmMsg",
+      "adminPayConfirmSkladkaMsg"
+    ];
+
+    msgIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = "";
+    });
+
+    const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
+      ? window.__adminPlatnosciZawodnikowCache
+      : [];
+
+    const updated = cache
+      .map(player => {
+        if (String(player.numer || "").trim() !== nr) return player;
+
+        const oldDebts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
+        const newDebts = oldDebts.filter(item => Number(item.col || 0) !== col);
+        const newSum = newDebts.reduce((acc, item) => acc + Number(item.brakuje || 0), 0);
+
+        return {
+          ...player,
+          zaleglosci: newDebts,
+          suma: newSum
+        };
+      })
+      .filter(player => {
+        const debts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
+        return debts.length > 0;
+      });
+
+    window.__adminPlatnosciZawodnikowCache = updated;
+    renderAdminPlatnosciZawodnikow_({
+      success: true,
+      items: updated
+    });
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
@@ -9194,6 +9293,11 @@ async function adminMarkPaymentAsZW() {
       zw.style.opacity = "1";
       zw.textContent = "ZWOLNIONY Z OPŁATY";
     }
+
+    window.__adminPendingPayCol = null;
+    window.__adminPendingPayLabel = "";
+    window.__adminPendingPayType = "";
+    window.__adminActivePayModal = "";
   }
 }
   
@@ -9276,6 +9380,13 @@ async function adminOpenPlatnosciZawodnikowView() {
 
   try {
     const res = await apiClubGet("adminListaZaleglosciPlatnosci", { t: Date.now() });
+
+    if (res && res.success === true) {
+      window.__adminPlatnosciZawodnikowCache = Array.isArray(res.items) ? res.items : [];
+    } else {
+      window.__adminPlatnosciZawodnikowCache = [];
+    }
+
     renderAdminPlatnosciZawodnikow_(res);
   } catch (e) {
     if (body) {
@@ -9295,6 +9406,7 @@ function renderAdminPlatnosciZawodnikow_(res) {
   }
 
   const items = Array.isArray(res.items) ? res.items : [];
+  window.__adminPlatnosciZawodnikowCache = items;
 
   if (msg) {
     msg.innerHTML = `<div class="card" style="background:#111;">Liczba zawodników z zaległościami: <b>${items.length}</b></div>`;
