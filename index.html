@@ -305,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.5';
+  window.APP_BUILD = 'APP v2.75.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -558,10 +558,6 @@ input[type="number"] {
 
   <button id="btnCopyActivatedClubLink" class="full-btn alt" type="button">
     Skopiuj link
-  </button>
-
-  <button class="full-btn alt" type="button" onclick="goToView('pokazLogowanie')">
-    Zakończ konfigurację
   </button>
 
   <div id="clubActivatedSuccessMsg" style="margin-top:10px; text-align:center; opacity:.85;"></div>
@@ -3545,13 +3541,13 @@ function startClubConfigProgress_() {
   // czasy dobrane pod realny odbiór:
   // szybki start, środek umiarkowany, końcówka najdłuższa
   const durations = [
-    2500, // identyfikator i dane
-    6000, // tworzenie plików
-    6000, // struktura folderów
+    5000, // identyfikator i dane
+    8000, // tworzenie plików
+    8000, // struktura folderów
     8000, // generowanie ikon
     10000, // publikacja ikon
     12000, // zapis końcowy
-    22000  // finalizacja - najdłużej
+    16000  // finalizacja - najdłużej
   ];
 
   const state = {
