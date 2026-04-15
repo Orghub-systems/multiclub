@@ -520,6 +520,53 @@ input[type="number"] {
   </div>
   </div>
 
+<!-- CLUB ACTIVED SUCCES VIEW
+     Ekran sukcesu po aktywacji klubu -->
+
+    
+    <div id="clubActivatedSuccessView" class="container hidden">
+  <h1>Klub został aktywowany ✅</h1>
+
+  <div class="card" style="text-align:left; background:#111;">
+    <div style="font-size:18px; font-weight:800; margin-bottom:10px;">
+      Konfiguracja zakończona
+    </div>
+
+    <div style="opacity:.9; line-height:1.5; margin-bottom:12px;">
+      Twój klub jest już gotowy do działania.
+      Link do klubu został wysłany na podany adres e-mail administratora.
+    </div>
+
+    <div style="margin-top:12px; font-size:14px; opacity:.8;">
+      Nazwa klubu:
+    </div>
+    <div id="clubActivatedName" style="font-size:20px; font-weight:900; margin-top:2px;">
+      —
+    </div>
+
+    <div style="margin-top:14px; font-size:14px; opacity:.8;">
+      Link do klubu:
+    </div>
+    <div id="clubActivatedLink" style="font-size:15px; font-weight:700; word-break:break-all; margin-top:4px;">
+      —
+    </div>
+  </div>
+
+  <button id="btnOpenActivatedClub" class="full-btn" type="button">
+    Otwórz klub
+  </button>
+
+  <button id="btnCopyActivatedClubLink" class="full-btn alt" type="button">
+    Skopiuj link
+  </button>
+
+  <button class="full-btn alt" type="button" onclick="goToView('pokazLogowanie')">
+    Zakończ konfigurację
+  </button>
+
+  <div id="clubActivatedSuccessMsg" style="margin-top:10px; text-align:center; opacity:.85;"></div>
+</div>
+
 <!-- =========================================================
      AUTH VIEWS
      Logowanie oraz rejestracja użytkowników
