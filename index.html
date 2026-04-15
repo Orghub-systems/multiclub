@@ -305,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.2';
+  window.APP_BUILD = 'APP v2.75.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3408,8 +3408,8 @@ function validateCfg_() {
 }
 
 function renderClubConfigProgress_(steps, activeIndex, doneMap, errorText) {
-  const msg = document.getElementById("cfgMsg");
-  if (!msg) return;
+  const overlay = document.getElementById("busyOverlay");
+  if (!overlay) return;
 
   const rows = steps.map(function(step, idx) {
     const isDone = !!doneMap[idx];
@@ -3432,7 +3432,7 @@ function renderClubConfigProgress_(steps, activeIndex, doneMap, errorText) {
         color:${color};
         transition:all .2s ease;
       ">
-        <div style="width:22px; text-align:center; font-weight:800;">${icon}</div>
+        <div style="width:22px; text-align:center; font-weight:800; flex:0 0 22px;">${icon}</div>
         <div style="font-size:14px; line-height:1.35; font-weight:${isActive || isDone ? 700 : 500};">
           ${step}
         </div>
@@ -3442,24 +3442,45 @@ function renderClubConfigProgress_(steps, activeIndex, doneMap, errorText) {
 
   const footer = errorText
     ? `<div style="margin-top:12px; color:#ff8b8b; font-size:14px; font-weight:700;">❌ ${errorText}</div>`
-    : `<div style="margin-top:12px; color:rgba(255,255,255,0.7); font-size:13px;">
+    : `<div style="margin-top:12px; color:rgba(255,255,255,0.72); font-size:13px; line-height:1.4;">
          Pierwsza konfiguracja klubu może potrwać około minuty.
        </div>`;
 
-  msg.innerHTML = `
+  overlay.innerHTML = `
     <div style="
-      margin-top:12px;
-      padding:12px;
-      border-radius:14px;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.08);
-      text-align:left;
+      position:fixed;
+      inset:0;
+      z-index:99999;
+      background:rgba(0,0,0,0.72);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      box-sizing:border-box;
     ">
-      <div style="font-size:15px; font-weight:800; margin-bottom:10px; color:#fff;">
-        Konfiguruję klub
+      <div style="
+        width:min(92vw, 460px);
+        max-height:85vh;
+        overflow:auto;
+        background:#111;
+        border:1px solid rgba(255,255,255,0.10);
+        border-radius:18px;
+        box-shadow:0 20px 60px rgba(0,0,0,0.45);
+        padding:18px 16px 16px 16px;
+        color:#fff;
+        text-align:left;
+      ">
+        <div style="font-size:22px; font-weight:900; margin-bottom:4px;">
+          ⏳ Przygotowuję aplikację...
+        </div>
+
+        <div style="font-size:14px; color:rgba(255,255,255,0.78); margin-bottom:14px;">
+          Konfiguruję klub...
+        </div>
+
+        ${rows}
+        ${footer}
       </div>
-      ${rows}
-      ${footer}
     </div>
   `;
 }
@@ -3529,12 +3550,31 @@ function stopClubConfigProgress_(state, isSuccess, errorText) {
   
 async function submitClubConfig() {
   const msg = document.getElementById("cfgMsg");
+
+  if (window.__clubConfigSubmitting === true) {
+    if (msg) msg.textContent = "⏳ Konfiguracja już trwa. Poczekaj na zakończenie.";
+    return;
+  }
+
+  const submitBtn =
+    document.querySelector('#clubConfigView button[onclick="submitClubConfig()"]') ||
+    document.querySelector('#clubConfigView .full-btn.red') ||
+    document.querySelector('#clubConfigView .full-btn');
+
   if (msg) msg.textContent = "";
 
   const err = validateCfg_();
   if (err) {
     if (msg) msg.textContent = "❌ " + err;
     return;
+  }
+
+  window.__clubConfigSubmitting = true;
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = "0.65";
+    submitBtn.textContent = "⏳ Trwa konfiguracja klubu...";
   }
 
   // zapis roboczy lokalnie
@@ -3546,7 +3586,6 @@ async function submitClubConfig() {
   const payload = {
     action: "createClub",
     clubName: cfgDraft.clubName,
-    // sezonStart/end przeniesione do Panelu 2 -> na tym etapie nie wysyłamy
     sezonStart: "",
     sezonEnd: "",
     bgColor: cfgDraft.bgColor,
@@ -3559,22 +3598,17 @@ async function submitClubConfig() {
       throw new Error("CORE nie zwrócił clubId.");
     }
 
-    // ustaw clubId
     saveClubId_(r.clubId);
-
-    // zablokuj panel konfiguracyjny na tym urządzeniu
     lockCfg_();
 
-    // theme
     const theme = {
       bgColor: r.bgColor || cfgDraft.bgColor,
       logoUrl: r.logoUrl || cfgDraft.logoDataUrl,
       clubName: r.clubName || cfgDraft.clubName
     };
+
     saveTheme_(theme);
     applyTheme_(theme);
-
-    // utrwal config (z clubId)
     saveLocalClubConfig({ ...cfgDraft, clubId: r.clubId });
 
     stopClubConfigProgress_(progress, true, "");
@@ -3582,7 +3616,7 @@ async function submitClubConfig() {
     setTimeout(function() {
       hideBusy();
       refreshClubBadge_();
-      goToConfig2(); // -> Panel 2
+      goToConfig2();
     }, 500);
   }
 
@@ -3601,9 +3635,6 @@ async function submitClubConfig() {
   } catch (e) {
     console.warn("submitClubConfig first attempt error:", e);
 
-    // Recovery:
-    // createClub mógł już zdążyć utworzyć klub, ale połączenie zostało przerwane.
-    // Robimy jedną próbę ponowną. Jeśli klub istnieje, backend powinien zwrócić go od razu.
     try {
       await new Promise(resolve => setTimeout(resolve, 1200));
 
@@ -3621,6 +3652,14 @@ async function submitClubConfig() {
     } catch (e2) {
       stopClubConfigProgress_(progress, false, e2?.message || e2);
       hideBusy();
+    }
+  } finally {
+    window.__clubConfigSubmitting = false;
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = "1";
+      submitBtn.textContent = "Zapisz i przejdź dalej";
     }
   }
 }
