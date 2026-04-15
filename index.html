@@ -305,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.1';
+  window.APP_BUILD = 'APP v2.75.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3407,6 +3407,126 @@ function validateCfg_() {
   return "";
 }
 
+function renderClubConfigProgress_(steps, activeIndex, doneMap, errorText) {
+  const msg = document.getElementById("cfgMsg");
+  if (!msg) return;
+
+  const rows = steps.map(function(step, idx) {
+    const isDone = !!doneMap[idx];
+    const isActive = idx === activeIndex && !isDone;
+    const icon = isDone ? "✅" : (isActive ? "⏳" : "•");
+    const color = isDone ? "#7CFF7C" : (isActive ? "#ffffff" : "rgba(255,255,255,0.55)");
+    const bg = isActive ? "rgba(255,255,255,0.06)" : "transparent";
+    const border = isActive ? "1px solid rgba(255,255,255,0.10)" : "1px solid transparent";
+
+    return `
+      <div style="
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:8px 10px;
+        margin-top:${idx === 0 ? 0 : 6}px;
+        border-radius:10px;
+        background:${bg};
+        border:${border};
+        color:${color};
+        transition:all .2s ease;
+      ">
+        <div style="width:22px; text-align:center; font-weight:800;">${icon}</div>
+        <div style="font-size:14px; line-height:1.35; font-weight:${isActive || isDone ? 700 : 500};">
+          ${step}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const footer = errorText
+    ? `<div style="margin-top:12px; color:#ff8b8b; font-size:14px; font-weight:700;">❌ ${errorText}</div>`
+    : `<div style="margin-top:12px; color:rgba(255,255,255,0.7); font-size:13px;">
+         Pierwsza konfiguracja klubu może potrwać około minuty.
+       </div>`;
+
+  msg.innerHTML = `
+    <div style="
+      margin-top:12px;
+      padding:12px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
+      text-align:left;
+    ">
+      <div style="font-size:15px; font-weight:800; margin-bottom:10px; color:#fff;">
+        Konfiguruję klub
+      </div>
+      ${rows}
+      ${footer}
+    </div>
+  `;
+}
+
+function startClubConfigProgress_() {
+  const steps = [
+    "Przygotowuję identyfikator i dane klubu",
+    "Tworzę pliki Google Sheets",
+    "Buduję strukturę folderów klubu",
+    "Generuję logo i ikony aplikacji",
+    "Publikuję ikony aplikacji",
+    "Zapisuję konfigurację końcową",
+    "Finalizuję konfigurację"
+  ];
+
+  const state = {
+    steps: steps,
+    activeIndex: 0,
+    doneMap: {},
+    timer: null,
+    stopped: false
+  };
+
+  renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
+
+  state.timer = setInterval(function() {
+    if (state.stopped) return;
+
+    if (state.activeIndex < state.steps.length - 1) {
+      state.doneMap[state.activeIndex] = true;
+      state.activeIndex++;
+      renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
+      return;
+    }
+
+    // ostatni krok zostawiamy jako aktywny, żeby nie wyglądało jak zawiecha
+    renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
+  }, 3500);
+
+  return state;
+}
+
+function stopClubConfigProgress_(state, isSuccess, errorText) {
+  if (!state) return;
+
+  state.stopped = true;
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  if (isSuccess) {
+    for (let i = 0; i < state.steps.length; i++) {
+      state.doneMap[i] = true;
+    }
+    renderClubConfigProgress_(state.steps, -1, state.doneMap, "");
+    return;
+  }
+
+  renderClubConfigProgress_(
+    state.steps,
+    typeof state.activeIndex === "number" ? state.activeIndex : 0,
+    state.doneMap || {},
+    errorText || "Nie udało się zakończyć konfiguracji."
+  );
+}
+  
 async function submitClubConfig() {
   const msg = document.getElementById("cfgMsg");
   if (msg) msg.textContent = "";
@@ -3421,6 +3541,7 @@ async function submitClubConfig() {
   saveLocalClubConfig({ ...cfgDraft });
 
   showBusy("Konfiguruję klub…");
+  const progress = startClubConfigProgress_();
 
   const payload = {
     action: "createClub",
@@ -3456,18 +3577,21 @@ async function submitClubConfig() {
     // utrwal config (z clubId)
     saveLocalClubConfig({ ...cfgDraft, clubId: r.clubId });
 
-    hideBusy();
+    stopClubConfigProgress_(progress, true, "");
 
-    refreshClubBadge_();
-    goToConfig2(); // -> Panel 2
+    setTimeout(function() {
+      hideBusy();
+      refreshClubBadge_();
+      goToConfig2(); // -> Panel 2
+    }, 500);
   }
 
   try {
     const r = await apiCorePost(payload);
 
     if (!r || (r.success !== true && r.ok !== true)) {
+      stopClubConfigProgress_(progress, false, r?.error || r?.message || JSON.stringify(r));
       hideBusy();
-      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || JSON.stringify(r));
       return;
     }
 
@@ -3481,15 +3605,13 @@ async function submitClubConfig() {
     // createClub mógł już zdążyć utworzyć klub, ale połączenie zostało przerwane.
     // Robimy jedną próbę ponowną. Jeśli klub istnieje, backend powinien zwrócić go od razu.
     try {
-      if (msg) msg.textContent = "⏳ Sprawdzam, czy klub został już utworzony...";
-
       await new Promise(resolve => setTimeout(resolve, 1200));
 
       const retry = await apiCorePost(payload);
 
       if (!retry || (retry.success !== true && retry.ok !== true)) {
+        stopClubConfigProgress_(progress, false, e?.message || e);
         hideBusy();
-        if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
         return;
       }
 
@@ -3497,11 +3619,12 @@ async function submitClubConfig() {
       return;
 
     } catch (e2) {
+      stopClubConfigProgress_(progress, false, e2?.message || e2);
       hideBusy();
-      if (msg) msg.textContent = "❌ Błąd połączenia: " + (e2?.message || e2);
     }
   }
 }
+  
 function goToConfig2() {
   setupDraft = {
     sezonStart: "",
