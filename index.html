@@ -305,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75';
+  window.APP_BUILD = 'APP v2.75.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3422,28 +3422,20 @@ async function submitClubConfig() {
 
   showBusy("Konfiguruję klub…");
 
-  try {
-    const r = await apiCorePost({
-      action: "createClub",
-      clubName: cfgDraft.clubName,
-      // sezonStart/end przeniesione do Panelu 2 -> na tym etapie nie wysyłamy
-      sezonStart: "",
-      sezonEnd: "",
-      bgColor: cfgDraft.bgColor,
-      ownerEmail: cfgDraft.email,
-      logoBase64: cfgDraft.logoDataUrl
-    });
+  const payload = {
+    action: "createClub",
+    clubName: cfgDraft.clubName,
+    // sezonStart/end przeniesione do Panelu 2 -> na tym etapie nie wysyłamy
+    sezonStart: "",
+    sezonEnd: "",
+    bgColor: cfgDraft.bgColor,
+    ownerEmail: cfgDraft.email,
+    logoBase64: cfgDraft.logoDataUrl
+  };
 
-    if (!r || (r.success !== true && r.ok !== true)) {
-      hideBusy();
-      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || JSON.stringify(r));
-      return;
-    }
-
+  function applyCreateClubSuccess_(r) {
     if (!r.clubId) {
-      hideBusy();
-      if (msg) msg.textContent = "❌ CORE nie zwrócił clubId.";
-      return;
+      throw new Error("CORE nie zwrócił clubId.");
     }
 
     // ustaw clubId
@@ -3468,13 +3460,48 @@ async function submitClubConfig() {
 
     refreshClubBadge_();
     goToConfig2(); // -> Panel 2
+  }
+
+  try {
+    const r = await apiCorePost(payload);
+
+    if (!r || (r.success !== true && r.ok !== true)) {
+      hideBusy();
+      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || JSON.stringify(r));
+      return;
+    }
+
+    applyCreateClubSuccess_(r);
+    return;
 
   } catch (e) {
-    hideBusy();
-    if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
+    console.warn("submitClubConfig first attempt error:", e);
+
+    // Recovery:
+    // createClub mógł już zdążyć utworzyć klub, ale połączenie zostało przerwane.
+    // Robimy jedną próbę ponowną. Jeśli klub istnieje, backend powinien zwrócić go od razu.
+    try {
+      if (msg) msg.textContent = "⏳ Sprawdzam, czy klub został już utworzony...";
+
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      const retry = await apiCorePost(payload);
+
+      if (!retry || (retry.success !== true && retry.ok !== true)) {
+        hideBusy();
+        if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
+        return;
+      }
+
+      applyCreateClubSuccess_(retry);
+      return;
+
+    } catch (e2) {
+      hideBusy();
+      if (msg) msg.textContent = "❌ Błąd połączenia: " + (e2?.message || e2);
+    }
   }
 }
-
 function goToConfig2() {
   setupDraft = {
     sezonStart: "",
