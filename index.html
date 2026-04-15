@@ -305,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.4';
+  window.APP_BUILD = 'APP v2.75.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4365,9 +4365,45 @@ async function submitSetupAndActivateClub() {
     const oldBox = document.getElementById("clubLinkBox");
     if (oldBox) oldBox.remove();
 
-    if (msg) {
-      msg.textContent = "✅ Klub aktywowany. Link do Twojego klubu wysłaliśmy na podany email.";
+    const finalClubName = String(cfgDraft?.clubName || "").trim();
+    const finalClubLink = `https://${encodeURIComponent(String(clubId).trim())}.orghub.pl`;
+
+    const successName = document.getElementById("clubActivatedName");
+    const successLink = document.getElementById("clubActivatedLink");
+    const successMsg = document.getElementById("clubActivatedSuccessMsg");
+    const btnOpen = document.getElementById("btnOpenActivatedClub");
+    const btnCopy = document.getElementById("btnCopyActivatedClubLink");
+
+    if (successName) {
+      successName.textContent = finalClubName || String(clubId).trim().toUpperCase();
     }
+
+    if (successLink) {
+      successLink.textContent = finalClubLink;
+    }
+
+    if (successMsg) {
+      successMsg.textContent = "";
+    }
+
+    if (btnOpen) {
+      btnOpen.onclick = function () {
+        window.location.href = finalClubLink;
+      };
+    }
+
+    if (btnCopy) {
+      btnCopy.onclick = async function () {
+        try {
+          await navigator.clipboard.writeText(finalClubLink);
+          if (successMsg) successMsg.textContent = "✅ Link skopiowany do schowka.";
+        } catch (e) {
+          if (successMsg) successMsg.textContent = "❌ Nie udało się skopiować linku.";
+        }
+      };
+    }
+
+    goToView("clubActivatedSuccessView");
 
   } catch (e) {
     console.error(e);
