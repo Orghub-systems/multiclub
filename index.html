@@ -8,26 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   
-  <link id="pwaManifestLink" rel="manifest" href="manifest.json">
- 
-<script>
-(function () {
-  try {
-    const params = new URLSearchParams(location.search)
-    const clubId = (params.get("clubId") || "").trim();
-    const link = document.getElementById("pwaManifestLink");
-    if (!link) return;
-
-    const workerBase = "https://still-shape-2aa3.orghubsystems.workers.dev";
-
-    if (clubId) {
-      link.href = workerBase + "/manifest.webmanifest?clubId=" + encodeURIComponent(clubId);
-    } else {
-      link.href = workerBase + "/manifest.webmanifest?clubId=default";
-    }
-  } catch (e) {}
-})();
-</script>
+<link id="pwaManifestLink" rel="manifest" href="/manifest.webmanifest">
                                                  
   <style>
     :root {
@@ -324,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'BETA APP v2.74.25';
+  window.APP_BUILD = 'APP v2.75';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
