@@ -305,7 +305,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.3';
+  window.APP_BUILD = 'APP v2.75.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3484,11 +3484,10 @@ function renderClubConfigProgress_(steps, activeIndex, doneMap, errorText) {
     </div>
   `;
 }
-
 function startClubConfigProgress_() {
   const steps = [
     "Przygotowuję identyfikator i dane klubu",
-    "Tworzę pliki",
+    "Tworzę pliki Google Sheets",
     "Buduję strukturę folderów klubu",
     "Generuję logo i ikony aplikacji",
     "Publikuję ikony aplikacji",
@@ -3496,30 +3495,49 @@ function startClubConfigProgress_() {
     "Finalizuję konfigurację"
   ];
 
+  // czasy dobrane pod realny odbiór:
+  // szybki start, środek umiarkowany, końcówka najdłuższa
+  const durations = [
+    2500, // identyfikator i dane
+    6000, // tworzenie plików
+    6000, // struktura folderów
+    8000, // generowanie ikon
+    10000, // publikacja ikon
+    12000, // zapis końcowy
+    22000  // finalizacja - najdłużej
+  ];
+
   const state = {
     steps: steps,
+    durations: durations,
     activeIndex: 0,
     doneMap: {},
-    timer: null,
-    stopped: false
+    stopped: false,
+    timer: null
   };
 
   renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
 
-  state.timer = setInterval(function() {
+  function runStep_(idx) {
     if (state.stopped) return;
-
-    if (state.activeIndex < state.steps.length - 1) {
-      state.doneMap[state.activeIndex] = true;
-      state.activeIndex++;
+    if (idx >= state.steps.length - 1) {
+      state.activeIndex = state.steps.length - 1;
       renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
       return;
     }
 
-    // ostatni krok zostawiamy jako aktywny, żeby nie wyglądało jak zawiecha
-    renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
-  }, 3500);
+    state.timer = setTimeout(function() {
+      if (state.stopped) return;
 
+      state.doneMap[idx] = true;
+      state.activeIndex = idx + 1;
+      renderClubConfigProgress_(state.steps, state.activeIndex, state.doneMap, "");
+
+      runStep_(idx + 1);
+    }, state.durations[idx]);
+  }
+
+  runStep_(0);
   return state;
 }
 
