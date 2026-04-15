@@ -370,32 +370,6 @@ self.addEventListener("push", (event) => {
   })());
 });
 
-    try {
-      const shownClubId = String(
-        (payload && payload.clubId) ||
-        (payload && payload.data && payload.data.clubId) ||
-        (meta && meta.clubId) ||
-        ""
-      ).trim();
-
-      const shownNumer = String(
-        (payload && payload.numer) ||
-        (payload && payload.data && payload.data.numer) ||
-        (meta && meta.numer) ||
-        ""
-      ).trim();
-
-      const shownTs = Number(payload?.ts || 0);
-
-      if (shownClubId && shownNumer && shownTs > 0) {
-        await writeLastShownPushTs_(shownClubId, shownNumer, shownTs);
-      }
-    } catch (e) {
-      console.warn("save shown push ts error", e);
-    }
-  })());
-});
-
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
