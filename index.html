@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.10';
+  window.APP_BUILD = 'APP v2.75.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2701,7 +2701,7 @@ function openPanelFromAppSession_(sess) {
   const role = String(s.role || "").trim();
 
   refreshClubBadge_();
-  prefetchClubGroupsInBackground_();
+  prefetchClubGroupsConfig_();
 
   if (role === "zawodnik") {
     goToView("playerMenuView", { replace: true });
@@ -9375,6 +9375,37 @@ function saveClubGroupsStateToCache_(state) {
   }
 }
 
+let clubGroupsPrefetchPromise_ = null;
+
+async function fetchClubGroupsConfigFromGas_() {
+  const res = await apiClubGet("getClubGroupsConfig");
+  if (!res || !res.success || !res.groups) {
+    throw new Error(res?.error || res?.message || "Nie udało się pobrać konfiguracji grup.");
+  }
+
+  const normalized = normalizeClubGroupsState_(res.groups);
+  adminClubGroupsState_ = normalized;
+  saveClubGroupsStateToCache_(normalized);
+  return normalized;
+}
+
+function prefetchClubGroupsConfig_() {
+  if (clubGroupsPrefetchPromise_) return clubGroupsPrefetchPromise_;
+
+  clubGroupsPrefetchPromise_ = (async () => {
+    try {
+      return await fetchClubGroupsConfigFromGas_();
+    } catch (e) {
+      console.warn("prefetchClubGroupsConfig_ error:", e);
+      return adminClubGroupsState_ || loadClubGroupsStateFromCache_();
+    } finally {
+      clubGroupsPrefetchPromise_ = null;
+    }
+  })();
+
+  return clubGroupsPrefetchPromise_;
+}
+  
 function renderAdminClubGroupsView_() {
   const box = document.getElementById("adminGroupsList");
   if (!box) return;
@@ -9429,9 +9460,20 @@ function openAdminClubGroupsView() {
   adminClubGroupsState_ = loadClubGroupsStateFromCache_();
   renderAdminClubGroupsView_();
   goToView("adminGroupsView");
+
+  prefetchClubGroupsConfig_()
+    .then(() => {
+      const view = document.getElementById("adminGroupsView");
+      if (view && !view.classList.contains("hidden")) {
+        renderAdminClubGroupsView_();
+      }
+    })
+    .catch(e => {
+      console.warn("openAdminClubGroupsView refresh error:", e);
+    });
 }
 
-function adminSaveClubGroupsLocal_() {
+async function adminSaveClubGroupsLocal_() {
   if (!adminClubGroupsState_) {
     adminClubGroupsState_ = getDefaultClubGroupsState_();
   }
@@ -9447,8 +9489,28 @@ function adminSaveClubGroupsLocal_() {
     };
   }
 
+  // najpierw lokalnie, żeby UI było szybkie
   saveClubGroupsStateToCache_(adminClubGroupsState_);
-  alert("✅ Zapisano konfigurację grup dla tego klubu.");
+
+  try {
+    const r = await apiClubPost({
+      action: "saveClubGroupsConfig",
+      groupsJson: JSON.stringify(adminClubGroupsState_)
+    });
+
+    if (!r || !r.success) {
+      alert("❌ Nie udało się zapisać grup: " + (r?.error || r?.message || "Błąd zapisu"));
+      return;
+    }
+
+    adminClubGroupsState_ = normalizeClubGroupsState_(r.groups || adminClubGroupsState_);
+    saveClubGroupsStateToCache_(adminClubGroupsState_);
+    renderAdminClubGroupsView_();
+
+    alert("✅ Zapisano konfigurację grup klubu.");
+  } catch (e) {
+    alert("❌ Błąd połączenia: " + (e?.message || e));
+  }
 }
 
 /* =================== KONIEC SEKTORA 161 =================== */  
