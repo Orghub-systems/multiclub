@@ -979,28 +979,24 @@ input[type="number"] {
         <select id="eventTrener4"><option value="">— kolejny trener —</option></select>
       </div>
 
-      <select id="eventTrybDostepu" class="select-like-input" onchange="onEventTrybDostepuChange()" style="text-align:left; text-align-last:left; font-weight:700; padding-left:16px;">
-        <option value="wszyscy">Dostęp dla wszystkich</option>
-        <option value="powolania">Powołania</option>
-      </select>
-
-      <div id="eventPowolaniWrap" style="display:none;">
-        <input id="eventPowolaniNums" type="hidden">
-
-        <button class="full-btn alt" id="btnPickPowolani" type="button" onclick="openPowolaniPopup('add')" style="text-align:left; padding-left:16px;">
-          Zawodnicy
-        </button>
-
-        <div id="eventPowolaniPreview" style="font-size:12px; opacity:.8; margin-top:6px; line-height:1.4; text-align:center;">
-          Nie wybrano zawodników
-        </div>
-      </div>
+      <input id="eventPowolaniNums" type="hidden">
 
       <div id="eventGroupsWrap" style="display:block;">
         <button class="full-btn alt" id="btnPickGroups" type="button" onclick="openGroupsPopup()" style="text-align:left; padding-left:16px;">
-          Grupy
+          Grupy / Powołania
         </button>
       </div>
+
+      <label class="full-btn alt" for="eventRez">
+        <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
+          <span style="flex:0 0 auto;">
+            <input id="eventRez" type="checkbox" style="transform:scale(1.35); margin:0;">
+          </span>
+          <span style="flex:1 1 auto; text-align:left; white-space:nowrap;">
+            Rezerwacja obiektu
+          </span>
+        </span>
+      </label>
 
       <label class="full-btn alt" for="eventRez">
         <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
