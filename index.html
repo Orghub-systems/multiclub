@@ -1064,75 +1064,61 @@ input[type="number"] {
   <div style="display:flex; flex-direction:column; align-items:flex-start; gap:16px;">
     
 <div class="card" style="margin-top:12px; padding:18px 20px;">
-  <div
-    style="
-      display:grid;
-      grid-template-columns: 120px 1fr;
-      grid-template-rows: auto auto;
-      column-gap:18px;
-      row-gap:16px;
-      align-items:start;
-    "
-  >
-    <div
-      style="
-        grid-column:1;
-        grid-row:1 / span 2;
-        font-size:38px;
-        line-height:1;
-        font-weight:800;
-        color:#fff;
-        padding-top:6px;
-      "
-    >
+  <div style="display:flex; align-items:flex-start; gap:20px;">
+    
+    <div style="
+      width:90px;
+      flex:0 0 90px;
+      font-size:34px;
+      line-height:1;
+      font-weight:800;
+      color:#fff;
+      padding-top:10px;
+    ">
       G1
     </div>
 
-    <input
-      id="groupLabel_G1"
-      type="text"
-      placeholder="Wpisz nazwę grupy"
-      value="Grupa 1"
-      style="
-        grid-column:2;
-        grid-row:1;
-        width:100%;
-        height:62px;
-        border-radius:14px;
-        border:1px solid #555;
-        background:#111;
-        color:#fff;
-        font-size:24px;
-        font-weight:700;
-        padding:0 18px;
-        box-sizing:border-box;
-      "
-    >
+    <div style="flex:1; min-width:0;">
+      <input
+        id="groupLabel_G1"
+        type="text"
+        placeholder="Wpisz nazwę grupy"
+        value="Grupa 1"
+        style="
+          width:100%;
+          height:60px;
+          border-radius:14px;
+          border:1px solid #555;
+          background:#111;
+          color:#fff;
+          font-size:22px;
+          font-weight:700;
+          padding:0 18px;
+          box-sizing:border-box;
+        "
+      >
 
-    <label
-      style="
-        grid-column:2;
-        grid-row:2;
+      <label style="
         display:flex;
         align-items:center;
         gap:10px;
-        font-size:22px;
+        margin-top:14px;
+        font-size:20px;
         font-weight:700;
         color:#fff;
-        margin:0;
-      "
-    >
-      <input
-        type="checkbox"
-        id="groupEnabled_G1"
-        checked
-        style="width:28px; height:28px; margin:0;"
-      >
-      <span>Aktywna</span>
-    </label>
+      ">
+        <input
+          type="checkbox"
+          id="groupEnabled_G1"
+          checked
+          style="width:26px; height:26px; margin:0;"
+        >
+        <span>Aktywna</span>
+      </label>
+    </div>
+
   </div>
 </div>
-
   <div class="card" style="margin-top:12px;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
       <b>G2</b>
