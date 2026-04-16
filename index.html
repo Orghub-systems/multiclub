@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.12';
+  window.APP_BUILD = 'APP v2.75.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1254,37 +1254,7 @@ input[type="number"] {
 <div id="adminGrupyView" class="container hidden">
   <h1 id="adminGrupyTitle">Grupy</h1>
 
-  <!-- KAFEL 1: G1–G5 -->
-  <div class="card" style="margin-bottom:12px;">
-    <div style="
-      display:grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap:6mm;
-      text-align:center;
-    ">
-      <label><input type="checkbox" class="adminGrupaChk" value="G1"> G1</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G2"> G2</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G3"> G3</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G4"> G4</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G5"> G5</label>
-    </div>
-  </div>
-
-  <!-- KAFEL 2: G6–G10 -->
-  <div class="card" style="margin-bottom:12px;">
-    <div style="
-      display:grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap:6mm;
-      text-align:center;
-    ">
-      <label><input type="checkbox" class="adminGrupaChk" value="G6"> G6</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G7"> G7</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G8"> G8</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G9"> G9</label>
-      <label><input type="checkbox" class="adminGrupaChk" value="G10"> G10</label>
-    </div>
-  </div>
+  <div id="adminGrupyDynamicWrap"></div>
 
   <button class="full-btn" onclick="adminSaveGrupyLocal()">Zapisz</button>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
@@ -9117,6 +9087,49 @@ function adminRenderGroupsGrid_() {
   }).join("");
 }
 
+function renderAdminPlayerGroupsView_() {
+  const wrap = document.getElementById("adminGrupyDynamicWrap");
+  if (!wrap) return;
+
+  const groups = getEnabledClubGroupsForUi_();
+
+  if (!groups.length) {
+    wrap.innerHTML = `
+      <div class="card" style="margin-bottom:12px; text-align:center; opacity:.85;">
+        Brak aktywnych grup w konfiguracji klubu.
+      </div>
+    `;
+    return;
+  }
+
+  const renderChunk = (arr) => {
+    return `
+      <div class="card" style="margin-bottom:12px;">
+        <div style="
+          display:grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap:6mm;
+          text-align:center;
+        ">
+          ${arr.map(g => `
+            <label>
+              <input type="checkbox" class="adminGrupaChk" value="${g.code}">
+              ${g.label}
+            </label>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  };
+
+  const firstRow = groups.slice(0, 5);
+  const secondRow = groups.slice(5, 10);
+
+  wrap.innerHTML =
+    renderChunk(firstRow) +
+    (secondRow.length ? renderChunk(secondRow) : "");
+}
+  
 async function adminOpenGroups() {
   const nr = String(window.__adminSelectedNr || "").trim();
   const nazw = String(window.__adminSelectedNazwisko || "").trim();
@@ -9126,8 +9139,7 @@ async function adminOpenGroups() {
   const t = document.getElementById("adminGrupyTitle");
   if (t) t.textContent = `Grupy — #${nr} ${nazw ? "— " + nazw : ""}`;
 
-  // ✅ U CIEBIE checkboxy są już w HTML (#adminGrupyView .adminGrupaChk)
-  // więc NIE budujemy żadnego gridu dynamicznie.
+  renderAdminPlayerGroupsView_();
 
   const msg = document.getElementById("adminGrupyMsg");
   if (msg) msg.textContent = "⏳ Ładuję grupy…";
