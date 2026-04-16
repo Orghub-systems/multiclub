@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.13';
+  window.APP_BUILD = 'APP v2.75.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1117,7 +1117,7 @@ input[type="number"] {
 
   <div id="adminGroupsList"></div>
 
-  <button class="full-btn" type="button" onclick="adminSaveClubGroupsLocal_()">💾 Zapisz grupy</button>
+  <button id="btnSaveClubGroupsConfig" class="full-btn" type="button" onclick="adminSaveClubGroupsLocal_()">💾 Zapisz grupy</button>
   <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
 </div>
 
@@ -9332,6 +9332,7 @@ async function adminApplyGroupsPopup() {
   /* =================== 161 ADMIN / GRUPS / CONFIG =================== */
 
   let adminClubGroupsState_ = null;
+  let adminClubGroupsSaving_ = false;
 
 function getClubGroupsStorageKey_() {
   return LS_KEY_CLUB_GROUPS_PREFIX + String(clubId || "default").trim().toLowerCase();
@@ -9539,42 +9540,93 @@ function openAdminClubGroupsView() {
 }
 
 async function adminSaveClubGroupsLocal_() {
-  if (!adminClubGroupsState_) {
-    adminClubGroupsState_ = getDefaultClubGroupsState_();
-  }
+  if (adminClubGroupsSaving_) return;
 
-  for (let i = 1; i <= 10; i++) {
-    const code = "G" + i;
-    const enabledEl = document.getElementById("groupEnabled_" + code);
-    const labelEl = document.getElementById("groupLabel_" + code);
+  const btn = document.getElementById("btnSaveClubGroupsConfig");
 
-    adminClubGroupsState_[code] = {
-      enabled: !!(enabledEl && enabledEl.checked),
-      label: String(labelEl && labelEl.value ? labelEl.value : "").trim()
-    };
-  }
+  const setBtnIdle = () => {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = "💾 Zapisz grupy";
+    btn.style.opacity = "";
+    btn.style.background = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+  };
 
-  // najpierw lokalnie, żeby UI było szybkie
-  saveClubGroupsStateToCache_(adminClubGroupsState_);
+  const setBtnSaving = () => {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = "Zapisywanie...";
+    btn.style.opacity = "0.7";
+  };
+
+  const setBtnSuccess = () => {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = "✅ Konfiguracja zapisana";
+    btn.style.opacity = "1";
+    btn.style.background = "#0f7a2a";
+    btn.style.borderColor = "#19b84a";
+    btn.style.color = "#fff";
+  };
+
+  const setBtnError = () => {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = "❌ Błąd zapisu";
+    btn.style.opacity = "1";
+    btn.style.background = "#7a0f0f";
+    btn.style.borderColor = "#ff2b2b";
+    btn.style.color = "#fff";
+  };
+
+  adminClubGroupsSaving_ = true;
+  setBtnSaving();
 
   try {
+    if (!adminClubGroupsState_) {
+      adminClubGroupsState_ = getDefaultClubGroupsState_();
+    }
+
+    for (let i = 1; i <= 10; i++) {
+      const code = "G" + i;
+      const enabledEl = document.getElementById("groupEnabled_" + code);
+      const labelEl = document.getElementById("groupLabel_" + code);
+
+      adminClubGroupsState_[code] = {
+        enabled: !!(enabledEl && enabledEl.checked),
+        label: String(labelEl && labelEl.value ? labelEl.value : "").trim()
+      };
+    }
+
+    // lokalny cache od razu
+    saveClubGroupsStateToCache_(adminClubGroupsState_);
+
     const r = await apiClubPost({
       action: "saveClubGroupsConfig",
       groupsJson: JSON.stringify(adminClubGroupsState_)
     });
 
     if (!r || !r.success) {
-      alert("❌ Nie udało się zapisać grup: " + (r?.error || r?.message || "Błąd zapisu"));
-      return;
+      throw new Error(r?.error || r?.message || "Błąd zapisu");
     }
 
     adminClubGroupsState_ = normalizeClubGroupsState_(r.groups || adminClubGroupsState_);
     saveClubGroupsStateToCache_(adminClubGroupsState_);
-    renderAdminClubGroupsView_();
 
-    alert("✅ Zapisano konfigurację grup klubu.");
+    setBtnSuccess();
   } catch (e) {
-    alert("❌ Błąd połączenia: " + (e?.message || e));
+    console.error("adminSaveClubGroupsLocal_ error:", e);
+    setBtnError();
+
+    setTimeout(() => {
+      setBtnIdle();
+    }, 1800);
+
+    return;
+  } finally {
+    adminClubGroupsSaving_ = false;
   }
 }
 
