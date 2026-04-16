@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.11';
+  window.APP_BUILD = 'APP v2.75.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9405,6 +9405,59 @@ function prefetchClubGroupsConfig_() {
 
   return clubGroupsPrefetchPromise_;
 }
+
+function getClubGroupsStateForUi_() {
+  return adminClubGroupsState_ || loadClubGroupsStateFromCache_() || getDefaultClubGroupsState_();
+}
+
+function getClubGroupLabel_(code) {
+  const key = String(code || "").trim();
+  if (!key) return "";
+
+  const state = getClubGroupsStateForUi_();
+  const item = state[key];
+
+  if (!item) return key;
+  return String(item.label || "").trim() || key;
+}
+
+function isClubGroupEnabled_(code) {
+  const key = String(code || "").trim();
+  if (!key) return false;
+
+  const state = getClubGroupsStateForUi_();
+  const item = state[key];
+  return !!(item && item.enabled);
+}
+
+function getEnabledClubGroupsForUi_() {
+  const state = getClubGroupsStateForUi_();
+  const out = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    const item = state[code];
+    if (!item || !item.enabled) continue;
+
+    out.push({
+      code,
+      label: String(item.label || "").trim() || code
+    });
+  }
+
+  return out;
+}
+
+function formatClubGroupsCsvForUi_(csv) {
+  const arr = String(csv || "")
+    .split(",")
+    .map(s => String(s || "").trim())
+    .filter(Boolean);
+
+  if (!arr.length) return "";
+
+  return arr.map(code => getClubGroupLabel_(code)).join(", ");
+}  
   
 function renderAdminClubGroupsView_() {
   const box = document.getElementById("adminGroupsList");
