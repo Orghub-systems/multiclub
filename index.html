@@ -9004,37 +9004,37 @@ function adminRenderGroupsGrid_() {
     if (!box) return;
 
     const rows = [];
-    for (let i = 1; i <= 10; i++) {
-      const code = "G" + i;
-      const checked = i === 1 ? "checked" : "";
-      const value = i === 1 ? "Grupa 1" : "";
+for (let i = 1; i <= 10; i++) {
+  const code = "G" + i;
+  const checked = i === 1 ? "checked" : "";
+  const value = "";
 
-      rows.push(`
-        <div class="card group-row-card">
-          <div class="group-row">
-            <div class="group-code">${code}</div>
+  rows.push(`
+    <div class="card group-row-card">
+      <div class="group-row">
+        <div class="group-code">${code}</div>
 
-            <input
-              id="groupLabel_${code}"
-              class="group-name-input"
-              type="text"
-              placeholder="Nazwa grupy"
-              value="${value}"
-            >
+        <input
+          id="groupLabel_${code}"
+          class="group-name-input"
+          type="text"
+          placeholder="Nazwa grupy"
+          value="${value}"
+        >
 
-            <label class="group-active-label">
-              <input
-                id="groupEnabled_${code}"
-                class="group-active-checkbox"
-                type="checkbox"
-                ${checked}
-              >
-              <span>Aktywna</span>
-            </label>
-          </div>
-        </div>
-      `);
-    }
+        <label class="group-active-label">
+          <input
+            id="groupEnabled_${code}"
+            class="group-active-checkbox"
+            type="checkbox"
+            ${checked}
+          >
+          <span>Aktywna</span>
+        </label>
+      </div>
+    </div>
+  `);
+}
 
     box.innerHTML = rows.join("");
   }
