@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.9';
+  window.APP_BUILD = 'APP v2.75.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1096,7 +1096,7 @@ input[type="number"] {
   <h1>Panel administratora</h1>
 
   <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
-  <button class="full-btn" onclick="openAdminGroupsView()">🧩 Grupy klubu</button>
+  <button class="full-btn" onclick="openAdminClubGroupsView()">🧩 Grupy klubu</button>
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
@@ -1117,7 +1117,7 @@ input[type="number"] {
 
   <div id="adminGroupsList"></div>
 
-  <button class="full-btn" type="button">💾 Zapisz grupy</button>
+  <button class="full-btn" type="button" onclick="adminSaveClubGroupsLocal_()">💾 Zapisz grupy</button>
   <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
 </div>
 
@@ -2360,6 +2360,9 @@ const LS_KEY_THEME = "orghub_theme";
 // Klucz localStorage dla blokady konfiguracji  
 const LS_KEY_CFG_LOCK = "orghub_cfg_locked";
 
+// Klucz localStorage dla konfiguracji grup    
+const LS_KEY_GROUPS_CFG_PREFIX = "orghub.clubGroups.v1.";  
+
 // Sprawdzenie, czy konfiguracja jest zablokowana  
 function isCfgLocked_() {
   return localStorage.getItem(LS_KEY_CFG_LOCK) === "1";
@@ -2504,6 +2507,125 @@ function applyTheme_(theme) {
   } catch (e) {}
 }
 
+/* =================== CLUB GROUPS CACHE =================== */
+
+let adminGroupsState_ = null;
+let groupsPrefetchPromise_ = null;
+
+function getGroupsStorageKey_() {
+  return LS_KEY_GROUPS_CFG_PREFIX + String(clubId || "default").trim().toLowerCase();
+}
+
+function getDefaultGroupsState_() {
+  const data = {};
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    data[code] = {
+      enabled: i === 1,
+      label: ""
+    };
+  }
+  return data;
+}
+
+function normalizeGroupsState_(raw) {
+  const base = getDefaultGroupsState_();
+  const src = raw && typeof raw === "object" ? raw : {};
+
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    const item = src[code] || {};
+    base[code] = {
+      enabled: !!item.enabled,
+      label: String(item.label || "").trim()
+    };
+  }
+
+  return base;
+}
+
+function loadGroupsStateFromCache_() {
+  try {
+    const raw = localStorage.getItem(getGroupsStorageKey_());
+    if (!raw) return getDefaultGroupsState_();
+    return normalizeGroupsState_(JSON.parse(raw));
+  } catch (e) {
+    console.warn("loadGroupsStateFromCache_ error", e);
+    return getDefaultGroupsState_();
+  }
+}
+
+function saveGroupsStateToCache_(state) {
+  try {
+    localStorage.setItem(
+      getGroupsStorageKey_(),
+      JSON.stringify(normalizeGroupsState_(state))
+    );
+  } catch (e) {
+    console.warn("saveGroupsStateToCache_ error", e);
+  }
+}
+
+function getActiveGroupsForUi_() {
+  const state = adminGroupsState_ || loadGroupsStateFromCache_();
+  const out = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    const item = state[code];
+    if (!item || !item.enabled) continue;
+
+    out.push({
+      code,
+      label: item.label || code
+    });
+  }
+
+  return out;
+}
+
+async function prefetchClubGroupsInBackground_() {
+  if (groupsPrefetchPromise_) return groupsPrefetchPromise_;
+
+  groupsPrefetchPromise_ = (async () => {
+    try {
+      if (!clubId) {
+        adminGroupsState_ = getDefaultGroupsState_();
+        return adminGroupsState_;
+      }
+
+      // 1) najpierw bierzemy to, co już jest lokalnie
+      adminGroupsState_ = loadGroupsStateFromCache_();
+
+      // 2) tutaj w następnym kroku podepniemy prawdziwy fetch z GAS
+      //    bez blokowania UI
+      //
+      // przykład docelowo:
+      // const res = await apiClubPost({
+      //   action: "TU_WSTAW_WLASCIWA_AKCJE_GAS_DLA_GRUP"
+      // });
+      //
+      // if (res && res.success === true && res.groups) {
+      //   adminGroupsState_ = normalizeGroupsState_(res.groups);
+      //   saveGroupsStateToCache_(adminGroupsState_);
+      // }
+
+      return adminGroupsState_;
+    } catch (e) {
+      console.warn("prefetchClubGroupsInBackground_ error", e);
+      adminGroupsState_ = adminGroupsState_ || loadGroupsStateFromCache_();
+      return adminGroupsState_;
+    } finally {
+      groupsPrefetchPromise_ = null;
+    }
+  })();
+
+  return groupsPrefetchPromise_;
+}
+
+/* =================== KONIEC CLUB GROUPS CACHE =================== */
+
+  
 /* =================== APP SESSION / LOCAL =================== */
 
 const ORGHUB_SESSION_KEY = "orghub_app_session_v1";
@@ -2579,6 +2701,7 @@ function openPanelFromAppSession_(sess) {
   const role = String(s.role || "").trim();
 
   refreshClubBadge_();
+  prefetchClubGroupsInBackground_();
 
   if (role === "zawodnik") {
     goToView("playerMenuView", { replace: true });
@@ -8939,11 +9062,6 @@ async function adminToggleAccessFromInfo(checked) {
 // =================== GRUPY ===================
 let __adminGroupsSet = new Set();
 
-  function openAdminGroupsView() {
-    renderAdminGroupsView_();
-    goToView("adminGroupsView");
-  }  
-
 async function adminSaveGrupy(nr, selectedSetOrArray) {
   const numer = String(nr || "").trim();
   if (!numer) { alert("❌ Brak numeru zawodnika"); return; }
@@ -8998,46 +9116,6 @@ function adminRenderGroupsGrid_() {
     `;
   }).join("");
 }
-
-  function renderAdminGroupsView_() {
-    const box = document.getElementById("adminGroupsList");
-    if (!box) return;
-
-    const rows = [];
-for (let i = 1; i <= 10; i++) {
-  const code = "G" + i;
-  const checked = i === 1 ? "checked" : "";
-  const value = "";
-
-  rows.push(`
-    <div class="card group-row-card">
-      <div class="group-row">
-        <div class="group-code">${code}</div>
-
-        <input
-          id="groupLabel_${code}"
-          class="group-name-input"
-          type="text"
-          placeholder="Nazwa grupy"
-          value="${value}"
-        >
-
-        <label class="group-active-label">
-          <input
-            id="groupEnabled_${code}"
-            class="group-active-checkbox"
-            type="checkbox"
-            ${checked}
-          >
-          <span>Aktywna</span>
-        </label>
-      </div>
-    </div>
-  `);
-}
-
-    box.innerHTML = rows.join("");
-  }
 
 async function adminOpenGroups() {
   const nr = String(window.__adminSelectedNr || "").trim();
@@ -9238,6 +9316,142 @@ async function adminApplyGroupsPopup() {
 }
 
 /* =================== KONIEC SEKTORA 160 =================== */
+
+  /* =================== 161 ADMIN / GRUPS / CONFIG =================== */
+
+  let adminClubGroupsState_ = null;
+
+function getClubGroupsStorageKey_() {
+  return LS_KEY_CLUB_GROUPS_PREFIX + String(clubId || "default").trim().toLowerCase();
+}
+
+function getDefaultClubGroupsState_() {
+  const data = {};
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    data[code] = {
+      enabled: i === 1,
+      label: ""
+    };
+  }
+  return data;
+}
+
+function normalizeClubGroupsState_(raw) {
+  const base = getDefaultClubGroupsState_();
+  const src = raw && typeof raw === "object" ? raw : {};
+
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    const item = src[code] || {};
+    base[code] = {
+      enabled: !!item.enabled,
+      label: String(item.label || "").trim()
+    };
+  }
+
+  return base;
+}
+
+function loadClubGroupsStateFromCache_() {
+  try {
+    const raw = localStorage.getItem(getClubGroupsStorageKey_());
+    if (!raw) return getDefaultClubGroupsState_();
+    return normalizeClubGroupsState_(JSON.parse(raw));
+  } catch (e) {
+    console.warn("loadClubGroupsStateFromCache_ error:", e);
+    return getDefaultClubGroupsState_();
+  }
+}
+
+function saveClubGroupsStateToCache_(state) {
+  try {
+    localStorage.setItem(
+      getClubGroupsStorageKey_(),
+      JSON.stringify(normalizeClubGroupsState_(state))
+    );
+  } catch (e) {
+    console.warn("saveClubGroupsStateToCache_ error:", e);
+  }
+}
+
+function renderAdminClubGroupsView_() {
+  const box = document.getElementById("adminGroupsList");
+  if (!box) return;
+
+  if (!adminClubGroupsState_) {
+    adminClubGroupsState_ = loadClubGroupsStateFromCache_();
+  }
+
+  const rows = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    const item = adminClubGroupsState_[code] || { enabled: false, label: "" };
+    const checked = item.enabled ? "checked" : "";
+    const safeValue = String(item.label || "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    rows.push(`
+      <div class="card group-row-card">
+        <div class="group-row">
+          <div class="group-code">${code}</div>
+
+          <input
+            id="groupLabel_${code}"
+            class="group-name-input"
+            type="text"
+            placeholder="Nazwa grupy"
+            value="${safeValue}"
+          >
+
+          <label class="group-active-label">
+            <input
+              id="groupEnabled_${code}"
+              class="group-active-checkbox"
+              type="checkbox"
+              ${checked}
+            >
+            <span>Aktywna</span>
+          </label>
+        </div>
+      </div>
+    `);
+  }
+
+  box.innerHTML = rows.join("");
+}
+
+function openAdminClubGroupsView() {
+  adminClubGroupsState_ = loadClubGroupsStateFromCache_();
+  renderAdminClubGroupsView_();
+  goToView("adminGroupsView");
+}
+
+function adminSaveClubGroupsLocal_() {
+  if (!adminClubGroupsState_) {
+    adminClubGroupsState_ = getDefaultClubGroupsState_();
+  }
+
+  for (let i = 1; i <= 10; i++) {
+    const code = "G" + i;
+    const enabledEl = document.getElementById("groupEnabled_" + code);
+    const labelEl = document.getElementById("groupLabel_" + code);
+
+    adminClubGroupsState_[code] = {
+      enabled: !!(enabledEl && enabledEl.checked),
+      label: String(labelEl && labelEl.value ? labelEl.value : "").trim()
+    };
+  }
+
+  saveClubGroupsStateToCache_(adminClubGroupsState_);
+  alert("✅ Zapisano konfigurację grup dla tego klubu.");
+}
+
+/* =================== KONIEC SEKTORA 161 =================== */  
   
 /* =================== 170 ADMIN / BILLING / PAYMENTS =================== */
 
