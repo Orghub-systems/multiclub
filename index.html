@@ -967,17 +967,6 @@ input[type="number"] {
       
       <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
       <input id="eventMiejsce" type="text" placeholder="Miejsce wydarzenia">
-
-      <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()" style="text-align:left; padding-left:16px;">
-        Trenerzy
-      </button>
-
-      <div style="display:none;">
-        <select id="eventTrener1"><option value="">— wybierz trenera —</option></select>
-        <select id="eventTrener2"><option value="">— kolejny trener —</option></select>
-        <select id="eventTrener3"><option value="">— kolejny trener —</option></select>
-        <select id="eventTrener4"><option value="">— kolejny trener —</option></select>
-      </div>
       
       <input id="eventPowolaniNums" type="hidden">
 
@@ -997,6 +986,17 @@ input[type="number"] {
         </div>
       </div>
 
+      <button class="full-btn alt" id="btnPickAddTrenerzy" type="button" onclick="openAddTrenerzyPopup()" style="text-align:left; padding-left:16px;">
+        Trenerzy
+      </button>
+
+      <div style="display:none;">
+        <select id="eventTrener1"><option value="">— wybierz trenera —</option></select>
+        <select id="eventTrener2"><option value="">— kolejny trener —</option></select>
+        <select id="eventTrener3"><option value="">— kolejny trener —</option></select>
+        <select id="eventTrener4"><option value="">— kolejny trener —</option></select>
+      </div>
+      
       <label class="full-btn alt" for="eventRez">
         <span style="display:flex; align-items:center; gap:12px; width:100%; justify-content:flex-start;">
           <span style="flex:0 0 auto;">
