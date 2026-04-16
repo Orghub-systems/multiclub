@@ -1060,12 +1060,17 @@ input[type="number"] {
     </p>
   </div>
 
-<div class="card" style="margin-top:12px; padding:18px 20px;">
-  <div style="display:flex; align-items:center; gap:18px; width:100%;">
+<div class="card" style="margin-top:12px; padding:12px 10px;">
+  <div style="
+    display:grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items:center;
+    gap:10px;
+    width:100%;
+  ">
 
     <div style="
-      flex:0 0 44px;
-      font-size:34px;
+      font-size:20px;
       line-height:1;
       font-weight:800;
       color:#fff;
@@ -1080,26 +1085,25 @@ input[type="number"] {
       placeholder="Nazwa grupy"
       value="Grupa 1"
       style="
-        flex:1 1 auto;
+        width:100%;
         min-width:0;
-        height:54px;
-        border-radius:12px;
+        height:46px;
+        border-radius:10px;
         border:1px solid #555;
         background:#111;
         color:#fff;
-        font-size:22px;
+        font-size:18px;
         font-weight:700;
-        padding:0 16px;
+        padding:0 12px;
         box-sizing:border-box;
       "
     >
 
     <label style="
-      flex:0 0 auto;
       display:flex;
       align-items:center;
-      gap:8px;
-      font-size:18px;
+      gap:6px;
+      font-size:15px;
       font-weight:700;
       color:#fff;
       white-space:nowrap;
@@ -1109,7 +1113,7 @@ input[type="number"] {
         type="checkbox"
         id="groupEnabled_G1"
         checked
-        style="width:24px; height:24px; margin:0;"
+        style="width:20px; height:20px; margin:0;"
       >
       <span>Aktywna</span>
     </label>
