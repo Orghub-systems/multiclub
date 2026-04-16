@@ -301,6 +301,62 @@ input[type="number"] {
 #adminRozliczModal .modal-card{
   margin: 0 auto !important;
 }
+
+  .groups-info-card{
+    margin-top:12px;
+  }
+
+  .group-row-card{
+    margin-top:12px;
+    padding:12px 10px;
+  }
+
+  .group-row{
+    display:grid;
+    grid-template-columns:34px minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    width:100%;
+  }
+
+  .group-code{
+    font-size:20px;
+    line-height:1;
+    font-weight:800;
+    color:#fff;
+    text-align:left;
+  }
+
+  .group-name-input{
+    width:100%;
+    min-width:0;
+    height:46px;
+    border-radius:10px;
+    border:1px solid #555;
+    background:#111;
+    color:#fff;
+    font-size:18px;
+    font-weight:700;
+    padding:0 12px;
+    box-sizing:border-box;
+  }
+
+  .group-active-label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:15px;
+    font-weight:700;
+    color:#fff;
+    white-space:nowrap;
+    margin:0;
+  }
+
+  .group-active-checkbox{
+    width:20px;
+    height:20px;
+    margin:0;
+  }
     
   </style>
   
@@ -1040,7 +1096,7 @@ input[type="number"] {
   <h1>Panel administratora</h1>
 
   <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
-  <button class="full-btn" onclick="goToView('adminGroupsView')">🧩 Grupy klubu</button>
+  <button class="full-btn" onclick="openAdminGroupsView()">🧩 Grupy klubu</button>
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
@@ -1049,176 +1105,17 @@ input[type="number"] {
 
 <!-- ADMIN GROUPS VIEW
      Zarządzanie grupami klubu -->
-
 <div id="adminGroupsView" class="container hidden">
   <h1>Grupy klubu</h1>
 
-  <div class="card">
+  <div class="card groups-info-card">
     <p style="margin:0 0 12px 0;">
       Tutaj administrator może aktywować grupy i nadać im własne nazwy.
       Tylko aktywne grupy będą docelowo widoczne w aplikacji.
     </p>
   </div>
 
-<div class="card" style="margin-top:12px; padding:12px 10px;">
-  <div style="
-    display:grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
-    align-items:center;
-    gap:10px;
-    width:100%;
-  ">
-
-    <div style="
-      font-size:20px;
-      line-height:1;
-      font-weight:800;
-      color:#fff;
-      text-align:left;
-    ">
-      G1
-    </div>
-
-    <input
-      id="groupLabel_G1"
-      type="text"
-      placeholder="Nazwa grupy"
-      value="Grupa 1"
-      style="
-        width:100%;
-        min-width:0;
-        height:46px;
-        border-radius:10px;
-        border:1px solid #555;
-        background:#111;
-        color:#fff;
-        font-size:18px;
-        font-weight:700;
-        padding:0 12px;
-        box-sizing:border-box;
-      "
-    >
-
-    <label style="
-      display:flex;
-      align-items:center;
-      gap:6px;
-      font-size:15px;
-      font-weight:700;
-      color:#fff;
-      white-space:nowrap;
-      margin:0;
-    ">
-      <input
-        type="checkbox"
-        id="groupEnabled_G1"
-        checked
-        style="width:20px; height:20px; margin:0;"
-      >
-      <span>Aktywna</span>
-    </label>
-
-  </div>
-</div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G2</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G2">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G2" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G3</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G3">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G3" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G4</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G4">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G4" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G5</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G5">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G5" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G6</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G6">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G6" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G7</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G7">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G7" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G8</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G8">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G8" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G9</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G9">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G9" type="text" placeholder="Nazwa grupy" value="">
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
-      <b>G10</b>
-      <label style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="groupEnabled_G10">
-        <span>Aktywna</span>
-      </label>
-    </div>
-    <input id="groupLabel_G10" type="text" placeholder="Nazwa grupy" value="">
-  </div>
+  <div id="adminGroupsList"></div>
 
   <button class="full-btn" type="button">💾 Zapisz grupy</button>
   <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
@@ -9042,6 +8939,11 @@ async function adminToggleAccessFromInfo(checked) {
 // =================== GRUPY ===================
 let __adminGroupsSet = new Set();
 
+  function openAdminGroupsView() {
+    renderAdminGroupsView_();
+    goToView("adminGroupsView");
+  }  
+
 async function adminSaveGrupy(nr, selectedSetOrArray) {
   const numer = String(nr || "").trim();
   if (!numer) { alert("❌ Brak numeru zawodnika"); return; }
@@ -9096,6 +8998,46 @@ function adminRenderGroupsGrid_() {
     `;
   }).join("");
 }
+
+  function renderAdminGroupsView_() {
+    const box = document.getElementById("adminGroupsList");
+    if (!box) return;
+
+    const rows = [];
+    for (let i = 1; i <= 10; i++) {
+      const code = "G" + i;
+      const checked = i === 1 ? "checked" : "";
+      const value = i === 1 ? "Grupa 1" : "";
+
+      rows.push(`
+        <div class="card group-row-card">
+          <div class="group-row">
+            <div class="group-code">${code}</div>
+
+            <input
+              id="groupLabel_${code}"
+              class="group-name-input"
+              type="text"
+              placeholder="Nazwa grupy"
+              value="${value}"
+            >
+
+            <label class="group-active-label">
+              <input
+                id="groupEnabled_${code}"
+                class="group-active-checkbox"
+                type="checkbox"
+                ${checked}
+              >
+              <span>Aktywna</span>
+            </label>
+          </div>
+        </div>
+      `);
+    }
+
+    box.innerHTML = rows.join("");
+  }
 
 async function adminOpenGroups() {
   const nr = String(window.__adminSelectedNr || "").trim();
