@@ -8569,13 +8569,19 @@ async function trainerSaveEditEvent() {
       return;
     }
 
-    const dataISO = (document.getElementById("editEventData")?.value || "").trim();
-    const start   = (document.getElementById("editEventStart")?.value || "").trim();
-    const end     = (document.getElementById("editEventEnd")?.value || "").trim();
-    const rodzaj  = (document.getElementById("editEventRodzaj")?.value || "").trim();
+    const dataISO    = (document.getElementById("editEventData")?.value || "").trim();
+    const dataEndISO = (document.getElementById("editEventDataEnd")?.value || "").trim();
+    const start      = (document.getElementById("editEventStart")?.value || "").trim();
+    const end        = (document.getElementById("editEventEnd")?.value || "").trim();
+    const rodzaj     = (document.getElementById("editEventRodzaj")?.value || "").trim();
 
-    if (!dataISO || !start || !end) {
-      if (msg) msg.textContent = "❌ Uzupełnij datę i godziny.";
+    if (!dataISO || !dataEndISO || !start || !end) {
+      if (msg) msg.textContent = "❌ Uzupełnij daty i godziny.";
+      return;
+    }
+
+    if (dataEndISO < dataISO) {
+      if (msg) msg.textContent = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
       return;
     }
 
@@ -8594,7 +8600,7 @@ async function trainerSaveEditEvent() {
     ].map(v => String(v || "").trim()).filter(Boolean);
 
     const grupyArr = Array.from(selectedEditGroups || []);
-    grupyArr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
+    grupyArr.sort((a, b) => Number(String(a).replace("G", "")) - Number(String(b).replace("G", "")));
     const grupyCsv = grupyArr.join(",");
 
     const liczDoStat = document.getElementById("editEventStat")?.checked ? 1 : 0;
@@ -8612,6 +8618,7 @@ async function trainerSaveEditEvent() {
       action: "edytujWydarzenie",
       treningId,
       data: dataISO,
+      dataKoniec: dataEndISO,
       godzStart: start,
       godzKoniec: end,
       rodzaj,
