@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76';
+  window.APP_BUILD = 'APP v2.76.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8113,18 +8113,42 @@ function onEditTrenerPick(n) {
 /* ===== EDYCJA: GRUPY (popup G1–G10) ===== */
 let selectedEditGroups = new Set(); // np. "G1","G2"...
 
+
 function renderEditGroupsList_() {
   const box = document.getElementById("editGroupsList");
   if (!box) return;
 
-  const groups = Array.from({ length: 10 }, (_, i) => `G${i + 1}`);
+  const groups = getEnabledClubGroupsForUi_(); // [{ code, label }]
+
+  if (!groups.length) {
+    box.innerHTML = `
+      <div class="card" style="text-align:center; opacity:.85;">
+        Brak aktywnych grup w konfiguracji klubu.
+      </div>
+    `;
+    return;
+  }
 
   box.innerHTML = groups.map(g => {
-    const checked = selectedEditGroups.has(g) ? "checked" : "";
+    const checked = selectedEditGroups.has(g.code) ? "checked" : "";
     return `
-      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:10px;background:#111;">
-        <span style="font-weight:700;">${g}</span>
-        <input type="checkbox" class="editGrpPick" value="${g}" ${checked} style="transform:scale(1.25);">
+      <label style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:8px;
+        border:1px solid #333;
+        border-radius:10px;
+        background:#111;
+      ">
+        <span style="font-weight:700;">${g.label}</span>
+        <input
+          type="checkbox"
+          class="editGrpPick"
+          value="${g.code}"
+          ${checked}
+          style="transform:scale(1.25);"
+        >
       </label>
     `;
   }).join("");
@@ -8140,8 +8164,6 @@ function openEditGroupsPopup() {
 }
 
 function closeEditGroupsPopup() {
-  // jeśli aktualny wpis historii dotyczy popupu grup,
-  // zamykamy go przez cofnięcie historii
   if (isHistoryModal_("editGroupsPopup")) {
     history.back();
     return;
@@ -8154,7 +8176,10 @@ function closeEditGroupsPopup() {
 function applyEditGroupsPopup() {
   const picks = document.querySelectorAll("#editGroupsList .editGrpPick");
   selectedEditGroups = new Set();
-  picks.forEach(ch => { if (ch.checked) selectedEditGroups.add(ch.value); });
+
+  picks.forEach(ch => {
+    if (ch.checked) selectedEditGroups.add(String(ch.value || "").trim());
+  });
 
   updateEditGroupsSummary_();
   closeEditGroupsPopup();
@@ -8248,9 +8273,13 @@ function updateEditGroupsSummary_() {
   if (!btn) return;
 
   const arr = Array.from(selectedEditGroups || []);
-  arr.sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
 
-  btn.textContent = arr.length ? ("Grupy: " + arr.join(", ")) : "Grupy: —";
+  arr.sort((a, b) => {
+    return Number(String(a).replace("G", "")) - Number(String(b).replace("G", ""));
+  });
+
+  const labels = arr.map(code => getClubGroupLabel_(code));
+  btn.textContent = labels.length ? labels.join(", ") : "Grupy";
 }
 
 function resetEditGroups_() {
