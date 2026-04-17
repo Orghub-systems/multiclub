@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.75.15';
+  window.APP_BUILD = 'APP v2.76';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7378,23 +7378,25 @@ function renderGroupsList_() {
   const box = document.getElementById("groupsList");
   if (!box) return;
 
+  const enabledGroups = getEnabledClubGroupsForUi_(); // [{ code, label }]
   const groups = [
-    ...Array.from({ length: 10 }, (_, i) => `G${i + 1}`),
-    "__POWOLANIA__"
+    ...enabledGroups,
+    { code: "__POWOLANIA__", label: "Powołania" }
   ];
 
   const hasPowolania = selectedGroups.has("__POWOLANIA__");
   const hasNormalGroups = Array.from(selectedGroups).some(g => g && g !== "__POWOLANIA__");
 
-  box.innerHTML = groups.map(g => {
-    const isPowolania = g === "__POWOLANIA__";
-    const checked = selectedGroups.has(g) ? "checked" : "";
+  box.innerHTML = groups.map(item => {
+    const value = item.code;
+    const isPowolania = value === "__POWOLANIA__";
+    const checked = selectedGroups.has(value) ? "checked" : "";
 
     const disabled = isPowolania
       ? (hasNormalGroups ? "disabled" : "")
       : (hasPowolania ? "disabled" : "");
 
-    const labelText = isPowolania ? "Powołania" : g;
+    const labelText = item.label || value;
     const opacity = disabled ? "0.45" : "1";
 
     return `
@@ -7412,7 +7414,7 @@ function renderGroupsList_() {
         <input
           type="checkbox"
           class="grpPick"
-          value="${g}"
+          value="${value}"
           ${checked}
           ${disabled}
           style="transform:scale(1.25);"
@@ -7518,9 +7520,19 @@ function updateGroupsSummary_() {
   if (!btn) return;
 
   const arr = Array.from(selectedGroups);
-  arr.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
 
-  btn.textContent = arr.length ? arr.join(", ") : "Grupy / Powołania";
+  arr.sort((a, b) => {
+    if (a === "__POWOLANIA__") return 1;
+    if (b === "__POWOLANIA__") return -1;
+    return Number(String(a).replace("G", "")) - Number(String(b).replace("G", ""));
+  });
+
+  const labels = arr.map(code => {
+    if (code === "__POWOLANIA__") return "Powołania";
+    return getClubGroupLabel_(code);
+  });
+
+  btn.textContent = labels.length ? labels.join(", ") : "Grupy / Powołania";
 }
 
 function resetGroups_() {
