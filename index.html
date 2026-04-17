@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.2';
+  window.APP_BUILD = 'APP v2.76.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1786,10 +1786,19 @@ input[type="number"] {
     <p style="margin:0 0 10px 0;"><b>Edytuj wydarzenie</b></p>
 
     <div class="login-box" style="margin-top:10px;">
-      <input id="editEventData" type="date">
-      <input id="editEventStart" type="time">
-      <input id="editEventEnd" type="time">
-      <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
+    <div style="font-size:13px; opacity:.8; margin-bottom:4px;">Data rozpoczęcia wydarzenia</div>
+    <input id="editEventData" type="date">
+    
+    <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Data zakończenia wydarzenia</div>
+    <input id="editEventDataEnd" type="date" data-autofill="1">
+    
+    <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Godzina rozpoczęcia</div>
+    <input id="editEventStart" type="time">
+    
+    <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Godzina zakończenia</div>
+    <input id="editEventEnd" type="time">
+    
+    <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
       <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()" style="text-align:left; padding-left:16px;">
         Trenerzy
