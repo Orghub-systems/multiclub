@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.11';
+  window.APP_BUILD = 'APP v2.76.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8972,7 +8972,7 @@ async function adminPokazTrenerow() {
             class="full-btn"
             type="button"
             style="margin-top:12px;"
-            onclick="event.stopPropagation(); adminDeleteTrainerByRow_(${Number(t.row || 0)}, ${JSON.stringify(nazwisko)})"
+            onclick="event.stopPropagation(); adminDeleteTrainerByIndex_(${idx})"
           >
             Usuń trenera
           </button>
@@ -9021,6 +9021,13 @@ function adminOpenTrenerByIndex_(idx) {
   if (!trener) return;
   adminOpenTrener(trener);
 }  
+
+  function adminDeleteTrainerByIndex_(idx) {
+  const list = Array.isArray(window.__adminTrainerList) ? window.__adminTrainerList : [];
+  const trener = list[Number(idx)];
+  if (!trener) return;
+  adminDeleteTrainerByRow_(trener.row, trener.nazwisko);
+}
 
 async function adminToggleTrainerAccessFromInfo(checked) {
   const trener = window.__adminSelectedTrainer || {};
