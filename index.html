@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.7';
+  window.APP_BUILD = 'APP v2.76.8';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1110,6 +1110,45 @@ input[type="number"] {
 <div id="adminTrenerzyView" class="container hidden">
   <h1>Lista trenerów</h1>
   <div id="adminListaTrenerow">Ładowanie...</div>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
+
+  <!-- ADMIN TRAINER INFO VIEW
+     Informacje o wybranym trenerze -->
+
+<div id="adminTrenerInfoView" class="container hidden">
+  <h1 id="adminTrenerInfoTitle">Informacje o trenerze</h1>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Login / inicjały</div>
+    <div id="adminTrenerInfoLogin" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Adres email</div>
+    <div id="adminTrenerInfoEmail" style="margin-top:4px; font-size:18px; font-weight:800; word-break:break-word;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Grupy</div>
+    <div id="adminTrenerInfoGrupy" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Data dołączenia</div>
+    <div id="adminTrenerInfoJoinDate" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px; margin-bottom:10px;">Status</div>
+
+    <label style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <span>Dostęp do aplikacji</span>
+      <input id="adminTrenerInfoAccess" type="checkbox" style="transform:scale(1.2);" disabled>
+    </label>
+  </div>
+
+  <p id="adminTrenerInfoMsg" style="margin-top:10px;"></p>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
@@ -8883,6 +8922,7 @@ async function adminPokazTrenerow() {
     }
 
     const trenerzy = Array.isArray(res.trenerzy) ? res.trenerzy : [];
+    window.__adminTrainerList = trenerzy;
 
     if (!trenerzy.length) {
       box.innerHTML = `
@@ -8893,13 +8933,17 @@ async function adminPokazTrenerow() {
       return;
     }
 
-    box.innerHTML = trenerzy.map(t => {
+    box.innerHTML = trenerzy.map((t, idx) => {
       const nazwisko = String(t.nazwisko || "").trim() || "—";
       const email = String(t.email || "").trim() || "—";
       const grupy = formatClubGroupsCsvForUi_(String(t.grupy || "").trim()) || "—";
 
       return `
-        <div class="card" style="background:#111; text-align:left; margin-bottom:12px;">
+        <div
+          class="card"
+          style="background:#111; text-align:left; margin-bottom:12px; cursor:pointer;"
+          onclick="adminOpenTrenerByIndex_(${idx})"
+        >
           <div style="font-size:20px; font-weight:900; margin-bottom:8px;">
             ${nazwisko}
           </div>
@@ -8921,6 +8965,38 @@ async function adminPokazTrenerow() {
     `;
   }
 }
+
+function adminOpenTrener(trener) {
+  const t = trener || {};
+
+  goToView("adminTrenerInfoView");
+
+  const title = document.getElementById("adminTrenerInfoTitle");
+  const loginEl = document.getElementById("adminTrenerInfoLogin");
+  const emailEl = document.getElementById("adminTrenerInfoEmail");
+  const grupyEl = document.getElementById("adminTrenerInfoGrupy");
+  const joinEl = document.getElementById("adminTrenerInfoJoinDate");
+  const accessEl = document.getElementById("adminTrenerInfoAccess");
+  const msg = document.getElementById("adminTrenerInfoMsg");
+
+  if (title) {
+    title.textContent = `Trener — ${String(t.nazwisko || "").trim() || "—"}`;
+  }
+
+  if (loginEl) loginEl.textContent = String(t.login || "").trim() || "—";
+  if (emailEl) emailEl.textContent = String(t.email || "").trim() || "—";
+  if (grupyEl) grupyEl.textContent = formatClubGroupsCsvForUi_(String(t.grupy || "").trim()) || "—";
+  if (joinEl) joinEl.textContent = String(t.joinDate || "").trim() || "—";
+  if (accessEl) accessEl.checked = !!t.access;
+  if (msg) msg.textContent = "";
+}
+
+function adminOpenTrenerByIndex_(idx) {
+  const list = Array.isArray(window.__adminTrainerList) ? window.__adminTrainerList : [];
+  const trener = list[Number(idx)];
+  if (!trener) return;
+  adminOpenTrener(trener);
+}  
   
 async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   window.__adminSelectedNr = String(nr || "").trim();
