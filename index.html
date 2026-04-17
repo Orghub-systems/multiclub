@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.9';
+  window.APP_BUILD = 'APP v2.76.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1132,6 +1132,7 @@ input[type="number"] {
   <div class="card" style="text-align:left; margin-bottom:12px;">
     <div style="opacity:.75; font-size:13px;">Grupy</div>
     <div id="adminTrenerInfoGrupy" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+    <button class="full-btn" style="margin-top:12px;" onclick="adminOpenTrainerGroups()">Edytuj grupy</button>
   </div>
 
   <div class="card" style="text-align:left; margin-bottom:12px;">
@@ -1150,6 +1151,20 @@ input[type="number"] {
 
   <p id="adminTrenerInfoMsg" style="margin-top:10px;"></p>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
+
+  <!-- ADMIN TRAINER GROUPS VIEW
+     Ekran edycji grup przypisanych do trenera -->
+
+<div id="adminTrenerGrupyView" class="container hidden">
+  <h1 id="adminTrenerGrupyTitle">Grupy trenera</h1>
+
+  <div id="adminTrenerGrupyDynamicWrap"></div>
+
+  <button class="full-btn" onclick="adminSaveTrainerGroupsLocal()">Zapisz</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+
+  <p id="adminTrenerGrupyMsg" style="margin-top:10px;"></p>
 </div>
 
 <!-- ADMIN GROUPS VIEW
@@ -9049,6 +9064,149 @@ async function adminToggleTrainerAccessFromInfo(checked) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
 }  
+
+function renderAdminTrainerGroupsView_() {
+  const wrap = document.getElementById("adminTrenerGrupyDynamicWrap");
+  if (!wrap) return;
+
+  const groups = getEnabledClubGroupsForUi_();
+
+  if (!groups.length) {
+    wrap.innerHTML = `
+      <div class="card" style="margin-bottom:12px; text-align:center; opacity:.85;">
+        Brak aktywnych grup w konfiguracji klubu.
+      </div>
+    `;
+    return;
+  }
+
+  const renderChunk = (arr) => {
+    return `
+      <div class="card" style="margin-bottom:12px;">
+        <div style="
+          display:grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap:6mm;
+          text-align:center;
+        ">
+          ${arr.map(g => `
+            <label>
+              <input type="checkbox" class="adminTrenerGrupaChk" value="${g.code}">
+              ${g.label}
+            </label>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  };
+
+  const firstRow = groups.slice(0, 5);
+  const secondRow = groups.slice(5, 10);
+
+  wrap.innerHTML =
+    renderChunk(firstRow) +
+    (secondRow.length ? renderChunk(secondRow) : "");
+}
+
+async function adminOpenTrainerGroups() {
+  const trener = window.__adminSelectedTrainer || {};
+  const row = Number(trener.row || 0);
+  const nazwisko = String(trener.nazwisko || "").trim();
+
+  const title = document.getElementById("adminTrenerGrupyTitle");
+  const msg = document.getElementById("adminTrenerGrupyMsg");
+
+  goToView("adminTrenerGrupyView");
+
+  if (title) {
+    title.textContent = `Grupy trenera — ${nazwisko || "—"}`;
+  }
+
+  renderAdminTrainerGroupsView_();
+
+  document.querySelectorAll("#adminTrenerGrupyView .adminTrenerGrupaChk").forEach(ch => {
+    ch.checked = false;
+  });
+
+  if (!row) {
+    if (msg) msg.textContent = "❌ Brak identyfikatora trenera.";
+    return;
+  }
+
+  if (msg) msg.textContent = "⏳ Ładuję grupy...";
+
+  try {
+    const grupyCsv = String(trener.grupy || "").trim();
+    const selected = grupyCsv
+      ? grupyCsv.split(",").map(s => s.trim()).filter(Boolean)
+      : [];
+
+    document.querySelectorAll("#adminTrenerGrupyView .adminTrenerGrupaChk").forEach(ch => {
+      ch.checked = selected.includes(String(ch.value || "").trim());
+    });
+
+    if (msg) msg.textContent = "";
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+
+async function adminSaveTrainerGroupsLocal() {
+  const trener = window.__adminSelectedTrainer || {};
+  const row = Number(trener.row || 0);
+  const msg = document.getElementById("adminTrenerGrupyMsg");
+
+  if (!row) {
+    if (msg) msg.textContent = "❌ Brak identyfikatora trenera.";
+    return;
+  }
+
+  const picks = document.querySelectorAll("#adminTrenerGrupyView .adminTrenerGrupaChk");
+  const arr = [];
+  picks.forEach(ch => {
+    if (ch.checked) arr.push(String(ch.value || "").trim());
+  });
+
+  const grupyCsv = arr
+    .filter(Boolean)
+    .sort((a, b) => Number(String(a).replace("G", "")) - Number(String(b).replace("G", "")))
+    .join(",");
+
+  if (msg) msg.textContent = "⏳ Zapisuję...";
+
+  try {
+    const r = await apiClubPost({
+      action: "adminSetTrainerGroups",
+      row: row,
+      grupy: grupyCsv
+    });
+
+    if (!r || !r.success) {
+      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
+      return;
+    }
+
+    if (window.__adminSelectedTrainer) {
+      window.__adminSelectedTrainer.grupy = grupyCsv;
+    }
+
+    if (Array.isArray(window.__adminTrainerList)) {
+      const idx = window.__adminTrainerList.findIndex(x => Number(x?.row || 0) === row);
+      if (idx >= 0) {
+        window.__adminTrainerList[idx].grupy = grupyCsv;
+      }
+    }
+
+    const infoEl = document.getElementById("adminTrenerInfoGrupy");
+    if (infoEl) {
+      infoEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
+    }
+
+    if (msg) msg.textContent = "✅ Zapisano grupy trenera.";
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
   
 async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   window.__adminSelectedNr = String(nr || "").trim();
