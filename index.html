@@ -1096,11 +1096,21 @@ input[type="number"] {
   <h1>Panel administratora</h1>
 
   <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
+  <button class="full-btn" onclick="adminPokazTrenerow()">👨‍🏫 Trenerzy</button>
   <button class="full-btn" onclick="openAdminClubGroupsView()">🧩 Grupy klubu</button>
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
   <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
+</div>
+
+  <!-- ADMIN TRAINERS VIEW
+     Lista trenerów administratora -->
+
+<div id="adminTrenerzyView" class="container hidden">
+  <h1>Lista trenerów</h1>
+  <div id="adminListaTrenerow">Ładowanie...</div>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN GROUPS VIEW
@@ -8851,6 +8861,19 @@ async function adminSetAccessFromList(nr, checked) {
 /* =================== 160 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
 
 // ---- Otwarcie okna zawodnika (wywołasz z listy zawodników) ----
+
+async function adminPokazTrenerow() {
+  goToView("adminTrenerzyView");
+
+  const box = document.getElementById("adminListaTrenerow");
+  if (!box) return;
+
+  box.innerHTML = `
+    <div class="card" style="background:#111; text-align:center;">
+      Moduł trenerów w przygotowaniu.
+    </div>
+  `;
+}
   
 async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   window.__adminSelectedNr = String(nr || "").trim();
