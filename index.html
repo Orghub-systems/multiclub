@@ -8924,6 +8924,7 @@ async function adminOpenPlayerInfo() {
   const nazwisko = String(window.__adminSelectedNazwisko || "").trim();
 
   goToView("adminZawodnikInfoView");
+  showBusy("Ładuję dane zawodnika...");
 
   const title = document.getElementById("adminZawodnikInfoTitle");
   const msg = document.getElementById("adminInfoMsg");
@@ -9034,6 +9035,8 @@ async function adminOpenPlayerInfo() {
 
   } catch (e) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
+  } finally {
+    hideBusy();
   }
 }
 
