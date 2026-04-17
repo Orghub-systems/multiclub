@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.5';
+  window.APP_BUILD = 'APP v2.76.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8997,7 +8997,8 @@ async function adminOpenPlayerInfo() {
 
     const joinDate = String(infoRes.joinDate || window.__adminSelectedJoinDate || "").trim() || "—";
     const email = String(infoRes.email || "").trim() || "—";
-    const grupy = String((grupyRes && grupyRes.success ? grupyRes.grupy : infoRes.grupy) || "").trim() || "—";
+    const grupyCsv = String((grupyRes && grupyRes.success ? grupyRes.grupy : infoRes.grupy) || "").trim();
+    const grupy = formatClubGroupsCsvForUi_(grupyCsv) || "—";
 
     const access =
       infoRes.dostepDoApki === true ||
@@ -9327,7 +9328,7 @@ async function adminSaveGrupyLocal() {
 
     const infoGrupyEl = document.getElementById("adminInfoGrupy");
     if (infoGrupyEl) {
-      infoGrupyEl.textContent = grupyCsv || "—";
+      infoGrupyEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
     }
 
     if (msg) msg.textContent = "✅ Zapisane: " + (grupyCsv || "—");
@@ -9345,10 +9346,10 @@ async function adminSaveGrupyLocal() {
             window.__adminCache[nr].info.grupy = String(fresh.grupy || "").trim();
           }
 
-          const infoGrupyEl2 = document.getElementById("adminInfoGrupy");
-          if (infoGrupyEl2) {
-            infoGrupyEl2.textContent = String(fresh.grupy || "").trim() || "—";
-          }
+        const infoGrupyEl2 = document.getElementById("adminInfoGrupy");
+        if (infoGrupyEl2) {
+          infoGrupyEl2.textContent = formatClubGroupsCsvForUi_(String(fresh.grupy || "").trim()) || "—";
+        }
         }
       } catch (e) {
         console.warn("adminGrupy refresh failed:", e);
