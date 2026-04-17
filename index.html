@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.10';
+  window.APP_BUILD = 'APP v2.76.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1150,6 +1150,7 @@ input[type="number"] {
   </div>
 
   <p id="adminTrenerInfoMsg" style="margin-top:10px;"></p>
+  <button class="full-btn" onclick="adminDeleteSelectedTrainer()">Usuń trenera</button>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
@@ -8914,8 +8915,6 @@ async function adminSetAccessFromList(nr, checked) {
   
 /* =================== 160 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
 
-// ---- Otwarcie okna zawodnika (wywołasz z listy zawodników) ----
-
 async function adminPokazTrenerow() {
   goToView("adminTrenerzyView");
 
@@ -8968,6 +8967,15 @@ async function adminPokazTrenerow() {
 
           <div style="font-size:13px; opacity:.75; margin-top:10px;">Grupy</div>
           <div style="font-weight:700; margin-top:2px;">${grupy}</div>
+
+          <button
+            class="full-btn"
+            type="button"
+            style="margin-top:12px;"
+            onclick="event.stopPropagation(); adminDeleteTrainerByRow_(${Number(t.row || 0)}, ${JSON.stringify(nazwisko)})"
+          >
+            Usuń trenera
+          </button>
         </div>
       `;
     }).join("");
@@ -9206,6 +9214,48 @@ async function adminSaveTrainerGroupsLocal() {
   } catch (e) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
+}
+
+  async function adminDeleteTrainerByRow_(row, nazwisko) {
+  const rowNum = Number(row || 0);
+  const name = String(nazwisko || "").trim() || "tego trenera";
+
+  if (!rowNum) {
+    alert("❌ Brak identyfikatora trenera.");
+    return;
+  }
+
+  const ok = confirm(`Czy na pewno chcesz usunąć trenera: ${name}?`);
+  if (!ok) return;
+
+  try {
+    const res = await apiClubPost({
+      action: "adminDeleteTrainer",
+      row: rowNum
+    });
+
+    if (!res || !res.success) {
+      alert("❌ " + (res?.error || res?.message || "Nie udało się usunąć trenera."));
+      return;
+    }
+
+    if (Array.isArray(window.__adminTrainerList)) {
+      window.__adminTrainerList = window.__adminTrainerList.filter(t => Number(t?.row || 0) !== rowNum);
+    }
+
+    if (window.__adminSelectedTrainer && Number(window.__adminSelectedTrainer.row || 0) === rowNum) {
+      window.__adminSelectedTrainer = null;
+    }
+
+    await adminPokazTrenerow();
+  } catch (e) {
+    alert("❌ " + (e?.message || e));
+  }
+}
+
+async function adminDeleteSelectedTrainer() {
+  const trener = window.__adminSelectedTrainer || {};
+  await adminDeleteTrainerByRow_(trener.row, trener.nazwisko);
 }
   
 async function adminOpenZawodnik(nr, nazwisko, joinDate) {
