@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.4';
+  window.APP_BUILD = 'APP v2.76.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -12107,15 +12107,34 @@ function openManualPushGroupsPopup() {
   const list = document.getElementById("manualPushGroupsList");
   if (!popup || !list) return;
 
-  const groups = ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"];
+  const groups = getSelectableClubGroupsForCurrentUser_(); // [{ code, label }]
+
+  if (!Array.isArray(window.__manualPushGroups)) {
+    window.__manualPushGroups = [];
+  }
+
+  if (!groups.length) {
+    list.innerHTML = `
+      <div class="card" style="text-align:center; opacity:.85;">
+        Brak dostępnych grup.
+      </div>
+    `;
+    popup.classList.remove("hidden");
+    return;
+  }
 
   list.innerHTML = groups.map(g => {
-    const checked = window.__manualPushGroups.includes(g) ? "checked" : "";
+    const checked = window.__manualPushGroups.includes(g.code) ? "checked" : "";
     return `
       <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-        <input type="checkbox" class="manualPushGroupChk" value="${g}" ${checked}
-               style="transform:scale(1.2);">
-        <span>${g}</span>
+        <input
+          type="checkbox"
+          class="manualPushGroupChk"
+          value="${g.code}"
+          ${checked}
+          style="transform:scale(1.2);"
+        >
+        <span>${g.label}</span>
       </label>
     `;
   }).join("");
@@ -12138,20 +12157,23 @@ function applyManualPushGroupsPopup() {
   const preview = document.getElementById("manualPushGroupsPreview");
   const btn = document.getElementById("btnManualPushGroups");
 
+  const labels = checked.map(code => getClubGroupLabel_(code));
+
   if (preview) {
-    preview.textContent = checked.length
-      ? "Wybrane: " + checked.join(", ")
+    preview.textContent = labels.length
+      ? "Wybrane: " + labels.join(", ")
       : "Nie wybrano żadnej grupy";
   }
 
   if (btn) {
-    btn.textContent = checked.length
-      ? "Grupy: " + checked.join(", ")
+    btn.textContent = labels.length
+      ? "Grupy: " + labels.join(", ")
       : "Wybierz grupy";
   }
 
   closeManualPushGroupsPopup();
 }
+  
 function setTransientManualPushMessage_(text, isError) {
   const msgEl = document.getElementById("manualPushMsg");
   if (!msgEl) return;
