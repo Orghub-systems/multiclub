@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.8';
+  window.APP_BUILD = 'APP v2.76.9';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1144,7 +1144,7 @@ input[type="number"] {
 
     <label style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <span>Dostęp do aplikacji</span>
-      <input id="adminTrenerInfoAccess" type="checkbox" style="transform:scale(1.2);" disabled>
+      <input id="adminTrenerInfoAccess" type="checkbox" style="transform:scale(1.2);" onchange="adminToggleTrainerAccessFromInfo(this.checked)">
     </label>
   </div>
 
@@ -8968,6 +8968,7 @@ async function adminPokazTrenerow() {
 
 function adminOpenTrener(trener) {
   const t = trener || {};
+  window.__adminSelectedTrainer = t;
 
   goToView("adminTrenerInfoView");
 
@@ -8996,6 +8997,57 @@ function adminOpenTrenerByIndex_(idx) {
   const trener = list[Number(idx)];
   if (!trener) return;
   adminOpenTrener(trener);
+}  
+
+async function adminToggleTrainerAccessFromInfo(checked) {
+  const trener = window.__adminSelectedTrainer || {};
+  const row = Number(trener.row || 0);
+
+  const msg = document.getElementById("adminTrenerInfoMsg");
+  const accessEl = document.getElementById("adminTrenerInfoAccess");
+
+  if (!row) {
+    if (msg) msg.textContent = "❌ Brak identyfikatora trenera.";
+    if (accessEl) accessEl.checked = !checked;
+    return;
+  }
+
+  if (msg) msg.textContent = "⏳ Zmieniam dostęp do aplikacji...";
+
+  try {
+    const res = await apiClubPost({
+      action: "adminSetTrainerAccess",
+      row: row,
+      access: checked ? "TRUE" : "FALSE"
+    });
+
+    if (!res || res.success === false) {
+      if (accessEl) accessEl.checked = !checked;
+      if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zmienić dostępu.");
+      return;
+    }
+
+    if (window.__adminSelectedTrainer) {
+      window.__adminSelectedTrainer.access = !!checked;
+    }
+
+    if (Array.isArray(window.__adminTrainerList)) {
+      const idx = window.__adminTrainerList.findIndex(x => Number(x?.row || 0) === row);
+      if (idx >= 0) {
+        window.__adminTrainerList[idx].access = !!checked;
+      }
+    }
+
+    if (msg) {
+      msg.textContent = checked
+        ? "✅ Dostęp do aplikacji został włączony"
+        : "✅ Dostęp do aplikacji został wyłączony";
+    }
+
+  } catch (e) {
+    if (accessEl) accessEl.checked = !checked;
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
 }  
   
 async function adminOpenZawodnik(nr, nazwisko, joinDate) {
