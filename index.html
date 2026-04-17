@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.3';
+  window.APP_BUILD = 'APP v2.76.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8372,11 +8372,13 @@ async function trainerShowEditPopup(miesiac, col5) {
   const cached = window.__trainerEventsByKey ? window.__trainerEventsByKey[key] : null;
 
   const d = document.getElementById("editEventData");
+  const dEnd = document.getElementById("editEventDataEnd");
   const s = document.getElementById("editEventStart");
   const e = document.getElementById("editEventEnd");
   const r = document.getElementById("editEventRodzaj");
 
   if (d) d.value = cached?.dataISO || "";
+  if (dEnd) dEnd.value = cached?.dataEndISO || cached?.dataISO || "";
   if (s) s.value = normalizeTimeForInput_(cached?.start);
   if (e) e.value = normalizeTimeForInput_(cached?.end);
   if (r) r.value = cached?.rodzaj || "";
@@ -8414,13 +8416,19 @@ async function trainerShowEditPopup(miesiac, col5) {
     const treningId = `${editMiesiac}-${editCol5}`;
     const details = await apiClubGet("wydarzenieDetails", { treningId });
 
-    if (details?.success) {
-      const trenerArr = normalizeTrenerzy_(details?.trenerzy);
-      const grupyArr  = normalizeGrupy_(details?.grupy);
-
-      setEditTrenerzy_(trenerArr);
-      updateEditTrenerzySummary_();
-      setEditGroups_(grupyArr);
+  if (details?.success) {
+        if (d) d.value = String(details.data || "");
+        if (dEnd) dEnd.value = String(details.dataKoniec || details.data || "");
+        if (s) s.value = normalizeTimeForInput_(details.godzStart);
+        if (e) e.value = normalizeTimeForInput_(details.godzKoniec);
+        if (r) r.value = String(details.rodzaj || "");
+  
+        const trenerArr = normalizeTrenerzy_(details?.trenerzy);
+        const grupyArr  = normalizeGrupy_(details?.grupy);
+  
+        setEditTrenerzy_(trenerArr);
+        updateEditTrenerzySummary_();
+        setEditGroups_(grupyArr);
 
       const chkStat = document.getElementById("editEventStat");
       const chkRez  = document.getElementById("editEventRez");
