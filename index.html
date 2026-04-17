@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.1';
+  window.APP_BUILD = 'APP v2.76.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7378,7 +7378,7 @@ function renderGroupsList_() {
   const box = document.getElementById("groupsList");
   if (!box) return;
 
-  const enabledGroups = getEnabledClubGroupsForUi_(); // [{ code, label }]
+  const enabledGroups = getSelectableClubGroupsForCurrentUser_(); // [{ code, label }]
   const groups = [
     ...enabledGroups,
     { code: "__POWOLANIA__", label: "Powołania" }
@@ -8118,7 +8118,7 @@ function renderEditGroupsList_() {
   const box = document.getElementById("editGroupsList");
   if (!box) return;
 
-  const groups = getEnabledClubGroupsForUi_(); // [{ code, label }]
+  const groups = getSelectableClubGroupsForCurrentUser_(); // [{ code, label }]
 
   if (!groups.length) {
     box.innerHTML = `
@@ -9501,6 +9501,35 @@ function getEnabledClubGroupsForUi_() {
 
   return out;
 }
+
+function parseGroupsCsvToSet_(csv) {
+  return new Set(
+    String(csv || "")
+      .split(",")
+      .map(s => String(s || "").trim())
+      .filter(Boolean)
+  );
+}
+
+function getSelectableClubGroupsForCurrentUser_() {
+  const enabledGroups = getEnabledClubGroupsForUi_(); // [{ code, label }]
+  const sess = loadAppSession_();
+  const role = String(sess?.role || "").trim().toLowerCase();
+
+  // admin i inne role widzą wszystkie aktywne grupy
+  if (role !== "trener") {
+    return enabledGroups;
+  }
+
+  const trainerGroupsSet = parseGroupsCsvToSet_(window.grupyTrenera || "");
+
+  // trener bez przypisanych grup -> nic nie widzi
+  if (!trainerGroupsSet.size) {
+    return [];
+  }
+
+  return enabledGroups.filter(g => trainerGroupsSet.has(g.code));
+}  
 
 function formatClubGroupsCsvForUi_(csv) {
   const arr = String(csv || "")
