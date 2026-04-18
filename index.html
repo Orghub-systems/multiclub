@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.17';
+  window.APP_BUILD = 'APP v2.76.19';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6081,6 +6081,62 @@ function closeSetNewPasswordPopup_() {
   if (popup) popup.style.display = "none";
 }
 
+  async function applyBrandingForPasswordReset_() {
+  try {
+    const cid = String(
+      (window.clubId || "") ||
+      getClubIdFromUrl_() ||
+      ""
+    ).trim();
+
+    if (!cid) return;
+
+    // Najpierw lokalny motyw, jeśli był zapisany
+    try {
+      const localTheme = loadTheme_();
+      if (localTheme) applyTheme_(localTheme);
+    } catch (e) {}
+
+    // Potem świeży branding z backendu
+    const res = await apiClubGet("brandingBoot");
+
+    if (!res || res.success === false) {
+      console.warn("applyBrandingForPasswordReset_ branding error:", res);
+      return;
+    }
+
+    const theme = res.theme || res.branding || res;
+
+    if (theme) {
+      try { applyTheme_(theme); } catch (e) {}
+      try { saveTheme_(theme); } catch (e) {}
+    }
+
+    const logoUrl = String(
+      (theme && theme.logoUrl) ||
+      res.logoUrl ||
+      res.logo ||
+      res.iconUrl ||
+      ""
+    ).trim();
+
+    if (logoUrl) {
+      const logoImg =
+        document.querySelector("#loginView img.logo") ||
+        document.querySelector("#loginView img");
+
+      if (logoImg) {
+        logoImg.src = logoUrl;
+      }
+    }
+
+    try { refreshClubBadge_(); } catch (e) {}
+
+  } catch (e) {
+    console.warn("applyBrandingForPasswordReset_ error:", e);
+  }
+}
+
 function checkPasswordResetLink_() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -6129,13 +6185,19 @@ function checkPasswordResetLink_() {
       const loginView = document.getElementById("loginView");
       if (loginView) loginView.classList.remove("hidden");
     }
-
-    try { refreshClubBadge_(); } catch (e) {}
-
-    // Otwórz właściwy popup ustawiania nowego hasła
-    openSetNewPasswordPopup_(token);
-
-    return true;
+    
+      try { refreshClubBadge_(); } catch (e) {}
+      
+      // Otwórz właściwy popup ustawiania nowego hasła
+      openSetNewPasswordPopup_(token);
+      
+      // Reset hasła omija normalny start aplikacji,
+      // więc dociągamy logo/branding osobno i bez blokowania startu.
+      setTimeout(() => {
+        applyBrandingForPasswordReset_();
+      }, 0);
+      
+      return true;
 
   } catch (e) {
     console.warn("checkPasswordResetLink_ error:", e);
