@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.16';
+  window.APP_BUILD = 'APP v2.76.17';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -12929,7 +12929,6 @@ async function sendManualPush() {
   }
 }
 
-/* =================== 999 START APLIKACJI =================== */
 window.addEventListener('load', () => {
   //odtworzIntroSound();
 
@@ -12948,11 +12947,20 @@ window.addEventListener('load', () => {
 
   // START: najpierw ustaw clubId z URL (albo wyczyść na linku głównym)
   initClubFromUrl_();
-  
-  if (checkPasswordResetLink_()) 
+
+  if (checkPasswordResetLink_()) {
+    if (splash) {
+      splash.style.display = 'none';
+      splash.classList.add('hidden');
+    }
+
+    if (app) {
+      app.classList.remove('hidden');
+    }
+
     return;
-  
-                        
+  }
+
   // dopiero teraz ustawiamy stan historii (bo clubId może się zmienić)
   try {
     history.replaceState(
@@ -12969,7 +12977,7 @@ window.addEventListener('load', () => {
   if (splash) {
     setTimeout(() => { splash.style.display = 'none'; }, 2000);
   }
-}); 
+});
   
 </script>
 </body>
