@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.1';
+  window.APP_BUILD = 'APP v2.77.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4352,18 +4352,33 @@ function closeAdminPassPopup() {
 }
 
 async function saveAdminPass() {
-  const inp = document.getElementById("adminPassInput");
+  const passInput = document.getElementById("adminPassInput");
+  const emailInput = document.getElementById("adminEmailInput");
   const msg = document.getElementById("adminPassMsg");
   const btn = document.getElementById("btnSetupAdminPass");
+  const label =
+    document.getElementById("setupAdminDataLabel") ||
+    document.getElementById("setupAdminPassLabel");
 
-  const pass = String(inp?.value || "").trim();
+  const pass = String(passInput?.value || "").trim();
+  const email = String(emailInput?.value || "").trim().toLowerCase();
 
   if (pass.length < 6) {
     if (msg) msg.textContent = "❌ Hasło musi mieć minimum 6 znaków.";
     return;
   }
 
-  if (msg) msg.textContent = "⏳ Zapisuję hasło administratora...";
+  if (!email) {
+    if (msg) msg.textContent = "❌ Wpisz email administratora.";
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (msg) msg.textContent = "❌ Wpisz poprawny email administratora.";
+    return;
+  }
+
+  if (msg) msg.textContent = "⏳ Zapisuję dane administratora...";
 
   try {
     const r = await apiClubPost({
@@ -4376,15 +4391,25 @@ async function saveAdminPass() {
       return;
     }
 
-    // zapis lokalny (żeby UI wiedziało, że już jest ustawione)
+    // zapis lokalny do aktywacji klubu
     setupDraft.adminPass = pass;
     setupDraft.adminEmail = email;
 
-    if (btn) btn.textContent = "Hasło administratora ✅";
-    if (msg) msg.textContent = "✅ Hasło zapisane w panelu administracyjnym.";
-    
+    // jeśli używasz jeszcze globalnej zmiennej setupAdminEmail, też ją aktualizujemy
+    if (typeof setupAdminEmail !== "undefined") {
+      setupAdminEmail = email;
+    }
+
+    if (btn) btn.textContent = "Dane administratora ✅";
+
+    if (label) {
+      label.textContent = "Administrator: admin / " + email;
+    }
+
+    if (msg) msg.textContent = "✅ Dane administratora zapisane.";
+
     refreshSetupSubmitState_();
-    
+
     setTimeout(() => closeAdminPassPopup(), 500);
 
   } catch (e) {
@@ -4479,7 +4504,11 @@ function refreshSetupSubmitState_() {
   }
 
   const adminPass = String(setupDraft?.adminPass || "").trim();
-  const adminOk = adminPass.length >= 6;
+  const adminEmail = String(setupDraft?.adminEmail || "").trim().toLowerCase();
+  
+  const adminOk =
+    adminPass.length >= 6 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail);
 
   const bankReceiver = String(setupDraft?.bankReceiver || "").trim();
   const bankAccount = String(setupDraft?.bankAccount || "").replace(/\s+/g, "");
@@ -4495,7 +4524,7 @@ function refreshSetupSubmitState_() {
     } else if (!paymentsOk) {
       msg.textContent = "Uzupełnij ustawienia płatności.";
     } else if (!adminOk) {
-      msg.textContent = "Utwórz hasło administratora.";
+      msg.textContent = "Utwórz dane administratora.";
     } else if (!bankOk) {
       msg.textContent = "Uzupełnij dane klubu do odbioru wpłat.";
     }
