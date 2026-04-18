@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.13';
+  window.APP_BUILD = 'APP v2.76.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1646,11 +1646,45 @@ input[type="number"] {
     </div>
 
     <div style="margin-top:12px;">
-      <button class="full-btn" type="button" onclick="sendResetPasswordRequest()">Resetuj hasło</button>
+      <button id="btnSendResetPassword" class="full-btn" type="button" onclick="sendResetPasswordRequest()">Resetuj hasło</button>
       <button class="full-btn alt" style="margin-top:8px;" type="button" onclick="closeResetPasswordPopup()">Anuluj</button>
     </div>
 
     <p id="resetPasswordPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
+  </div>
+</div>
+
+  <!-- SET NEW PASSWORD POPUP
+     Ustawienie nowego hasła po wejściu z linku resetującego -->
+
+<div id="setNewPasswordPopup" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3012;
+  padding: 18px;
+">
+  <div class="popup-card" style="max-width:360px;width:100%; text-align:center;">
+    <p style="margin:0 0 14px 0;"><b>Ustaw nowe hasło</b></p>
+
+    <div class="login-box" style="margin-top:10px;">
+      <div style="margin-bottom:10px; text-align:center; font-weight:700;">
+        Wpisz nowe hasło do konta
+      </div>
+
+      <input id="newPasswordResetInput" type="password" placeholder="Nowe hasło">
+      <input id="newPasswordResetRepeatInput" type="password" placeholder="Powtórz nowe hasło">
+    </div>
+
+    <div style="margin-top:12px;">
+      <button id="btnSetNewPassword" class="full-btn" type="button" onclick="submitNewPasswordAfterReset_()">Zapisz nowe hasło</button>
+      <button class="full-btn alt" style="margin-top:8px;" type="button" onclick="closeSetNewPasswordPopup_()">Anuluj</button>
+    </div>
+
+    <p id="setNewPasswordPopupMsg" style="margin-top:10px; min-height:1.2em;"></p>
   </div>
 </div>
 
@@ -3763,6 +3797,7 @@ function renderClubConfigProgress_(steps, activeIndex, doneMap, errorText) {
     </div>
   `;
 }
+  
 function startClubConfigProgress_() {
   const steps = [
     "Przygotowuję identyfikator i dane klubu",
@@ -5972,48 +6007,179 @@ function closeResetPasswordPopup() {
 }
 
 async function sendResetPasswordRequest() {
-
   const input = document.getElementById("resetPasswordEmailInput");
   const msg = document.getElementById("resetPasswordPopupMsg");
+  const btn = document.getElementById("btnSendResetPassword");
 
-  const email = String(input?.value || "").trim();
+  const email = String(input?.value || "").trim().toLowerCase();
 
   if (!email) {
-    msg.textContent = "❌ Podaj adres email.";
+    if (msg) msg.textContent = "❌ Podaj adres email.";
     return;
   }
 
-  msg.textContent = "⏳ Resetowanie...";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Wysyłam link...";
+    btn.style.opacity = "0.7";
+  }
+
+  if (msg) msg.textContent = "⏳ Wysyłam link resetujący...";
 
   try {
-
     const data = await apiClubPost({
       mode: "resetHasla",
       email
     });
 
     if (data && data.ok) {
-
-      msg.textContent =
-        "✅ Jeśli email istnieje w systemie, wysłaliśmy instrukcję resetu.";
+      if (msg) {
+        msg.textContent = "✅ Jeśli email istnieje w systemie, wysłaliśmy link do ustawienia nowego hasła.";
+      }
 
       setTimeout(() => {
         closeResetPasswordPopup();
-      }, 2000);
+      }, 2500);
 
     } else {
-
-      msg.textContent = "❌ " + (data?.error || "Błąd resetu.");
-
+      if (msg) msg.textContent = "❌ " + (data?.error || "Błąd resetu.");
     }
 
   } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
 
-    msg.textContent = "❌ " + (e?.message || e);
-
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Resetuj hasło";
+      btn.style.opacity = "";
+    }
   }
-} 
+}
 
+/* =============================== obsługa liku resetującego hasło ===================================*/
+
+  let passwordResetToken_ = "";
+
+function openSetNewPasswordPopup_(token) {
+  passwordResetToken_ = String(token || "").trim();
+
+  const popup = document.getElementById("setNewPasswordPopup");
+  const pass1 = document.getElementById("newPasswordResetInput");
+  const pass2 = document.getElementById("newPasswordResetRepeatInput");
+  const msg = document.getElementById("setNewPasswordPopupMsg");
+
+  if (pass1) pass1.value = "";
+  if (pass2) pass2.value = "";
+  if (msg) msg.textContent = "";
+
+  if (popup) popup.style.display = "flex";
+}
+
+function closeSetNewPasswordPopup_() {
+  const popup = document.getElementById("setNewPasswordPopup");
+  if (popup) popup.style.display = "none";
+}
+
+function checkPasswordResetLink_() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token = String(params.get("resetToken") || "").trim();
+    const cid = String(params.get("clubId") || "").trim();
+
+    if (!token) return false;
+
+    if (cid) {
+      saveClubId_(cid);
+      refreshClubBadge_();
+    }
+
+    goToView("loginView", { replace: true });
+    openSetNewPasswordPopup_(token);
+
+    return true;
+  } catch (e) {
+    console.warn("checkPasswordResetLink_ error:", e);
+    return false;
+  }
+}
+
+async function submitNewPasswordAfterReset_() {
+  const msg = document.getElementById("setNewPasswordPopupMsg");
+  const btn = document.getElementById("btnSetNewPassword");
+
+  const pass1 = String(document.getElementById("newPasswordResetInput")?.value || "").trim();
+  const pass2 = String(document.getElementById("newPasswordResetRepeatInput")?.value || "").trim();
+
+  if (!passwordResetToken_) {
+    if (msg) msg.textContent = "❌ Brak tokenu resetu hasła.";
+    return;
+  }
+
+  if (!pass1 || !pass2) {
+    if (msg) msg.textContent = "❌ Wpisz i powtórz nowe hasło.";
+    return;
+  }
+
+  if (pass1 !== pass2) {
+    if (msg) msg.textContent = "❌ Hasła nie są takie same.";
+    return;
+  }
+
+  if (pass1.length < 4) {
+    if (msg) msg.textContent = "❌ Hasło jest za krótkie.";
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Zapisuję...";
+    btn.style.opacity = "0.7";
+  }
+
+  if (msg) msg.textContent = "⏳ Zapisuję nowe hasło...";
+
+  try {
+    const res = await apiClubPost({
+      action: "ustawNoweHasloPoResecie",
+      token: passwordResetToken_,
+      haslo: pass1
+    });
+
+    if (!res || !res.ok) {
+      if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się ustawić nowego hasła.");
+      return;
+    }
+
+    if (msg) msg.textContent = "✅ Hasło zostało zmienione. Możesz się zalogować.";
+
+    passwordResetToken_ = "";
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("resetToken");
+      window.history.replaceState({}, document.title, url.toString());
+    } catch (e) {}
+
+    setTimeout(() => {
+      closeSetNewPasswordPopup_();
+      pokazLogowanie();
+    }, 2000);
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Zapisz nowe hasło";
+      btn.style.opacity = "";
+    }
+  }
+}
+
+/* =============================== koniec obsługi liku resetującego hasło ===================================*/
+  
 async function openFreeNumbersPopup() {
   const popup = document.getElementById("freeNumbersPopup");
   const body = document.getElementById("freeNumbersPopupBody");
@@ -12743,6 +12909,7 @@ window.addEventListener('load', () => {
 
   // START: najpierw ustaw clubId z URL (albo wyczyść na linku głównym)
   initClubFromUrl_();
+  checkPasswordResetLink_();
 
   // dopiero teraz ustawiamy stan historii (bo clubId może się zmienić)
   try {
