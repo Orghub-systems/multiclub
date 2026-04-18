@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.14';
+  window.APP_BUILD = 'APP v2.76.15';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6084,6 +6084,7 @@ function closeSetNewPasswordPopup_() {
 function checkPasswordResetLink_() {
   try {
     const params = new URLSearchParams(window.location.search);
+
     const token = String(params.get("resetToken") || "").trim();
     const cid = String(params.get("clubId") || "").trim();
 
@@ -6091,13 +6092,26 @@ function checkPasswordResetLink_() {
 
     if (cid) {
       saveClubId_(cid);
-      refreshClubBadge_();
+      window.clubId = cid;
     }
 
+    // Zamykamy wszystko, co mogło być otwarte po poprzednim stanie aplikacji
+    try { closeResetPasswordPopup(); } catch (e) {}
+    try { closeFreeNumbersPopup(); } catch (e) {}
+    try { closeSetNewPasswordPopup_(); } catch (e) {}
+
+    // Czyścimy sesję, bo reset hasła nie jest wejściem do panelu
+    try { clearAppSession_(); } catch (e) {}
+
+    // Przenosimy usera na ekran logowania
     goToView("loginView", { replace: true });
+    refreshClubBadge_();
+
+    // Otwieramy osobny popup ustawienia nowego hasła
     openSetNewPasswordPopup_(token);
 
     return true;
+
   } catch (e) {
     console.warn("checkPasswordResetLink_ error:", e);
     return false;
@@ -12909,7 +12923,7 @@ window.addEventListener('load', () => {
 
   // START: najpierw ustaw clubId z URL (albo wyczyść na linku głównym)
   initClubFromUrl_();
-  checkPasswordResetLink_();
+  if (checkPasswordResetLink_()) return;
 
   // dopiero teraz ustawiamy stan historii (bo clubId może się zmienić)
   try {
