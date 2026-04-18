@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77';
+  window.APP_BUILD = 'APP v2.77.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4378,6 +4378,7 @@ async function saveAdminPass() {
 
     // zapis lokalny (żeby UI wiedziało, że już jest ustawione)
     setupDraft.adminPass = pass;
+    setupDraft.adminEmail = email;
 
     if (btn) btn.textContent = "Hasło administratora ✅";
     if (msg) msg.textContent = "✅ Hasło zapisane w panelu administracyjnym.";
@@ -4573,6 +4574,22 @@ async function submitSetupAndActivateClub() {
       if (msg) msg.textContent = "❌ Ustaw hasło administratora.";
       return;
     }
+    
+    const adminEmail = String(
+      setupDraft?.adminEmail ||
+      (typeof setupAdminEmail !== "undefined" ? setupAdminEmail : "") ||
+      ""
+    ).trim().toLowerCase();
+    
+    if (!adminEmail) {
+      if (msg) msg.textContent = "❌ Ustaw email administratora.";
+      return;
+    }
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
+      if (msg) msg.textContent = "❌ Email administratora jest nieprawidłowy.";
+      return;
+    }
 
     const bankReceiver = String(setupDraft?.bankReceiver || "").trim();
     const bankAccount = String(setupDraft?.bankAccount || "").replace(/\s+/g, "");
@@ -4613,7 +4630,8 @@ async function submitSetupAndActivateClub() {
       membershipLimit_type: typeof setupDraft?.membershipLimit,
       membershipLimit,
       bankReceiver,
-      bankAccount
+      bankAccount,
+      adminEmail
     });
 
     const r = await activateClub_({
@@ -4626,7 +4644,8 @@ async function submitSetupAndActivateClub() {
       membershipLimit,
       bankReceiver,
       bankAccount,
-      email: setupDraft.email
+      email: setupDraft.email,
+      adminEmail
     });
 
     if (!r || (r.success !== true && r.ok !== true)) {
