@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76.17';
+  window.APP_BUILD = 'APP v2.76.18';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6131,10 +6131,13 @@ function checkPasswordResetLink_() {
     }
 
     try { refreshClubBadge_(); } catch (e) {}
-
+    
+    // Reset hasła omija startApp_(), więc osobno ładujemy logo i branding klubu
+    applyBrandingForPasswordReset_();
+    
     // Otwórz właściwy popup ustawiania nowego hasła
     openSetNewPasswordPopup_(token);
-
+    
     return true;
 
   } catch (e) {
@@ -6142,7 +6145,62 @@ function checkPasswordResetLink_() {
     return false;
   }
 }
+async function applyBrandingForPasswordReset_() {
+  try {
+    const cid = String(window.clubId || clubId || getClubIdFromUrl_() || "").trim();
+    if (!cid) return;
 
+    // najpierw spróbuj lokalnego motywu
+    try {
+      const localTheme = loadTheme_();
+      if (localTheme) applyTheme_(localTheme);
+    } catch (e) {}
+
+    // potem dociągnij świeży branding klubu
+    const res = await apiClubGet("brandingBoot");
+
+    if (!res || res.success === false) {
+      console.warn("applyBrandingForPasswordReset_ branding error:", res);
+      return;
+    }
+
+    const theme = res.theme || res.branding || res;
+
+    if (theme) {
+      try { applyTheme_(theme); } catch (e) {}
+      try { saveTheme_(theme); } catch (e) {}
+    }
+
+    const logoUrl = String(
+      theme?.logoUrl ||
+      res.logoUrl ||
+      res.logo ||
+      res.iconUrl ||
+      ""
+    ).trim();
+
+    if (logoUrl) {
+      const logoImg =
+        document.querySelector("#loginView img.logo") ||
+        document.querySelector("#loginView img");
+
+      if (logoImg) logoImg.src = logoUrl;
+    }
+
+    try { refreshClubBadge_(); } catch (e) {}
+
+  } catch (e) {
+    console.warn("applyBrandingForPasswordReset_ error:", e);
+  }
+}
+
+    try { refreshClubBadge_(); } catch (e) {}
+
+  } catch (e) {
+    console.warn("applyBrandingForPasswordReset_ error:", e);
+  }
+}
+  
 async function submitNewPasswordAfterReset_() {
   const msg = document.getElementById("setNewPasswordPopupMsg");
   const btn = document.getElementById("btnSetNewPassword");
