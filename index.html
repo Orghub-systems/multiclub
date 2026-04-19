@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.4';
+  window.APP_BUILD = 'APP v2.77.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9722,7 +9722,7 @@ async function adminOpenPlayerInfo() {
   const nazwisko = String(window.__adminSelectedNazwisko || "").trim();
 
   goToView("adminZawodnikInfoView");
-  showBusy("Ładuję dane zawodnika...");
+  setViewSoftLoading_("adminZawodnikInfoView", true);
 
   const title = document.getElementById("adminZawodnikInfoTitle");
   const msg = document.getElementById("adminInfoMsg");
@@ -9834,7 +9834,7 @@ async function adminOpenPlayerInfo() {
   } catch (e) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   } finally {
-    hideBusy();
+    setViewSoftLoading_("adminZawodnikInfoView", false);
   }
 }
 
