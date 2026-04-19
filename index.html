@@ -361,7 +361,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.2';
+  window.APP_BUILD = 'APP v2.77.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2453,6 +2453,31 @@ const LS_KEY_CFG_LOCK = "orghub_cfg_locked";
 
 // Klucz localStorage dla konfiguracji grup    
 const LS_KEY_GROUPS_CFG_PREFIX = "orghub.clubGroups.v1.";  
+
+ // Klucz localStorage dla trybu developerskiego / serwisowego
+const LS_KEY_DEV_MODE = "orghub_dev_mode";
+
+function initDevModeFromUrl_() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("dev") === "1") {
+      localStorage.setItem(LS_KEY_DEV_MODE, "1");
+    }
+
+    if (params.get("dev") === "0") {
+      localStorage.removeItem(LS_KEY_DEV_MODE);
+    }
+  } catch (e) {}
+}
+
+function isDevMode_() {
+  try {
+    return localStorage.getItem(LS_KEY_DEV_MODE) === "1";
+  } catch (e) {
+    return false;
+  }
+} 
 
 // Sprawdzenie, czy konfiguracja jest zablokowana  
 function isCfgLocked_() {
@@ -13071,6 +13096,9 @@ async function sendManualPush() {
   }
 }
 
+
+/* =================== 999 APP START / LOAD =================== */
+  
 window.addEventListener('load', () => {
   //odtworzIntroSound();
 
@@ -13079,8 +13107,18 @@ window.addEventListener('load', () => {
 
   if (app) app.classList.remove('hidden');
 
-  const wersja = document.getElementById("wersjaNum");
-  if (wersja) wersja.textContent = APP_BUILD;
+    initDevModeFromUrl_();
+    
+    const wersja = document.getElementById("wersjaNum");
+    if (wersja) {
+      if (isDevMode_()) {
+        wersja.textContent = APP_BUILD;
+        wersja.style.display = "";
+      } else {
+        wersja.textContent = "";
+        wersja.style.display = "none";
+      }
+    }
 
   const setupSubmitBtn = document.getElementById("btnSetupSubmit");
   if (setupSubmitBtn && !setupSubmitBtn.getAttribute("onclick")) {
