@@ -357,11 +357,19 @@ input[type="number"] {
     height:20px;
     margin:0;
   }
+
+    /* SOFT LOADING — przygaszenie aktywnego widoku bez globalnego overlaya */
+  .soft-loading-view {
+    opacity: 0.42;
+    pointer-events: none;
+    filter: grayscale(0.25);
+    transition: opacity 0.15s ease, filter 0.15s ease;
+  }
     
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.3';
+  window.APP_BUILD = 'APP v2.77.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2621,6 +2629,19 @@ function applyTheme_(theme) {
     if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
 
   } catch (e) {}
+}
+
+  /* SOFT LOADING — przygaszenie aktywnego widoku */
+    
+  function setViewSoftLoading_(viewId, loading) {
+  const view = document.getElementById(viewId);
+  if (!view) return;
+
+  if (loading) {
+    view.classList.add("soft-loading-view");
+  } else {
+    view.classList.remove("soft-loading-view");
+  }
 }
 
 /* =================== CLUB GROUPS CACHE =================== */
