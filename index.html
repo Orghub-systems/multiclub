@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.2';
+  window.APP_BUILD = 'APP v2.9.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7471,7 +7471,7 @@ function renderTreningi(lista) {
       : `zapiszSie('${t.id}')`;
 
     const statusLine = isPowolanie
-      ? `<span style="display:inline-block;margin-top:4px;color:${acceptedPowolanie ? "#81c784" : "#90caf9"};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${acceptedPowolanie ? "Zaakceptowano" : "Oczekuje na akceptację"}</span><br>`
+      ? `<span id="powolanie-status-${t.id}" style="display:inline-block;margin-top:4px;color:${acceptedPowolanie ? "#81c784" : "#90caf9"};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${acceptedPowolanie ? "Zaakceptowano" : "Oczekuje na akceptację"}</span><br>`
       : "";
 
     const secondBtnHtml = isPowolanie
@@ -7521,6 +7521,37 @@ function renderTreningi(lista) {
       </div>
     `;
   }).join('');
+}
+
+function updatePowolanieUiLocal_(id, accepted) {
+  const btn = document.getElementById(`btn-${id}`);
+  const statusEl = document.getElementById(`powolanie-status-${id}`);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.classList.remove("loading");
+
+    if (accepted) {
+      btn.textContent = "Rezygnuję z powołania";
+      btn.style.background = "#8b0000";
+      btn.style.color = "white";
+      btn.style.border = "none";
+      btn.setAttribute("onclick", `wypiszSie('${id}')`);
+    } else {
+      btn.textContent = "Akceptuję powołanie";
+      btn.style.background = "#1565c0";
+      btn.style.color = "white";
+      btn.style.border = "none";
+      btn.setAttribute("onclick", `zapiszSie('${id}')`);
+    }
+  }
+
+  if (statusEl) {
+    statusEl.style.color = accepted ? "#81c784" : "#90caf9";
+    statusEl.innerHTML = accepted
+      ? "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Zaakceptowano"
+      : "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Oczekuje na akceptację";
+  }
 }
   
 async function toggleZapisani(id) {
@@ -7574,7 +7605,6 @@ async function toggleZapisani(id) {
     box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
   }
 }
-
 async function zapiszSie(id) {
   const btn = document.getElementById(`btn-${id}`);
   const wypiszBtn = document.getElementById(`wypisz-${id}`);
@@ -7591,6 +7621,18 @@ async function zapiszSie(id) {
     });
 
     if (r && r.ok) {
+      // TRYB POWOŁANIA — tylko lokalna zmiana UI, bez renderowania całego ekranu
+      if (r.accepted === true) {
+        updatePowolanieUiLocal_(id, true);
+
+        if (box && !box.classList.contains("hidden")) {
+          await odswiezListeZapisanych(id);
+        }
+
+        return;
+      }
+
+      // ZWYKŁY TRYB — zostawiamy dotychczasowe odświeżenie listy wydarzeń
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
@@ -7605,18 +7647,20 @@ async function zapiszSie(id) {
     }
 
     alert((r && r.message) ? r.message : "Nie udało się zapisać.");
+
   } catch (err) {
     alert("Błąd połączenia: " + err);
+
   } finally {
     btn.classList.remove("loading");
   }
 }
-
 async function wypiszSie(id) {
   const btn =
     document.getElementById(`wypisz-${id}`) ||
     document.getElementById(`btn-${id}`);
 
+  const zapiszBtn = document.getElementById(`btn-${id}`);
   const box = document.getElementById(`zapisani-${id}`);
 
   if (btn) btn.classList.add("loading");
@@ -7628,16 +7672,31 @@ async function wypiszSie(id) {
     });
 
     if (r && r.ok) {
+      // TRYB POWOŁANIA — tylko lokalna zmiana UI, bez renderowania całego ekranu
+      if (r.resigned === true) {
+        updatePowolanieUiLocal_(id, false);
+
+        if (box && !box.classList.contains("hidden")) {
+          await odswiezListeZapisanych(id);
+        }
+
+        return;
+      }
+
+      // ZWYKŁY TRYB — lokalnie przywracamy przyciski
+      if (zapiszBtn) {
+        zapiszBtn.innerText = "Zapisz się";
+        zapiszBtn.disabled = false;
+      }
+
+      if (btn && btn.id && btn.id.startsWith("wypisz-")) {
+        btn.disabled = true;
+      }
+
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
 
-      const lista = await apiClubGet("treningi", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego
-      });
-
-      renderTreningi(lista);
       return;
     }
 
