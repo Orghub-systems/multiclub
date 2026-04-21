@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79.5';
+  window.APP_BUILD = 'APP v2.79.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7821,14 +7821,11 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   if (grupyEl) grupyEl.textContent = "—";
   if (msg) msg.textContent = "";
 
-  // Statystyki nie ładują się automatycznie — klik dopiero odpala endpoint.
-  if (statsEl) {
-    statsEl.innerHTML = `
-      <button class="full-btn" type="button" onclick="trainerLoadSelectedPlayerStats_()">
-        Pokaż statystyki
-      </button>
-    `;
-  }
+    // Statystyki załadują się automatycznie po danych podstawowych.
+    // Nie blokują głównego ekranu zawodnika.
+    if (statsEl) {
+      statsEl.innerHTML = `<p style="opacity:.75;">Statystyki załadują się automatycznie...</p>`;
+    }
 
   setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
 
@@ -7895,10 +7892,18 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     if (grupyEl) grupyEl.textContent = "—";
     if (msg) msg.textContent = "❌ Błąd pobierania danych zawodnika.";
 
-  } finally {
-    setTrainerZawodnikViewBusy_(false);
+    } finally {
+      setTrainerZawodnikViewBusy_(false);
+  
+      // Statystyki odpalamy dopiero po załadowaniu danych podstawowych,
+      // żeby nie spowalniały wejścia w ekran zawodnika.
+      if (String(window.__trainerSelectedNr || "").trim() === nrSafe) {
+        setTimeout(() => {
+          trainerLoadSelectedPlayerStats_();
+        }, 0);
+      }
+    }
   }
-}
 
 /* ------------- statystyki do kafla w ekranie zawodnika w panelu trenera------------*/
   // dane z funkcji pokazstatystyki
