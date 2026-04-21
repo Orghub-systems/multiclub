@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.9';
+  window.APP_BUILD = 'APP v2.77.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3366,6 +3366,16 @@ window.addEventListener("popstate", (event) => {
     hidePlayerPaymentPopup_();
   }
 
+    // popup ogólny: reset hasła — wpisanie emaila
+  if (isResetPasswordPopupOpen_() && !(state && state.modal === "resetPasswordPopup")) {
+    hideResetPasswordPopup_();
+  }
+
+  // popup ogólny: reset hasła — ustawienie nowego hasła z linku
+  if (isSetNewPasswordPopupOpen_() && !(state && state.modal === "setNewPasswordPopup")) {
+    hideSetNewPasswordPopup_();
+  }
+
   // popupy edycji wydarzenia
   syncTrainerEditPopupsToHistoryState_(state);
 });
@@ -6112,6 +6122,26 @@ async function wyslijRejestracjeTrener() {
   }
 }
 
+function isResetPasswordPopupOpen_() {
+  const popup = document.getElementById("resetPasswordPopup");
+  return !!(popup && popup.style.display !== "none" && popup.style.display !== "");
+}
+
+function hideResetPasswordPopup_() {
+  const popup = document.getElementById("resetPasswordPopup");
+  if (popup) popup.style.display = "none";
+}
+
+function isSetNewPasswordPopupOpen_() {
+  const popup = document.getElementById("setNewPasswordPopup");
+  return !!(popup && popup.style.display !== "none" && popup.style.display !== "");
+}
+
+function hideSetNewPasswordPopup_() {
+  const popup = document.getElementById("setNewPasswordPopup");
+  if (popup) popup.style.display = "none";
+}
+  
 function openResetPasswordPopup() {
   const popup = document.getElementById("resetPasswordPopup");
   const input = document.getElementById("resetPasswordEmailInput");
@@ -6120,12 +6150,19 @@ function openResetPasswordPopup() {
   if (msg) msg.textContent = "";
   if (input) input.value = "";
 
-  if (popup) popup.style.display = "flex";
+  if (popup) {
+    popup.style.display = "flex";
+    pushAppModalHistoryState_("resetPasswordPopup");
+  }
 }
 
 function closeResetPasswordPopup() {
-  const popup = document.getElementById("resetPasswordPopup");
-  if (popup) popup.style.display = "none";
+  if (isHistoryModal_("resetPasswordPopup")) {
+    history.back();
+    return;
+  }
+
+  hideResetPasswordPopup_();
 }
 
 async function sendResetPasswordRequest() {
@@ -6195,12 +6232,19 @@ function openSetNewPasswordPopup_(token) {
   if (pass2) pass2.value = "";
   if (msg) msg.textContent = "";
 
-  if (popup) popup.style.display = "flex";
+  if (popup) {
+    popup.style.display = "flex";
+    pushAppModalHistoryState_("setNewPasswordPopup");
+  }
 }
 
 function closeSetNewPasswordPopup_() {
-  const popup = document.getElementById("setNewPasswordPopup");
-  if (popup) popup.style.display = "none";
+  if (isHistoryModal_("setNewPasswordPopup")) {
+    history.back();
+    return;
+  }
+
+  hideSetNewPasswordPopup_();
 }
 
   async function applyBrandingForPasswordReset_() {
