@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.4';
+  window.APP_BUILD = 'APP v2.9.5';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7500,13 +7500,15 @@ function renderTreningi(lista) {
         </p>
 
         <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-      <button 
-        id="btn-${t.id}" 
-        ${mainBtnDisabled ? 'disabled' : ''} 
-        style="background:${mainBtnBg};color:white;border:none;"
-        onclick="${mainBtnAction}">
-        ${mainBtnText}
-      </button>
+          <button 
+            id="btn-${t.id}" 
+            data-powolanie="${isPowolanie ? "1" : "0"}"
+            data-accepted="${acceptedPowolanie ? "1" : "0"}"
+            ${mainBtnDisabled ? 'disabled' : ''} 
+            style="background:${mainBtnBg};color:white;border:none;"
+            onclick="${mainBtnAction}">
+            ${mainBtnText}
+          </button>
 
           ${secondBtnHtml}
 
@@ -7531,6 +7533,9 @@ function updatePowolanieUiLocal_(id, accepted) {
     btn.disabled = false;
     btn.classList.remove("loading");
 
+    btn.dataset.powolanie = "1";
+    btn.dataset.accepted = accepted ? "1" : "0";
+
     if (accepted) {
       btn.textContent = "Rezygnuję z powołania";
       btn.style.background = "#8b0000";
@@ -7552,6 +7557,13 @@ function updatePowolanieUiLocal_(id, accepted) {
       ? "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Zaakceptowano"
       : "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Oczekuje na akceptację";
   }
+
+  updatePowolanyNaLiscieLocal_(id, numerZalogowanego, accepted);
+}
+
+  function isPowolanieEventLocal_(id) {
+  const btn = document.getElementById(`btn-${id}`);
+  return !!(btn && btn.dataset && btn.dataset.powolanie === "1");
 }
   
 async function toggleZapisani(id) {
@@ -7617,10 +7629,11 @@ async function toggleZapisani(id) {
   
 async function zapiszSie(id) {
   const btn = document.getElementById(`btn-${id}`);
-  const wypiszBtn = document.getElementById(`wypisz-${id}`);
   const box = document.getElementById(`zapisani-${id}`);
 
   if (!btn) return;
+
+  const isPowolanie = isPowolanieEventLocal_(id);
 
   btn.classList.add("loading");
 
@@ -7631,20 +7644,15 @@ async function zapiszSie(id) {
     });
 
     if (r && r.ok) {
-      // TRYB POWOŁANIA — tylko lokalna zmiana UI, bez renderowania całego ekranu
-      if (r.accepted === true) {
+      // POWOŁANIE — bez odświeżania całej listy i bez renderTreningi()
+      if (isPowolanie || r.accepted === true) {
         updatePowolanieUiLocal_(id, true);
-
-        if (box && !box.classList.contains("hidden")) {
-          
-        }
-
         return;
       }
 
-      // ZWYKŁY TRYB — zostawiamy dotychczasowe odświeżenie listy wydarzeń
+      // ZWYKŁY TRYB — dotychczasowe zachowanie
       if (box && !box.classList.contains("hidden")) {
-        
+        await odswiezListeZapisanych(id);
       }
 
       const lista = await apiClubGet("treningi", {
@@ -7665,6 +7673,7 @@ async function zapiszSie(id) {
     btn.classList.remove("loading");
   }
 }
+  
 async function wypiszSie(id) {
   const btn =
     document.getElementById(`wypisz-${id}`) ||
@@ -7672,6 +7681,8 @@ async function wypiszSie(id) {
 
   const zapiszBtn = document.getElementById(`btn-${id}`);
   const box = document.getElementById(`zapisani-${id}`);
+
+  const isPowolanie = isPowolanieEventLocal_(id);
 
   if (btn) btn.classList.add("loading");
 
@@ -7682,18 +7693,13 @@ async function wypiszSie(id) {
     });
 
     if (r && r.ok) {
-      // TRYB POWOŁANIA — tylko lokalna zmiana UI, bez renderowania całego ekranu
-      if (r.resigned === true) {
+      // POWOŁANIE — bez odświeżania listy powołanych
+      if (isPowolanie || r.resigned === true) {
         updatePowolanieUiLocal_(id, false);
-
-        if (box && !box.classList.contains("hidden")) {
-          await odswiezListeZapisanych(id);
-        }
-
         return;
       }
 
-      // ZWYKŁY TRYB — lokalnie przywracamy przyciski
+      // ZWYKŁY TRYB
       if (zapiszBtn) {
         zapiszBtn.innerText = "Zapisz się";
         zapiszBtn.disabled = false;
