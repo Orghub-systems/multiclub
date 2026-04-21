@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.80';
+  window.APP_BUILD = 'APP v2.81';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2489,7 +2489,10 @@ const LS_KEY_THEME = "orghub_theme";
 const LS_KEY_CFG_LOCK = "orghub_cfg_locked";
 
 // Klucz localStorage dla konfiguracji grup    
-const LS_KEY_GROUPS_CFG_PREFIX = "orghub.clubGroups.v1.";  
+const LS_KEY_GROUPS_CFG_PREFIX = "orghub.clubGroups.v1.";
+
+// Alias dla starszych/nowszych funkcji cache grup
+const LS_KEY_CLUB_GROUPS_PREFIX = LS_KEY_GROUPS_CFG_PREFIX; 
 
  // Klucz localStorage dla trybu developerskiego / serwisowego
 const LS_KEY_DEV_MODE = "orghub_dev_mode";
