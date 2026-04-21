@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.11';
+  window.APP_BUILD = 'APP v2.77.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -978,7 +978,7 @@ input[type="number"] {
       <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
       <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
       <button class="full-btn" onclick="trainerPokazRaportObecnosci()">📋 Raport obecności</button>
-      <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
+      <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
     </div>
 
 <!-- TRAINER PLAYERS VIEW
@@ -1111,7 +1111,7 @@ input[type="number"] {
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
-  <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
+  <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
 </div>
 
   <!-- ADMIN TRAINERS VIEW
@@ -2933,36 +2933,101 @@ async function validateStoredSessionInBackground_(sess) {
   }
 }
 
-async function logoutAppSession_() {
-  const sess = loadAppSession_();
-  const token = String(sess?.sessionToken || "").trim();
+function setLogoutBusy_(busy, text) {
+  const visibleView = Array.from(document.querySelectorAll(".container:not(.hidden), .view:not(.hidden)"))
+    .find(el => el && el.offsetParent !== null);
 
-  clearAppSession_();
+  if (!visibleView) return;
 
-  numerZalogowanego = null;
-  window.numerZalogowanego = "";
-  grupaZalogowanego = null;
-  window.grupyTrenera = "";
-  window.zalogowanyTrenerName = "";
-  window.userPushConsent = false;
-  window.userEmailConsent = false;
+  let info = document.getElementById("logoutBusyInfo");
 
-  try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch (e) {}
-  try { sessionStorage.removeItem("userPushConsent"); } catch (e) {}
-  try { sessionStorage.removeItem("userEmailConsent"); } catch (e) {}
-
-  if (token) {
-    try {
-      await apiClubPost({
-        action: "logoutSession",
-        sessionToken: token
-      });
-    } catch (e) {
-      console.warn("logoutSession backend error", e);
-    }
+  if (!info) {
+    info = document.createElement("div");
+    info.id = "logoutBusyInfo";
+    info.className = "card";
+    info.style.position = "fixed";
+    info.style.left = "50%";
+    info.style.top = "50%";
+    info.style.transform = "translate(-50%, -50%)";
+    info.style.zIndex = "99999";
+    info.style.width = "min(320px, 86vw)";
+    info.style.background = "#222";
+    info.style.textAlign = "center";
+    info.style.fontWeight = "900";
+    info.style.boxShadow = "0 10px 30px rgba(0,0,0,.45)";
+    document.body.appendChild(info);
   }
 
-  pokazLogowanie();
+  if (busy) {
+    info.textContent = text || "⏳ Wylogowuję...";
+    info.classList.remove("hidden");
+
+    visibleView.dataset.logoutBusy = "1";
+    visibleView.style.opacity = "0.45";
+    visibleView.style.pointerEvents = "none";
+    visibleView.style.filter = "grayscale(0.25)";
+  } else {
+    info.textContent = "";
+    info.classList.add("hidden");
+
+    document.querySelectorAll('[data-logout-busy="1"]').forEach(el => {
+      el.style.opacity = "";
+      el.style.pointerEvents = "";
+      el.style.filter = "";
+      delete el.dataset.logoutBusy;
+    });
+  }
+}
+
+function waitMs_(ms) {
+  return new Promise(resolve => setTimeout(resolve, Number(ms || 0)));
+}
+  
+async function logoutAppSession_() {
+  setLogoutBusy_(true, "⏳ Wylogowuję...");
+
+  const startedAt = Date.now();
+
+  try {
+    const sess = loadAppSession_();
+    const token = String(sess?.sessionToken || "").trim();
+
+    clearAppSession_();
+
+    numerZalogowanego = null;
+    window.numerZalogowanego = "";
+    grupaZalogowanego = null;
+    window.grupyTrenera = "";
+    window.zalogowanyTrenerName = "";
+    window.userPushConsent = false;
+    window.userEmailConsent = false;
+
+    try { sessionStorage.removeItem("zalogowanyTrenerName"); } catch (e) {}
+    try { sessionStorage.removeItem("userPushConsent"); } catch (e) {}
+    try { sessionStorage.removeItem("userEmailConsent"); } catch (e) {}
+
+    if (token) {
+      try {
+        await apiClubPost({
+          action: "logoutSession",
+          sessionToken: token
+        });
+      } catch (e) {
+        console.warn("logoutSession backend error", e);
+      }
+    }
+
+    // Minimalna chwila, żeby użytkownik zobaczył komunikat,
+    // a nie mignięcie jak światło w starej piwnicy.
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < 450) {
+      await waitMs_(450 - elapsed);
+    }
+
+  } finally {
+    setLogoutBusy_(false);
+    pokazLogowanie();
+  }
 }
 
 /* =================== KONIEC APP SESSION / LOCAL =================== */
