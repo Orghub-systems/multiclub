@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.5';
+  window.APP_BUILD = 'APP v2.77.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3349,6 +3349,11 @@ window.addEventListener("popstate", (event) => {
   if (isTrainerDeletePopupOpen_() && !(state && state.modal === "trainerDeletePopup")) {
     const pop = document.getElementById("trainerDeletePopup");
     if (pop) pop.classList.remove("show");
+  }
+
+    // popup admin/trener: wybór grup w ręcznych powiadomieniach
+  if (isManualPushGroupsPopupOpen_() && !(state && state.modal === "manualPushGroupsPopup")) {
+    hideManualPushGroupsPopup_();
   }
 
   // popupy edycji wydarzenia
@@ -12935,6 +12940,45 @@ function manualPushModeChanged() {
 
 window.__manualPushGroups = [];
 
+function pushAppModalHistoryState_(modalId) {
+  try {
+    const id = String(modalId || "").trim();
+    if (!id) return;
+
+    if (history.state && String(history.state.modal || "") === id) {
+      return;
+    }
+
+    // Jeśli masz już istniejący helper modalowy, użyjemy go.
+    if (typeof pushPaymentModalHistoryState_ === "function") {
+      pushPaymentModalHistoryState_(id);
+      return;
+    }
+
+    const baseState = history.state && typeof history.state === "object"
+      ? { ...history.state }
+      : {};
+
+    history.pushState({
+      ...baseState,
+      modal: id
+    }, "", "");
+
+  } catch (e) {
+    console.warn("pushAppModalHistoryState_ error:", e);
+  }
+}
+
+function isManualPushGroupsPopupOpen_() {
+  const popup = document.getElementById("manualPushGroupsPopup");
+  return !!(popup && !popup.classList.contains("hidden"));
+}
+
+function hideManualPushGroupsPopup_() {
+  const popup = document.getElementById("manualPushGroupsPopup");
+  if (popup) popup.classList.add("hidden");
+}
+  
 function openManualPushGroupsPopup() {
   const popup = document.getElementById("manualPushGroupsPopup");
   const list = document.getElementById("manualPushGroupsList");
@@ -12953,6 +12997,7 @@ function openManualPushGroupsPopup() {
       </div>
     `;
     popup.classList.remove("hidden");
+    pushAppModalHistoryState_("manualPushGroupsPopup");
     return;
   }
 
@@ -12973,13 +13018,18 @@ function openManualPushGroupsPopup() {
   }).join("");
 
   popup.classList.remove("hidden");
+  pushAppModalHistoryState_("manualPushGroupsPopup");
 }
 
 function closeManualPushGroupsPopup() {
-  const popup = document.getElementById("manualPushGroupsPopup");
-  if (popup) popup.classList.add("hidden");
-}
+  if (isHistoryModal_("manualPushGroupsPopup")) {
+    history.back();
+    return;
+  }
 
+  hideManualPushGroupsPopup_();
+}
+  
 function applyManualPushGroupsPopup() {
   const checked = Array.from(document.querySelectorAll(".manualPushGroupChk:checked"))
     .map(el => String(el.value || "").trim())
