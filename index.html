@@ -7824,7 +7824,7 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     // Statystyki załadują się automatycznie po danych podstawowych.
     // Nie blokują głównego ekranu zawodnika.
     if (statsEl) {
-      statsEl.innerHTML = `<p style="opacity:.75;">Statystyki załadują się automatycznie...</p>`;
+      statsEl.innerHTML = "";
     }
 
   setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
