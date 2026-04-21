@@ -7769,7 +7769,7 @@ async function trainerPokazZawodnicy() {
   }
 }
 
-function trainerOpenZawodnik_(nr, nazwisko) {
+async function trainerOpenZawodnik_(nr, nazwisko) {
   window.__trainerSelectedNr = String(nr || "").trim();
   window.__trainerSelectedNazwisko = String(nazwisko || "").trim();
 
@@ -7785,18 +7785,71 @@ function trainerOpenZawodnik_(nr, nazwisko) {
     title.textContent = `Zawodnik #${window.__trainerSelectedNr} — ${window.__trainerSelectedNazwisko || "—"}`;
   }
 
-  if (joinEl) joinEl.textContent = "—";
-  if (grupyEl) grupyEl.textContent = "—";
-  if (statsEl) statsEl.textContent = "—";
+  if (joinEl) joinEl.textContent = "⏳ Ładowanie...";
+  if (grupyEl) grupyEl.textContent = "⏳ Ładowanie...";
+  if (statsEl) statsEl.textContent = "⏳ Ładowanie...";
   if (msg) msg.textContent = "";
 
-  // Dane podepniemy w następnym kroku.
-}  
+  try {
+    const nrSafe = window.__trainerSelectedNr;
 
-  function trainerOpenPlayerGroupsEdit_() {
-  const msg = document.getElementById("trainerZawodnikMsg");
-  if (msg) {
-    msg.textContent = "ℹ️ Edycję grup zawodnika podepniemy w następnym kroku.";
+    const [infoRes, grupyRes, statsRes] = await Promise.all([
+      apiClubPost({
+        action: "adminPlayerInfo",
+        numer: nrSafe
+      }),
+      apiClubGet("adminGrupy", {
+        numer: nrSafe
+      }),
+      apiClubGet("statystyki", {
+        numer: nrSafe
+      })
+    ]);
+
+    if (!infoRes || infoRes.success === false) {
+      if (joinEl) joinEl.textContent = "—";
+      if (msg) msg.textContent = "⚠️ Nie udało się pobrać informacji o zawodniku.";
+    } else {
+      if (joinEl) {
+        joinEl.textContent = String(infoRes.joinDate || "").trim() || "—";
+      }
+    }
+
+    if (!grupyRes || grupyRes.success === false) {
+      if (grupyEl) grupyEl.textContent = "—";
+    } else {
+      const grupyRaw = String(grupyRes.grupy || "").trim();
+      const grupyLabel = grupyRaw
+        ? grupyRaw
+            .split(",")
+            .map(x => getClubGroupLabel_(x.trim()))
+            .filter(Boolean)
+            .join(", ")
+        : "—";
+
+      if (grupyEl) grupyEl.textContent = grupyLabel;
+    }
+
+    if (Array.isArray(statsRes)) {
+      const suma = statsRes.reduce((acc, row) => {
+        const val = Number(row?.obecnosc || row?.suma || row?.count || 0);
+        return acc + (isNaN(val) ? 0 : val);
+      }, 0);
+
+      if (statsEl) statsEl.textContent = suma ? `${suma} obecności łącznie` : "Brak obecności";
+    } else if (statsRes && statsRes.success === false) {
+      if (statsEl) statsEl.textContent = "—";
+    } else {
+      if (statsEl) statsEl.textContent = "Dostępne w statystykach";
+    }
+
+  } catch (e) {
+    console.warn("trainerOpenZawodnik_ error:", e);
+
+    if (joinEl) joinEl.textContent = "—";
+    if (grupyEl) grupyEl.textContent = "—";
+    if (statsEl) statsEl.textContent = "—";
+    if (msg) msg.textContent = "❌ Błąd pobierania danych zawodnika.";
   }
 }
   
