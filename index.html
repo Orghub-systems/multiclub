@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.5';
+  window.APP_BUILD = 'APP v2.9.6';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7844,18 +7844,6 @@ function powrotDoTreningow() {
   
 function trainerPowrot() { appBack(); }
 
-  // ✅ MUSI być globalne dla onclick w HTML
-window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
-  goToView("trainerWydarzeniaView");
-  try {
-    const lista = await apiClubGet("treningiTrener", { grupa: window.grupyTrenera || "" });
-    renderTreningiTrainer(lista);
-  } catch (e) {
-    const div = document.getElementById("trainerListaWydarzen");
-    if (div) div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
-  }
-};
-
 async function trainerPokazZawodnicy() {
   goToView("trainerZawodnicyView");
 
@@ -8153,27 +8141,60 @@ function trainerOpenPlayerGroupsEdit_() {
   if (el) el.textContent = label;
 }
   
+// =================== TRAINER / EVENTS LIST ===================
+
+// MUSI być globalne dla onclick w HTML
+window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
+  goToView("trainerWydarzeniaView");
+
+  const div = document.getElementById("trainerListaWydarzen");
+  if (div) {
+    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie wydarzeń...</div>";
+  }
+
+  try {
+    const lista = await apiClubGet("treningiTrener", {
+      grupa: window.grupyTrenera || ""
+    });
+
+    renderTreningiTrainer(lista);
+
+  } catch (e) {
+    if (div) {
+      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+    }
+  }
+};
+
 function renderTreningiTrainer(lista) {
   const div = document.getElementById("trainerListaWydarzen");
-  if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
+  if (!div) return;
 
-  // ✅ Globalna mapa eventów dla popupu edycji
+  if (!Array.isArray(lista) || !lista.length) {
+    div.innerHTML = "<p>Brak wydarzeń</p>";
+    return;
+  }
+
+  // Globalna mapa eventów dla popupu edycji
   window.__trainerEventsByKey = {};
 
-  // parser "dd.mm.yyyy" albo "dd-mm-yyyy" -> "yyyy-mm-dd"
+  // Globalna mapa trybu wydarzenia dla listy zapisanych/powołanych
+  window.__trainerEventModeById = {};
+
   function toISO_(dataTxt) {
     const s = String(dataTxt || "").trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
     const m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
     if (!m) return "";
+
     const dd = String(m[1]).padStart(2, "0");
     const mm = String(m[2]).padStart(2, "0");
     const yyyy = m[3];
+
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // ✅ SORTOWANIE wydarzeń po dacie i godzinie
   const sortedLista = [...lista].sort((a, b) => {
     const da = toISO_(a.data);
     const db = toISO_(b.data);
@@ -8188,7 +8209,18 @@ function renderTreningiTrainer(lista) {
 
   div.innerHTML = sortedLista.map(t => {
     const key = `${t.miesiac}-${t.czasCol}`;
+    const eventId = String(t.id || "").trim();
     const dataISO = toISO_(t.data);
+
+    const isPowolanie = !!t.powolaniaMode;
+    const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
+    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
+    const listId = eventId || key;
+
+    window.__trainerEventModeById[listId] = {
+      isPowolanie,
+      label: isPowolanie ? "powołanych" : "zapisanych"
+    };
 
     window.__trainerEventsByKey[key] = {
       key,
@@ -8197,81 +8229,110 @@ function renderTreningiTrainer(lista) {
       dataISO,
       start: String(t.godzStart || ""),
       end: String(t.godzKoniec || ""),
-      rodzaj: String(t.rodzaj || ""),
+      rodzaj: String(t.rodzaj || "")
     };
 
     return `
       <div class="card" data-event-id="${key}">
-        <b>${t.rodzaj}</b> ${t.data} (${t.dzien})<br>
-        Godzina: <b>${t.godzStart}</b> – <b>${t.godzKoniec}</b><br>
-        Trener: <b>${t.trener || "—"}</b> | Zapisanych: ${t.zapisanych}<br><br>
+        <b>${t.rodzaj || ""}</b> ${t.data || ""} (${t.dzien || ""})<br>
+        Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+        Trener: <b>${t.trener || "—"}</b> | ${countLabel}: ${t.zapisanych ?? 0}<br><br>
 
         <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="btn" onclick="trainerToggleZapisani('${t.id}')">👥 Zapisani</button>
-          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">✏️ Edytuj</button>
-          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">🗑️ Usuń</button>
+          <button class="btn" onclick="trainerToggleZapisani('${listId}')">
+            ${toggleLabel}
+          </button>
+
+          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
+            ✏️ Edytuj
+          </button>
+
+          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
+            🗑️ Usuń
+          </button>
         </div>
 
-        <div id="trainer-zapisani-${t.id}" class="hidden"></div>
+        <div id="trainer-zapisani-${listId}" class="hidden"></div>
       </div>
     `;
-  }).join('');
+  }).join("");
 }
 
 async function trainerToggleZapisani(id) {
   const box = document.getElementById(`trainer-zapisani-${id}`);
   if (!box) return;
 
-  if (!box.classList.contains('hidden')) {
-    box.classList.add('hidden');
+  if (!box.classList.contains("hidden")) {
+    box.classList.add("hidden");
     return;
   }
 
-  box.classList.remove('hidden');
+  const mode = window.__trainerEventModeById && window.__trainerEventModeById[id]
+    ? window.__trainerEventModeById[id]
+    : { isPowolanie: false, label: "zapisanych" };
+
+  const isPowolanie = !!mode.isPowolanie;
+
+  box.classList.remove("hidden");
   box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
 
   try {
-    const lista = await apiClubGet("zapisani", { treningId: id });
+    const lista = await apiClubGet("zapisani", {
+      treningId: id
+    });
 
     if (!Array.isArray(lista) || !lista.length) {
-      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      box.innerHTML = `<div class="card" style="background:#111;">Brak ${isPowolanie ? "powołanych" : "zapisanych"}</div>`;
       return;
     }
 
+    const title = isPowolanie ? "Lista powołanych:" : "Lista zapisanych:";
+
     box.innerHTML = `<div class="card" style="background:#111;">
-      <b>Lista zapisanych:</b>
+      <b>${title}</b>
       <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
         ${lista.map(p => {
           const nazwisko = String(p?.nazwisko || "").trim();
+          const nr = String(p?.numer || p?.nr || p?.number || "").trim();
           const hasAccepted = typeof p?.accepted === "boolean";
 
+          // Zwykłe wydarzenie — bez statusu accepted
           if (!hasAccepted) {
             return `
-              <li style="display:flex;align-items:center;">
-                <span style="display:inline-block;min-width:230px;color:#fff;">${nazwisko}</span>
+              <li data-player-no="${nr}" style="display:flex;align-items:center;">
+                <span style="display:inline-block;min-width:230px;color:#fff;">
+                  ${nazwisko}
+                </span>
               </li>
             `;
           }
 
+          // Powołanie zaakceptowane
           if (p.accepted) {
             return `
-              <li style="display:flex;align-items:center;">
-                <span style="display:inline-block;min-width:230px;color:#fff;font-weight:700;">${nazwisko}</span>
+              <li data-player-no="${nr}" data-accepted="1" style="display:flex;align-items:center;">
+                <span style="display:inline-block;min-width:230px;color:#fff;font-weight:700;">
+                  ${nazwisko}
+                </span>
                 <span style="color:#81c784;font-weight:700;">✅</span>
               </li>
             `;
           }
 
+          // Powołanie niezaakceptowane / rezygnacja
           return `
-            <li style="display:flex;align-items:center;">
-              <span style="display:inline-block;min-width:230px;color:rgba(255,255,255,.42);">${nazwisko}</span>
+            <li data-player-no="${nr}" data-accepted="0" style="display:flex;align-items:center;">
+              <span style="display:inline-block;min-width:230px;color:rgba(255,255,255,.42);">
+                ${nazwisko}
+              </span>
             </li>
           `;
-        }).join('')}
+        }).join("")}
       </ul>
     </div>`;
-  } catch {
-    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+
+  } catch (e) {
+    box.innerHTML = `<div class="card" style="background:#700;">Błąd pobierania listy</div>`;
   }
 }
 
