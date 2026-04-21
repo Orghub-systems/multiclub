@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.3';
+  window.APP_BUILD = 'APP v2.9.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7558,53 +7558,63 @@ async function toggleZapisani(id) {
   const box = document.getElementById(`zapisani-${id}`);
   if (!box) return;
 
-  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+  if (!box.classList.contains('hidden')) {
+    box.classList.add('hidden');
+    return;
+  }
 
   box.classList.remove('hidden');
   box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
 
   try {
     const lista = await apiClubGet("zapisani", { treningId: id });
+
     if (!Array.isArray(lista) || !lista.length) {
       box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
       return;
     }
+
     box.innerHTML = `<div class="card" style="background:#111;">
       <b>Lista zapisanych:</b>
       <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
         ${lista.map(p => {
           const nazwisko = String(p?.nazwisko || "").trim();
+          const nr = String(p?.numer || p?.nr || p?.number || "").trim();
           const hasAccepted = typeof p?.accepted === "boolean";
-        
+
           if (!hasAccepted) {
             return `
-              <li style="display:flex;align-items:center;">
-                <span style="display:inline-block;min-width:230px;color:#fff;">${nazwisko}</span>
+              <li data-player-no="${nr}" style="display:flex;align-items:center;">
+                <span class="powolany-name" style="display:inline-block;min-width:230px;color:#fff;">${nazwisko}</span>
+                <span class="powolany-check"></span>
               </li>
             `;
           }
-        
+
           if (p.accepted) {
             return `
-              <li style="display:flex;align-items:center;">
-                <span style="display:inline-block;min-width:230px;color:#fff;font-weight:700;">${nazwisko}</span>
-                <span style="color:#81c784;font-weight:700;">✅</span>
+              <li data-player-no="${nr}" data-accepted="1" style="display:flex;align-items:center;">
+                <span class="powolany-name" style="display:inline-block;min-width:230px;color:#fff;font-weight:700;">${nazwisko}</span>
+                <span class="powolany-check" style="color:#81c784;font-weight:700;">✅</span>
               </li>
             `;
           }
-        
+
           return `
-            <li style="display:flex;align-items:center;">
-              <span style="display:inline-block;min-width:230px;color:rgba(255,255,255,.42);">${nazwisko}</span>
+            <li data-player-no="${nr}" data-accepted="0" style="display:flex;align-items:center;">
+              <span class="powolany-name" style="display:inline-block;min-width:230px;color:rgba(255,255,255,.42);">${nazwisko}</span>
+              <span class="powolany-check" style="color:#81c784;font-weight:700;"></span>
             </li>
           `;
         }).join('')}
       </ul>
     </div>`;
+
   } catch {
     box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
   }
 }
+  
 async function zapiszSie(id) {
   const btn = document.getElementById(`btn-${id}`);
   const wypiszBtn = document.getElementById(`wypisz-${id}`);
@@ -7626,7 +7636,7 @@ async function zapiszSie(id) {
         updatePowolanieUiLocal_(id, true);
 
         if (box && !box.classList.contains("hidden")) {
-          await odswiezListeZapisanych(id);
+          
         }
 
         return;
@@ -7634,7 +7644,7 @@ async function zapiszSie(id) {
 
       // ZWYKŁY TRYB — zostawiamy dotychczasowe odświeżenie listy wydarzeń
       if (box && !box.classList.contains("hidden")) {
-        await odswiezListeZapisanych(id);
+        
       }
 
       const lista = await apiClubGet("treningi", {
@@ -7731,6 +7741,36 @@ async function odswiezListeZapisanych(id) {
     box.innerHTML = '<div class="card" style="background:#700;">Błąd odświeżania</div>';
   }
 }
+
+ function updatePowolanyNaLiscieLocal_(treningId, numer, accepted) {
+  const box = document.getElementById(`zapisani-${treningId}`);
+  if (!box || box.classList.contains("hidden")) return;
+
+  const nr = String(numer || "").trim();
+  if (!nr) return;
+
+  const row = box.querySelector(`[data-player-no="${CSS.escape(nr)}"]`);
+  if (!row) return;
+
+  const nameEl = row.querySelector(".powolany-name");
+  const checkEl = row.querySelector(".powolany-check");
+
+  if (nameEl) {
+    if (accepted) {
+      nameEl.style.color = "#fff";
+      nameEl.style.fontWeight = "700";
+    } else {
+      nameEl.style.color = "rgba(255,255,255,.42)";
+      nameEl.style.fontWeight = "";
+    }
+  }
+
+  if (checkEl) {
+    checkEl.textContent = accepted ? "✅" : "";
+  }
+
+  row.dataset.accepted = accepted ? "1" : "0";
+} 
 
 async function pokazStatystyki() {
   goToView("statsView");
