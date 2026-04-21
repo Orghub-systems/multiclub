@@ -8,7 +8,6 @@ const CACHE_NAME = "orghub-static-v" + SW_VERSION;
 
 const STATIC_ASSETS = [
   "/",
-  "/index.html",
   "/icon-192.png",
   "/icon-512.png",
 ];
@@ -62,24 +61,22 @@ self.addEventListener("fetch", (e) => {
       url.pathname.endsWith(".svg")
     );
 
-  // HTML / JS / CSS -> network first
-  if (isAppShell) {
-    e.respondWith((async () => {
-      try {
-        const resp = await fetch(e.request);
-        if (resp && resp.status === 200) {
-          const copy = resp.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
+    // HTML / JS / CSS -> zawsze z sieci, bez cache.
+    // To jest kluczowe: index.html zawiera APP_BUILD i nie może zostać stary.
+    if (isAppShell || e.request.mode === "navigate") {
+      e.respondWith((async () => {
+        try {
+          return await fetch(e.request, { cache: "no-store" });
+        } catch (err) {
+          // Nie oddajemy starego index.html z cache, bo to blokuje aktualizacje.
+          return new Response("Brak połączenia z aplikacją. Odśwież stronę po chwili.", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" }
+          });
         }
-        return resp;
-      } catch (err) {
-        const cached = await caches.match(e.request);
-        if (cached) return cached;
-        throw err;
-      }
-    })());
-    return;
-  }
+      })());
+      return;
+    }
 
   // obrazki / ikony -> cache first
   if (isImageAsset) {
