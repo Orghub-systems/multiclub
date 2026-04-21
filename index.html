@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.8';
+  window.APP_BUILD = 'APP v2.77.9';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3359,6 +3359,11 @@ window.addEventListener("popstate", (event) => {
     // popup admin: sposób rozliczania zawodnika
   if (isAdminRozliczPopupOpen_() && !(state && state.modal === "adminRozliczModal")) {
     hideAdminRozliczPopup_();
+  }
+
+    // popup zawodnika: Zapłać teraz
+  if (isPlayerPaymentPopupOpen_() && !(state && state.modal === "playerPaymentPopup")) {
+    hidePlayerPaymentPopup_();
   }
 
   // popupy edycji wydarzenia
@@ -6628,6 +6633,32 @@ function renderClubAd(ad) {
 
 /* =================== 110 PLAYER PAYMENT POPUP / QR / PRZELEWY =================== */  
 /* =================== Generator do przelewów =================== */
+
+function isPlayerPaymentPopupOpen_() {
+  const popup = document.getElementById("playerPaymentPopup");
+  return !!(popup && popup.style.display !== "none" && popup.style.display !== "");
+}
+
+function hidePlayerPaymentPopup_() {
+  const popup = document.getElementById("playerPaymentPopup");
+  if (popup) popup.style.display = "none";
+
+  const msgEl = document.getElementById("playerPaymentPopupMsg");
+  if (msgEl) msgEl.textContent = "";
+
+  const qrImg = document.getElementById("playerPaymentPopupQr");
+  const placeholder = document.getElementById("playerPaymentPopupQrPlaceholder");
+
+  if (qrImg) {
+    qrImg.style.display = "none";
+    qrImg.removeAttribute("src");
+  }
+
+  if (placeholder) {
+    placeholder.style.display = "block";
+    placeholder.textContent = "Ładowanie QR...";
+  }
+}
   
 async function playerPayNow(nazwa, kwota) {
   const popup = document.getElementById("playerPaymentPopup");
@@ -6660,6 +6691,7 @@ async function playerPayNow(nazwa, kwota) {
   });
 
   popup.style.display = "flex";
+  pushAppModalHistoryState_("playerPaymentPopup");
 
   let branding;
   try {
