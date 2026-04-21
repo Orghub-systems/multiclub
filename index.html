@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.10';
+  window.APP_BUILD = 'APP v2.77.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -10535,10 +10535,52 @@ function renderAdminClubGroupsView_() {
   box.innerHTML = rows.join("");
 }
 
+function setAdminGroupsViewBusy_(busy, text) {
+  const view = document.getElementById("adminGroupsView");
+  if (!view) return;
+
+  let info = document.getElementById("adminGroupsBusyInfo");
+
+  if (!info) {
+    info = document.createElement("div");
+    info.id = "adminGroupsBusyInfo";
+    info.className = "card";
+    info.style.margin = "10px 0 12px 0";
+    info.style.background = "#222";
+    info.style.textAlign = "center";
+    info.style.fontWeight = "800";
+
+    const list = document.getElementById("adminGroupsList");
+    if (list && list.parentNode) {
+      list.parentNode.insertBefore(info, list);
+    } else {
+      view.appendChild(info);
+    }
+  }
+
+  if (busy) {
+    info.textContent = text || "⏳ Ładuję konfigurację grup...";
+    info.classList.remove("hidden");
+
+    view.style.opacity = "0.55";
+    view.style.pointerEvents = "none";
+    view.style.filter = "grayscale(0.25)";
+  } else {
+    info.textContent = "";
+    info.classList.add("hidden");
+
+    view.style.opacity = "";
+    view.style.pointerEvents = "";
+    view.style.filter = "";
+  }
+}
+  
 function openAdminClubGroupsView() {
   adminClubGroupsState_ = loadClubGroupsStateFromCache_();
   renderAdminClubGroupsView_();
   goToView("adminGroupsView");
+
+  setAdminGroupsViewBusy_(true, "⏳ Ładuję konfigurację grup...");
 
   prefetchClubGroupsConfig_()
     .then(() => {
@@ -10549,8 +10591,15 @@ function openAdminClubGroupsView() {
     })
     .catch(e => {
       console.warn("openAdminClubGroupsView refresh error:", e);
+    })
+    .finally(() => {
+      const view = document.getElementById("adminGroupsView");
+      if (view && !view.classList.contains("hidden")) {
+        setAdminGroupsViewBusy_(false);
+      }
     });
 }
+  
 async function adminSaveClubGroupsLocal_() {
   if (adminClubGroupsSaving_) return;
 
