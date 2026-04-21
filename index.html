@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79.6';
+  window.APP_BUILD = 'APP v2.79.7';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7453,14 +7453,19 @@ function renderTreningi(lista) {
     const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
     const countValue = t.zapisanych ?? 0;
 
-    const mainBtnDisabled = isPowolanie ? acceptedPowolanie : !!t.zapisany;
+    const mainBtnDisabled = isPowolanie ? false : !!t.zapisany;
+    
     const mainBtnText = isPowolanie
-      ? (acceptedPowolanie ? "Powołanie zaakceptowane ✅" : "Akceptuję powołanie")
+      ? (acceptedPowolanie ? "Rezygnuję z powołania" : "Akceptuję powołanie")
       : (t.zapisany ? "Zapisano ✅" : "Zapisz się");
-
+    
     const mainBtnBg = isPowolanie
-      ? (acceptedPowolanie ? "#2e7d32" : "#1565c0")
+      ? (acceptedPowolanie ? "#8b0000" : "#1565c0")
       : (t.zapisany ? "#2e7d32" : "#c62828");
+    
+    const mainBtnAction = isPowolanie && acceptedPowolanie
+      ? `wypiszSie('${t.id}')`
+      : `zapiszSie('${t.id}')`;
 
     const statusLine = isPowolanie
       ? `<span style="display:inline-block;margin-top:4px;color:${acceptedPowolanie ? "#81c784" : "#90caf9"};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${acceptedPowolanie ? "Zaakceptowano" : "Oczekuje na akceptację"}</span><br>`
@@ -7492,13 +7497,13 @@ function renderTreningi(lista) {
         </p>
 
         <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-          <button 
-            id="btn-${t.id}" 
-            ${mainBtnDisabled ? 'disabled' : ''} 
-            style="background:${mainBtnBg};color:white;border:none;"
-            onclick="zapiszSie('${t.id}')">
-            ${mainBtnText}
-          </button>
+      <button 
+        id="btn-${t.id}" 
+        ${mainBtnDisabled ? 'disabled' : ''} 
+        style="background:${mainBtnBg};color:white;border:none;"
+        onclick="${mainBtnAction}">
+        ${mainBtnText}
+      </button>
 
           ${secondBtnHtml}
 
