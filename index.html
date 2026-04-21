@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.7';
+  window.APP_BUILD = 'APP v2.77.8';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -10640,11 +10640,16 @@ if (!r || !(r.success || r.ok)) {
 console.log("✅ adminSetRozliczanie:", r);
 if (msg) msg.textContent = `✅ Zapis: ${r.kodWritten} (odczyt: ${r.kodReadBack}) w ${r.cell} / ssid=${r.adminSsid}`;
 
-adminCloseRozliczPopup();
+console.log("✅ adminSetRozliczanie:", r);
 
-setTimeout(async () => {
-  await adminOpenPayments();
-}, 150);
+const kodFinal = String(r.kodReadBack || r.kodWritten || kod || "").trim().toUpperCase();
+
+if (msg) {
+  msg.textContent = "✅ Zapisano: " + getAdminRozliczanieLabel_(kodFinal);
+}
+
+updateAdminRozliczanieUiAfterSave_(kodFinal);
+adminCloseRozliczPopup();
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
@@ -10677,9 +10682,39 @@ async function adminOpenPayments() {
       ? String(resRozl.kod || resRozl.value).trim().toUpperCase()
       : "S";
 
+    // zapamiętujemy ostatnie dane płatności,
+    // żeby po zmianie sposobu rozliczania nie robić pełnego ładowania ekranu
+    window.__adminLastPaymentsRes = resPay;
+
     renderAdminPayments_(resPay);
   } catch (e) {
     if (body) body.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+  }
+}
+
+function getAdminRozliczanieLabel_(kod) {
+  const k = String(kod || "").trim().toUpperCase();
+
+  if (k === "S") return "Składka członkowska";
+  if (k === "O") return "Uczestnik okazjonalny";
+  if (k === "B") return "Uczestnik bezpłatny";
+
+  return "Nieznany";
+}
+
+function updateAdminRozliczanieUiAfterSave_(kod) {
+  const k = String(kod || "").trim().toUpperCase() || "S";
+
+  window.__adminRozliczKod = k;
+
+  // Najlepszy wariant: przerysuj ekran z ostatnich danych, bez loadera.
+  if (window.__adminLastPaymentsRes && typeof renderAdminPayments_ === "function") {
+    renderAdminPayments_(window.__adminLastPaymentsRes);
+  }
+
+  const msg = document.getElementById("adminPaymentsMsg");
+  if (msg) {
+    msg.textContent = "✅ Zmieniono sposób rozliczania: " + getAdminRozliczanieLabel_(k);
   }
 }
   
