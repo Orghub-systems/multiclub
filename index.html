@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79.2';
+  window.APP_BUILD = 'APP v2.79.3';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7798,7 +7798,7 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   window.__trainerSelectedNr = String(nr || "").trim();
   window.__trainerSelectedNazwisko = String(nazwisko || "").trim();
 
-    // Mostek do istniejącego mechanizmu adminOpenGroups()
+  // Mostek do istniejącego mechanizmu adminOpenGroups()
   window.__adminSelectedNr = window.__trainerSelectedNr;
   window.__adminSelectedNazwisko = window.__trainerSelectedNazwisko;
   window.__adminSelectedJoinDate = "";
@@ -7817,35 +7817,106 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
 
   if (joinEl) joinEl.textContent = "—";
   if (grupyEl) grupyEl.textContent = "—";
-  if (statsEl) statsEl.textContent = "—";
-  
+  if (statsEl) statsEl.textContent = "Ładuję statystyki...";
+  if (msg) msg.textContent = "";
+
+  const nrSafe = window.__trainerSelectedNr;
+
+  // Statystyki lecą osobno i nie blokują ekranu zawodnika.
+  (async () => {
+    try {
+      const statsRes = await apiClubGet("statystyki", {
+        numer: nrSafe
+      });
+
+      // Jeśli użytkownik kliknął już innego zawodnika, nie nadpisujemy starego ekranu.
+      if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+
+      let suma = 0;
+
+      if (Array.isArray(statsRes)) {
+        suma = statsRes.reduce((acc, row) => {
+          if (!row) return acc;
+
+          const possibleValues = [
+            row.obecnosc,
+            row.obecnosci,
+            row.suma,
+            row.count,
+            row.liczba,
+            row.total
+          ];
+
+          for (const v of possibleValues) {
+            const n = Number(v);
+            if (!isNaN(n) && n > 0) return acc + n;
+          }
+
+          return acc;
+        }, 0);
+      } else if (statsRes && typeof statsRes === "object") {
+        const possibleValues = [
+          statsRes.obecnosc,
+          statsRes.obecnosci,
+          statsRes.suma,
+          statsRes.count,
+          statsRes.liczba,
+          statsRes.total
+        ];
+
+        for (const v of possibleValues) {
+          const n = Number(v);
+          if (!isNaN(n) && n > 0) {
+            suma += n;
+          }
+        }
+
+        if (!suma && Array.isArray(statsRes.items)) {
+          suma = statsRes.items.reduce((acc, row) => {
+            const n = Number(row?.obecnosc || row?.obecnosci || row?.suma || row?.count || 0);
+            return acc + (isNaN(n) ? 0 : n);
+          }, 0);
+        }
+      }
+
+      if (statsEl) {
+        statsEl.textContent = suma ? `${suma} obecności łącznie` : "Brak obecności";
+      }
+
+    } catch (e) {
+      console.warn("trainer stats load error:", e);
+
+      if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+
+      if (statsEl) statsEl.textContent = "Nie udało się pobrać statystyk";
+    }
+  })();
+
+  // Dane podstawowe + grupy ładują główny widok.
   setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
 
   try {
-    const nrSafe = window.__trainerSelectedNr;
-
-    const [infoRes, grupyRes, statsRes] = await Promise.all([
+    const [infoRes, grupyRes] = await Promise.all([
       apiClubPost({
         action: "adminPlayerInfo",
         numer: nrSafe
       }),
       apiClubGet("adminGrupy", {
         numer: nrSafe
-      }),
-      apiClubGet("statystyki", {
-        numer: nrSafe
       })
     ]);
 
-      // Przygotuj cache dla istniejącego ekranu edycji grup.
-    // Dzięki temu po kliknięciu "Edytuj grupy" ekran grup nie musi dopiero pobierać danych.
+    if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+
+    // Przygotuj cache dla istniejącego ekranu edycji grup.
+    // Dzięki temu po kliknięciu "Edytuj grupy" ekran grup ma dane gotowe.
     if (!window.__adminCache) window.__adminCache = {};
     if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
-    
+
     if (infoRes && infoRes.success !== false) {
       window.__adminCache[nrSafe].info = infoRes;
     }
-    
+
     if (grupyRes && grupyRes.success !== false) {
       window.__adminCache[nrSafe].grupy = grupyRes;
     }
@@ -7863,6 +7934,8 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
       if (grupyEl) grupyEl.textContent = "—";
     } else {
       const grupyRaw = String(grupyRes.grupy || "").trim();
+      window.__trainerSelectedGroupsRaw = grupyRaw;
+
       const grupyLabel = grupyRaw
         ? grupyRaw
             .split(",")
@@ -7874,25 +7947,11 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
       if (grupyEl) grupyEl.textContent = grupyLabel;
     }
 
-    if (Array.isArray(statsRes)) {
-      const suma = statsRes.reduce((acc, row) => {
-        const val = Number(row?.obecnosc || row?.suma || row?.count || 0);
-        return acc + (isNaN(val) ? 0 : val);
-      }, 0);
-
-      if (statsEl) statsEl.textContent = suma ? `${suma} obecności łącznie` : "Brak obecności";
-    } else if (statsRes && statsRes.success === false) {
-      if (statsEl) statsEl.textContent = "—";
-    } else {
-      if (statsEl) statsEl.textContent = "Dostępne w statystykach";
-    }
-
   } catch (e) {
-    console.warn("trainerOpenZawodnik_ error:", e);
+    console.warn("trainerOpenZawodnik_ basic data error:", e);
 
     if (joinEl) joinEl.textContent = "—";
     if (grupyEl) grupyEl.textContent = "—";
-    if (statsEl) statsEl.textContent = "—";
     if (msg) msg.textContent = "❌ Błąd pobierania danych zawodnika.";
 
   } finally {
