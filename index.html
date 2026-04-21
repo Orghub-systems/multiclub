@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79';
+  window.APP_BUILD = 'APP v2.79.1';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7769,6 +7769,31 @@ async function trainerPokazZawodnicy() {
   }
 }
 
+function setTrainerZawodnikViewBusy_(busy, text) {
+  const view = document.getElementById("trainerZawodnikView");
+  const msg = document.getElementById("trainerZawodnikMsg");
+
+  if (!view) return;
+
+  if (busy) {
+    view.style.opacity = "0.55";
+    view.style.pointerEvents = "none";
+    view.style.filter = "grayscale(0.25)";
+
+    if (msg) {
+      msg.textContent = text || "Ładuję dane zawodnika...";
+    }
+  } else {
+    view.style.opacity = "";
+    view.style.pointerEvents = "";
+    view.style.filter = "";
+
+    if (msg) {
+      msg.textContent = "";
+    }
+  }
+}
+  
 async function trainerOpenZawodnik_(nr, nazwisko) {
   window.__trainerSelectedNr = String(nr || "").trim();
   window.__trainerSelectedNazwisko = String(nazwisko || "").trim();
@@ -7785,10 +7810,11 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     title.textContent = `Zawodnik #${window.__trainerSelectedNr} — ${window.__trainerSelectedNazwisko || "—"}`;
   }
 
-  if (joinEl) joinEl.textContent = "⏳ Ładowanie...";
-  if (grupyEl) grupyEl.textContent = "⏳ Ładowanie...";
-  if (statsEl) statsEl.textContent = "⏳ Ładowanie...";
-  if (msg) msg.textContent = "";
+  if (joinEl) joinEl.textContent = "—";
+  if (grupyEl) grupyEl.textContent = "—";
+  if (statsEl) statsEl.textContent = "—";
+  
+  setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
 
   try {
     const nrSafe = window.__trainerSelectedNr;
@@ -7850,6 +7876,9 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     if (grupyEl) grupyEl.textContent = "—";
     if (statsEl) statsEl.textContent = "—";
     if (msg) msg.textContent = "❌ Błąd pobierania danych zawodnika.";
+
+  } finally {
+    setTrainerZawodnikViewBusy_(false);
   }
 }
   
@@ -10461,7 +10490,7 @@ async function adminSaveGrupyLocal() {
       infoGrupyEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
     }
 
-    if (msg) msg.textContent = "✅ Zapisane: " + (grupyCsv || "—");
+    if (msg) msg.textContent = "✅ Zmiany zostały zapisane";
 
     (async () => {
       try {
