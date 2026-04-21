@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.1';
+  window.APP_BUILD = 'APP v2.9.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7613,23 +7613,41 @@ async function zapiszSie(id) {
 }
 
 async function wypiszSie(id) {
-  const btn = document.getElementById(`wypisz-${id}`);
-  const zapiszBtn = document.getElementById(`btn-${id}`);
+  const btn =
+    document.getElementById(`wypisz-${id}`) ||
+    document.getElementById(`btn-${id}`);
+
   const box = document.getElementById(`zapisani-${id}`);
 
-  btn.classList.add("loading");
+  if (btn) btn.classList.add("loading");
+
   try {
-    const r = await apiClubGet("wypisz", { numer: numerZalogowanego, treningId: id });
-    if (r.ok) {
-      zapiszBtn.innerText = "Zapisz się";
-      zapiszBtn.disabled = false;
-      btn.disabled = true;
-      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
-    } else alert(r.message);
+    const r = await apiClubGet("wypisz", {
+      numer: numerZalogowanego,
+      treningId: id
+    });
+
+    if (r && r.ok) {
+      if (box && !box.classList.contains("hidden")) {
+        await odswiezListeZapisanych(id);
+      }
+
+      const lista = await apiClubGet("treningi", {
+        grupa: grupaZalogowanego,
+        numer: numerZalogowanego
+      });
+
+      renderTreningi(lista);
+      return;
+    }
+
+    alert((r && r.message) ? r.message : "Nie udało się wypisać.");
+
   } catch (err) {
     alert("Błąd połączenia: " + err);
+
   } finally {
-    btn.classList.remove("loading");
+    if (btn) btn.classList.remove("loading");
   }
 }
 
