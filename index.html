@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79.1';
+  window.APP_BUILD = 'APP v2.79.2';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7798,6 +7798,11 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   window.__trainerSelectedNr = String(nr || "").trim();
   window.__trainerSelectedNazwisko = String(nazwisko || "").trim();
 
+    // Mostek do istniejącego mechanizmu adminOpenGroups()
+  window.__adminSelectedNr = window.__trainerSelectedNr;
+  window.__adminSelectedNazwisko = window.__trainerSelectedNazwisko;
+  window.__adminSelectedJoinDate = "";
+
   goToView("trainerZawodnikView");
 
   const title = document.getElementById("trainerZawodnikTitle");
@@ -7831,6 +7836,19 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
         numer: nrSafe
       })
     ]);
+
+      // Przygotuj cache dla istniejącego ekranu edycji grup.
+    // Dzięki temu po kliknięciu "Edytuj grupy" ekran grup nie musi dopiero pobierać danych.
+    if (!window.__adminCache) window.__adminCache = {};
+    if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
+    
+    if (infoRes && infoRes.success !== false) {
+      window.__adminCache[nrSafe].info = infoRes;
+    }
+    
+    if (grupyRes && grupyRes.success !== false) {
+      window.__adminCache[nrSafe].grupy = grupyRes;
+    }
 
     if (!infoRes || infoRes.success === false) {
       if (joinEl) joinEl.textContent = "—";
