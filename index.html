@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.78';
+  window.APP_BUILD = 'APP v2.79';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7853,6 +7853,48 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   }
 }
   
+function trainerOpenPlayerGroupsEdit_() {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const nazwisko = String(window.__trainerSelectedNazwisko || "").trim();
+
+  if (!nr) {
+    const msg = document.getElementById("trainerZawodnikMsg");
+    if (msg) msg.textContent = "❌ Brak numeru zawodnika.";
+    return;
+  }
+
+  // Mostek: wykorzystujemy istniejący mechanizm admina do edycji grup.
+  window.__adminSelectedNr = nr;
+  window.__adminSelectedNazwisko = nazwisko;
+  window.__adminSelectedJoinDate = "";
+
+  if (!window.__adminCache) window.__adminCache = {};
+  if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
+
+  adminOpenGroups();
+}
+
+  function trainerUpdateSelectedGroupsLabel_(grupyCsv) {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const adminNr = String(window.__adminSelectedNr || "").trim();
+
+  if (!nr || nr !== adminNr) return;
+
+  const raw = String(grupyCsv || "").trim();
+  window.__trainerSelectedGroupsRaw = raw;
+
+  const label = raw
+    ? raw
+        .split(",")
+        .map(x => getClubGroupLabel_(x.trim()))
+        .filter(Boolean)
+        .join(", ")
+    : "—";
+
+  const el = document.getElementById("trainerInfoGrupy");
+  if (el) el.textContent = label;
+}
+  
 function renderTreningiTrainer(lista) {
   const div = document.getElementById("trainerListaWydarzen");
   if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
@@ -10412,6 +10454,8 @@ async function adminSaveGrupyLocal() {
       window.__adminCache[nr].info.grupy = grupyCsv;
     }
 
+    trainerUpdateSelectedGroupsLabel_(grupyCsv);
+    
     const infoGrupyEl = document.getElementById("adminInfoGrupy");
     if (infoGrupyEl) {
       infoGrupyEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
