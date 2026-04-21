@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.6';
+  window.APP_BUILD = 'APP v2.9.7';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8210,12 +8210,25 @@ function renderTreningiTrainer(lista) {
   div.innerHTML = sortedLista.map(t => {
     const key = `${t.miesiac}-${t.czasCol}`;
     const eventId = String(t.id || "").trim();
+    const listId = eventId || key;
     const dataISO = toISO_(t.data);
 
-    const isPowolanie = !!t.powolaniaMode;
+    const isPowolanie = !!(
+      t.powolaniaMode ||
+      t.powolanieMode ||
+      t.trybPowolania ||
+      String(t.tryb || "").toLowerCase().includes("powo")
+    );
+
     const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
     const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
-    const listId = eventId || key;
+
+    const countValue =
+      t.zapisanych ??
+      t.powolanych ??
+      t.liczbaPowołanych ??
+      t.liczbaPowolanych ??
+      0;
 
     window.__trainerEventModeById[listId] = {
       isPowolanie,
@@ -8234,9 +8247,13 @@ function renderTreningiTrainer(lista) {
 
     return `
       <div class="card" data-event-id="${key}">
-        <b>${t.rodzaj || ""}</b> ${t.data || ""} (${t.dzien || ""})<br>
-        Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
-        Trener: <b>${t.trener || "—"}</b> | ${countLabel}: ${t.zapisanych ?? 0}<br><br>
+        <p>
+          <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
+          ${t.dataKoniec && t.dataKoniec !== t.data ? `Do: <b>${t.dataKoniec}</b><br>` : ""}
+          Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+          ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
+          Trener: <b>${t.trener || "—"}</b> &nbsp;&nbsp; ${countLabel}: ${countValue}<br>
+        </p>
 
         <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
           <button class="btn" onclick="trainerToggleZapisani('${listId}')">
