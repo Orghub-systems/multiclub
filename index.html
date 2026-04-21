@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77.12';
+  window.APP_BUILD = 'APP v2.78';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -989,6 +989,35 @@ input[type="number"] {
       <div id="trainerListaZawodnikow">Ładowanie...</div>
       <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
     </div>
+
+  <!-- TRAINER PLAYER DETAILS VIEW
+     Szczegóły zawodnika widoczne dla trenera -->
+
+<div id="trainerZawodnikView" class="container hidden">
+  <h1 id="trainerZawodnikTitle">Zawodnik</h1>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Data dołączenia</div>
+    <div id="trainerInfoJoinDate" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Grupy</div>
+    <div id="trainerInfoGrupy" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+    <button class="full-btn" style="margin-top:12px;" onclick="trainerOpenPlayerGroupsEdit_()">
+      Edytuj grupy
+    </button>
+  </div>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Statystyki</div>
+    <div id="trainerInfoStats" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
+  </div>
+
+  <p id="trainerZawodnikMsg" style="margin-top:10px;"></p>
+
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
 
 <!-- TRAINER EVENTS VIEW
      Lista wydarzeń zarządzanych przez trenera -->
@@ -7698,24 +7727,76 @@ window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
 
 async function trainerPokazZawodnicy() {
   goToView("trainerZawodnicyView");
+
   const box = document.getElementById("trainerListaZawodnikow");
+  if (!box) return;
+
   box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
 
   try {
     const lista = await apiClubGet("listaZawodnikow", { grupy: window.grupyTrenera || "" });
+
     if (!Array.isArray(lista) || lista.length === 0) {
       box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
       return;
     }
 
-    box.innerHTML = lista.map(z => `
-      <div class="card" style="text-align:left;">
-        <b>#${z.nr}</b> — ${z.nazwisko}<br>
-        <span style="opacity:0.8;">${z.suma} treningów łącznie</span>
-      </div>
-    `).join('');
-  } catch {
+    box.innerHTML = lista.map(z => {
+      const nr = String(z.nr || "").trim();
+      const nazwisko = String(z.nazwisko || "").trim();
+
+      return `
+        <div
+          class="card"
+          onclick="trainerOpenZawodnik_(decodeURIComponent('${encodeURIComponent(nr)}'), decodeURIComponent('${encodeURIComponent(nazwisko)}'))"
+          style="
+            text-align:left;
+            cursor:pointer;
+            user-select:none;
+          "
+        >
+          <b>#${nr}</b> — ${nazwisko}
+          <div style="opacity:.65; font-size:13px; margin-top:6px;">
+            Kliknij, aby zobaczyć szczegóły
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (e) {
+    console.warn("trainerPokazZawodnicy error:", e);
     box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
+  }
+}
+
+function trainerOpenZawodnik_(nr, nazwisko) {
+  window.__trainerSelectedNr = String(nr || "").trim();
+  window.__trainerSelectedNazwisko = String(nazwisko || "").trim();
+
+  goToView("trainerZawodnikView");
+
+  const title = document.getElementById("trainerZawodnikTitle");
+  const joinEl = document.getElementById("trainerInfoJoinDate");
+  const grupyEl = document.getElementById("trainerInfoGrupy");
+  const statsEl = document.getElementById("trainerInfoStats");
+  const msg = document.getElementById("trainerZawodnikMsg");
+
+  if (title) {
+    title.textContent = `Zawodnik #${window.__trainerSelectedNr} — ${window.__trainerSelectedNazwisko || "—"}`;
+  }
+
+  if (joinEl) joinEl.textContent = "—";
+  if (grupyEl) grupyEl.textContent = "—";
+  if (statsEl) statsEl.textContent = "—";
+  if (msg) msg.textContent = "";
+
+  // Dane podepniemy w następnym kroku.
+}  
+
+  function trainerOpenPlayerGroupsEdit_() {
+  const msg = document.getElementById("trainerZawodnikMsg");
+  if (msg) {
+    msg.textContent = "ℹ️ Edycję grup zawodnika podepniemy w następnym kroku.";
   }
 }
   
