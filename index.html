@@ -10730,21 +10730,23 @@ function renderAdminPayments_(res) {
   }
 
   const items = Array.isArray(res.items) ? res.items : [];
-  if (items.length === 0) {
-    body.innerHTML = `<div class="card" style="background:#111;">Brak płatności do wyświetlenia</div>`;
-    return;
-  }
 
   const skladki = items.filter(x => x.typ === "skladka");
   const zajecia = items.filter(x => x.typ === "zajecia");
 
-  // ===== PRZYCISK ROZLICZANIA (NAD "Składki") =====
   const kod = String(window.__adminRozliczKod || "S").toUpperCase();
+
   const label =
     kod === "S" ? "Składka członkowska" :
     kod === "O" ? "Uczestnik okazjonalny" :
     kod === "B" ? "Uczestnik bezpłatny" :
     "Składka członkowska";
+
+  const emptyInfo = items.length === 0
+    ? `<div class="card" style="background:#111; margin-top:12px;">
+         Brak płatności do wyświetlenia
+       </div>`
+    : "";
 
   body.innerHTML = `
     <button class="full-btn" style="margin-top:10px;"
@@ -10752,8 +10754,10 @@ function renderAdminPayments_(res) {
       Sposób rozliczania: ${label}
     </button>
 
-    ${renderPaymentsSection_("Składki", skladki)}
-    ${renderPaymentsSection_("Zajęcia dodatkowe", zajecia)}
+    ${emptyInfo}
+
+    ${items.length ? renderPaymentsSection_("Składki", skladki) : ""}
+    ${items.length ? renderPaymentsSection_("Zajęcia dodatkowe", zajecia) : ""}
   `;
 
   if (msg) msg.textContent = "";
