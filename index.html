@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79.3';
+  window.APP_BUILD = 'APP v2.79.4';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7811,92 +7811,29 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   const statsEl = document.getElementById("trainerInfoStats");
   const msg = document.getElementById("trainerZawodnikMsg");
 
+  const nrSafe = window.__trainerSelectedNr;
+
   if (title) {
-    title.textContent = `Zawodnik #${window.__trainerSelectedNr} — ${window.__trainerSelectedNazwisko || "—"}`;
+    title.textContent = `Zawodnik #${nrSafe} — ${window.__trainerSelectedNazwisko || "—"}`;
   }
 
   if (joinEl) joinEl.textContent = "—";
   if (grupyEl) grupyEl.textContent = "—";
-  if (statsEl) statsEl.textContent = "Ładuję statystyki...";
   if (msg) msg.textContent = "";
 
-  const nrSafe = window.__trainerSelectedNr;
+  // Statystyki nie ładują się automatycznie — klik dopiero odpala endpoint.
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <button class="full-btn" type="button" onclick="trainerLoadSelectedPlayerStats_()">
+        Pokaż statystyki
+      </button>
+    `;
+  }
 
-  // Statystyki lecą osobno i nie blokują ekranu zawodnika.
-  (async () => {
-    try {
-      const statsRes = await apiClubGet("statystyki", {
-        numer: nrSafe
-      });
-
-      // Jeśli użytkownik kliknął już innego zawodnika, nie nadpisujemy starego ekranu.
-      if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
-
-      let suma = 0;
-
-      if (Array.isArray(statsRes)) {
-        suma = statsRes.reduce((acc, row) => {
-          if (!row) return acc;
-
-          const possibleValues = [
-            row.obecnosc,
-            row.obecnosci,
-            row.suma,
-            row.count,
-            row.liczba,
-            row.total
-          ];
-
-          for (const v of possibleValues) {
-            const n = Number(v);
-            if (!isNaN(n) && n > 0) return acc + n;
-          }
-
-          return acc;
-        }, 0);
-      } else if (statsRes && typeof statsRes === "object") {
-        const possibleValues = [
-          statsRes.obecnosc,
-          statsRes.obecnosci,
-          statsRes.suma,
-          statsRes.count,
-          statsRes.liczba,
-          statsRes.total
-        ];
-
-        for (const v of possibleValues) {
-          const n = Number(v);
-          if (!isNaN(n) && n > 0) {
-            suma += n;
-          }
-        }
-
-        if (!suma && Array.isArray(statsRes.items)) {
-          suma = statsRes.items.reduce((acc, row) => {
-            const n = Number(row?.obecnosc || row?.obecnosci || row?.suma || row?.count || 0);
-            return acc + (isNaN(n) ? 0 : n);
-          }, 0);
-        }
-      }
-
-      if (statsEl) {
-        statsEl.textContent = suma ? `${suma} obecności łącznie` : "Brak obecności";
-      }
-
-    } catch (e) {
-      console.warn("trainer stats load error:", e);
-
-      if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
-
-      if (statsEl) statsEl.textContent = "Nie udało się pobrać statystyk";
-    }
-  })();
-
-  // Dane podstawowe + grupy ładują główny widok.
   setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
 
   try {
-    const [infoRes, grupyRes] = await Promise.all([
+    const [infoResult, grupyResult] = await Promise.allSettled([
       apiClubPost({
         action: "adminPlayerInfo",
         numer: nrSafe
@@ -7906,10 +7843,14 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
       })
     ]);
 
+    // Jeśli w międzyczasie kliknięto innego zawodnika — nie nadpisujemy widoku.
     if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
 
-    // Przygotuj cache dla istniejącego ekranu edycji grup.
-    // Dzięki temu po kliknięciu "Edytuj grupy" ekran grup ma dane gotowe.
+    const infoRes = infoResult.status === "fulfilled" ? infoResult.value : null;
+    const grupyRes = grupyResult.status === "fulfilled" ? grupyResult.value : null;
+
+    // Cache dla istniejącego ekranu edycji grup.
+    // Dzięki temu "Edytuj grupy" korzysta z już pobranych danych.
     if (!window.__adminCache) window.__adminCache = {};
     if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
 
@@ -7948,7 +7889,7 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     }
 
   } catch (e) {
-    console.warn("trainerOpenZawodnik_ basic data error:", e);
+    console.warn("trainerOpenZawodnik_ error:", e);
 
     if (joinEl) joinEl.textContent = "—";
     if (grupyEl) grupyEl.textContent = "—";
@@ -7956,6 +7897,81 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
 
   } finally {
     setTrainerZawodnikViewBusy_(false);
+  }
+}
+
+/* ------------- statystyki do kafla w ekranie zawodnika w panelu trenera------------*/
+  // dane z funkcji pokazstatystyki
+  
+  function renderStatystykiInto_(targetId, lista) {
+  const div = document.getElementById(targetId);
+  if (!div) return;
+
+  if (!Array.isArray(lista) || lista.length === 0) {
+    div.innerHTML = "<p>Brak danych</p>";
+    return;
+  }
+
+  const ordered = [...lista];
+  const suma = ordered.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
+
+  const currentMonthName = [
+    "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
+    "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
+  ][new Date().getMonth()];
+
+  const rowsHtml = ordered.map(s => {
+    const miesiac = String(s.miesiac || "").trim();
+    const treningi = Number(s.treningi) || 0;
+
+    const isCurrent = miesiac.toLowerCase() === currentMonthName.toLowerCase();
+    const badge = isCurrent
+      ? ` <span style="opacity:.9;font-weight:700;">(teraz)</span>`
+      : "";
+
+    return `
+      <div class="card" style="background:#111; margin-top:8px;">
+        📅 ${miesiac}${badge} — 🏒 <b>${treningi}</b>
+      </div>
+    `;
+  }).join("");
+
+  const sumHtml = `
+    <div class="card" style="background:#222;margin-top:12px;font-weight:800;">
+      🔥 Łącznie: ${suma} treningów w sezonie
+    </div>
+  `;
+
+  div.innerHTML = rowsHtml + sumHtml;
+}
+
+  async function trainerLoadSelectedPlayerStats_() {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const statsEl = document.getElementById("trainerInfoStats");
+
+  if (!nr || !statsEl) return;
+
+  statsEl.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
+
+  try {
+    const lista = await apiClubGet("statystyki", { numer: nr });
+
+    // Jeśli trener kliknął już innego zawodnika, nie nadpisujemy kafla.
+    if (String(window.__trainerSelectedNr || "").trim() !== nr) return;
+
+    renderStatystykiInto_("trainerInfoStats", lista);
+
+  } catch (e) {
+    console.error("trainerLoadSelectedPlayerStats_ error", e);
+
+    if (String(window.__trainerSelectedNr || "").trim() !== nr) return;
+
+    statsEl.innerHTML = `
+      <p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>
+      <button class="full-btn" type="button" onclick="trainerLoadSelectedPlayerStats_()">
+        Spróbuj ponownie
+      </button>
+    `;
   }
 }
   
