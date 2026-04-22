@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.9';
+  window.APP_BUILD = 'APP v2.9.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3471,6 +3471,11 @@ window.addEventListener("popstate", (event) => {
   // popup ogólny: reset hasła — ustawienie nowego hasła z linku
   if (isSetNewPasswordPopupOpen_() && !(state && state.modal === "setNewPasswordPopup")) {
     hideSetNewPasswordPopup_();
+  }
+
+    // popup trenera: wybór zawodników do powołań
+  if (isPowolaniPopupOpen_() && !(state && state.modal === "powolaniPopup")) {
+    hidePowolaniPopup_();
   }
 
   // popupy edycji wydarzenia
@@ -8876,6 +8881,16 @@ function filterPowolaniPopupList_() {
   });
 }
 
+function isPowolaniPopupOpen_() {
+  const popup = document.getElementById("powolaniPopup");
+  return !!(popup && !popup.classList.contains("hidden"));
+}
+
+function hidePowolaniPopup_() {
+  const popup = document.getElementById("powolaniPopup");
+  if (popup) popup.classList.add("hidden");
+}
+  
 async function openPowolaniPopup(target) {
   window.__powolaniPopupTarget = target === "edit" ? "edit" : "add";
 
@@ -8894,7 +8909,7 @@ async function openPowolaniPopup(target) {
   searchEl.value = "";
   listEl.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie zawodników...</div>`;
 
-  pushPaymentModalHistoryState_("powolaniPopup");
+  ppushAppModalHistoryState_("powolaniPopup");
 
   try {
     await ensurePowolaniPlayersLoaded_();
@@ -8904,16 +8919,14 @@ async function openPowolaniPopup(target) {
     listEl.innerHTML = `<div class="card" style="background:#522;">❌ Błąd pobierania zawodników</div>`;
   }
 }
-
+  
 function closePowolaniPopup() {
-  const popup = document.getElementById("powolaniPopup");
-  if (popup) popup.classList.add("hidden");
-
   if (isHistoryModal_("powolaniPopup")) {
-    setTimeout(() => {
-      try { history.back(); } catch (e) {}
-    }, 0);
+    history.back();
+    return;
   }
+
+  hidePowolaniPopup_();
 }
 
 function applyPowolaniPopup() {
