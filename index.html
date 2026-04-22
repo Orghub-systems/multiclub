@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.13';
+  window.APP_BUILD = 'APP v2.9.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1326,8 +1326,16 @@ input[type="number"] {
 <div id="adminZawodnikView" class="container hidden">
   <h1 id="adminZawodnikTitle">Zawodnik</h1>
 
- <button class="full-btn" onclick="adminOpenPlayerInfo()">Informacje o zawodniku</button>
- <button class="full-btn" onclick="adminOpenStats();">Statystyki</button>
+  <button class="full-btn" onclick="adminOpenPlayerInfo()">Informacje o zawodniku</button>
+  <button class="full-btn" onclick="adminOpenStats();">Statystyki</button>
+
+  <button
+    id="btnAdminPlayerRozlicz"
+    class="full-btn"
+    onclick="adminOpenRozliczPopup()">
+    Sposób rozliczania
+  </button>
+
   <button class="full-btn" onclick="adminOpenPayments()">Zarejestrowane wpłaty</button>
 
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
@@ -10404,18 +10412,29 @@ async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   goToView("adminZawodnikView");
 
   const title = document.getElementById("adminZawodnikTitle");
+  const msg = document.getElementById("adminZawodnikMsg");
+  const btnRozlicz = document.getElementById("btnAdminPlayerRozlicz");
+
   if (title) {
     title.textContent = `Zawodnik #${window.__adminSelectedNr} — ${window.__adminSelectedNazwisko || "—"}`;
   }
 
-  const msg = document.getElementById("adminZawodnikMsg");
   if (msg) msg.textContent = "";
+
+  if (btnRozlicz) {
+    btnRozlicz.textContent = "Sposób rozliczania: ładowanie...";
+    btnRozlicz.disabled = true;
+    btnRozlicz.style.opacity = "0.65";
+  }
+
+  window.__adminRozliczKod = "";
 
   if (!window.__adminCache) window.__adminCache = {};
   const key = String(window.__adminSelectedNr || "").trim();
   if (!window.__adminCache[key]) window.__adminCache[key] = { ts: Date.now() };
 
   // Prefetch tylko tego, co potrzebne do ekranu "Informacje o zawodniku"
+  // + odczyt sposobu rozliczania dla przycisku na karcie zawodnika.
   (async () => {
     try {
       const nr2 = String(window.__adminSelectedNr || "").trim();
@@ -10453,12 +10472,51 @@ async function adminOpenZawodnik(nr, nazwisko, joinDate) {
         );
       }
 
+      if (window.__adminCache[nr2].rozlicz === undefined) {
+        tasks.push(
+          apiClubGet("adminGetRozliczanie", {
+            numer: nr2,
+            t: Date.now()
+          }).then(res => {
+            window.__adminCache[nr2].rozlicz = res;
+          })
+        );
+      }
+
       if (tasks.length) {
         await Promise.all(tasks);
       }
 
+      // Jeżeli w międzyczasie admin kliknął innego zawodnika, nie nadpisujemy przycisku.
+      if (String(window.__adminSelectedNr || "").trim() !== nr2) return;
+
+      const rozl = window.__adminCache[nr2].rozlicz || {};
+      const kod = String(rozl.kod || rozl.value || "S").trim().toUpperCase();
+
+      window.__adminRozliczKod = kod;
+
+      const label =
+        kod === "S" ? "Składka członkowska" :
+        kod === "O" ? "Uczestnik okazjonalny" :
+        kod === "B" ? "Uczestnik bezpłatny" :
+        "Składka członkowska";
+
+      const btn = document.getElementById("btnAdminPlayerRozlicz");
+      if (btn) {
+        btn.textContent = "Sposób rozliczania: " + label;
+        btn.disabled = false;
+        btn.style.opacity = "";
+      }
+
     } catch (e) {
       console.warn("Prefetch admin failed:", e);
+
+      const btn = document.getElementById("btnAdminPlayerRozlicz");
+      if (btn) {
+        btn.textContent = "Sposób rozliczania";
+        btn.disabled = false;
+        btn.style.opacity = "";
+      }
     }
   })();
 }
@@ -11402,41 +11460,57 @@ function adminCloseRozliczPopup() {
 
   hideAdminRozliczPopup_();
 }
-
 async function adminSetRozlicz(kod) {
   const nr = String(window.__adminSelectedNr || "").trim();
   const msg = document.getElementById("adminRozliczMsg");
+
   if (!nr) return;
+
+  const kodSafe = String(kod || "").trim().toUpperCase();
 
   try {
     if (msg) msg.textContent = "⏳ Zapisuję…";
 
-const r = await apiClubPost({
-  action: "adminSetRozliczanie",
-  numer: nr,
-  kod: String(kod || "").toUpperCase()
-});
+    const r = await apiClubPost({
+      action: "adminSetRozliczanie",
+      numer: nr,
+      kod: kodSafe
+    });
 
-if (!r || !(r.success || r.ok)) {
-  if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
-  console.warn("adminSetRozliczanie resp:", r);
-  return;
-}
+    if (!r || !(r.success || r.ok)) {
+      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
+      console.warn("adminSetRozliczanie resp:", r);
+      return;
+    }
 
-// pokaż twardy dowód (chwilowo, do debug)
-console.log("✅ adminSetRozliczanie:", r);
-if (msg) msg.textContent = `✅ Zapis: ${r.kodWritten} (odczyt: ${r.kodReadBack}) w ${r.cell} / ssid=${r.adminSsid}`;
+    window.__adminRozliczKod = kodSafe;
 
-console.log("✅ adminSetRozliczanie:", r);
+    if (!window.__adminCache) window.__adminCache = {};
+    if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
+    window.__adminCache[nr].rozlicz = {
+      success: true,
+      kod: kodSafe,
+      value: kodSafe
+    };
 
-const kodFinal = String(r.kodReadBack || r.kodWritten || kod || "").trim().toUpperCase();
+    const label =
+      kodSafe === "S" ? "Składka członkowska" :
+      kodSafe === "O" ? "Uczestnik okazjonalny" :
+      kodSafe === "B" ? "Uczestnik bezpłatny" :
+      "Składka członkowska";
 
-if (msg) {
-  msg.textContent = "✅ Zapisano: " + getAdminRozliczanieLabel_(kodFinal);
-}
+    const btnRozlicz = document.getElementById("btnAdminPlayerRozlicz");
+    if (btnRozlicz) {
+      btnRozlicz.textContent = "Sposób rozliczania: " + label;
+      btnRozlicz.disabled = false;
+      btnRozlicz.style.opacity = "";
+    }
 
-updateAdminRozliczanieUiAfterSave_(kodFinal);
-adminCloseRozliczPopup();
+    if (msg) msg.textContent = "✅ Zmiany zostały zapisane";
+
+    setTimeout(() => {
+      adminCloseRozliczPopup();
+    }, 400);
 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
@@ -11481,6 +11555,7 @@ async function adminOpenPayments() {
 
 function getAdminRozliczanieLabel_(kod) {
   const k = String(kod || "").trim().toUpperCase();
+  
 
   if (k === "S") return "Składka członkowska";
   if (k === "O") return "Uczestnik okazjonalny";
@@ -11521,14 +11596,6 @@ function renderAdminPayments_(res) {
   const skladki = items.filter(x => x.typ === "skladka");
   const zajecia = items.filter(x => x.typ === "zajecia");
 
-  const kod = String(window.__adminRozliczKod || "S").toUpperCase();
-
-  const label =
-    kod === "S" ? "Składka członkowska" :
-    kod === "O" ? "Uczestnik okazjonalny" :
-    kod === "B" ? "Uczestnik bezpłatny" :
-    "Składka członkowska";
-
   const emptyInfo = items.length === 0
     ? `<div class="card" style="background:#111; margin-top:12px;">
          Brak płatności do wyświetlenia
@@ -11536,11 +11603,6 @@ function renderAdminPayments_(res) {
     : "";
 
   body.innerHTML = `
-    <button class="full-btn" style="margin-top:10px;"
-            onclick="adminOpenRozliczPopup()">
-      Sposób rozliczania: ${label}
-    </button>
-
     ${emptyInfo}
 
     ${items.length ? renderPaymentsSection_("Składki", skladki) : ""}
