@@ -8251,8 +8251,11 @@ function renderTreningiTrainer(lista) {
           ${t.dataKoniec && t.dataKoniec !== t.data ? `Do: <b>${t.dataKoniec}</b><br>` : ""}
           Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
           ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
-          Trener: <b>${t.trener || "—"}</b> &nbsp;&nbsp; ${countLabel}: ${countValue}<br>
-          ${isPowolanie ? `Zaakceptowało: <b>${acceptedCount}</b><br>` : ""}
+          Trener: <b>${t.trener || "—"}</b><br>
+          ${isPowolanie
+            ? `Powołanych: <b>${countValue}</b> &nbsp;&nbsp; Zaakceptowało: <b>${acceptedCount}</b><br>`
+            : `Zapisanych: <b>${countValue}</b><br>`
+          }
         </p>
 
         <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
