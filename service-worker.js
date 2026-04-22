@@ -7,7 +7,6 @@ const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE_NAME = "orghub-static-v" + SW_VERSION;
 
 const STATIC_ASSETS = [
-  "/",
   "/icon-192.png",
   "/icon-512.png",
 ];
