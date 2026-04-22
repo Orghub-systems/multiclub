@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.14';
+  window.APP_BUILD = 'APP v2.9.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -10141,30 +10141,9 @@ function adminOpenTrener(trener) {
   if (loginEl) loginEl.textContent = String(t.login || "").trim() || "—";
   if (emailEl) emailEl.textContent = String(t.email || "").trim() || "—";
   if (grupyEl) grupyEl.textContent = formatClubGroupsCsvForUi_(String(t.grupy || "").trim()) || "—";
-  ensureAdminTrainerGroupsButton_();
   if (joinEl) joinEl.textContent = String(t.joinDate || "").trim() || "—";
   if (accessEl) accessEl.checked = !!t.access;
   if (msg) msg.textContent = "";
-}
-
-  function ensureAdminTrainerGroupsButton_() {
-  const grupyEl = document.getElementById("adminTrenerInfoGrupy");
-  if (!grupyEl) return;
-
-  let btn = document.getElementById("btnAdminEditTrainerGroups");
-
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.id = "btnAdminEditTrainerGroups";
-    btn.className = "full-btn";
-    btn.type = "button";
-    btn.style.marginTop = "12px";
-    btn.textContent = "Edytuj grupy trenera";
-
-    grupyEl.insertAdjacentElement("afterend", btn);
-  }
-
-  btn.onclick = adminOpenTrainerGroups;
 }
 
 function adminOpenTrenerByIndex_(idx) {
@@ -10369,7 +10348,7 @@ async function adminSaveTrainerGroupsLocal() {
       infoEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
     }
 
-    if (msg) msg.textContent = "✅ Zmiany zostały zapisane";
+    if (msg) msg.textContent = "✅ Zapisano grupy trenera.";
   } catch (e) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
