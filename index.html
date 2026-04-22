@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.10';
+  window.APP_BUILD = 'APP v2.9.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9561,7 +9561,11 @@ async function trainerShowEditPopup(miesiac, col5) {
 
   if (editTrybElReset) editTrybElReset.value = "wszyscy";
   if (editPowolaniElReset) editPowolaniElReset.value = "";
-
+  
+  // ważne: czyścimy też Set, z którego korzysta popup checkboxów
+  selectedPowolaniEdit = new Set();
+  syncPowolaniUi_("edit");
+  
   onEditEventTrybDostepuChange();
 
   // 3) pokaż popup od razu
@@ -9612,15 +9616,18 @@ async function trainerShowEditPopup(miesiac, col5) {
         editTrybEl.value = details.powolaniaMode ? "powolania" : "wszyscy";
       }
 
-      if (editPowolaniEl) {
-        editPowolaniEl.value = Array.isArray(details.powolani)
-          ? details.powolani
-              .map(x => String(x?.numer || "").trim())
-              .filter(Boolean)
-              .join(",")
-          : "";
-      }
-
+      const powolaniRaw = Array.isArray(details.powolani)
+        ? details.powolani
+            .map(x => {
+              if (x && typeof x === "object") return String(x.numer || x.nr || "").trim();
+              return String(x || "").trim();
+            })
+            .filter(Boolean)
+            .join(",")
+        : String(details.powolani || details.powolaniNums || "").trim();
+      
+      setEditPowolaniNums_(powolaniRaw);
+      
       onEditEventTrybDostepuChange();
 
       if (msg) msg.textContent = "";
