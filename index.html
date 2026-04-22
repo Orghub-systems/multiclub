@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.10';
+  window.APP_BUILD = 'APP v2.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3608,6 +3608,16 @@ window.addEventListener("popstate", (event) => {
     hidePowolaniPopup_();
   }
 
+    // popup rejestracji: wybór wolnego numeru
+  const freeNumbersPopup = document.getElementById("freeNumbersPopup");
+  if (
+    freeNumbersPopup &&
+    freeNumbersPopup.style.display === "flex" &&
+    !(state && state.modal === "freeNumbersPopup")
+  ) {
+    freeNumbersPopup.style.display = "none";
+  }
+
   // popupy edycji wydarzenia
   syncTrainerEditPopupsToHistoryState_(state);
 });
@@ -6740,7 +6750,11 @@ async function openFreeNumbersPopup() {
   body.innerHTML = "";
   if (msg) msg.textContent = "⏳ Ładowanie wolnych numerów...";
 
-  popup.style.display = "flex";
+    popup.style.display = "flex";
+
+  if (!isHistoryModal_("freeNumbersPopup")) {
+    pushAppModalHistoryState_("freeNumbersPopup");
+  }
 
   try {
     const data = await apiClubPost({ mode: "wolneNumery" });
@@ -6816,6 +6830,11 @@ async function openFreeNumbersPopup() {
 }
 
 function closeFreeNumbersPopup() {
+  if (isHistoryModal_("freeNumbersPopup")) {
+    history.back();
+    return;
+  }
+
   const popup = document.getElementById("freeNumbersPopup");
   if (popup) popup.style.display = "none";
 }
