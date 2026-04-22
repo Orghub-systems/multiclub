@@ -8909,7 +8909,7 @@ async function openPowolaniPopup(target) {
   searchEl.value = "";
   listEl.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie zawodników...</div>`;
 
-  ppushAppModalHistoryState_("powolaniPopup");
+  pushAppModalHistoryState_("powolaniPopup");
 
   try {
     await ensurePowolaniPlayersLoaded_();
