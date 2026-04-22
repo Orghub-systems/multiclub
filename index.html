@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.14';
+  window.APP_BUILD = 'APP v2.10';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -491,16 +491,69 @@ input[type="number"] {
 ========================================================= -->  
 
 <!-- LANDING VIEW
-     Ekran startowy ORGHUB z wejściem do konfiguracji klubu -->
+     Ekran startowy ORGHUB z instrukcją przygotowania klubu -->
     
-    <div id="orgHubLandingView" class="container hidden">
-<h1 style="margin-bottom:6px;color:#000;">Witamy w aplikacji</h1>
-<div style="font-size:28px;font-weight:800;letter-spacing:2px;margin-bottom:18px;color:#000;">
-  ORGHUB SYSTEMS
-</div>
+<div id="orgHubLandingView" class="container hidden">
+  <h1 style="margin-bottom:6px;color:#000;">Witamy w aplikacji</h1>
 
-      <button class="full-btn" onclick="goToConfig()">Skonfiguruj klub</button>
+  <div style="font-size:28px;font-weight:800;letter-spacing:2px;margin-bottom:18px;color:#000;">
+    ORGHUB SYSTEMS
+  </div>
+
+  <button class="full-btn" onclick="goToConfig()">Skonfiguruj klub</button>
+
+  <div class="card" style="max-width:520px;margin:18px auto 12px auto;text-align:left;background:#111;color:#fff;">
+    <div style="font-size:20px;font-weight:900;margin-bottom:10px;">
+      Zanim rozpoczniesz konfigurację
     </div>
+
+    <div style="opacity:.9;line-height:1.5;margin-bottom:12px;">
+      Przygotuj podstawowe dane klubu. Dzięki temu konfiguracja przebiegnie szybko i bez cofania się po brakujące informacje.
+    </div>
+
+    <div style="font-weight:900;margin:12px 0 6px 0;">
+      Przygotuj:
+    </div>
+
+    <ul style="line-height:1.55;padding-left:20px;margin:0;">
+      <li><b>Logo klubu</b> — najlepiej kwadratowe, np. PNG/JPG 512×512.</li>
+      <li><b>Nazwę klubu</b> — będzie widoczna w aplikacji.</li>
+      <li><b>Email twojego klubu</b> — do kontaktu i informacji o aktywacji.</li>
+      <li><b>Datę początku i końca sezonu</b> — na tej podstawie system przygotuje płatności i statystyki.</li>
+      <li><b>Wysokość składek</b> oraz zasady płatności za zajęcia dodatkowe.</li>
+      <li><b>Dane administratora</b> — email i hasło głównego konta admina.</li>
+      <li><b>Dane do odbioru wpłat</b> — nazwa odbiorcy i numer konta bankowego klubu.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="max-width:520px;margin:12px auto;text-align:left;background:#111;color:#fff;">
+    <div style="font-size:20px;font-weight:900;margin-bottom:10px;">
+      Jak wygląda uruchomienie klubu?
+    </div>
+
+    <ol style="line-height:1.55;padding-left:20px;margin:0;">
+      <li>Wgrywasz logo klubu.</li>
+      <li>Podajesz nazwę klubu.</li>
+      <li>Wybierasz kolor aplikacji.</li>
+      <li>Podajesz swój email.</li>
+      <li>Ustawiasz daty sezonu.</li>
+      <li>Uzupełniasz płatności, dane administratora i dane do przelewów.</li>
+      <li>Aktywujesz klub.</li>
+      <li>Po aktywacji uzupełniasz w panelu administratora zawodników, trenerów, grupy i wydarzenia.</li>
+    </ol>
+  </div>
+
+  <div class="card" style="max-width:520px;margin:12px auto;text-align:left;background:#151515;color:#fff;border:1px solid #333;">
+    <div style="font-size:18px;font-weight:900;margin-bottom:8px;">
+      Ważne
+    </div>
+
+    <div style="opacity:.9;line-height:1.5;">
+      Po utworzeniu klubu administrator ma dostęp do danych,
+      płatności, wydarzeń, statystyk, raportów, trenerów i zawodników.
+    </div>
+  </div>
+</div>
 
 <!-- CLUB CONFIG VIEW
      Pierwszy etap konfiguracji klubu: logo, nazwa, kolor i email -->
@@ -559,7 +612,19 @@ input[type="number"] {
     
 <div id="clubSetupView" class="container hidden">
   <h1>Uzupełnij dane klubu</h1>
+
   <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
+
+    <div style="text-align:left; background:#111; border:1px solid #333; border-radius:12px; padding:12px; margin-bottom:16px;">
+      <div style="font-weight:900; font-size:16px; margin-bottom:8px;">
+        Kolejność konfiguracji
+      </div>
+
+      <div style="opacity:.9; line-height:1.45; font-size:13px;">
+        Uzupełnij dane od góry do dołu. Najpierw ustaw daty sezonu.
+        Dopiero potem odblokują się płatności, dane administratora, dane do odbioru wpłat oraz aktywacja klubu.
+      </div>
+    </div>
 
     <!-- POCZĄTEK SEZONU -->
     <button class="full-btn alt" id="btnSetupSeasonStart" onclick="setupSeasonStartPick()">
@@ -577,12 +642,20 @@ input[type="number"] {
     </button>
     <div id="setupSeasonEndLabel" style="margin-top:6px; opacity:0.9; min-height:1.2em;"></div>
 
-    <!-- PRZYCISKI -->
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:10px 0 16px 0;">
+      Daty sezonu określają, dla jakich miesięcy system przygotuje płatności, statystyki i strukturę pracy klubu.
+    </div>
+
+    <!-- PŁATNOŚCI -->
     <button class="full-btn alt" id="btnSetupPayments" disabled
-        style="margin-top:20px; width:100%;"
-        onclick="openPaymentsPopup()">
-  Płatności (ustaw daty sezonu)
+            style="margin-top:12px; width:100%;"
+            onclick="openPaymentsPopup()">
+      Płatności (ustaw daty sezonu)
     </button>
+
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 12px 0;">
+      Ustaw wysokość składek oraz zasady rozliczania zajęć dodatkowych.
+    </div>
 
     <!-- DANE ADMINISTRATORA -->
     <button class="full-btn alt" id="btnSetupAdminPass" disabled
@@ -592,27 +665,46 @@ input[type="number"] {
     </button>
     
     <div id="setupAdminDataLabel" style="margin-top:6px; opacity:0.9; min-height:1.2em;"></div>
+
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 12px 0;">
+      Podaj email i hasło głównego administratora. To konto będzie zarządzać klubem po aktywacji.
+    </div>
     
-        <!-- Ustwienia wpłat -->
-        <button class="full-btn alt" id="btnSetupBankData" disabled
+    <!-- DANE DO WPŁAT -->
+    <button class="full-btn alt" id="btnSetupBankData" disabled
             style="margin-top:12px; width:100%;"
             onclick="openBankDataPopup()">
       Dane klubu do odbioru wpłat
     </button>
     
-<div id="setupBankDataLabel" style="margin-top:6px; opacity:0.9; min-height:1.2em;"></div>
+    <div id="setupBankDataLabel" style="margin-top:6px; opacity:0.9; min-height:1.2em;"></div>
+
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 16px 0;">
+      Podaj nazwę odbiorcy i numer rachunku bankowego. Te dane będą używane przy płatnościach i kodach QR.
+    </div>
     
     <button class="full-btn" id="btnSetupSubmit" disabled
-        style="margin-top:12px; width:100%;"
-        onclick="submitSetupAndActivateClub()">Wyślij i aktywuj klub</button>
+            style="margin-top:12px; width:100%;"
+            onclick="submitSetupAndActivateClub()">
+      Wyślij i aktywuj klub
+    </button>
+
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:8px 0 12px 0;">
+      Aktywacja utworzy pliki klubu, konfigurację aplikacji oraz dostęp dla administratora.
+    </div>
 
     <button class="full-btn alt" onclick="goBackFromSetup()" 
-            style="margin-top:12px; width:100%;">⬅ Powrót</button>
+            style="margin-top:12px; width:100%;">
+      ⬅ Powrót
+    </button>
 
     <p id="setupMsg" style="margin-top:16px; min-height:3em;"></p>
-    <div id="setupErrorBox" class="hidden" style="margin-top:10px; padding:8px; border:1px solid #933; border-radius:6px; background:#2b1111; color:#ffb3b3; font-size:0.9rem; text-align:left;"></div>
+
+    <div id="setupErrorBox" class="hidden"
+         style="margin-top:10px; padding:8px; border:1px solid #933; border-radius:6px; background:#2b1111; color:#ffb3b3; font-size:0.9rem; text-align:left;">
+    </div>
   </div>
-  </div>
+</div>
 
 <!-- CLUB ACTIVED SUCCES VIEW
      Ekran sukcesu po aktywacji klubu -->
