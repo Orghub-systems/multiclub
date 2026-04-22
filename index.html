@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.8';
+  window.APP_BUILD = 'APP v2.9.9';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4923,6 +4923,27 @@ window.submitSetupAndActivateClub = submitSetupAndActivateClub;
   
 /* =================== 80 PUSH / POWIADOMIENIA =================== */
 
+function setPlayerSettingsViewBusy_(busy, text) {
+  const view = document.getElementById("playerSettingsView");
+  const pushStatus = document.getElementById("pushStatus");
+  const emailStatus = document.getElementById("emailStatus");
+
+  if (!view) return;
+
+  if (busy) {
+    view.style.opacity = "0.55";
+    view.style.pointerEvents = "none";
+    view.style.filter = "grayscale(0.25)";
+
+    if (pushStatus) pushStatus.textContent = text || "⏳ Sprawdzam stan powiadomień push...";
+    if (emailStatus) emailStatus.textContent = text || "⏳ Sprawdzam stan powiadomień email...";
+  } else {
+    view.style.opacity = "";
+    view.style.pointerEvents = "";
+    view.style.filter = "";
+  }
+}
+  
 const PUSH_WORKER_URL = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
 function getCurrentNotificationLoginId_() {
@@ -5056,13 +5077,24 @@ window.openPlayerNotificationsView_ = async function openPlayerNotificationsView
 window.openPlayerNotificationSettingsView_ = async function openPlayerNotificationSettingsView_() {
   goToView("playerSettingsView");
 
+  setPlayerSettingsViewBusy_(true, "⏳ Sprawdzam stan powiadomień...");
+
   try {
     await loadUserNotificationPrefsFromServer_();
-  } catch (e) {
-    console.warn("loadUserNotificationPrefsFromServer_ error:", e);
-  }
+    await refreshPlayerNotificationsUi_();
 
-  await refreshPlayerNotificationsUi_();
+  } catch (e) {
+    console.warn("openPlayerNotificationSettingsView_ error:", e);
+
+    const pushStatus = document.getElementById("pushStatus");
+    const emailStatus = document.getElementById("emailStatus");
+
+    if (pushStatus) pushStatus.textContent = "❌ Nie udało się sprawdzić stanu powiadomień push.";
+    if (emailStatus) emailStatus.textContent = "❌ Nie udało się sprawdzić stanu powiadomień email.";
+
+  } finally {
+    setPlayerSettingsViewBusy_(false);
+  }
 };
 
 function hookPushButton_() {
