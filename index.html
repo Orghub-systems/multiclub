@@ -13972,7 +13972,7 @@ function applyManualPushGroupsPopup() {
   closeManualPushGroupsPopup();
 }
   
-function setTransientManualPushMessage_(text, isError) {
+function setTransientManualPushMessage_(text, isError, autoHide) {
   const msgEl = document.getElementById("manualPushMsg");
   if (!msgEl) return;
 
@@ -13984,11 +13984,13 @@ function setTransientManualPushMessage_(text, isError) {
   msgEl.textContent = String(text || "");
   msgEl.style.color = isError ? "#ffb3b3" : "#ffffff";
 
-  if (!isError && text) {
+  // Domyślnie NIE chowamy komunikatu.
+  // Auto-hide tylko wtedy, gdy jawnie podamy true.
+  if (autoHide === true && !isError && text) {
     window.__manualPushMsgTimer = setTimeout(() => {
       msgEl.textContent = "";
       window.__manualPushMsgTimer = null;
-    }, 2500);
+    }, 4000);
   }
 }
 
@@ -14060,11 +14062,11 @@ async function sendManualPush() {
     }
 
     if (mode === "group") {
-      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do wybranych grup", false);
+      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do wybranych grup", false, true);
     } else if (mode === "single") {
-      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do zawodnika", false);
+      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do zawodnika", false, true);
     } else {
-      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do całego klubu", false);
+      setTransientManualPushMessage_("✅ Powiadomienie zapisane i wysłane do całego klubu", false, true);
     }
 
     const bodyEl = document.getElementById("manualPushBody");
