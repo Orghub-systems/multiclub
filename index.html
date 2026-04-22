@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.9.7';
+  window.APP_BUILD = 'APP v2.9.8';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8222,13 +8222,12 @@ function renderTreningiTrainer(lista) {
 
     const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
     const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
-
-    const countValue =
-      t.zapisanych ??
-      t.powolanych ??
-      t.liczbaPowołanych ??
-      t.liczbaPowolanych ??
-      0;
+    
+    const countValue = isPowolanie
+      ? Number(t.powolanych || t.zapisanych || 0)
+      : Number(t.zapisanych || 0);
+    
+    const acceptedCount = Number(t.zaakceptowalo || 0);
 
     window.__trainerEventModeById[listId] = {
       isPowolanie,
@@ -8253,6 +8252,7 @@ function renderTreningiTrainer(lista) {
           Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
           ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
           Trener: <b>${t.trener || "—"}</b> &nbsp;&nbsp; ${countLabel}: ${countValue}<br>
+          ${isPowolanie ? `Zaakceptowało: <b>${acceptedCount}</b><br>` : ""}
         </p>
 
         <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
