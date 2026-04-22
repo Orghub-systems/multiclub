@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.11';
+  window.APP_BUILD = 'APP v2.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1723,10 +1723,12 @@ input[type="number"] {
   
 <div id="paymentsPopup" class="hidden" style="
   position:fixed; inset:0; background:rgba(0,0,0,0.7);
-  display:flex; justify-content:center; align-items:center;
+  display:flex; justify-content:center; align-items:flex-start;
   z-index:4000; padding:18px;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
 ">
-  <div class="card" style="max-width:360px;width:100%; text-align:left;">
+  <div class="card" style="max-width:360px;width:100%; text-align:left; margin:0 auto 18px auto;">
     <div style="font-weight:800; font-size:16px; margin-bottom:10px;">Ustal płatności</div>
 
     <div id="paymentsList" style="display:flex; flex-direction:column; gap:10px;"></div>
