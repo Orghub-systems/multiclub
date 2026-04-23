@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.14';
+  window.APP_BUILD = 'APP v2.15';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -751,6 +751,29 @@ input[type="number"] {
   <div id="clubActivatedSuccessMsg" style="margin-top:10px; text-align:center; opacity:.85;"></div>
 </div>
 
+<!-- CLUB BLOCKED VIEW
+     Ekran blokady klubu po końcu triala / blokadzie dostępu -->
+
+<div id="clubBlockedView" class="container hidden">
+  <h1 id="clubBlockedTitle">Dostęp do klubu został zablokowany</h1>
+
+  <div class="card" style="max-width:420px; margin:12px auto; text-align:left;">
+    <div style="font-size:18px; font-weight:900; margin-bottom:10px;">
+      Klub wymaga aktywacji
+    </div>
+
+    <div style="opacity:.92; line-height:1.55; margin-bottom:12px;">
+      Okres testowy klubu dobiegł końca albo dostęp do klubu został wstrzymany.
+    </div>
+
+    <div id="clubBlockedReason" style="line-height:1.55; font-weight:700;">
+      Skontaktuj się z ORGHUB SYSTEMS, aby aktywować dostęp.
+    </div>
+  </div>
+
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót do logowania</button>
+</div>
+    
 <!-- =========================================================
      AUTH VIEWS
      Logowanie oraz rejestracja użytkowników
@@ -6196,8 +6219,32 @@ async function zaloguj() {
   try {
     const data = await apiClubPost({ mode: "login", numer: login, haslo });
 
-    if (!data.success) {
-      const err = data?.error || data?.message || "Błąd logowania";
+        if (!data.success) {
+      const err = String(data?.error || data?.message || "Błąd logowania").trim();
+      const errLc = err.toLowerCase();
+
+      const isBlockedClub =
+        errLc.includes("zablokowany") ||
+        errLc.includes("okres testowy") ||
+        errLc.includes("aktywować dostęp") ||
+        errLc.includes("aktywowac dostep");
+
+      if (isBlockedClub) {
+        const blockedTitle = document.getElementById("clubBlockedTitle");
+        const blockedReason = document.getElementById("clubBlockedReason");
+
+        if (blockedTitle) {
+          blockedTitle.textContent = "Dostęp do klubu został zablokowany";
+        }
+
+        if (blockedReason) {
+          blockedReason.textContent = err;
+        }
+
+        goToView("clubBlockedView");
+        return;
+      }
+
       komunikat.innerText = "❌ " + err;
       return;
     }
