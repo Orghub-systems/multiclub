@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.17';
+  window.APP_BUILD = 'APP v2.18';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3895,15 +3895,16 @@ function clubNameEditCommit() {
   const input = document.getElementById("clubNameInput");
   if (!span || !input) return;
 
-  const raw = String(input.value || "").trim().toUpperCase();
-  const isValid = /^[A-Z0-9]{2,12}$/.test(raw);
+  const raw = String(input.value || "").trim().replace(/\s+/g, " ");
+
+  const isValid = /^[A-Za-zĄĆĘŁŃÓŚŻŹąćęłńóśżź0-9][A-Za-zĄĆĘŁŃÓŚŻŹąćęłńóśżź0-9 \-]{1,39}$/.test(raw);
 
   if (!isValid) {
     input.value = cfgDraft.clubName || "";
     input.classList.add("hidden");
     span.classList.remove("hidden");
     span.textContent = cfgDraft.clubName ? cfgDraft.clubName : "Podaj nazwę klubu";
-    alert("Nazwa klubu musi być jednym słowem, bez spacji, maksymalnie 12 znaków.");
+    alert("Nazwa klubu może zawierać polskie znaki, cyfry, spacje i myślnik. Minimum 2 znaki, maksimum 40.");
     return;
   }
 
