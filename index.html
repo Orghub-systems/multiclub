@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.12';
+  window.APP_BUILD = 'APP v2.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4962,6 +4962,16 @@ async function submitSetupAndActivateClub() {
           ? ""
           : String(setupDraft.membershipLimit).trim();
 
+    // ownerPhone jest opcjonalny backendowo.
+    // Jak pole telefonu w draft ma inną nazwę, podmień tylko tę jedną linię.
+    const ownerPhone = String(
+      setupDraft?.ownerPhone ||
+      setupDraft?.phone ||
+      cfgDraft?.ownerPhone ||
+      cfgDraft?.phone ||
+      ""
+    ).trim();
+
     console.log("[DIAG] activateClub payload preview", {
       clubId,
       sezonStart,
@@ -4975,7 +4985,8 @@ async function submitSetupAndActivateClub() {
       membershipLimit,
       bankReceiver,
       bankAccount,
-      adminEmail
+      adminEmail,
+      ownerPhone
     });
 
     const r = await activateClub_({
@@ -4989,7 +5000,8 @@ async function submitSetupAndActivateClub() {
       bankReceiver,
       bankAccount,
       email: setupDraft.email,
-      adminEmail
+      adminEmail,
+      ownerPhone
     });
 
     if (!r || (r.success !== true && r.ok !== true)) {
