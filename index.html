@@ -1713,6 +1713,8 @@ input[type="number"] {
 
     </div><!-- /app -->
 
+<!-- ============================================================ POPUPY I MODALE =========================================================== -- >
+  
 <!-- =========================================================
      OVERLAYS: SETUP / ACCOUNT
      Popupy konfiguracji klubu oraz operacji konta
@@ -3661,6 +3663,20 @@ window.addEventListener("popstate", (event) => {
   ) {
     freeNumbersPopup.style.display = "none";
   }
+  
+     // popup ustawień płatności przy zakładaniu klubu
+    const paymentsPopup = document.getElementById("paymentsPopup");
+  if (
+    paymentsPopup &&
+    paymentsPopup.style.display === "flex" &&
+    !(state && state.modal === "paymentsPopup")
+  ) {
+    paymentsPopup.classList.add("hidden");
+    paymentsPopup.style.display = "none";
+
+    const m = document.getElementById("paymentsMsg");
+    if (m) m.textContent = "";
+  }
 
   // popupy edycji wydarzenia
   syncTrainerEditPopupsToHistoryState_(state);
@@ -4443,10 +4459,16 @@ function openPaymentsPopup() {
   renderPaymentsPopup_();
 
   const pop = document.getElementById("paymentsPopup");
-  if (pop) pop.classList.remove("hidden");
-  
-  wireMembershipLimitUI_();
+  if (pop) {
+    pop.classList.remove("hidden");
+    pop.style.display = "flex";
+  }
 
+  if (!isHistoryModal_("paymentsPopup")) {
+    pushAppModalHistoryState_("paymentsPopup");
+  }
+
+  wireMembershipLimitUI_();
 }
 
 function wireMembershipLimitUI_() {
@@ -4470,8 +4492,16 @@ function wireMembershipLimitUI_() {
 }
   
 function closePaymentsPopup() {
+  if (isHistoryModal_("paymentsPopup")) {
+    history.back();
+    return;
+  }
+
   const pop = document.getElementById("paymentsPopup");
-  if (pop) pop.classList.add("hidden");
+  if (pop) {
+    pop.classList.add("hidden");
+    pop.style.display = "none";
+  }
 
   const m = document.getElementById("paymentsMsg");
   if (m) m.textContent = "";
