@@ -6232,15 +6232,15 @@ async function zaloguj() {
       if (isBlockedClub) {
         const blockedTitle = document.getElementById("clubBlockedTitle");
         const blockedReason = document.getElementById("clubBlockedReason");
-
+      
         if (blockedTitle) {
-          blockedTitle.textContent = "Dostęp do klubu został zablokowany";
+          blockedTitle.textContent = "Panel klubu jest obecnie niedostępny";
         }
-
+      
         if (blockedReason) {
           blockedReason.textContent = err;
         }
-
+      
         goToView("clubBlockedView");
         return;
       }
