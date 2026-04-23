@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.16';
+  window.APP_BUILD = 'APP v2.17';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4500,6 +4500,26 @@ function wireMembershipLimitUI_() {
   cb.onchange = refresh;
   refresh();
 }
+
+function wireSingleTrainingUI_() {
+  const cb = document.getElementById("noSingleTrainingCheckbox");
+  const inp = document.getElementById("singleTrainingPriceInput");
+  if (!cb || !inp) return;
+
+  function refresh() {
+    if (cb.checked) {
+      inp.value = "";
+      inp.disabled = true;
+      inp.style.opacity = "0.55";
+    } else {
+      inp.disabled = false;
+      inp.style.opacity = "1";
+    }
+  }
+
+  cb.onchange = refresh;
+  refresh();
+}
   
 function closePaymentsPopup() {
   if (isHistoryModal_("paymentsPopup")) {
@@ -4538,9 +4558,19 @@ function renderPaymentsPopup_() {
     `;
   }).join("");
 
-  // wstaw cenę treningu
   const single = document.getElementById("singleTrainingPriceInput");
-  if (single) single.value = setupDraft.singleTrainingPrice || "";
+  const noSingleCb = document.getElementById("noSingleTrainingCheckbox");
+
+  if (single) {
+    single.value = setupDraft.singleTrainingPrice || "";
+  }
+
+  if (noSingleCb) {
+    noSingleCb.checked = !!setupDraft.noSingleTraining;
+  }
+
+  wireMembershipLimitUI_();
+  wireSingleTrainingUI_();
 }
 
 function applyPaymentsPopup() {
@@ -4549,11 +4579,11 @@ function applyPaymentsPopup() {
 
   const inputs = Array.from(document.querySelectorAll(`#paymentsList input[data-monthkey]`));
   const fees = {};
+
   for (const inp of inputs) {
     const k = inp.getAttribute("data-monthkey");
     const raw = String(inp.value || "").trim();
 
-    // dopuszczamy puste (jeśli chcesz wymusić wszystkie, zmienimy)
     if (raw === "") continue;
 
     const v = Number(raw.replace(",", "."));
@@ -4562,37 +4592,48 @@ function applyPaymentsPopup() {
       inp.focus();
       return;
     }
+
     fees[k] = v;
   }
 
   const singleInp = document.getElementById("singleTrainingPriceInput");
+  const noSingleCb = document.getElementById("noSingleTrainingCheckbox");
+
   const singleRaw = String(singleInp?.value || "").trim();
-  if (singleRaw !== "") {
+  const noSingle = !!noSingleCb?.checked;
+
+  if (noSingle) {
+    setupDraft.noSingleTraining = true;
+    setupDraft.singleTrainingPrice = "";
+  } else if (singleRaw !== "") {
     const v = Number(singleRaw.replace(",", "."));
-    if (!isFinite(v) || v < 0) {
-      if (pmsg) pmsg.textContent = "❌ Nieprawidłowa cena pojedynczego treningu.";
+
+    if (!isFinite(v) || v <= 0) {
+      if (pmsg) pmsg.textContent = "❌ Cena pojedynczego treningu musi być większa od zera.";
       if (singleInp) singleInp.focus();
       return;
     }
+
+    setupDraft.noSingleTraining = false;
     setupDraft.singleTrainingPrice = v;
   } else {
+    setupDraft.noSingleTraining = false;
     setupDraft.singleTrainingPrice = "";
   }
 
   setupDraft.fees = fees;
 
-  // ✅ UI: oznacz że płatności uzupełnione i odblokuj submit
   const btnPay = document.getElementById("btnSetupPayments");
   if (btnPay) btnPay.textContent = "Płatności ✅";
 
-    const noLimit = !!document.getElementById("noLimitCheckbox")?.checked;
+  const noLimit = !!document.getElementById("noLimitCheckbox")?.checked;
   const limitInp = document.getElementById("membershipLimitInput");
   const limitRaw = String(limitInp?.value || "").trim();
 
-    if (noLimit) {
+  if (noLimit) {
     setupDraft.membershipLimit = "NO_LIMIT";
   } else if (limitRaw === "") {
-    setupDraft.membershipLimit = ""; 
+    setupDraft.membershipLimit = "";
   } else {
     const lim = Number(limitRaw.replace(",", "."));
     if (!Number.isFinite(lim) || lim < 0) {
@@ -4990,9 +5031,12 @@ async function submitSetupAndActivateClub() {
       }
     }
 
-    if (!singleTrainingPrice) {
-      if (msg) msg.textContent = "❌ Podaj cenę pojedynczego treningu.";
-      return;
+    if (singleTrainingPrice !== "") {
+      const singleNum = Number(String(singleTrainingPrice).replace(",", "."));
+      if (!Number.isFinite(singleNum) || singleNum <= 0) {
+        if (msg) msg.textContent = "❌ Cena pojedynczego treningu musi być większa od zera albo pole musi pozostać puste.";
+        return;
+      }
     }
 
     const adminPass = String(setupDraft?.adminPass || "").trim();
