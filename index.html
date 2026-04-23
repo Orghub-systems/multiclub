@@ -1253,7 +1253,28 @@ input[type="number"] {
     
 <!-- ADMIN PANEL VIEW
      Główne menu administratora -->
-<div id="adminPanelView" class="container hidden">
+<div id="adminPanelView" class="container hidden" style="position:relative;">
+  <div
+    id="adminTrialBadge"
+    class="hidden"
+    style="
+      position:absolute;
+      top:10px;
+      right:10px;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      background:#1f5f2b;
+      color:#fff;
+      border:1px solid #2d8a40;
+      z-index:5;
+      box-shadow:0 4px 12px rgba(0,0,0,.25);
+    "
+  >
+    Pozostało 30 dni testu
+  </div>
+
   <h1>Panel administratora</h1>
 
   <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
@@ -6280,6 +6301,65 @@ async function zaloguj() {
       });
 
       goToView("adminPanelView");
+
+      const badge = document.getElementById("adminTrialBadge");
+      if (badge) {
+        badge.classList.add("hidden");
+      }
+
+      try {
+        const trial = await apiClubGet("clubTrialStatus", { t: Date.now() });
+
+        if (badge && trial && trial.success === true) {
+          const billingStatus = String(trial.billingStatus || "").trim().toLowerCase();
+          const blocked =
+            trial.blocked === true ||
+            trial.blocked === 1 ||
+            String(trial.blocked || "").trim().toUpperCase() === "TRUE";
+
+          const daysLeft = Number(trial.daysLeft);
+
+          if (billingStatus === "trial" && !blocked) {
+            badge.classList.remove("hidden");
+
+            if (isFinite(daysLeft)) {
+              if (daysLeft < 0) {
+                badge.textContent = "Okres testowy zakończony";
+                badge.style.background = "#7a0f0f";
+                badge.style.borderColor = "#ff2b2b";
+                badge.style.color = "#fff";
+              } else {
+                badge.textContent = "Pozostało " + daysLeft + " dni testu";
+
+                if (daysLeft < 7) {
+                  badge.style.background = "#7a0f0f";
+                  badge.style.borderColor = "#ff2b2b";
+                  badge.style.color = "#fff";
+                } else if (daysLeft < 14) {
+                  badge.style.background = "#7a4d0f";
+                  badge.style.borderColor = "#ffb020";
+                  badge.style.color = "#fff";
+                } else {
+                  badge.style.background = "#1f5f2b";
+                  badge.style.borderColor = "#2d8a40";
+                  badge.style.color = "#fff";
+                }
+              }
+            } else {
+              badge.textContent = "Okres testowy aktywny";
+              badge.style.background = "#1f5f2b";
+              badge.style.borderColor = "#2d8a40";
+              badge.style.color = "#fff";
+            }
+          } else {
+            badge.classList.add("hidden");
+          }
+        }
+
+      } catch (e) {
+        console.warn("clubTrialStatus error:", e);
+      }
+
       return;
     }
 
