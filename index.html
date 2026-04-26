@@ -2154,7 +2154,26 @@ input[type="number"] {
      OVERLAYS: TRAINER
      Popupy trenera do zarządzania wydarzeniami
 ========================================================= -->
-  
+
+<!-- TRAINER ARCHIVE MONTHS POPUP
+     Potwierdzenie usunięcia wydarzenia -->
+
+<div id="trainerArchiveMonthsPopup" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  display:flex; justify-content:center; align-items:center;
+  z-index:3007; padding:18px;
+">
+  <div class="card" style="max-width:320px;width:100%; text-align:left;">
+    <div style="font-weight:800; font-size:16px; margin-bottom:10px;">Wybierz miesiąc</div>
+
+    <div id="trainerArchiveMonthsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="full-btn alt" style="flex:1;" type="button" onclick="closeTrainerArchiveMonthsPopup_()">Anuluj</button>
+    </div>
+  </div>
+</div>
+
 <!-- TRAINER DELETE EVENT POPUP
      Potwierdzenie usunięcia wydarzenia -->
   
@@ -8650,16 +8669,12 @@ function bindTrainerEventsModeButtons_() {
     };
   }
 
-  if (btnPickMonth && btnPickMonth.dataset.bound !== "1") {
-    btnPickMonth.dataset.bound = "1";
-    btnPickMonth.onclick = function () {
-      // Na razie tylko placeholder pod następny krok.
-      const box = document.getElementById("trainerListaWydarzen");
-      if (box) {
-        box.innerHTML = "<div class='card' style='background:#222;'>📁 W następnym kroku podepniemy wybór miesiąca archiwum.</div>";
-      }
-    };
-  }
+    if (btnPickMonth && btnPickMonth.dataset.bound !== "1") {
+      btnPickMonth.dataset.bound = "1";
+      btnPickMonth.onclick = function () {
+        openTrainerArchiveMonthsPopup_();
+      };
+    }
 }
 
 function trainerRenderEventsModeUi_() {
@@ -8764,6 +8779,66 @@ async function trainerEnsureArchiveMonthsLoaded_() {
   }
 }
 
+async function openTrainerArchiveMonthsPopup_() {
+  const popup = document.getElementById("trainerArchiveMonthsPopup");
+  const list = document.getElementById("trainerArchiveMonthsList");
+
+  if (!popup || !list) return;
+
+  list.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy...</div>";
+  popup.classList.remove("hidden");
+
+  try {
+    const months = await trainerEnsureArchiveMonthsLoaded_();
+
+    if (!Array.isArray(months) || !months.length) {
+      list.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
+      return;
+    }
+
+    list.innerHTML = months.map(m => {
+      const key = String(m?.key || "").trim();
+      const label = String(m?.label || key).trim();
+      const isSelected = key && key === window.__trainerArchiveSelectedMonth;
+
+      return `
+        <button
+          type="button"
+          class="full-btn ${isSelected ? "" : "alt"}"
+          style="margin:0;"
+          onclick="selectTrainerArchiveMonth_('${key.replace(/'/g, "\\'")}', '${label.replace(/'/g, "\\'")}')"
+        >
+          ${label}
+        </button>
+      `;
+    }).join("");
+
+  } catch (e) {
+    list.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
+  }
+}
+
+function closeTrainerArchiveMonthsPopup_() {
+  const popup = document.getElementById("trainerArchiveMonthsPopup");
+  if (popup) popup.classList.add("hidden");
+}
+
+function selectTrainerArchiveMonth_(key, label) {
+  window.__trainerArchiveSelectedMonth = String(key || "").trim();
+  trainerRenderEventsModeUi_();
+  closeTrainerArchiveMonthsPopup_();
+
+  const div = document.getElementById("trainerListaWydarzen");
+  if (div) {
+    div.innerHTML = `
+      <div class="card" style="background:#111;">
+        Wybrany miesiąc: <b>${String(label || key || "").trim()}</b><br><br>
+        W następnym kroku podepniemy render wydarzeń archiwalnych dla tego miesiąca.
+      </div>
+    `;
+  }
+}
+  
 function renderTreningiTrainer(lista) {
   const div = document.getElementById("trainerListaWydarzen");
   if (!div) return;
