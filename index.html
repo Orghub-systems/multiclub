@@ -8823,19 +8823,36 @@ function closeTrainerArchiveMonthsPopup_() {
   if (popup) popup.classList.add("hidden");
 }
 
-function selectTrainerArchiveMonth_(key, label) {
+async function selectTrainerArchiveMonth_(key, label) {
   window.__trainerArchiveSelectedMonth = String(key || "").trim();
   trainerRenderEventsModeUi_();
   closeTrainerArchiveMonthsPopup_();
 
   const div = document.getElementById("trainerListaWydarzen");
   if (div) {
-    div.innerHTML = `
-      <div class="card" style="background:#111;">
-        Wybrany miesiąc: <b>${String(label || key || "").trim()}</b><br><br>
-        W następnym kroku podepniemy render wydarzeń archiwalnych dla tego miesiąca.
-      </div>
-    `;
+    div.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie wydarzeń z miesiąca: <b>${String(label || key || "").trim()}</b>...</div>`;
+  }
+
+  try {
+    const lista = await apiClubGet("treningiTrenerArchiwalne", {
+      grupa: window.grupyTrenera || "",
+      miesiac: window.__trainerArchiveSelectedMonth
+    });
+
+    renderTreningiTrainer(lista);
+
+    if ((!Array.isArray(lista) || !lista.length) && div) {
+      div.innerHTML = `
+        <div class="card" style="background:#111;">
+          Brak wydarzeń archiwalnych w miesiącu: <b>${String(label || key || "").trim()}</b>.
+        </div>
+      `;
+    }
+
+  } catch (e) {
+    if (div) {
+      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
+    }
   }
 }
   
