@@ -1181,13 +1181,60 @@ input[type="number"] {
 <!-- TRAINER EVENTS VIEW
      Lista wydarzeń zarządzanych przez trenera -->
     
-    <div id="trainerWydarzeniaView" class="container hidden">
-      <h1>Wydarzenia</h1>
-      <div id="trainerListaWydarzen">Ładowanie...</div>
-      <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
-      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+<div id="trainerWydarzeniaView" class="container hidden">
+  <h1>Wydarzenia</h1>
+
+  <div class="card" style="max-width:420px; margin:12px auto; text-align:left;">
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <button
+        id="btnTrainerEventsCurrent"
+        class="full-btn"
+        type="button"
+        style="margin:0; flex:1;"
+      >
+        Bieżące
+      </button>
+
+      <button
+        id="btnTrainerEventsArchive"
+        class="full-btn alt"
+        type="button"
+        style="margin:0; flex:1;"
+      >
+        Archiwalne
+      </button>
     </div>
 
+    <div
+      id="trainerArchiveToolbar"
+      class="hidden"
+      style="margin-top:10px;"
+    >
+      <div style="font-size:13px; opacity:.78; margin-bottom:8px;">
+        Wybierz miesiąc archiwalnych wydarzeń
+      </div>
+
+      <button
+        id="btnTrainerArchivePickMonth"
+        class="full-btn alt"
+        type="button"
+        style="margin:0;"
+      >
+        Wybierz miesiąc
+      </button>
+
+      <div
+        id="trainerArchiveSelectedMonth"
+        style="margin-top:8px; font-size:13px; opacity:.88; min-height:18px;"
+      ></div>
+    </div>
+  </div>
+
+  <div id="trainerListaWydarzen">Ładowanie...</div>
+
+  <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
 <!-- TRAINER ATTENDANCE REPORT VIEW
      Raport obecności zalogowanego trenera -->
 
