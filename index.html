@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.21';
+  window.APP_BUILD = 'APP v2.22';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8758,25 +8758,18 @@ async function trainerShowArchiveEventsMode_() {
 }
 
 async function trainerEnsureArchiveMonthsLoaded_() {
-  if (Array.isArray(window.__trainerArchiveMonths)) {
-    return window.__trainerArchiveMonths;
-  }
+  // Na czas diagnostyki NIE trzymamy cache po stronie frontendu.
+  // Każde kliknięcie Archiwalne / Wybierz miesiąc ma realnie zapytać backend.
+  window.__trainerArchiveMonths = null;
+  window.__trainerArchiveMonthsLoading = null;
 
-  if (window.__trainerArchiveMonthsLoading) {
-    return await window.__trainerArchiveMonthsLoading;
-  }
+  const months = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
+    _ts: Date.now()
+  });
 
-  window.__trainerArchiveMonthsLoading = (async () => {
-    const months = await apiClubGet("treningiTrenerArchiwalneMiesiace", {});
-    window.__trainerArchiveMonths = Array.isArray(months) ? months : [];
-    return window.__trainerArchiveMonths;
-  })();
+  window.__trainerArchiveMonths = Array.isArray(months) ? months : [];
 
-  try {
-    return await window.__trainerArchiveMonthsLoading;
-  } finally {
-    window.__trainerArchiveMonthsLoading = null;
-  }
+  return window.__trainerArchiveMonths;
 }
 
 async function openTrainerArchiveMonthsPopup_() {
