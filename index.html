@@ -8614,9 +8614,84 @@ function trainerOpenPlayerGroupsEdit_() {
   
 // =================== TRAINER / EVENTS LIST ===================
 
+// =================== TRAINER / EVENTS LIST ===================
+
+window.__trainerEventsMode = "current";
+window.__trainerArchiveMonths = null;
+window.__trainerArchiveMonthsLoading = null;
+window.__trainerArchiveSelectedMonth = "";
+
 // MUSI być globalne dla onclick w HTML
 window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
   goToView("trainerWydarzeniaView");
+
+  bindTrainerEventsModeButtons_();
+
+  // Domyślnie wchodzimy w bieżące
+  await trainerShowCurrentEvents_();
+};
+
+function bindTrainerEventsModeButtons_() {
+  const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
+  const btnArchive = document.getElementById("btnTrainerEventsArchive");
+  const btnPickMonth = document.getElementById("btnTrainerArchivePickMonth");
+
+  if (btnCurrent && btnCurrent.dataset.bound !== "1") {
+    btnCurrent.dataset.bound = "1";
+    btnCurrent.onclick = function () {
+      trainerShowCurrentEvents_();
+    };
+  }
+
+  if (btnArchive && btnArchive.dataset.bound !== "1") {
+    btnArchive.dataset.bound = "1";
+    btnArchive.onclick = function () {
+      trainerShowArchiveEventsMode_();
+    };
+  }
+
+  if (btnPickMonth && btnPickMonth.dataset.bound !== "1") {
+    btnPickMonth.dataset.bound = "1";
+    btnPickMonth.onclick = function () {
+      // Na razie tylko placeholder pod następny krok.
+      const box = document.getElementById("trainerListaWydarzen");
+      if (box) {
+        box.innerHTML = "<div class='card' style='background:#222;'>📁 W następnym kroku podepniemy wybór miesiąca archiwum.</div>";
+      }
+    };
+  }
+}
+
+function trainerRenderEventsModeUi_() {
+  const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
+  const btnArchive = document.getElementById("btnTrainerEventsArchive");
+  const toolbar = document.getElementById("trainerArchiveToolbar");
+  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
+
+  const isArchive = window.__trainerEventsMode === "archive";
+
+  if (btnCurrent) {
+    btnCurrent.className = isArchive ? "full-btn alt" : "full-btn";
+  }
+
+  if (btnArchive) {
+    btnArchive.className = isArchive ? "full-btn" : "full-btn alt";
+  }
+
+  if (toolbar) {
+    toolbar.classList.toggle("hidden", !isArchive);
+  }
+
+  if (selectedMonth) {
+    selectedMonth.textContent = window.__trainerArchiveSelectedMonth
+      ? `Wybrany miesiąc: ${window.__trainerArchiveSelectedMonth}`
+      : "";
+  }
+}
+
+async function trainerShowCurrentEvents_() {
+  window.__trainerEventsMode = "current";
+  trainerRenderEventsModeUi_();
 
   const div = document.getElementById("trainerListaWydarzen");
   if (div) {
@@ -8635,7 +8710,59 @@ window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
       div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
     }
   }
-};
+}
+
+async function trainerShowArchiveEventsMode_() {
+  window.__trainerEventsMode = "archive";
+  trainerRenderEventsModeUi_();
+
+  const div = document.getElementById("trainerListaWydarzen");
+  if (div) {
+    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy archiwalnych...</div>";
+  }
+
+  try {
+    const months = await trainerEnsureArchiveMonthsLoaded_();
+
+    if (!Array.isArray(months) || !months.length) {
+      if (div) {
+        div.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
+      }
+      return;
+    }
+
+    if (div) {
+      div.innerHTML = "<div class='card' style='background:#111;'>Wybierz miesiąc archiwalnych wydarzeń.</div>";
+    }
+
+  } catch (e) {
+    if (div) {
+      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
+    }
+  }
+}
+
+async function trainerEnsureArchiveMonthsLoaded_() {
+  if (Array.isArray(window.__trainerArchiveMonths)) {
+    return window.__trainerArchiveMonths;
+  }
+
+  if (window.__trainerArchiveMonthsLoading) {
+    return await window.__trainerArchiveMonthsLoading;
+  }
+
+  window.__trainerArchiveMonthsLoading = (async () => {
+    const months = await apiClubGet("treningiTrenerArchiwalneMiesiace", {});
+    window.__trainerArchiveMonths = Array.isArray(months) ? months : [];
+    return window.__trainerArchiveMonths;
+  })();
+
+  try {
+    return await window.__trainerArchiveMonthsLoading;
+  } finally {
+    window.__trainerArchiveMonthsLoading = null;
+  }
+}
 
 function renderTreningiTrainer(lista) {
   const div = document.getElementById("trainerListaWydarzen");
