@@ -8892,7 +8892,8 @@ async function selectTrainerArchiveMonth_(key, label) {
 }
   
 function renderTreningiTrainer(lista) {
-  const div = document.getElementById("trainerListaWydarzen");
+  const targetId = window.__trainerEventsRenderTarget || "trainerListaWydarzen";
+  const div = document.getElementById(targetId) || document.getElementById("trainerListaWydarzen");
   if (!div) return;
 
   if (!Array.isArray(lista) || !lista.length) {
