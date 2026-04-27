@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.36';
+  window.APP_BUILD = 'APP v2.37';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3075,19 +3075,98 @@ function getActiveGroupsForUi_() {
 }
 
 async function prefetchClubGroupsInBackground_() {
-  if (groupsPrefetchPromise_) return groupsPrefetchPromise_;
+  const GROUPS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 
+  if (groupsPrefetchPromise_) {
+    return groupsPrefetchPromise_;
+  }
+
+  if (!clubId) {
+    adminGroupsState_ = getDefaultGroupsState_();
+    return adminGroupsState_;
+  }
+
+  const storageKey = getGroupsStorageKey_();
+  const metaKey = storageKey + ".meta";
+
+  // 1. Najpierw zawsze bierzemy grupy z pamięci/localStorage.
+  adminGroupsState_ = adminGroupsState_ || loadGroupsStateFromCache_();
+
+  let hasLocalCache = false;
+  let cacheFresh = false;
+
+  try {
+    hasLocalCache = !!localStorage.getItem(storageKey);
+
+    const metaRaw = localStorage.getItem(metaKey);
+    if (metaRaw) {
+      const meta = JSON.parse(metaRaw);
+      const savedAt = new Date(meta.savedAt || "").getTime();
+
+      if (isFinite(savedAt)) {
+        cacheFresh = (Date.now() - savedAt) <= GROUPS_CACHE_MAX_AGE_MS;
+      }
+    }
+  } catch (e) {
+    hasLocalCache = false;
+    cacheFresh = false;
+  }
+
+  // 2. Jeśli cache jest świeży, NIE pobieramy ponownie z GAS.
+  if (hasLocalCache && cacheFresh) {
+    return adminGroupsState_;
+  }
+
+  // 3. Jeśli cache jest, ale stary — zwracamy go od razu,
+  // a świeże dane pobieramy w tle bez blokowania UI.
+  if (hasLocalCache && !cacheFresh) {
+    groupsPrefetchPromise_ = (async () => {
+      try {
+        const res = await apiClubGet("getClubGroupsConfig", {
+          _ts: Date.now()
+        });
+
+        if (res && res.success === false) {
+          throw new Error(res.error || "Błąd pobierania konfiguracji grup");
+        }
+
+        const groups =
+          (res && res.groups) ? res.groups :
+          (res && res.data) ? res.data :
+          res;
+
+        adminGroupsState_ = normalizeGroupsState_(groups);
+        saveGroupsStateToCache_(adminGroupsState_);
+
+        try {
+          localStorage.setItem(metaKey, JSON.stringify({
+            savedAt: new Date().toISOString()
+          }));
+        } catch (e) {}
+
+        // Jeśli popup grup jest otwarty, podmień listę po cichej aktualizacji.
+        const pop = document.getElementById("groupsPopup");
+        if (pop && !pop.classList.contains("hidden")) {
+          renderGroupsList_();
+        }
+
+        return adminGroupsState_;
+
+      } catch (e) {
+        console.warn("prefetchClubGroupsInBackground_ background error", e);
+        return adminGroupsState_;
+
+      } finally {
+        groupsPrefetchPromise_ = null;
+      }
+    })();
+
+    return adminGroupsState_;
+  }
+
+  // 4. Jeśli cache nie istnieje, pierwszy raz musimy poczekać na API.
   groupsPrefetchPromise_ = (async () => {
     try {
-      if (!clubId) {
-        adminGroupsState_ = getDefaultGroupsState_();
-        return adminGroupsState_;
-      }
-
-      // 1. Najpierw pokazujemy grupy z localStorage / pamięci
-      adminGroupsState_ = loadGroupsStateFromCache_();
-
-      // 2. W tle pobieramy aktualne grupy z GAS
       const res = await apiClubGet("getClubGroupsConfig", {
         _ts: Date.now()
       });
@@ -3096,26 +3175,25 @@ async function prefetchClubGroupsInBackground_() {
         throw new Error(res.error || "Błąd pobierania konfiguracji grup");
       }
 
-      // Obsługa kilku możliwych formatów odpowiedzi,
-      // żeby nie rozwalić działania, jeśli backend zwraca bezpośrednio obiekt grup.
       const groups =
         (res && res.groups) ? res.groups :
         (res && res.data) ? res.data :
         res;
 
-      const normalized = normalizeGroupsState_(groups);
-
-      adminGroupsState_ = normalized;
+      adminGroupsState_ = normalizeGroupsState_(groups);
       saveGroupsStateToCache_(adminGroupsState_);
+
+      try {
+        localStorage.setItem(metaKey, JSON.stringify({
+          savedAt: new Date().toISOString()
+        }));
+      } catch (e) {}
 
       return adminGroupsState_;
 
     } catch (e) {
       console.warn("prefetchClubGroupsInBackground_ error", e);
-
-      // Jeśli API padnie, zostają dane z pamięci.
       adminGroupsState_ = adminGroupsState_ || loadGroupsStateFromCache_();
-
       return adminGroupsState_;
 
     } finally {
