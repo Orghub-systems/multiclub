@@ -9144,19 +9144,21 @@ function renderTreningiTrainer(lista) {
           }
         </p>
 
-        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="btn" onclick="trainerToggleZapisani('${listId}')">
-            ${toggleLabel}
-          </button>
-
-          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
-            ✏️ Edytuj
-          </button>
-
-          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
-            🗑️ Usuń
-          </button>
-        </div>
+          <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+            <button class="btn" onclick="trainerToggleZapisani('${listId}')">
+              ${toggleLabel}
+            </button>
+          
+            ${window.__trainerEventsMode === "archive" ? "" : `
+              <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
+                ✏️ Edytuj
+              </button>
+          
+              <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
+                🗑️ Usuń
+              </button>
+            `}
+          </div>
 
         <div id="trainer-zapisani-${listId}" class="hidden"></div>
       </div>
