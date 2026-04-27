@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.37';
+  window.APP_BUILD = 'APP v2.38';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -12211,14 +12211,57 @@ async function fetchClubGroupsConfigFromGas_() {
 }
 
 function prefetchClubGroupsConfig_() {
+  const GROUPS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+  const storageKey = getClubGroupsStorageKey_();
+  const metaKey = storageKey + ".meta";
+
   if (clubGroupsPrefetchPromise_) return clubGroupsPrefetchPromise_;
 
+  // 1. Najpierw zawsze bierzemy lokalne dane, jeśli istnieją.
+  adminClubGroupsState_ = adminClubGroupsState_ || loadClubGroupsStateFromCache_();
+
+  let hasCache = false;
+  let cacheFresh = false;
+
+  try {
+    hasCache = !!localStorage.getItem(storageKey);
+
+    const metaRaw = localStorage.getItem(metaKey);
+    if (metaRaw) {
+      const meta = JSON.parse(metaRaw);
+      const savedAt = new Date(meta.savedAt || "").getTime();
+
+      if (isFinite(savedAt)) {
+        cacheFresh = (Date.now() - savedAt) <= GROUPS_CACHE_MAX_AGE_MS;
+      }
+    }
+  } catch (e) {
+    hasCache = false;
+    cacheFresh = false;
+  }
+
+  // 2. Jeśli cache istnieje i jest świeży, NIE wołamy GAS.
+  if (hasCache && cacheFresh) {
+    return Promise.resolve(adminClubGroupsState_);
+  }
+
+  // 3. Jeśli cache jest stary albo go nie ma, pobieramy świeże dane.
   clubGroupsPrefetchPromise_ = (async () => {
     try {
-      return await fetchClubGroupsConfigFromGas_();
+      const fresh = await fetchClubGroupsConfigFromGas_();
+
+      try {
+        localStorage.setItem(metaKey, JSON.stringify({
+          savedAt: new Date().toISOString()
+        }));
+      } catch (e) {}
+
+      return fresh;
+
     } catch (e) {
       console.warn("prefetchClubGroupsConfig_ error:", e);
       return adminClubGroupsState_ || loadClubGroupsStateFromCache_();
+
     } finally {
       clubGroupsPrefetchPromise_ = null;
     }
