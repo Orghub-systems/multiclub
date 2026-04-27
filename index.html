@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.27';
+  window.APP_BUILD = 'APP v2.28';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1243,18 +1243,36 @@ input[type="number"] {
 
 <!-- TRAINER ARCHIVE EVENTS VIEW
      Archiwalne wydarzenia trenera -->
+<!-- TRAINER ARCHIVE EVENTS VIEW
+     Wybór miesiąca archiwalnych wydarzeń -->
 
 <div id="trainerWydarzeniaArchiveView" class="container hidden">
   <h1>Archiwalne wydarzenia</h1>
 
   <div style="font-size:13px; opacity:.78; margin-bottom:12px;">
-    Wybierz miesiąc sezonu, aby zobaczyć wydarzenia archiwalne.
+    Wybierz miesiąc sezonu.
   </div>
 
   <div
     id="trainerArchiveMonthsInline"
     style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"
   ></div>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="trainerPokazWydarzenia()"
+  >
+    ⬅ Powrót
+  </button>
+</div>
+
+
+<!-- TRAINER ARCHIVE MONTH EVENTS VIEW
+     Lista wydarzeń z wybranego miesiąca archiwum -->
+
+<div id="trainerWydarzeniaArchiveMonthView" class="container hidden">
+  <h1 id="trainerArchiveMonthTitle">Archiwalne wydarzenia</h1>
 
   <div
     id="trainerArchiveSelectedMonth"
@@ -1266,9 +1284,9 @@ input[type="number"] {
   <button
     class="full-btn alt"
     type="button"
-    onclick="trainerPokazWydarzenia()"
+    onclick="trainerShowArchiveEventsMode_()"
   >
-    ⬅ Powrót
+    ⬅ Wróć do miesięcy
   </button>
 </div>
   
