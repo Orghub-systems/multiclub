@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.42';
+  window.APP_BUILD = 'APP v2.43';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -14400,7 +14400,18 @@ async function adminLoadRaportWydarzenia_() {
 
   try {
     // NOWE: backend zwraca gotową siatkę zakładki "Wydarzenia"
-    const res = await apiClubGet("raportWydarzenia", {}); // bez monthName
+    const res = await orgCachedApiGet_({
+      scope: "adminReportEvents",
+      parts: {
+        report: "wydarzenia"
+      },
+      action: "raportWydarzenia",
+      params: {
+        _ts: Date.now()
+      },
+      maxAgeMs: 24 * 60 * 60 * 1000,
+      useStale: true
+    });
 
     if (!res || res.success !== true || !Array.isArray(res.grid)) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu (albo brak zakładki/endpointu).</div>`;
