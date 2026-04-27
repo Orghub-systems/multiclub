@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.29';
+  window.APP_BUILD = 'APP v2.30';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8878,7 +8878,7 @@ async function selectTrainerArchiveMonth_(key, label) {
   }
 
   if (selectedMonth) {
-    selectedMonth.textContent = labelTxt ? `Wybrany miesiąc: ${labelTxt}` : "";
+    selectedMonth.innerHTML = "⏳ Liczenie podsumowania...";
   }
 
   if (listDiv) {
@@ -8896,6 +8896,10 @@ async function selectTrainerArchiveMonth_(key, label) {
       throw new Error(lista.error || "Błąd pobierania wydarzeń archiwalnych");
     }
 
+    if (selectedMonth) {
+      selectedMonth.innerHTML = trainerArchiveSummaryHtml_(lista);
+    }
+    
     if (!Array.isArray(lista) || !lista.length) {
       if (listDiv) {
         listDiv.innerHTML = `
@@ -8906,7 +8910,7 @@ async function selectTrainerArchiveMonth_(key, label) {
       }
       return;
     }
-
+    
     renderTreningiTrainer(lista);
 
   } catch (e) {
@@ -8914,6 +8918,65 @@ async function selectTrainerArchiveMonth_(key, label) {
       listDiv.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
     }
   }
+}
+
+function trainerDurationToHours_(value) {
+  const s = String(value || "").trim();
+  if (!s) return 0;
+
+  // np. "1,5" albo "1.5"
+  if (/^\d+([,.]\d+)?$/.test(s)) {
+    return Number(s.replace(",", "."));
+  }
+
+  // np. "1:30", "01:30", "1:30:00"
+  const timeMatch = s.match(/^(\d{1,3}):(\d{2})(?::(\d{2}))?$/);
+  if (timeMatch) {
+    const h = Number(timeMatch[1] || 0);
+    const m = Number(timeMatch[2] || 0);
+    const sec = Number(timeMatch[3] || 0);
+    return h + (m / 60) + (sec / 3600);
+  }
+
+  // np. "1 h", "1h", "90 min", "1 godz 30 min"
+  let total = 0;
+
+  const hMatch = s.match(/(\d+(?:[,.]\d+)?)\s*(h|godz|godzina|godziny)/i);
+  if (hMatch) {
+    total += Number(String(hMatch[1]).replace(",", "."));
+  }
+
+  const minMatch = s.match(/(\d+(?:[,.]\d+)?)\s*(m|min|minut|minuty)/i);
+  if (minMatch) {
+    total += Number(String(minMatch[1]).replace(",", ".")) / 60;
+  }
+
+  return isFinite(total) ? total : 0;
+}
+
+function trainerFormatHours_(hours) {
+  const n = Number(hours || 0);
+  if (!isFinite(n) || n <= 0) return "0 h";
+
+  const rounded = Math.round(n * 100) / 100;
+  return String(rounded).replace(".", ",") + " h";
+}
+
+function trainerArchiveSummaryHtml_(lista) {
+  const arr = Array.isArray(lista) ? lista : [];
+
+  const totalHours = arr.reduce((sum, item) => {
+    return sum + trainerDurationToHours_(item && item.czas);
+  }, 0);
+
+  return `
+    <div>
+      <b>${arr.length}</b> wydarzeń
+    </div>
+    <div>
+      Łączny czas trwania: <b>${trainerFormatHours_(totalHours)}</b>
+    </div>
+  `;
 }
   
 function renderTreningiTrainer(lista) {
@@ -9001,6 +9064,7 @@ function renderTreningiTrainer(lista) {
           <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
           ${t.dataKoniec && t.dataKoniec !== t.data ? `Do: <b>${t.dataKoniec}</b><br>` : ""}
           Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
+          ${t.czas ? `Czas trwania: <b>${t.czas}</b><br>` : ""}
           ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
           Trener: <b>${t.trener || "—"}</b><br>
           ${isPowolanie
