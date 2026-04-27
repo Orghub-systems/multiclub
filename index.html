@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.28';
+  window.APP_BUILD = 'APP v2.29';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8865,10 +8865,17 @@ async function selectTrainerArchiveMonth_(key, label) {
   window.__trainerEventsRenderTarget = "trainerArchiveListaWydarzen";
   window.__trainerArchiveSelectedMonth = String(key || "").trim();
 
+  const labelTxt = String(label || key || "").trim();
+
+  goToView("trainerWydarzeniaArchiveMonthView");
+
+  const title = document.getElementById("trainerArchiveMonthTitle");
   const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
   const listDiv = document.getElementById("trainerArchiveListaWydarzen");
 
-  const labelTxt = String(label || key || "").trim();
+  if (title) {
+    title.textContent = labelTxt ? `Archiwum: ${labelTxt}` : "Archiwalne wydarzenia";
+  }
 
   if (selectedMonth) {
     selectedMonth.textContent = labelTxt ? `Wybrany miesiąc: ${labelTxt}` : "";
