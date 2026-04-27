@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.25';
+  window.APP_BUILD = 'APP v2.26';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1181,60 +1181,94 @@ input[type="number"] {
 <!-- TRAINER EVENTS VIEW
      Lista wydarzeń zarządzanych przez trenera -->
     
+<!-- TRAINER EVENTS VIEW
+     Lista wydarzeń zarządzanych przez trenera -->
+
 <div id="trainerWydarzeniaView" class="container hidden">
   <h1>Wydarzenia</h1>
 
-  <div class="card" style="max-width:420px; margin:12px auto; text-align:left;">
-    <div style="display:flex; gap:8px; margin-bottom:12px;">
-      <button
-        id="btnTrainerEventsCurrent"
-        class="full-btn"
-        type="button"
-        style="margin:0; flex:1;"
-      >
-        Bieżące
-      </button>
-
-      <button
-        id="btnTrainerEventsArchive"
-        class="full-btn alt"
-        type="button"
-        style="margin:0; flex:1;"
-      >
-        Archiwalne
-      </button>
-    </div>
-
-    <div
-      id="trainerArchiveToolbar"
-      class="hidden"
-      style="margin-top:10px;"
+  <!-- GŁÓWNE MENU WYDARZEŃ -->
+  <div
+    id="trainerEventsMainMenu"
+    class="card"
+    style="max-width:420px; margin:12px auto; text-align:left;"
+  >
+    <button
+      id="btnTrainerEventsCurrent"
+      class="full-btn"
+      type="button"
+      style="margin:0 0 10px 0;"
     >
-      <div style="font-size:13px; opacity:.78; margin-bottom:8px;">
-        Wybierz miesiąc archiwalnych wydarzeń
+      Bieżące
+    </button>
+
+    <button
+      id="btnTrainerEventsArchive"
+      class="full-btn alt"
+      type="button"
+      style="margin:0 0 10px 0;"
+    >
+      Archiwalne
+    </button>
+
+    <button
+      class="full-btn alt"
+      type="button"
+      style="margin:0;"
+      onclick="appBack()"
+    >
+      ⬅ Powrót
+    </button>
+  </div>
+
+  <!-- PANEL ARCHIWUM: tutaj będą ładowane miesiące sezonu -->
+  <div
+    id="trainerArchiveToolbar"
+    class="hidden"
+    style="max-width:420px; margin:12px auto;"
+  >
+    <div class="card" style="text-align:left;">
+      <div style="font-size:15px; font-weight:700; margin-bottom:8px;">
+        Archiwalne miesiące
       </div>
 
-      <button
-        id="btnTrainerArchivePickMonth"
-        class="full-btn alt"
-        type="button"
-        style="margin:0;"
-      >
-        Wybierz miesiąc
-      </button>
+      <div style="font-size:13px; opacity:.78; margin-bottom:10px;">
+        Wybierz miesiąc sezonu, aby zobaczyć wydarzenia archiwalne.
+      </div>
+
+      <div
+        id="trainerArchiveMonthsInline"
+        style="display:flex; flex-direction:column; gap:8px;"
+      ></div>
 
       <div
         id="trainerArchiveSelectedMonth"
-        style="margin-top:8px; font-size:13px; opacity:.88; min-height:18px;"
+        style="margin-top:10px; font-size:13px; opacity:.88; min-height:18px;"
       ></div>
     </div>
   </div>
 
-  <div id="trainerListaWydarzen">Ładowanie...</div>
+  <!-- WSPÓLNA LISTA WYDARZEŃ: bieżące albo wybrany miesiąc archiwum -->
+  <div
+    id="trainerEventsListPanel"
+    class="hidden"
+    style="max-width:520px; margin:12px auto;"
+  >
+    <div id="trainerListaWydarzen"></div>
 
-  <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
-  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+    <button
+      id="btnTrainerAddEvent"
+      class="full-btn hidden"
+      type="button"
+      style="margin-top:20px;"
+      onclick="pokazDodajWydarzenie()"
+      disabled
+    >
+      ➕ Dodaj wydarzenie
+    </button>
+  </div>
 </div>
+  
 <!-- TRAINER ATTENDANCE REPORT VIEW
      Raport obecności zalogowanego trenera -->
 
