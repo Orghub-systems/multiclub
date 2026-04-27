@@ -8970,11 +8970,22 @@ function trainerArchiveSummaryHtml_(lista) {
   }, 0);
 
   return `
-    <div>
-      <b>${arr.length}</b> wydarzeń
-    </div>
-    <div>
-      Łączny czas trwania: <b>${trainerFormatHours_(totalHours)}</b>
+    <div style="
+      margin:12px auto 14px auto;
+      padding:14px 16px;
+      max-width:420px;
+      border-radius:16px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14);
+      text-align:center;
+      line-height:1.35;
+    ">
+      <div style="font-size:20px; font-weight:800;">
+        ${arr.length} wydarzeń
+      </div>
+      <div style="font-size:18px; font-weight:700; margin-top:6px;">
+        Łączny czas trwania: ${trainerFormatHours_(totalHours)}
+      </div>
     </div>
   `;
 }
