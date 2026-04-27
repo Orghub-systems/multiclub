@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.20';
+  window.APP_BUILD = 'APP v2.22';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1181,13 +1181,60 @@ input[type="number"] {
 <!-- TRAINER EVENTS VIEW
      Lista wydarzeń zarządzanych przez trenera -->
     
-    <div id="trainerWydarzeniaView" class="container hidden">
-      <h1>Wydarzenia</h1>
-      <div id="trainerListaWydarzen">Ładowanie...</div>
-      <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
-      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+<div id="trainerWydarzeniaView" class="container hidden">
+  <h1>Wydarzenia</h1>
+
+  <div class="card" style="max-width:420px; margin:12px auto; text-align:left;">
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <button
+        id="btnTrainerEventsCurrent"
+        class="full-btn"
+        type="button"
+        style="margin:0; flex:1;"
+      >
+        Bieżące
+      </button>
+
+      <button
+        id="btnTrainerEventsArchive"
+        class="full-btn alt"
+        type="button"
+        style="margin:0; flex:1;"
+      >
+        Archiwalne
+      </button>
     </div>
 
+    <div
+      id="trainerArchiveToolbar"
+      class="hidden"
+      style="margin-top:10px;"
+    >
+      <div style="font-size:13px; opacity:.78; margin-bottom:8px;">
+        Wybierz miesiąc archiwalnych wydarzeń
+      </div>
+
+      <button
+        id="btnTrainerArchivePickMonth"
+        class="full-btn alt"
+        type="button"
+        style="margin:0;"
+      >
+        Wybierz miesiąc
+      </button>
+
+      <div
+        id="trainerArchiveSelectedMonth"
+        style="margin-top:8px; font-size:13px; opacity:.88; min-height:18px;"
+      ></div>
+    </div>
+  </div>
+
+  <div id="trainerListaWydarzen">Ładowanie...</div>
+
+  <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
 <!-- TRAINER ATTENDANCE REPORT VIEW
      Raport obecności zalogowanego trenera -->
 
@@ -2107,7 +2154,26 @@ input[type="number"] {
      OVERLAYS: TRAINER
      Popupy trenera do zarządzania wydarzeniami
 ========================================================= -->
-  
+
+<!-- TRAINER ARCHIVE MONTHS POPUP
+     Potwierdzenie usunięcia wydarzenia -->
+
+<div id="trainerArchiveMonthsPopup" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  display:flex; justify-content:center; align-items:center;
+  z-index:3007; padding:18px;
+">
+  <div class="card" style="max-width:320px;width:100%; text-align:left;">
+    <div style="font-weight:800; font-size:16px; margin-bottom:10px;">Wybierz miesiąc</div>
+
+    <div id="trainerArchiveMonthsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="full-btn alt" style="flex:1;" type="button" onclick="closeTrainerArchiveMonthsPopup_()">Anuluj</button>
+    </div>
+  </div>
+</div>
+
 <!-- TRAINER DELETE EVENT POPUP
      Potwierdzenie usunięcia wydarzenia -->
   
@@ -8567,9 +8633,80 @@ function trainerOpenPlayerGroupsEdit_() {
   
 // =================== TRAINER / EVENTS LIST ===================
 
+// =================== TRAINER / EVENTS LIST ===================
+
+window.__trainerEventsMode = "current";
+window.__trainerArchiveMonths = null;
+window.__trainerArchiveMonthsLoading = null;
+window.__trainerArchiveSelectedMonth = "";
+
 // MUSI być globalne dla onclick w HTML
 window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
   goToView("trainerWydarzeniaView");
+
+  bindTrainerEventsModeButtons_();
+
+  // Domyślnie wchodzimy w bieżące
+  await trainerShowCurrentEvents_();
+};
+
+function bindTrainerEventsModeButtons_() {
+  const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
+  const btnArchive = document.getElementById("btnTrainerEventsArchive");
+  const btnPickMonth = document.getElementById("btnTrainerArchivePickMonth");
+
+  if (btnCurrent && btnCurrent.dataset.bound !== "1") {
+    btnCurrent.dataset.bound = "1";
+    btnCurrent.onclick = function () {
+      trainerShowCurrentEvents_();
+    };
+  }
+
+  if (btnArchive && btnArchive.dataset.bound !== "1") {
+    btnArchive.dataset.bound = "1";
+    btnArchive.onclick = function () {
+      trainerShowArchiveEventsMode_();
+    };
+  }
+
+    if (btnPickMonth && btnPickMonth.dataset.bound !== "1") {
+      btnPickMonth.dataset.bound = "1";
+      btnPickMonth.onclick = function () {
+        openTrainerArchiveMonthsPopup_();
+      };
+    }
+}
+
+function trainerRenderEventsModeUi_() {
+  const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
+  const btnArchive = document.getElementById("btnTrainerEventsArchive");
+  const toolbar = document.getElementById("trainerArchiveToolbar");
+  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
+
+  const isArchive = window.__trainerEventsMode === "archive";
+
+  if (btnCurrent) {
+    btnCurrent.className = isArchive ? "full-btn alt" : "full-btn";
+  }
+
+  if (btnArchive) {
+    btnArchive.className = isArchive ? "full-btn" : "full-btn alt";
+  }
+
+  if (toolbar) {
+    toolbar.classList.toggle("hidden", !isArchive);
+  }
+
+  if (selectedMonth) {
+    selectedMonth.textContent = window.__trainerArchiveSelectedMonth
+      ? `Wybrany miesiąc: ${window.__trainerArchiveSelectedMonth}`
+      : "";
+  }
+}
+
+async function trainerShowCurrentEvents_() {
+  window.__trainerEventsMode = "current";
+  trainerRenderEventsModeUi_();
 
   const div = document.getElementById("trainerListaWydarzen");
   if (div) {
@@ -8588,8 +8725,130 @@ window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
       div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
     }
   }
-};
+}
 
+async function trainerShowArchiveEventsMode_() {
+  window.__trainerEventsMode = "archive";
+  trainerRenderEventsModeUi_();
+
+  const div = document.getElementById("trainerListaWydarzen");
+  if (div) {
+    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy archiwalnych...</div>";
+  }
+
+  try {
+    const months = await trainerEnsureArchiveMonthsLoaded_();
+
+    if (!Array.isArray(months) || !months.length) {
+      if (div) {
+        div.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
+      }
+      return;
+    }
+
+    if (div) {
+      div.innerHTML = "<div class='card' style='background:#111;'>Wybierz miesiąc archiwalnych wydarzeń.</div>";
+    }
+
+  } catch (e) {
+    if (div) {
+      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
+    }
+  }
+}
+
+async function trainerEnsureArchiveMonthsLoaded_() {
+  // Na czas diagnostyki NIE trzymamy cache po stronie frontendu.
+  // Każde kliknięcie Archiwalne / Wybierz miesiąc ma realnie zapytać backend.
+  window.__trainerArchiveMonths = null;
+  window.__trainerArchiveMonthsLoading = null;
+
+  const months = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
+    _ts: Date.now()
+  });
+
+  window.__trainerArchiveMonths = Array.isArray(months) ? months : [];
+
+  return window.__trainerArchiveMonths;
+}
+
+async function openTrainerArchiveMonthsPopup_() {
+  const popup = document.getElementById("trainerArchiveMonthsPopup");
+  const list = document.getElementById("trainerArchiveMonthsList");
+
+  if (!popup || !list) return;
+
+  list.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy...</div>";
+  popup.classList.remove("hidden");
+
+  try {
+    const months = await trainerEnsureArchiveMonthsLoaded_();
+
+    if (!Array.isArray(months) || !months.length) {
+      list.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
+      return;
+    }
+
+    list.innerHTML = months.map(m => {
+      const key = String(m?.key || "").trim();
+      const label = String(m?.label || key).trim();
+      const isSelected = key && key === window.__trainerArchiveSelectedMonth;
+
+      return `
+        <button
+          type="button"
+          class="full-btn ${isSelected ? "" : "alt"}"
+          style="margin:0;"
+          onclick="selectTrainerArchiveMonth_('${key.replace(/'/g, "\\'")}', '${label.replace(/'/g, "\\'")}')"
+        >
+          ${label}
+        </button>
+      `;
+    }).join("");
+
+  } catch (e) {
+    list.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
+  }
+}
+
+function closeTrainerArchiveMonthsPopup_() {
+  const popup = document.getElementById("trainerArchiveMonthsPopup");
+  if (popup) popup.classList.add("hidden");
+}
+
+async function selectTrainerArchiveMonth_(key, label) {
+  window.__trainerArchiveSelectedMonth = String(key || "").trim();
+  trainerRenderEventsModeUi_();
+  closeTrainerArchiveMonthsPopup_();
+
+  const div = document.getElementById("trainerListaWydarzen");
+  if (div) {
+    div.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie wydarzeń z miesiąca: <b>${String(label || key || "").trim()}</b>...</div>`;
+  }
+
+  try {
+    const lista = await apiClubGet("treningiTrenerArchiwalne", {
+      grupa: window.grupyTrenera || "",
+      miesiac: window.__trainerArchiveSelectedMonth
+    });
+
+    renderTreningiTrainer(lista);
+
+    if ((!Array.isArray(lista) || !lista.length) && div) {
+      div.innerHTML = `
+        <div class="card" style="background:#111;">
+          Brak wydarzeń archiwalnych w miesiącu: <b>${String(label || key || "").trim()}</b>.
+        </div>
+      `;
+    }
+
+  } catch (e) {
+    if (div) {
+      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
+    }
+  }
+}
+  
 function renderTreningiTrainer(lista) {
   const div = document.getElementById("trainerListaWydarzen");
   if (!div) return;
