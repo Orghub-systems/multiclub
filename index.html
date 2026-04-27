@@ -8800,23 +8800,38 @@ async function trainerShowArchiveEventsMode_() {
 }
 
 async function trainerEnsureArchiveMonthsLoaded_() {
-  // Na razie bez cache — każde wejście pobiera świeżą odpowiedź z API.
-  window.__trainerArchiveMonths = null;
-  window.__trainerArchiveMonthsLoading = null;
-
-  const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
-    _ts: Date.now()
-  });
-
-  if (response && response.success === false) {
-    throw new Error(response.error || "Błąd pobierania miesięcy archiwalnych");
+  // Cache tylko w pamięci frontendu.
+  // Nie używamy CacheService w GAS.
+  if (Array.isArray(window.__trainerArchiveMonths)) {
+    return window.__trainerArchiveMonths;
   }
 
-  const months = Array.isArray(response) ? response : [];
+  // Jeśli request już trwa, drugi klik nie odpala kolejnego API.
+  if (window.__trainerArchiveMonthsLoading) {
+    return await window.__trainerArchiveMonthsLoading;
+  }
 
-  window.__trainerArchiveMonths = months;
+  window.__trainerArchiveMonthsLoading = (async () => {
+    const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
+      _ts: Date.now()
+    });
 
-  return months;
+    if (response && response.success === false) {
+      throw new Error(response.error || "Błąd pobierania miesięcy archiwalnych");
+    }
+
+    const months = Array.isArray(response) ? response : [];
+
+    window.__trainerArchiveMonths = months;
+
+    return months;
+  })();
+
+  try {
+    return await window.__trainerArchiveMonthsLoading;
+  } finally {
+    window.__trainerArchiveMonthsLoading = null;
+  }
 }
 
 function trainerEscHtml_(value) {
