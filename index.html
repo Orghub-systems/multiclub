@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.41';
+  window.APP_BUILD = 'APP v2.42';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11057,18 +11057,15 @@ async function adminSetAccessFromList(nr, checked) {
 /* =================== KONIEC SEKTORA 150 =================== */
   
 /* =================== 160 ADMIN / PLAYERS LIST / ACCESS / DELETE =================== */
-
 async function adminPokazTrenerow() {
   goToView("adminTrenerzyView");
 
   const box = document.getElementById("adminListaTrenerow");
   if (!box) return;
 
-  box.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie...</div>`;
+  const TRAINERS_CACHE_24H = 24 * 60 * 60 * 1000;
 
-  try {
-    const res = await apiClubGet("adminListaTrenerow");
-
+  function renderAdminTrainers_(res) {
     if (!res || !res.success) {
       box.innerHTML = `
         <div class="card" style="background:#700;">
@@ -11114,10 +11111,40 @@ async function adminPokazTrenerow() {
           <div style="font-size:12px; opacity:.55; margin-top:12px; text-align:center;">
             Kliknij, aby zobaczyć szczegóły
           </div>
-  
         </div>
       `;
     }).join("");
+  }
+
+  box.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie...</div>`;
+
+  try {
+    let renderedFromHook = false;
+
+    const res = await orgCachedApiGet_({
+      scope: "adminTrainersList",
+      parts: {
+        list: "all"
+      },
+      action: "adminListaTrenerow",
+      params: {
+        _ts: Date.now()
+      },
+      maxAgeMs: TRAINERS_CACHE_24H,
+      useStale: true,
+      onCached: (cachedRes) => {
+        renderedFromHook = true;
+        renderAdminTrainers_(cachedRes);
+      },
+      onFresh: (freshRes) => {
+        renderedFromHook = true;
+        renderAdminTrainers_(freshRes);
+      }
+    });
+
+    if (!renderedFromHook) {
+      renderAdminTrainers_(res);
+    }
 
   } catch (e) {
     box.innerHTML = `
