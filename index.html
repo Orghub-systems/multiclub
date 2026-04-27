@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.35';
+  window.APP_BUILD = 'APP v2.36';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3084,27 +3084,40 @@ async function prefetchClubGroupsInBackground_() {
         return adminGroupsState_;
       }
 
-      // 1) najpierw bierzemy to, co już jest lokalnie
+      // 1. Najpierw pokazujemy grupy z localStorage / pamięci
       adminGroupsState_ = loadGroupsStateFromCache_();
 
-      // 2) tutaj w następnym kroku podepniemy prawdziwy fetch z GAS
-      //    bez blokowania UI
-      //
-      // przykład docelowo:
-      // const res = await apiClubPost({
-      //   action: "TU_WSTAW_WLASCIWA_AKCJE_GAS_DLA_GRUP"
-      // });
-      //
-      // if (res && res.success === true && res.groups) {
-      //   adminGroupsState_ = normalizeGroupsState_(res.groups);
-      //   saveGroupsStateToCache_(adminGroupsState_);
-      // }
+      // 2. W tle pobieramy aktualne grupy z GAS
+      const res = await apiClubGet("getClubGroupsConfig", {
+        _ts: Date.now()
+      });
+
+      if (res && res.success === false) {
+        throw new Error(res.error || "Błąd pobierania konfiguracji grup");
+      }
+
+      // Obsługa kilku możliwych formatów odpowiedzi,
+      // żeby nie rozwalić działania, jeśli backend zwraca bezpośrednio obiekt grup.
+      const groups =
+        (res && res.groups) ? res.groups :
+        (res && res.data) ? res.data :
+        res;
+
+      const normalized = normalizeGroupsState_(groups);
+
+      adminGroupsState_ = normalized;
+      saveGroupsStateToCache_(adminGroupsState_);
 
       return adminGroupsState_;
+
     } catch (e) {
       console.warn("prefetchClubGroupsInBackground_ error", e);
+
+      // Jeśli API padnie, zostają dane z pamięci.
       adminGroupsState_ = adminGroupsState_ || loadGroupsStateFromCache_();
+
       return adminGroupsState_;
+
     } finally {
       groupsPrefetchPromise_ = null;
     }
