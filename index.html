@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.32';
+  window.APP_BUILD = 'APP v2.33';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9023,10 +9023,24 @@ async function selectTrainerArchiveMonth_(key, label) {
   }
 
   try {
-    const lista = await apiClubGet("treningiTrenerArchiwalne", {
-      grupa: window.grupyTrenera || "",
-      miesiac: window.__trainerArchiveSelectedMonth,
-      _ts: Date.now()
+    const lista = await orgCachedApiGet_({
+      scope: "trainerArchiveEvents",
+      parts: {
+        month: window.__trainerArchiveSelectedMonth,
+        groups: window.grupyTrenera || ""
+      },
+      action: "treningiTrenerArchiwalne",
+      params: {
+        grupa: window.grupyTrenera || "",
+        miesiac: window.__trainerArchiveSelectedMonth,
+        _ts: Date.now()
+      },
+    
+      // Archiwum jest historyczne, więc cache może być długi.
+      // Na razie 31 dni; później możemy zrobić sezonowy albo wersjonowany.
+      maxAgeMs: 31 * 24 * 60 * 60 * 1000,
+    
+      useStale: true
     });
 
     if (lista && lista.success === false) {
