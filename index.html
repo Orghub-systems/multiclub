@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.31';
+  window.APP_BUILD = 'APP v2.32';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8942,81 +8942,20 @@ async function trainerEnsureArchiveMonthsLoaded_() {
   const cacheMonthKey =
     now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
 
-  const clubKey = String(window.clubId || clubId || "").trim().toLowerCase();
-
-  const storageKey = [
-    "orghub",
-    "trainerArchiveMonths",
-    "v1",
-    clubKey,
-    cacheMonthKey
-  ].join(".");
-
-  // 1. Cache w pamięci — najszybszy, działa dopóki appka jest otwarta
-  if (
-    Array.isArray(window.__trainerArchiveMonths) &&
-    window.__trainerArchiveMonthsStorageKey === storageKey
-  ) {
-    return window.__trainerArchiveMonths;
-  }
-
-  // 2. Cache z localStorage — działa po zamknięciu/otwarciu aplikacji
-  try {
-    const cachedRaw = localStorage.getItem(storageKey);
-    if (cachedRaw) {
-      const cached = JSON.parse(cachedRaw);
-
-      if (cached && Array.isArray(cached.months)) {
-        window.__trainerArchiveMonths = cached.months;
-        window.__trainerArchiveMonthsStorageKey = storageKey;
-        return cached.months;
-      }
-    }
-  } catch (e) {
-    // localStorage nie może zablokować działania
-  }
-
-  // 3. Jeśli request już trwa, nie odpalamy drugiego
-  if (window.__trainerArchiveMonthsLoading) {
-    return await window.__trainerArchiveMonthsLoading;
-  }
-
-  // 4. Brak cache — pobieramy z API
-  window.__trainerArchiveMonthsLoading = (async () => {
-    const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
+  return await orgCachedApiGet_({
+    scope: "trainerArchiveMonths",
+    parts: {
+      month: cacheMonthKey
+    },
+    action: "treningiTrenerArchiwalneMiesiace",
+    params: {
       _ts: Date.now()
-    });
-
-    if (response && response.success === false) {
-      throw new Error(response.error || "Błąd pobierania miesięcy archiwalnych");
-    }
-
-    const months = Array.isArray(response) ? response : [];
-
-    window.__trainerArchiveMonths = months;
-    window.__trainerArchiveMonthsStorageKey = storageKey;
-
-    try {
-      localStorage.setItem(storageKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        clubId: clubKey,
-        cacheMonth: cacheMonthKey,
-        months
-      }));
-    } catch (e) {
-      // brak miejsca / tryb prywatny — ignorujemy
-    }
-
-    return months;
-  })();
-
-  try {
-    return await window.__trainerArchiveMonthsLoading;
-  } finally {
-    window.__trainerArchiveMonthsLoading = null;
-  }
+    },
+    maxAgeMs: 31 * 24 * 60 * 60 * 1000,
+    useStale: true
+  });
 }
-
+  
 function trainerEscHtml_(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
