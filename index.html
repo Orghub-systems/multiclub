@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.24';
+  window.APP_BUILD = 'APP v2.25';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8630,8 +8630,6 @@ function trainerOpenPlayerGroupsEdit_() {
   const el = document.getElementById("trainerInfoGrupy");
   if (el) el.textContent = label;
 }
-  
-// =================== TRAINER / EVENTS LIST ===================
 
 // =================== TRAINER / EVENTS LIST ===================
 
@@ -8758,30 +8756,25 @@ async function trainerShowArchiveEventsMode_() {
 }
 
 async function trainerEnsureArchiveMonthsLoaded_() {
+  // Na razie bez cache — każde wejście pobiera świeżą odpowiedź z API.
   window.__trainerArchiveMonths = null;
   window.__trainerArchiveMonthsLoading = null;
 
-  try {
-    const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
-      _ts: Date.now()
-    });
+  const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
+    _ts: Date.now()
+  });
 
-    return [
-      {
-        key: "DEBUG_API_RESPONSE",
-        label: "DEBUG API RESPONSE: " + JSON.stringify(response)
-      }
-    ];
-
-  } catch (e) {
-    return [
-      {
-        key: "DEBUG_API_ERROR",
-        label: "DEBUG API ERROR: " + String(e?.message || e)
-      }
-    ];
+  if (response && response.success === false) {
+    throw new Error(response.error || "Błąd pobierania miesięcy archiwalnych");
   }
+
+  const months = Array.isArray(response) ? response : [];
+
+  window.__trainerArchiveMonths = months;
+
+  return months;
 }
+
 async function openTrainerArchiveMonthsPopup_() {
   const popup = document.getElementById("trainerArchiveMonthsPopup");
   const list = document.getElementById("trainerArchiveMonthsList");
@@ -8790,6 +8783,10 @@ async function openTrainerArchiveMonthsPopup_() {
 
   list.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy...</div>";
   popup.classList.remove("hidden");
+
+  if (typeof pushAppModalHistoryState_ === "function") {
+    pushAppModalHistoryState_("trainerArchiveMonthsPopup");
+  }
 
   try {
     const months = await trainerEnsureArchiveMonthsLoaded_();
@@ -8821,9 +8818,21 @@ async function openTrainerArchiveMonthsPopup_() {
   }
 }
 
-function closeTrainerArchiveMonthsPopup_() {
+function hideTrainerArchiveMonthsPopup_() {
   const popup = document.getElementById("trainerArchiveMonthsPopup");
   if (popup) popup.classList.add("hidden");
+}
+
+function closeTrainerArchiveMonthsPopup_() {
+  if (
+    typeof isHistoryModal_ === "function" &&
+    isHistoryModal_("trainerArchiveMonthsPopup")
+  ) {
+    history.back();
+    return;
+  }
+
+  hideTrainerArchiveMonthsPopup_();
 }
 
 async function selectTrainerArchiveMonth_(key, label) {
