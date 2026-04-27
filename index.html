@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.30';
+  window.APP_BUILD = 'APP v2.31';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3465,6 +3465,144 @@ async function apiClubGet(action, params = {}) {
   }
 }
 
+// =================== ORG HUB / LOCAL CACHE HELPERS ===================
+
+const ORGHUB_CACHE_PREFIX = "orghub.cache.v1";
+
+function orgCacheClubId_() {
+  return String(window.clubId || clubId || "").trim().toLowerCase();
+}
+
+function orgCacheNormalizePart_(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9ąćęłńóśźż_\-]/gi, "");
+}
+
+function orgCacheKey_(scope, parts = {}) {
+  const clubKey = orgCacheNormalizePart_(orgCacheClubId_());
+  const scopeKey = orgCacheNormalizePart_(scope);
+
+  const extra = Object.keys(parts || {})
+    .sort()
+    .map(k => `${orgCacheNormalizePart_(k)}-${orgCacheNormalizePart_(parts[k])}`)
+    .join(".");
+
+  return [
+    ORGHUB_CACHE_PREFIX,
+    clubKey || "no_club",
+    scopeKey || "unknown",
+    extra || "default"
+  ].join(".");
+}
+
+function orgCacheRead_(scope, parts = {}) {
+  const key = orgCacheKey_(scope, parts);
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    const entry = JSON.parse(raw);
+
+    if (!entry || typeof entry !== "object") return null;
+    if (!("data" in entry)) return null;
+
+    return {
+      key,
+      savedAt: entry.savedAt || "",
+      version: entry.version || "",
+      data: entry.data
+    };
+
+  } catch (e) {
+    return null;
+  }
+}
+
+function orgCacheWrite_(scope, parts = {}, data, options = {}) {
+  const key = orgCacheKey_(scope, parts);
+
+  try {
+    const entry = {
+      savedAt: new Date().toISOString(),
+      version: options.version || "",
+      data
+    };
+
+    localStorage.setItem(key, JSON.stringify(entry));
+
+    return true;
+
+  } catch (e) {
+    return false;
+  }
+}
+
+function orgCacheRemove_(scope, parts = {}) {
+  const key = orgCacheKey_(scope, parts);
+
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function orgCacheIsFresh_(entry, maxAgeMs) {
+  if (!entry || !entry.savedAt) return false;
+  if (!maxAgeMs || maxAgeMs <= 0) return false;
+
+  const savedTime = new Date(entry.savedAt).getTime();
+  if (!isFinite(savedTime)) return false;
+
+  return (Date.now() - savedTime) <= maxAgeMs;
+}
+
+async function orgCachedApiGet_(config) {
+  const {
+    scope,
+    parts = {},
+    action,
+    params = {},
+    maxAgeMs = 0,
+    useStale = true,
+    onCached,
+    onFresh
+  } = config || {};
+
+  if (!scope || !action) {
+    throw new Error("orgCachedApiGet_: brak scope albo action");
+  }
+
+  const cached = orgCacheRead_(scope, parts);
+
+  if (cached && useStale && typeof onCached === "function") {
+    onCached(cached.data, cached);
+  }
+
+  if (cached && orgCacheIsFresh_(cached, maxAgeMs)) {
+    return cached.data;
+  }
+
+  const fresh = await apiClubGet(action, params);
+
+  if (fresh && fresh.success === false) {
+    throw new Error(fresh.error || "Błąd API: " + action);
+  }
+
+  orgCacheWrite_(scope, parts, fresh);
+
+  if (typeof onFresh === "function") {
+    onFresh(fresh);
+  }
+
+  return fresh;
+}
+  
 // Wyciągnięcie komunikatu błędu z odpowiedzi HTML GAS  
 function extractGasError_(html) {
   try {
