@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.43';
+  window.APP_BUILD = 'APP v2.44';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -14595,7 +14595,18 @@ async function adminLoadRaportTrenerzy_() {
 
   try {
     // NOWE: backend zwraca siatkę zakładki "Trenerzy"
-    const res = await apiClubGet("raportTrenerzy", {}); // bez monthName
+    const res = await orgCachedApiGet_({
+      scope: "adminReportTrainers",
+      parts: {
+        report: "trenerzy"
+      },
+      action: "raportTrenerzy",
+      params: {
+        _ts: Date.now()
+      },
+      maxAgeMs: 24 * 60 * 60 * 1000,
+      useStale: true
+    });
 
     if (!res || res.success !== true || !Array.isArray(res.grid)) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu trenerów (albo brak zakładki/endpointu).</div>`;
@@ -14761,7 +14772,18 @@ async function adminLoadRaportRezerwacja_() {
 
   try {
     // NOWE: backend zwraca siatkę zakładki "Rezerwacja obiektu"
-    const res = await apiClubGet("raportRezerwacja", {}); // bez monthName
+    const res = await orgCachedApiGet_({
+      scope: "adminReportReservation",
+      parts: {
+        report: "rezerwacja"
+      },
+      action: "raportRezerwacja",
+      params: {
+        _ts: Date.now()
+      },
+      maxAgeMs: 24 * 60 * 60 * 1000,
+      useStale: true
+    });
 
     if (!res || res.success !== true || !Array.isArray(res.grid)) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu rezerwacji (albo brak zakładki/endpointu).</div>`;
