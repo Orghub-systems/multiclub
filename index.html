@@ -8800,17 +8800,50 @@ async function trainerShowArchiveEventsMode_() {
 }
 
 async function trainerEnsureArchiveMonthsLoaded_() {
-  // Cache tylko w pamięci frontendu.
-  // Nie używamy CacheService w GAS.
-  if (Array.isArray(window.__trainerArchiveMonths)) {
+  const now = new Date();
+  const cacheMonthKey =
+    now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+
+  const clubKey = String(window.clubId || clubId || "").trim().toLowerCase();
+
+  const storageKey = [
+    "orghub",
+    "trainerArchiveMonths",
+    "v1",
+    clubKey,
+    cacheMonthKey
+  ].join(".");
+
+  // 1. Cache w pamięci — najszybszy, działa dopóki appka jest otwarta
+  if (
+    Array.isArray(window.__trainerArchiveMonths) &&
+    window.__trainerArchiveMonthsStorageKey === storageKey
+  ) {
     return window.__trainerArchiveMonths;
   }
 
-  // Jeśli request już trwa, drugi klik nie odpala kolejnego API.
+  // 2. Cache z localStorage — działa po zamknięciu/otwarciu aplikacji
+  try {
+    const cachedRaw = localStorage.getItem(storageKey);
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw);
+
+      if (cached && Array.isArray(cached.months)) {
+        window.__trainerArchiveMonths = cached.months;
+        window.__trainerArchiveMonthsStorageKey = storageKey;
+        return cached.months;
+      }
+    }
+  } catch (e) {
+    // localStorage nie może zablokować działania
+  }
+
+  // 3. Jeśli request już trwa, nie odpalamy drugiego
   if (window.__trainerArchiveMonthsLoading) {
     return await window.__trainerArchiveMonthsLoading;
   }
 
+  // 4. Brak cache — pobieramy z API
   window.__trainerArchiveMonthsLoading = (async () => {
     const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
       _ts: Date.now()
@@ -8823,6 +8856,18 @@ async function trainerEnsureArchiveMonthsLoaded_() {
     const months = Array.isArray(response) ? response : [];
 
     window.__trainerArchiveMonths = months;
+    window.__trainerArchiveMonthsStorageKey = storageKey;
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        clubId: clubKey,
+        cacheMonth: cacheMonthKey,
+        months
+      }));
+    } catch (e) {
+      // brak miejsca / tryb prywatny — ignorujemy
+    }
 
     return months;
   })();
