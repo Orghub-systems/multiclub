@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.33';
+  window.APP_BUILD = 'APP v2.34';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9337,17 +9337,71 @@ async function trainerToggleZapisani(id) {
 
 /* --- dodawanie wydarzenia --- */
 async function zaladujListeTrenerow() {
-  try {
-    const lista = await apiClubGet("getTrenerzy", {});
+  const CACHE_SCOPE = "clubTrainers";
+  const CACHE_PARTS = { role: "trainerEvents" };
+
+  function esc_(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderTrenerzyOptions_(lista) {
+    const trenerzy = Array.isArray(lista) ? lista : [];
+
     const t1 = document.getElementById("eventTrener1");
     const t2 = document.getElementById("eventTrener2");
-    t1.innerHTML = "<option value=''>— wybierz trenera —</option>";
-    t2.innerHTML = "<option value=''>— Brak —</option>";
-    (lista || []).forEach(nazw => {
-      t1.innerHTML += `<option value="${nazw}">${nazw}</option>`;
-      t2.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+    const t3 = document.getElementById("eventTrener3");
+    const t4 = document.getElementById("eventTrener4");
+
+    const mainHtml =
+      "<option value=''>— wybierz trenera —</option>" +
+      trenerzy.map(nazw => {
+        const safe = esc_(nazw);
+        return `<option value="${safe}">${safe}</option>`;
+      }).join("");
+
+    const optionalHtml =
+      "<option value=''>— Brak —</option>" +
+      trenerzy.map(nazw => {
+        const safe = esc_(nazw);
+        return `<option value="${safe}">${safe}</option>`;
+      }).join("");
+
+    if (t1) t1.innerHTML = mainHtml;
+    if (t2) t2.innerHTML = optionalHtml;
+    if (t3) t3.innerHTML = optionalHtml;
+    if (t4) t4.innerHTML = optionalHtml;
+  }
+
+  // 1. Najpierw pokazujemy cache, jeśli istnieje
+  const cached = orgCacheRead_(CACHE_SCOPE, CACHE_PARTS);
+  if (cached && Array.isArray(cached.data)) {
+    renderTrenerzyOptions_(cached.data);
+  }
+
+  // 2. W tle pobieramy aktualną listę z API
+  try {
+    const fresh = await apiClubGet("getTrenerzy", {
+      _ts: Date.now()
     });
-  } catch {}
+
+    if (fresh && fresh.success === false) {
+      throw new Error(fresh.error || "Błąd pobierania trenerów");
+    }
+
+    const lista = Array.isArray(fresh) ? fresh : [];
+
+    orgCacheWrite_(CACHE_SCOPE, CACHE_PARTS, lista);
+    renderTrenerzyOptions_(lista);
+
+  } catch (e) {
+    // Jeśli API padnie, a cache był — użytkownik dalej ma listę z pamięci.
+    // Jeśli cache nie było, zostawiamy dotychczasowy stan selectów.
+    console.warn("zaladujListeTrenerow cache/API error:", e);
+  }
 }
 
   function resetTrenerSelects_() {
