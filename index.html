@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.23';
+  window.APP_BUILD = 'APP v2.24';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8758,18 +8758,30 @@ async function trainerShowArchiveEventsMode_() {
 }
 
 async function trainerEnsureArchiveMonthsLoaded_() {
-  return [
-    {
-      key: "TEST_FRONTEND",
-      label: "TEST FRONTEND: ta funkcja działa"
-    },
-    {
-      key: "Lipiec",
-      label: "Lipiec"
-    }
-  ];
-}
+  window.__trainerArchiveMonths = null;
+  window.__trainerArchiveMonthsLoading = null;
 
+  try {
+    const response = await apiClubGet("treningiTrenerArchiwalneMiesiace", {
+      _ts: Date.now()
+    });
+
+    return [
+      {
+        key: "DEBUG_API_RESPONSE",
+        label: "DEBUG API RESPONSE: " + JSON.stringify(response)
+      }
+    ];
+
+  } catch (e) {
+    return [
+      {
+        key: "DEBUG_API_ERROR",
+        label: "DEBUG API ERROR: " + String(e?.message || e)
+      }
+    ];
+  }
+}
 async function openTrainerArchiveMonthsPopup_() {
   const popup = document.getElementById("trainerArchiveMonthsPopup");
   const list = document.getElementById("trainerArchiveMonthsList");
