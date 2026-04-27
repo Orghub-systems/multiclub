@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.38';
+  window.APP_BUILD = 'APP v2.39';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8342,14 +8342,56 @@ async function odswiezListeZapisanych(id) {
   row.dataset.accepted = accepted ? "1" : "0";
 } 
 
+async function loadStatystykiCached_(numer, hooks = {}) {
+  const nr = String(numer || "").trim();
+
+  if (!nr) {
+    throw new Error("Brak numeru zawodnika dla statystyk");
+  }
+
+  const STATS_CACHE_24H = 24 * 60 * 60 * 1000;
+
+  return await orgCachedApiGet_({
+    scope: "playerStats",
+    parts: {
+      numer: nr
+    },
+    action: "statystyki",
+    params: {
+      numer: nr,
+      _ts: Date.now()
+    },
+    maxAgeMs: STATS_CACHE_24H,
+    useStale: true,
+    onCached: hooks.onCached,
+    onFresh: hooks.onFresh
+  });
+}  
+  
 async function pokazStatystyki() {
   goToView("statsView");
+
   const div = document.getElementById("listaStatystyk");
   if (div) div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
 
   try {
-    const lista = await apiClubGet("statystyki", { numer: numerZalogowanego });
-    renderStatystyki(lista);
+    let renderedByCacheHook = false;
+
+    const lista = await loadStatystykiCached_(numerZalogowanego, {
+      onCached: (cachedLista) => {
+        renderedByCacheHook = true;
+        renderStatystyki(cachedLista);
+      },
+      onFresh: (freshLista) => {
+        renderedByCacheHook = true;
+        renderStatystyki(freshLista);
+      }
+    });
+
+    if (!renderedByCacheHook) {
+      renderStatystyki(lista);
+    }
+
   } catch (e) {
     console.error("pokazStatystyki error", e);
     if (div) div.innerHTML = `<p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>`;
