@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.26';
+  window.APP_BUILD = 'APP v2.27';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8670,25 +8670,24 @@ function trainerOpenPlayerGroupsEdit_() {
 
 // =================== TRAINER / EVENTS LIST ===================
 
-window.__trainerEventsMode = "current";
+window.__trainerEventsMode = "menu";
 window.__trainerArchiveMonths = null;
 window.__trainerArchiveMonthsLoading = null;
 window.__trainerArchiveSelectedMonth = "";
+window.__trainerEventsRenderTarget = "";
 
 // MUSI być globalne dla onclick w HTML
 window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
+  window.__trainerEventsMode = "menu";
+  window.__trainerEventsRenderTarget = "";
+
   goToView("trainerWydarzeniaView");
-
   bindTrainerEventsModeButtons_();
-
-  // Domyślnie wchodzimy w bieżące
-  await trainerShowCurrentEvents_();
 };
 
 function bindTrainerEventsModeButtons_() {
   const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
   const btnArchive = document.getElementById("btnTrainerEventsArchive");
-  const btnPickMonth = document.getElementById("btnTrainerArchivePickMonth");
 
   if (btnCurrent && btnCurrent.dataset.bound !== "1") {
     btnCurrent.dataset.bound = "1";
@@ -8703,49 +8702,31 @@ function bindTrainerEventsModeButtons_() {
       trainerShowArchiveEventsMode_();
     };
   }
-
-    if (btnPickMonth && btnPickMonth.dataset.bound !== "1") {
-      btnPickMonth.dataset.bound = "1";
-      btnPickMonth.onclick = function () {
-        openTrainerArchiveMonthsPopup_();
-      };
-    }
 }
 
-function trainerRenderEventsModeUi_() {
-  const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
-  const btnArchive = document.getElementById("btnTrainerEventsArchive");
-  const toolbar = document.getElementById("trainerArchiveToolbar");
-  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
+function trainerSetAddEventButtonLoaded_(loaded) {
+  const btn = document.getElementById("btnTrainerAddEvent");
+  if (!btn) return;
 
-  const isArchive = window.__trainerEventsMode === "archive";
-
-  if (btnCurrent) {
-    btnCurrent.className = isArchive ? "full-btn alt" : "full-btn";
-  }
-
-  if (btnArchive) {
-    btnArchive.className = isArchive ? "full-btn" : "full-btn alt";
-  }
-
-  if (toolbar) {
-    toolbar.classList.toggle("hidden", !isArchive);
-  }
-
-  if (selectedMonth) {
-    selectedMonth.textContent = window.__trainerArchiveSelectedMonth
-      ? `Wybrany miesiąc: ${window.__trainerArchiveSelectedMonth}`
-      : "";
+  if (loaded) {
+    btn.classList.remove("hidden");
+    btn.disabled = false;
+  } else {
+    btn.classList.add("hidden");
+    btn.disabled = true;
   }
 }
 
 async function trainerShowCurrentEvents_() {
   window.__trainerEventsMode = "current";
-  trainerRenderEventsModeUi_();
+  window.__trainerEventsRenderTarget = "trainerCurrentListaWydarzen";
 
-  const div = document.getElementById("trainerListaWydarzen");
+  goToView("trainerWydarzeniaCurrentView");
+  trainerSetAddEventButtonLoaded_(false);
+
+  const div = document.getElementById("trainerCurrentListaWydarzen");
   if (div) {
-    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie wydarzeń...</div>";
+    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
   }
 
   try {
@@ -8753,9 +8734,18 @@ async function trainerShowCurrentEvents_() {
       grupa: window.grupyTrenera || ""
     });
 
+    if (lista && lista.success === false) {
+      throw new Error(lista.error || "Błąd pobierania bieżących wydarzeń");
+    }
+
     renderTreningiTrainer(lista);
 
+    // Przycisk dodawania uaktywnia się dopiero po zakończeniu ładowania.
+    trainerSetAddEventButtonLoaded_(true);
+
   } catch (e) {
+    trainerSetAddEventButtonLoaded_(false);
+
     if (div) {
       div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
     }
@@ -8764,30 +8754,29 @@ async function trainerShowCurrentEvents_() {
 
 async function trainerShowArchiveEventsMode_() {
   window.__trainerEventsMode = "archive";
-  trainerRenderEventsModeUi_();
+  window.__trainerEventsRenderTarget = "trainerArchiveListaWydarzen";
+  window.__trainerArchiveSelectedMonth = "";
 
-  const div = document.getElementById("trainerListaWydarzen");
-  if (div) {
-    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy archiwalnych...</div>";
+  goToView("trainerWydarzeniaArchiveView");
+
+  const monthsBox = document.getElementById("trainerArchiveMonthsInline");
+  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
+  const listDiv = document.getElementById("trainerArchiveListaWydarzen");
+
+  if (selectedMonth) selectedMonth.textContent = "";
+  if (listDiv) listDiv.innerHTML = "";
+
+  if (monthsBox) {
+    monthsBox.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy archiwalnych...</div>";
   }
 
   try {
     const months = await trainerEnsureArchiveMonthsLoaded_();
-
-    if (!Array.isArray(months) || !months.length) {
-      if (div) {
-        div.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
-      }
-      return;
-    }
-
-    if (div) {
-      div.innerHTML = "<div class='card' style='background:#111;'>Wybierz miesiąc archiwalnych wydarzeń.</div>";
-    }
+    renderTrainerArchiveMonthsInline_(months);
 
   } catch (e) {
-    if (div) {
-      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
+    if (monthsBox) {
+      monthsBox.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
     }
   }
 }
@@ -8812,95 +8801,92 @@ async function trainerEnsureArchiveMonthsLoaded_() {
   return months;
 }
 
-async function openTrainerArchiveMonthsPopup_() {
-  const popup = document.getElementById("trainerArchiveMonthsPopup");
-  const list = document.getElementById("trainerArchiveMonthsList");
-
-  if (!popup || !list) return;
-
-  list.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy...</div>";
-  popup.classList.remove("hidden");
-
-  if (typeof pushAppModalHistoryState_ === "function") {
-    pushAppModalHistoryState_("trainerArchiveMonthsPopup");
-  }
-
-  try {
-    const months = await trainerEnsureArchiveMonthsLoaded_();
-
-    if (!Array.isArray(months) || !months.length) {
-      list.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
-      return;
-    }
-
-    list.innerHTML = months.map(m => {
-      const key = String(m?.key || "").trim();
-      const label = String(m?.label || key).trim();
-      const isSelected = key && key === window.__trainerArchiveSelectedMonth;
-
-      return `
-        <button
-          type="button"
-          class="full-btn ${isSelected ? "" : "alt"}"
-          style="margin:0;"
-          onclick="selectTrainerArchiveMonth_('${key.replace(/'/g, "\\'")}', '${label.replace(/'/g, "\\'")}')"
-        >
-          ${label}
-        </button>
-      `;
-    }).join("");
-
-  } catch (e) {
-    list.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
-  }
+function trainerEscHtml_(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function hideTrainerArchiveMonthsPopup_() {
-  const popup = document.getElementById("trainerArchiveMonthsPopup");
-  if (popup) popup.classList.add("hidden");
+function trainerEscJsArg_(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
 }
 
-function closeTrainerArchiveMonthsPopup_() {
-  if (
-    typeof isHistoryModal_ === "function" &&
-    isHistoryModal_("trainerArchiveMonthsPopup")
-  ) {
-    history.back();
+function renderTrainerArchiveMonthsInline_(months) {
+  const monthsBox = document.getElementById("trainerArchiveMonthsInline");
+  if (!monthsBox) return;
+
+  if (!Array.isArray(months) || !months.length) {
+    monthsBox.innerHTML = "<div class='card' style='background:#111;'>Brak miesięcy archiwalnych.</div>";
     return;
   }
 
-  hideTrainerArchiveMonthsPopup_();
+  monthsBox.innerHTML = months.map(m => {
+    const key = String(m?.key || "").trim();
+    const label = String(m?.label || key).trim();
+
+    if (!key) return "";
+
+    return `
+      <button
+        type="button"
+        class="full-btn alt"
+        onclick="selectTrainerArchiveMonth_('${trainerEscJsArg_(key)}', '${trainerEscJsArg_(label)}')"
+      >
+        ${trainerEscHtml_(label)}
+      </button>
+    `;
+  }).join("");
 }
 
 async function selectTrainerArchiveMonth_(key, label) {
+  window.__trainerEventsMode = "archive";
+  window.__trainerEventsRenderTarget = "trainerArchiveListaWydarzen";
   window.__trainerArchiveSelectedMonth = String(key || "").trim();
-  trainerRenderEventsModeUi_();
-  closeTrainerArchiveMonthsPopup_();
 
-  const div = document.getElementById("trainerListaWydarzen");
-  if (div) {
-    div.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie wydarzeń z miesiąca: <b>${String(label || key || "").trim()}</b>...</div>`;
+  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
+  const listDiv = document.getElementById("trainerArchiveListaWydarzen");
+
+  const labelTxt = String(label || key || "").trim();
+
+  if (selectedMonth) {
+    selectedMonth.textContent = labelTxt ? `Wybrany miesiąc: ${labelTxt}` : "";
+  }
+
+  if (listDiv) {
+    listDiv.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie wydarzeń z miesiąca: <b>${trainerEscHtml_(labelTxt)}</b>...</div>`;
   }
 
   try {
     const lista = await apiClubGet("treningiTrenerArchiwalne", {
       grupa: window.grupyTrenera || "",
-      miesiac: window.__trainerArchiveSelectedMonth
+      miesiac: window.__trainerArchiveSelectedMonth,
+      _ts: Date.now()
     });
+
+    if (lista && lista.success === false) {
+      throw new Error(lista.error || "Błąd pobierania wydarzeń archiwalnych");
+    }
+
+    if (!Array.isArray(lista) || !lista.length) {
+      if (listDiv) {
+        listDiv.innerHTML = `
+          <div class="card" style="background:#111;">
+            Brak wydarzeń archiwalnych w miesiącu: <b>${trainerEscHtml_(labelTxt)}</b>.
+          </div>
+        `;
+      }
+      return;
+    }
 
     renderTreningiTrainer(lista);
 
-    if ((!Array.isArray(lista) || !lista.length) && div) {
-      div.innerHTML = `
-        <div class="card" style="background:#111;">
-          Brak wydarzeń archiwalnych w miesiącu: <b>${String(label || key || "").trim()}</b>.
-        </div>
-      `;
-    }
-
   } catch (e) {
-    if (div) {
-      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
+    if (listDiv) {
+      listDiv.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
     }
   }
 }
