@@ -1177,83 +1177,99 @@ input[type="number"] {
 
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
-<!-- TRAINER EVENTS VIEW
-     Lista wydarzeń zarządzanych przez trenera -->
+  
+<!-- TRAINER EVENTS MENU VIEW
+     Główne menu wydarzeń trenera -->
 
 <div id="trainerWydarzeniaView" class="container hidden">
   <h1>Wydarzenia</h1>
 
-  <!-- GŁÓWNE MENU WYDARZEŃ -->
-  <div id="trainerEventsMainMenu">
-    <button
-      id="btnTrainerEventsCurrent"
-      class="full-btn"
-      type="button"
-    >
-      Bieżące
-    </button>
-
-    <button
-      id="btnTrainerEventsArchive"
-      class="full-btn alt"
-      type="button"
-    >
-      Archiwalne
-    </button>
-
-    <button
-      class="full-btn alt"
-      type="button"
-      onclick="appBack()"
-    >
-      ⬅ Powrót
-    </button>
-  </div>
-
-  <!-- PANEL ARCHIWUM: tutaj będą ładowane miesiące sezonu -->
-  <div
-    id="trainerArchiveToolbar"
-    class="hidden"
-    style="margin-top:16px;"
+  <button
+    id="btnTrainerEventsCurrent"
+    class="full-btn"
+    type="button"
   >
-    <h2 style="font-size:20px; margin:0 0 10px 0;">
-      Archiwalne miesiące
-    </h2>
+    Bieżące
+  </button>
 
-    <div style="font-size:13px; opacity:.78; margin-bottom:12px;">
-      Wybierz miesiąc sezonu, aby zobaczyć wydarzenia archiwalne.
-    </div>
-
-    <div
-      id="trainerArchiveMonthsInline"
-      style="display:flex; flex-direction:column; gap:8px;"
-    ></div>
-
-    <div
-      id="trainerArchiveSelectedMonth"
-      style="margin-top:10px; font-size:13px; opacity:.88; min-height:18px;"
-    ></div>
-  </div>
-
-  <!-- WSPÓLNA LISTA WYDARZEŃ: bieżące albo wybrany miesiąc archiwum -->
-  <div
-    id="trainerEventsListPanel"
-    class="hidden"
-    style="margin-top:16px;"
+  <button
+    id="btnTrainerEventsArchive"
+    class="full-btn alt"
+    type="button"
   >
-    <div id="trainerListaWydarzen"></div>
+    Archiwalne
+  </button>
 
-    <button
-      id="btnTrainerAddEvent"
-      class="full-btn hidden"
-      type="button"
-      style="margin-top:20px;"
-      onclick="pokazDodajWydarzenie()"
-      disabled
-    >
-      ➕ Dodaj wydarzenie
-    </button>
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="appBack()"
+  >
+    ⬅ Powrót
+  </button>
+</div>
+
+
+<!-- TRAINER CURRENT EVENTS VIEW
+     Bieżące wydarzenia trenera -->
+
+<div id="trainerWydarzeniaCurrentView" class="container hidden">
+  <h1>Bieżące wydarzenia</h1>
+
+  <div id="trainerCurrentListaWydarzen">
+    Ładowanie...
   </div>
+
+  <button
+    id="btnTrainerAddEvent"
+    class="full-btn hidden"
+    type="button"
+    style="margin-top:20px;"
+    onclick="pokazDodajWydarzenie()"
+    disabled
+  >
+    ➕ Dodaj wydarzenie
+  </button>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="trainerPokazWydarzenia()"
+  >
+    ⬅ Powrót
+  </button>
+</div>
+
+
+<!-- TRAINER ARCHIVE EVENTS VIEW
+     Archiwalne wydarzenia trenera -->
+
+<div id="trainerWydarzeniaArchiveView" class="container hidden">
+  <h1>Archiwalne wydarzenia</h1>
+
+  <div style="font-size:13px; opacity:.78; margin-bottom:12px;">
+    Wybierz miesiąc sezonu, aby zobaczyć wydarzenia archiwalne.
+  </div>
+
+  <div
+    id="trainerArchiveMonthsInline"
+    style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"
+  ></div>
+
+  <div
+    id="trainerArchiveSelectedMonth"
+    style="margin-bottom:10px; font-size:13px; opacity:.88; min-height:18px;"
+  ></div>
+
+  <div id="trainerArchiveListaWydarzen"></div>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="trainerPokazWydarzenia()"
+  >
+    ⬅ Powrót
+  </button>
 </div>
   
 <!-- TRAINER ATTENDANCE REPORT VIEW
