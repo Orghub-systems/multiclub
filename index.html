@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.34';
+  window.APP_BUILD = 'APP v2.35';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9760,22 +9760,71 @@ window.__powolaniPlayersCache = [];
 window.__powolaniPopupTarget = "add";
 
 async function ensurePowolaniPlayersLoaded_() {
+  const CACHE_SCOPE = "clubPlayersForPowolania";
+  const CACHE_PARTS = { role: "trainerEvents" };
+
+  function normalizePlayers_(lista) {
+    return (Array.isArray(lista) ? lista : [])
+      .map(z => ({
+        nr: String(z?.nr || "").trim(),
+        nazwisko: String(z?.nazwisko || "").trim()
+      }))
+      .filter(z => z.nr && z.nazwisko)
+      .sort((a, b) => Number(a.nr) - Number(b.nr));
+  }
+
+  async function refreshPlayersInBackground_() {
+    if (window.__powolaniPlayersRefreshLoading) {
+      return window.__powolaniPlayersRefreshLoading;
+    }
+
+    window.__powolaniPlayersRefreshLoading = (async () => {
+      try {
+        const fresh = await apiClubGet("listaZawodnikow", {
+          grupy: "",
+          _ts: Date.now()
+        });
+
+        if (fresh && fresh.success === false) {
+          throw new Error(fresh.error || "Błąd pobierania zawodników");
+        }
+
+        const rows = normalizePlayers_(fresh);
+
+        window.__powolaniPlayersCache = rows;
+        orgCacheWrite_(CACHE_SCOPE, CACHE_PARTS, rows);
+
+        // Jeżeli popup powołań jest aktualnie otwarty, podmień listę na świeżą.
+        if (typeof isPowolaniPopupOpen_ === "function" && isPowolaniPopupOpen_()) {
+          renderPowolaniPopupList_();
+        }
+
+        return rows;
+
+      } finally {
+        window.__powolaniPlayersRefreshLoading = null;
+      }
+    })();
+
+    return window.__powolaniPlayersRefreshLoading;
+  }
+
+  // 1. Cache w pamięci — najszybszy.
   if (Array.isArray(window.__powolaniPlayersCache) && window.__powolaniPlayersCache.length) {
+    refreshPlayersInBackground_();
     return window.__powolaniPlayersCache;
   }
 
-  const lista = await apiClubGet("listaZawodnikow", { grupy: "" });
+  // 2. Cache z localStorage — pokazujemy od razu.
+  const cached = orgCacheRead_(CACHE_SCOPE, CACHE_PARTS);
+  if (cached && Array.isArray(cached.data) && cached.data.length) {
+    window.__powolaniPlayersCache = cached.data;
+    refreshPlayersInBackground_();
+    return cached.data;
+  }
 
-  const rows = (Array.isArray(lista) ? lista : [])
-    .map(z => ({
-      nr: String(z?.nr || "").trim(),
-      nazwisko: String(z?.nazwisko || "").trim()
-    }))
-    .filter(z => z.nr && z.nazwisko)
-    .sort((a, b) => Number(a.nr) - Number(b.nr));
-
-  window.__powolaniPlayersCache = rows;
-  return rows;
+  // 3. Brak cache — musimy poczekać na API.
+  return await refreshPlayersInBackground_();
 }
 
 function getPowolaniSetByTarget_(target) {
