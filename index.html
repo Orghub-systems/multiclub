@@ -3451,6 +3451,7 @@ async function orgCachedApiGet_(config) {
     params = {},
     maxAgeMs = 0,
     useStale = true,
+    backgroundRefresh = false,
     onCached,
     onFresh
   } = config || {};
@@ -3463,6 +3464,41 @@ async function orgCachedApiGet_(config) {
 
   if (cached && useStale && typeof onCached === "function") {
     onCached(cached.data, cached);
+  }
+
+  // Nowy tryb:
+  // jeśli mamy cache i backgroundRefresh=true,
+  // zwracamy cache od razu, a świeże dane pobieramy w tle.
+  if (cached && useStale && backgroundRefresh) {
+    apiClubGet(action, params)
+      .then(fresh => {
+        if (fresh && fresh.success === false) {
+          throw new Error(fresh.error || "Błąd API: " + action);
+        }
+
+        const oldJson = JSON.stringify(cached.data);
+        const newJson = JSON.stringify(fresh);
+
+        // Jeśli dane są identyczne, nie podmieniamy UI.
+        if (oldJson === newJson) {
+          return;
+        }
+
+        orgCacheWrite_(scope, parts, fresh);
+
+        if (typeof onFresh === "function") {
+          onFresh(fresh);
+        }
+      })
+      .catch(e => {
+        console.warn("orgCachedApiGet_ backgroundRefresh error:", {
+          scope,
+          action,
+          error: e?.message || e
+        });
+      });
+
+    return cached.data;
   }
 
   if (cached && orgCacheIsFresh_(cached, maxAgeMs)) {
