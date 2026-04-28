@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.44';
+  window.APP_BUILD = 'APP v2.45';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -10994,10 +10994,30 @@ async function adminDoDeletePlayer() {
       modal.style.opacity = "";
     }
 
-    window.__adminDeleteNr = "";
-    window.__adminDeleteNazw = "";
-
-    if (Array.isArray(window.__adminPlayersListCache)) {
+      window.__adminDeleteNr = "";
+      window.__adminDeleteNazw = "";
+      
+      // Po usunięciu zawodnika czyścimy cache list zawodników.
+      // Dotyczy: Admin → Zawodnicy, Trener → Zawodnicy, Powołania.
+      try {
+        Object.keys(localStorage)
+          .filter(k => {
+            const key = String(k || "").toLowerCase();
+            return (
+              key.includes("adminplayerslist") ||
+              key.includes("trainerplayerslist") ||
+              key.includes("clubplayersforpowolania")
+            );
+          })
+          .forEach(k => localStorage.removeItem(k));
+      } catch (e) {
+        console.warn("adminDoDeletePlayer clear players cache error:", e);
+      }
+      
+      window.__powolaniPlayersCache = [];
+      window.__powolaniPlayersRefreshLoading = null;
+      
+      if (Array.isArray(window.__adminPlayersListCache)) {
       window.__adminPlayersListCache = window.__adminPlayersListCache.filter(z => {
         return String(z?.nr || "").trim() !== numer;
       });
