@@ -205,6 +205,47 @@
       color:#fff;
     }
 
+        .orghub-install-card{
+      width:100%;
+      max-width:360px;
+      margin:14px auto 0 auto;
+      padding:14px;
+      border-radius:16px;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.22);
+      color:#fff;
+      text-align:left;
+    }
+    
+    .orghub-install-title{
+      font-size:16px;
+      font-weight:900;
+      margin-bottom:6px;
+    }
+    
+    .orghub-install-text{
+      font-size:13px;
+      line-height:1.35;
+      opacity:.92;
+      margin-bottom:12px;
+    }
+    
+    .orghub-install-btn{
+      width:100%;
+      border:1px solid rgba(255,255,255,.28);
+      background:#9f1010;
+      color:#fff;
+      padding:12px 14px;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    
+    .orghub-install-btn:active{
+      transform:scale(.99);
+    }
+
     /* BUSY OVERLAY */
     #busyOverlay.hidden { display: none !important; }
     #busyOverlay {
@@ -369,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.46';
+  window.APP_BUILD = 'APP v2.47';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2945,6 +2986,43 @@ function showOrgHubInstallInstructions_() {
     "Na Androidzie użyj Chrome i opcji „Zainstaluj aplikację”.\n" +
     "Na iPhone użyj Safari i opcji „Do ekranu początkowego”."
   );
+}
+
+  function getOrgHubInstallCardHtml_() {
+  if (isOrgHubStandaloneMode_()) {
+    return "";
+  }
+
+  const clubName = getOrgHubInstallClubName_();
+
+  return `
+    <div class="orghub-install-card">
+      <div class="orghub-install-title">📲 Dodaj aplikację klubu na pulpit</div>
+      <div class="orghub-install-text">
+        Uruchamiaj aplikację ${clubName} jedną ikoną z ekranu telefonu,
+        bez szukania linku w wiadomościach.
+      </div>
+      <button class="orghub-install-btn" type="button" onclick="installOrgHubPwa_()">
+        Dodaj ikonę klubu
+      </button>
+    </div>
+  `;
+}
+
+  function injectOrgHubInstallCardIntoLogin_() {
+  const loginView = document.getElementById("loginView");
+  if (!loginView) return;
+
+  if (isOrgHubStandaloneMode_()) return;
+
+  let box = document.getElementById("orghubInstallLoginCard");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orghubInstallLoginCard";
+    loginView.appendChild(box);
+  }
+
+  box.innerHTML = getOrgHubInstallCardHtml_();
 }
   
 /* =================== 20 PAMIĘĆ LOKALNA (localStorage) =================== */
@@ -6619,6 +6697,10 @@ function pokazLogowanie() {
 
   refreshClubBadge_();
   goToView("loginView");
+
+  setTimeout(() => {
+    injectOrgHubInstallCardIntoLogin_();
+  }, 0);
 }
 
 function pokazRejestracjaSelect() { goToView("registerSelectView"); }
