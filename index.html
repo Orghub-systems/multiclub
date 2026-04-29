@@ -3895,6 +3895,44 @@ function goToView(viewId, options = {}) {
   }
 }
 
+  function hookOrgHubInstallCardIntoGoToView_() {
+  if (typeof window.goToView !== "function") return;
+  if (window.goToView.__orghubInstallHooked) return;
+
+  const originalGoToView = window.goToView;
+
+  window.goToView = function(viewId) {
+    const result = originalGoToView.apply(this, arguments);
+
+    if (String(viewId || "") === "loginView") {
+      setTimeout(() => {
+        injectOrgHubInstallCardIntoLogin_();
+      }, 0);
+    }
+
+    return result;
+  };
+
+  window.goToView.__orghubInstallHooked = true;
+}
+
+hookOrgHubInstallCardIntoGoToView_();
+
+setTimeout(() => {
+  const loginView = document.getElementById("loginView");
+  if (!loginView) return;
+
+  const style = window.getComputedStyle(loginView);
+  const isVisible =
+    !loginView.classList.contains("hidden") &&
+    style.display !== "none" &&
+    style.visibility !== "hidden";
+
+  if (isVisible) {
+    injectOrgHubInstallCardIntoLogin_();
+  }
+}, 300);
+
 // Odtworzenie widoku na podstawie historii przeglądarki  
 function showViewFromHistory(viewId, state = null) {
   ukryjWszystkie();
