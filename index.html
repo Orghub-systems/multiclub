@@ -369,7 +369,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.45';
+  window.APP_BUILD = 'APP v2.46';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2794,6 +2794,158 @@ window.__adminPendingPayCol = null;
 window.__adminPendingPayLabel = "";
 
 /* =================== KONIEC SEKTORA 10 =================== */
+
+/****************************************************
+ * ORG HUB — instalacja aplikacji PWA na telefonie
+ * Android/Chrome: własny przycisk odpala prompt instalacji
+ * iPhone/Safari: pokazujemy instrukcję dodania do ekranu
+ ****************************************************/
+
+window.__orghubDeferredInstallPrompt = null;
+window.__orghubInstallReady = false;
+window.__orghubAppInstalled = false;
+
+window.addEventListener("beforeinstallprompt", function (event) {
+  try {
+    event.preventDefault();
+
+    window.__orghubDeferredInstallPrompt = event;
+    window.__orghubInstallReady = true;
+
+    document.body.classList.add("orghub-install-ready");
+
+    console.log("📲 ORG HUB PWA install prompt ready");
+  } catch (err) {
+    console.warn("⚠️ beforeinstallprompt error:", err);
+  }
+});
+
+window.addEventListener("appinstalled", function () {
+  try {
+    window.__orghubDeferredInstallPrompt = null;
+    window.__orghubInstallReady = false;
+    window.__orghubAppInstalled = true;
+
+    document.body.classList.remove("orghub-install-ready");
+    document.body.classList.add("orghub-installed");
+
+    localStorage.setItem("orghub_pwa_installed", "1");
+
+    console.log("✅ ORG HUB PWA installed");
+  } catch (err) {
+    console.warn("⚠️ appinstalled error:", err);
+  }
+});
+
+function isOrgHubStandaloneMode_() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function isOrgHubIOS_() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera || "";
+  return /iPad|iPhone|iPod/.test(ua) || (
+    navigator.platform === "MacIntel" &&
+    navigator.maxTouchPoints > 1
+  );
+}
+
+function isOrgHubAndroid_() {
+  return /Android/i.test(navigator.userAgent || "");
+}
+
+function getOrgHubInstallClubName_() {
+  try {
+    const badge = document.getElementById("clubIdBadge");
+    const fromBadge = badge ? String(badge.textContent || "").trim() : "";
+    if (fromBadge) return fromBadge;
+
+    const saved = localStorage.getItem("orghub.clubConfig.v1");
+    if (saved) {
+      const cfg = JSON.parse(saved);
+      if (cfg && cfg.clubName) return String(cfg.clubName).trim();
+      if (cfg && cfg.name) return String(cfg.name).trim();
+    }
+  } catch (err) {
+    console.warn("⚠️ getOrgHubInstallClubName_ error:", err);
+  }
+
+  return "swojego klubu";
+}
+
+async function installOrgHubPwa_() {
+  try {
+    if (isOrgHubStandaloneMode_()) {
+      showOrgHubInstallInfo_("Aplikacja jest już uruchomiona z ikony na pulpicie telefonu.");
+      return;
+    }
+
+    const deferredPrompt = window.__orghubDeferredInstallPrompt;
+
+    if (deferredPrompt && typeof deferredPrompt.prompt === "function") {
+      await deferredPrompt.prompt();
+
+      const choice = await deferredPrompt.userChoice;
+      console.log("📲 ORG HUB install choice:", choice);
+
+      window.__orghubDeferredInstallPrompt = null;
+      window.__orghubInstallReady = false;
+
+      if (choice && choice.outcome === "accepted") {
+        localStorage.setItem("orghub_pwa_install_accepted", "1");
+      }
+
+      return;
+    }
+
+    showOrgHubInstallInstructions_();
+
+  } catch (err) {
+    console.warn("⚠️ installOrgHubPwa_ error:", err);
+    showOrgHubInstallInstructions_();
+  }
+}
+
+function showOrgHubInstallInfo_(message) {
+  alert(message);
+}
+
+function showOrgHubInstallInstructions_() {
+  const clubName = getOrgHubInstallClubName_();
+
+  if (isOrgHubIOS_()) {
+    alert(
+      "📲 Dodaj aplikację " + clubName + " do ekranu telefonu\n\n" +
+      "Na iPhone zrób tak:\n\n" +
+      "1. Otwórz ten link w Safari.\n" +
+      "2. Kliknij ikonę udostępniania.\n" +
+      "3. Wybierz „Do ekranu początkowego”.\n" +
+      "4. Potwierdź dodanie aplikacji.\n\n" +
+      "Po dodaniu na pulpicie telefonu pojawi się ikona klubu."
+    );
+    return;
+  }
+
+  if (isOrgHubAndroid_()) {
+    alert(
+      "📲 Dodaj aplikację " + clubName + " do ekranu telefonu\n\n" +
+      "Jeśli nie pojawiło się okno instalacji:\n\n" +
+      "1. Otwórz link klubu w Chrome.\n" +
+      "2. Kliknij menu przeglądarki.\n" +
+      "3. Wybierz „Zainstaluj aplikację” albo „Dodaj do ekranu głównego”.\n\n" +
+      "Po dodaniu aplikacja będzie dostępna z ikony klubu na pulpicie."
+    );
+    return;
+  }
+
+  alert(
+    "📲 Aplikację ORG HUB możesz dodać do ekranu głównego telefonu.\n\n" +
+    "Na Androidzie użyj Chrome i opcji „Zainstaluj aplikację”.\n" +
+    "Na iPhone użyj Safari i opcji „Do ekranu początkowego”."
+  );
+}
   
 /* =================== 20 PAMIĘĆ LOKALNA (localStorage) =================== */
 
