@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.48';
+  window.APP_BUILD = 'APP v2.49';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8666,105 +8666,154 @@ async function toggleZapisani(id) {
   }
 }
   
+// =================== ZAWODNIK: ZAPIS/WYPISANIE ===================
+ 
 async function zapiszSie(id) {
   const btn = document.getElementById(`btn-${id}`);
   const box = document.getElementById(`zapisani-${id}`);
-
+ 
   if (!btn) return;
-
+ 
   const isPowolanie = isPowolanieEventLocal_(id);
-
   btn.classList.add("loading");
-
+ 
   try {
-    const r = await apiClubGet("zapisz", {
-      numer: numerZalogowanego,
-      treningId: id
-    });
-
+    const r = await apiClubGet("zapisz", { numer: numerZalogowanego, treningId: id });
+ 
     if (r && r.ok) {
-      // POWOŁANIE — bez odświeżania całej listy i bez renderTreningi()
       if (isPowolanie || r.accepted === true) {
         updatePowolanieUiLocal_(id, true);
+ 
+        // Aktualizuj cache wydarzeń zawodnika
+        try {
+          const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
+          const raw = localStorage.getItem(cacheKey);
+          if (raw) {
+            const entry = JSON.parse(raw);
+            if (entry && Array.isArray(entry.data)) {
+              entry.data = entry.data.map(t => {
+                if (String(t.id || "") !== String(id)) return t;
+                return { ...t, zaakceptowalPowolanie: true };
+              });
+              entry.savedAt = new Date().toISOString();
+              localStorage.setItem(cacheKey, JSON.stringify(entry));
+            }
+          }
+        } catch (e) {}
+ 
         return;
       }
-
-      // ZWYKŁY TRYB — dotychczasowe zachowanie
+ 
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
-
-      const lista = await apiClubGet("treningi", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego
-      });
-
+ 
+      // Aktualizuj cache wydarzeń zawodnika
+      try {
+        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          const entry = JSON.parse(raw);
+          if (entry && Array.isArray(entry.data)) {
+            entry.data = entry.data.map(t => {
+              if (String(t.id || "") !== String(id)) return t;
+              return { ...t, zapisany: true, zapisanych: Number(t.zapisanych || 0) + 1 };
+            });
+            entry.savedAt = new Date().toISOString();
+            localStorage.setItem(cacheKey, JSON.stringify(entry));
+          }
+        }
+      } catch (e) {}
+ 
+      const lista = await apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego });
       renderTreningi(lista);
       return;
     }
-
+ 
     alert((r && r.message) ? r.message : "Nie udało się zapisać.");
-
+ 
   } catch (err) {
     alert("Błąd połączenia: " + err);
-
   } finally {
     btn.classList.remove("loading");
   }
 }
-  
+ 
 async function wypiszSie(id) {
   const btn =
     document.getElementById(`wypisz-${id}`) ||
     document.getElementById(`btn-${id}`);
-
+ 
   const zapiszBtn = document.getElementById(`btn-${id}`);
   const box = document.getElementById(`zapisani-${id}`);
-
+ 
   const isPowolanie = isPowolanieEventLocal_(id);
-
+ 
   if (btn) btn.classList.add("loading");
-
+ 
   try {
-    const r = await apiClubGet("wypisz", {
-      numer: numerZalogowanego,
-      treningId: id
-    });
-
+    const r = await apiClubGet("wypisz", { numer: numerZalogowanego, treningId: id });
+ 
     if (r && r.ok) {
-      // POWOŁANIE — bez odświeżania listy powołanych
       if (isPowolanie || r.resigned === true) {
         updatePowolanieUiLocal_(id, false);
+ 
+        // Aktualizuj cache wydarzeń zawodnika
+        try {
+          const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
+          const raw = localStorage.getItem(cacheKey);
+          if (raw) {
+            const entry = JSON.parse(raw);
+            if (entry && Array.isArray(entry.data)) {
+              entry.data = entry.data.map(t => {
+                if (String(t.id || "") !== String(id)) return t;
+                return { ...t, zaakceptowalPowolanie: false };
+              });
+              entry.savedAt = new Date().toISOString();
+              localStorage.setItem(cacheKey, JSON.stringify(entry));
+            }
+          }
+        } catch (e) {}
+ 
         return;
       }
-
-      // ZWYKŁY TRYB
-      if (zapiszBtn) {
-        zapiszBtn.innerText = "Zapisz się";
-        zapiszBtn.disabled = false;
-      }
-
-      if (btn && btn.id && btn.id.startsWith("wypisz-")) {
-        btn.disabled = true;
-      }
-
+ 
+      if (zapiszBtn) { zapiszBtn.innerText = "Zapisz się"; zapiszBtn.disabled = false; }
+      if (btn && btn.id && btn.id.startsWith("wypisz-")) btn.disabled = true;
+ 
+      // Aktualizuj cache wydarzeń zawodnika
+      try {
+        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          const entry = JSON.parse(raw);
+          if (entry && Array.isArray(entry.data)) {
+            entry.data = entry.data.map(t => {
+              if (String(t.id || "") !== String(id)) return t;
+              return { ...t, zapisany: false, zapisanych: Math.max(0, Number(t.zapisanych || 0) - 1) };
+            });
+            entry.savedAt = new Date().toISOString();
+            localStorage.setItem(cacheKey, JSON.stringify(entry));
+          }
+        }
+      } catch (e) {}
+ 
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
-
+ 
       return;
     }
-
+ 
     alert((r && r.message) ? r.message : "Nie udało się wypisać.");
-
+ 
   } catch (err) {
     alert("Błąd połączenia: " + err);
-
   } finally {
     if (btn) btn.classList.remove("loading");
   }
 }
-
+  
 async function odswiezListeZapisanych(id) {
   const box = document.getElementById(`zapisani-${id}`);
   if (!box) return;
@@ -10419,6 +10468,8 @@ function applyPowolaniPopup() {
   closePowolaniPopup();
 }
   
+// =================== TRENER: DODANIE WYDARZENIA ===================
+ 
 async function wyslijNoweWydarzenie() {
   const data = document.getElementById("eventData").value;
   let dataKoniec = document.getElementById("eventDataEnd")?.value || "";
@@ -10426,60 +10477,60 @@ async function wyslijNoweWydarzenie() {
   const end = document.getElementById("eventEnd").value;
   const rodzaj = document.getElementById("eventRodzaj").value;
   const miejsce = document.getElementById("eventMiejsce")?.value || "";
-
+ 
   const trener1 = document.getElementById("eventTrener1").value;
   const trener2 = document.getElementById("eventTrener2")?.value || "";
   const trener3 = document.getElementById("eventTrener3")?.value || "";
   const trener4 = document.getElementById("eventTrener4")?.value || "";
-
+ 
   const selected = Array.from(selectedGroups || []);
   const hasPowolania = selected.includes("__POWOLANIA__");
   const grupy = hasPowolania
     ? ""
     : selected.filter(v => v && v !== "__POWOLANIA__").join(",");
-
+ 
   const liczDoStat = document.getElementById("eventStat").checked;
   const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
-
+ 
   const trybDostepu = hasPowolania ? "powolania" : "wszyscy";
   const powolani = normalizePowolaniNumsInput_(document.getElementById("eventPowolaniNums")?.value || "");
-
+ 
   const msg = document.getElementById("eventMsg");
-
+ 
   if (!dataKoniec) dataKoniec = data;
-
+ 
   if (!data || !dataKoniec || !start || !end || !rodzaj) {
     msg.innerText = "Uzupełnij: daty, godziny i rodzaj wydarzenia.";
     return;
   }
-
+ 
   if (dataKoniec < data) {
     msg.innerText = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
     return;
   }
-
+ 
   if (!validHour(start) || !validHour(end)) {
     msg.innerText = "❌ Godzina w formacie HH:MM.";
     return;
   }
-
+ 
   if (start >= end) {
     msg.innerText = "❌ Koniec musi być później niż start.";
     return;
   }
-
+ 
   if (!hasPowolania && !grupy) {
     msg.innerText = "❌ Wybierz grupę albo Powołania.";
     return;
   }
-
+ 
   if (trybDostepu === "powolania" && !powolani) {
     msg.innerText = "❌ Wybierz powołanych zawodników.";
     return;
   }
-
+ 
   msg.innerText = "⏳ Dodawanie wydarzenia...";
-
+ 
   try {
     const r = await apiClubPost({
       action: "dodajWydarzenie",
@@ -10495,39 +10546,48 @@ async function wyslijNoweWydarzenie() {
       trener4,
       grupy,
       liczDoStatystyk: String(liczDoStat),
-      rezerwacjaObiektu: rezerwacjaObiektu,
-      trybDostepu: trybDostepu,
-      powolani: powolani
+      rezerwacjaObiektu,
+      trybDostepu,
+      powolani
     });
-
+ 
     msg.innerText = r.message || "Nieznany wynik.";
-
+ 
     if (r.success) {
       document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
         if (i.type !== "checkbox" && i.type !== "hidden") i.value = "";
         else if (i.type === "checkbox") i.checked = false;
       });
-
+ 
       const powolaniEl = document.getElementById("eventPowolaniNums");
       const endDateEl = document.getElementById("eventDataEnd");
       const powolaniWrap = document.getElementById("eventPowolaniWrap");
       const powolaniPreview = document.getElementById("eventPowolaniPreview");
-
+ 
       if (powolaniEl) powolaniEl.value = "";
       if (endDateEl) endDateEl.dataset.autofill = "1";
       if (powolaniWrap) powolaniWrap.style.display = "none";
       if (powolaniPreview) powolaniPreview.textContent = "Nie wybrano zawodników";
-
+ 
       resetTrenerSelects_();
       resetGroups_();
-
+ 
+      // Kasuj cache bieżących wydarzeń i pobierz świeże dane
+      try {
+        const groupsKey = String(window.grupyTrenera || "").trim();
+        Object.keys(localStorage)
+          .filter(k => k.includes("trainerarchiveevents") || k.includes("trainerarchivemonths"))
+          .forEach(k => localStorage.removeItem(k));
+      } catch (e) {}
+ 
       setTimeout(() => trainerPokazWydarzenia(), 800);
     }
-
+ 
   } catch (err) {
     msg.innerText = "❌ Błąd połączenia: " + err;
   }
 }
+
 
 function initEventPickers_() {
   const elStart = document.getElementById("eventData");
@@ -10603,23 +10663,37 @@ function trainerHideDeletePopup() {
   if (pop) pop.classList.remove("show");
 }
   
+// =================== TRENER: USUNIĘCIE WYDARZENIA ===================
+ 
 async function trainerConfirmDeleteYes() {
-  // zamknij popup usuwania w sposób zgodny z historią
   trainerHideDeletePopup();
-
+ 
   const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
   const card = document.querySelector(`[data-event-id='${treningId}']`);
   if (card) {
     card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
   }
-
+ 
   try {
     const data = await apiClubGet("usunWydarzenie", { treningId });
-
+ 
     if (data.success) {
       if (card) {
         card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
       }
+ 
+      // Kasuj cache wydarzeń i pobierz świeże dane
+      try {
+        const groupsKey = String(window.grupyTrenera || "").trim();
+        orgCacheRemove_("trainerArchiveEvents", {
+          month: window.__trainerArchiveSelectedMonth || "",
+          groups: groupsKey
+        });
+        orgCacheRemove_("trainerArchiveMonths", {
+          month: new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0")
+        });
+      } catch (e) {}
+ 
       setTimeout(() => trainerPokazWydarzenia(), 800);
     } else {
       if (card) {
@@ -10632,6 +10706,7 @@ async function trainerConfirmDeleteYes() {
     }
   }
 }
+
 
   async function trainerPokazRaportObecnosci() {
   goToView("trainerRaportObecnosciView");
@@ -11205,65 +11280,66 @@ function setEditGroups_(arr) {
   renderEditGroupsList_();
 }
 
-// zapis do backendu
+// =================== TRENER: EDYCJA WYDARZENIA ===================
+ 
 async function trainerSaveEditEvent() {
   const msg = document.getElementById("editEventMsg");
   if (msg) msg.textContent = "";
-
+ 
   const btn = document.getElementById("btnEditSave");
   if (btn) { btn.classList.add("loading"); btn.disabled = true; }
-
+ 
   try {
     if (!editMiesiac || !editCol5) {
       if (msg) msg.textContent = "❌ Brak identyfikatora wydarzenia.";
       return;
     }
-
+ 
     const dataISO    = (document.getElementById("editEventData")?.value || "").trim();
     const dataEndISO = (document.getElementById("editEventDataEnd")?.value || "").trim();
     const start      = (document.getElementById("editEventStart")?.value || "").trim();
     const end        = (document.getElementById("editEventEnd")?.value || "").trim();
     const rodzaj     = (document.getElementById("editEventRodzaj")?.value || "").trim();
-
+ 
     if (!dataISO || !dataEndISO || !start || !end) {
       if (msg) msg.textContent = "❌ Uzupełnij daty i godziny.";
       return;
     }
-
+ 
     if (dataEndISO < dataISO) {
       if (msg) msg.textContent = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
       return;
     }
-
+ 
     if (start >= end) {
       if (msg) msg.textContent = "❌ Godzina końca musi być później niż start.";
       return;
     }
-
+ 
     const treningId = `${editMiesiac}-${editCol5}`;
-
+ 
     const trenerzyArr = [
       document.getElementById("editTrener1")?.value,
       document.getElementById("editTrener2")?.value,
       document.getElementById("editTrener3")?.value,
       document.getElementById("editTrener4")?.value
     ].map(v => String(v || "").trim()).filter(Boolean);
-
+ 
     const grupyArr = Array.from(selectedEditGroups || []);
     grupyArr.sort((a, b) => Number(String(a).replace("G", "")) - Number(String(b).replace("G", "")));
     const grupyCsv = grupyArr.join(",");
-
+ 
     const liczDoStat = document.getElementById("editEventStat")?.checked ? 1 : 0;
     const rezerwacjaObiektu = document.getElementById("editEventRez")?.checked ? 1 : 0;
-
+ 
     const trybDostepu = String(document.getElementById("editEventTrybDostepu")?.value || "wszyscy").trim().toLowerCase();
     const powolani = normalizePowolaniNumsInput_(document.getElementById("editEventPowolaniNums")?.value || "");
-
+ 
     if (trybDostepu === "powolania" && !powolani) {
       if (msg) msg.textContent = "❌ Wpisz numery powołanych zawodników.";
       return;
     }
-
+ 
     const r = await apiClubPost({
       action: "edytujWydarzenie",
       treningId,
@@ -11275,28 +11351,38 @@ async function trainerSaveEditEvent() {
       trenerzy: trenerzyArr.join(", "),
       grupy: grupyCsv,
       liczDoStatystyk: liczDoStat,
-      rezerwacjaObiektu: rezerwacjaObiektu,
-      trybDostepu: trybDostepu,
-      powolani: powolani
+      rezerwacjaObiektu,
+      trybDostepu,
+      powolani
     });
-
+ 
     if (r && (r.success || r.ok)) {
       if (msg) msg.textContent = "✅ Zapisano. Odświeżam listę…";
-
+ 
+      // Kasuj cache wydarzeń i pobierz świeże dane
+      try {
+        const groupsKey = String(window.grupyTrenera || "").trim();
+        orgCacheRemove_("trainerArchiveEvents", {
+          month: window.__trainerArchiveSelectedMonth || "",
+          groups: groupsKey
+        });
+        orgCacheRemove_("trainerArchiveMonths", {
+          month: new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0")
+        });
+      } catch (e) {}
+ 
       try {
         await trainerPokazWydarzenia();
         setTimeout(trainerHideEditPopup, 300);
       } catch (refreshErr) {
-        console.error("Refresh after save failed:", refreshErr);
         if (msg) msg.textContent = "✅ Zapisano, ale nie udało się odświeżyć listy.";
       }
       return;
     } else {
       if (msg) msg.textContent = "❌ Nie udało się zapisać zmian: " + (r?.error || r?.message || "");
     }
-
+ 
   } catch (err) {
-    console.error(err);
     if (msg) msg.textContent = "❌ Błąd zapisu (sprawdź konsolę).";
   } finally {
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -11434,86 +11520,88 @@ function adminCloseDeletePopup() {
 async function adminDoDeletePlayer() {
   const numer = String(window.__adminDeleteNr || "").trim();
   if (!numer) {
-    const modal = document.getElementById("adminDeletePopup");
-    if (modal) {
-      modal.classList.add("hidden");
-      modal.style.display = "none";
-      modal.style.visibility = "";
-      modal.style.opacity = "";
-    }
+    hideModal("adminDeletePopup");
     window.__adminDeleteNr = "";
     window.__adminDeleteNazw = "";
     return;
   }
-
+ 
   const btn = document.querySelector("#adminDeletePopup .full-btn.green");
   if (btn) {
     btn.textContent = "Usuwam zawodnika…";
     btn.disabled = true;
     btn.classList.add("loading");
   }
-
+ 
   try {
     const r = await apiClubPost({ action: "adminDeletePlayer", numer });
-
+ 
     if (!r || !(r.success || r.ok)) {
       alert("❌ Nie udało się usunąć: " + (r?.error || r?.message || JSON.stringify(r)));
       return;
     }
-
-    const modal = document.getElementById("adminDeletePopup");
-    if (modal) {
-      modal.classList.add("hidden");
-      modal.style.display = "none";
-      modal.style.visibility = "";
-      modal.style.opacity = "";
-    }
-
-      window.__adminDeleteNr = "";
-      window.__adminDeleteNazw = "";
-      
-      // Po usunięciu zawodnika czyścimy cache list zawodników.
-      // Dotyczy: Admin → Zawodnicy, Trener → Zawodnicy, Powołania.
+ 
+    hideModal("adminDeletePopup");
+    window.__adminDeleteNr = "";
+    window.__adminDeleteNazw = "";
+ 
+    // Aktualizuj cache listy zawodników bez usuniętego zawodnika
+    if (Array.isArray(window.__adminPlayersListCache)) {
+      window.__adminPlayersListCache = window.__adminPlayersListCache.filter(z =>
+        String(z?.nr || "").trim() !== numer
+      );
+ 
       try {
-        Object.keys(localStorage)
-          .filter(k => {
-            const key = String(k || "").toLowerCase();
-            return (
-              key.includes("adminplayerslist") ||
-              key.includes("trainerplayerslist") ||
-              key.includes("clubplayersforpowolania")
-            );
-          })
-          .forEach(k => localStorage.removeItem(k));
-      } catch (e) {
-        console.warn("adminDoDeletePlayer clear players cache error:", e);
-      }
-      
-      window.__powolaniPlayersCache = [];
-      window.__powolaniPlayersRefreshLoading = null;
-      
-      if (Array.isArray(window.__adminPlayersListCache)) {
-      window.__adminPlayersListCache = window.__adminPlayersListCache.filter(z => {
-        return String(z?.nr || "").trim() !== numer;
-      });
+        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerslist.groups-all";
+        localStorage.setItem(cacheKey, JSON.stringify({
+          savedAt: new Date().toISOString(),
+          data: window.__adminPlayersListCache
+        }));
+      } catch (e) {}
     }
-
+ 
+    // Aktualizuj cache listy zawodników trenera
+    try {
+      const trainerCacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".trainerplayerslist.groups-all";
+      const raw = localStorage.getItem(trainerCacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        if (entry && Array.isArray(entry.data)) {
+          entry.data = entry.data.filter(z => String(z?.nr || "").trim() !== numer);
+          entry.savedAt = new Date().toISOString();
+          localStorage.setItem(trainerCacheKey, JSON.stringify(entry));
+        }
+      }
+    } catch (e) {}
+ 
+    // Aktualizuj cache powołań
+    window.__powolaniPlayersCache = (window.__powolaniPlayersCache || []).filter(p =>
+      String(p?.nr || "").trim() !== numer
+    );
+    try {
+      const powolaniKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".clubplayersforpowolania.role-trainerevents";
+      const raw = localStorage.getItem(powolaniKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        if (entry && Array.isArray(entry.data)) {
+          entry.data = entry.data.filter(p => String(p?.nr || "").trim() !== numer);
+          entry.savedAt = new Date().toISOString();
+          localStorage.setItem(powolaniKey, JSON.stringify(entry));
+        }
+      }
+    } catch (e) {}
+ 
+    // Usuń z DOM
     const rowEl = document.querySelector(`[data-admin-player-nr="${numer}"]`);
-    if (rowEl) {
-      rowEl.remove();
-    }
-
+    if (rowEl) rowEl.remove();
+ 
     const box = document.getElementById("adminListaZawodnikow");
-    if (box) {
-      const remainingCards = box.querySelectorAll("[data-admin-player-nr]");
-      if (!remainingCards.length) {
-        box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
-      }
+    if (box && !box.querySelectorAll("[data-admin-player-nr]").length) {
+      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
     }
-
+ 
   } catch (e) {
     alert("❌ Błąd połączenia: " + (e?.message || e));
-
   } finally {
     if (btn) {
       btn.textContent = "TAK";
@@ -11690,57 +11778,67 @@ function adminOpenTrenerByIndex_(idx) {
   adminDeleteTrainerByRow_(trener.row, trener.nazwisko);
 }
 
+ // =================== ADMIN: DOSTĘP TRENERA ===================
+ 
 async function adminToggleTrainerAccessFromInfo(checked) {
   const trener = window.__adminSelectedTrainer || {};
   const row = Number(trener.row || 0);
-
   const msg = document.getElementById("adminTrenerInfoMsg");
   const accessEl = document.getElementById("adminTrenerInfoAccess");
-
+ 
   if (!row) {
     if (msg) msg.textContent = "❌ Brak identyfikatora trenera.";
     if (accessEl) accessEl.checked = !checked;
     return;
   }
-
+ 
   if (msg) msg.textContent = "⏳ Zmieniam dostęp do aplikacji...";
-
+ 
   try {
     const res = await apiClubPost({
       action: "adminSetTrainerAccess",
-      row: row,
+      row,
       access: checked ? "TRUE" : "FALSE"
     });
-
+ 
     if (!res || res.success === false) {
       if (accessEl) accessEl.checked = !checked;
       if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zmienić dostępu.");
       return;
     }
-
-    if (window.__adminSelectedTrainer) {
-      window.__adminSelectedTrainer.access = !!checked;
-    }
-
+ 
+    if (window.__adminSelectedTrainer) window.__adminSelectedTrainer.access = !!checked;
+ 
+    // Aktualizuj cache listy trenerów
     if (Array.isArray(window.__adminTrainerList)) {
       const idx = window.__adminTrainerList.findIndex(x => Number(x?.row || 0) === row);
-      if (idx >= 0) {
-        window.__adminTrainerList[idx].access = !!checked;
-      }
+      if (idx >= 0) window.__adminTrainerList[idx].access = !!checked;
+ 
+      try {
+        const cached = orgCacheRead_("adminTrainersList", { list: "all" });
+        if (cached) {
+          const updated = { ...cached.data };
+          if (updated.trenerzy && Array.isArray(updated.trenerzy)) {
+            const tidx = updated.trenerzy.findIndex(x => Number(x?.row || 0) === row);
+            if (tidx >= 0) updated.trenerzy[tidx].access = !!checked;
+          }
+          orgCacheWrite_("adminTrainersList", { list: "all" }, updated);
+        }
+      } catch (e) {}
     }
-
+ 
     if (msg) {
       msg.textContent = checked
         ? "✅ Dostęp do aplikacji został włączony"
         : "✅ Dostęp do aplikacji został wyłączony";
     }
-
+ 
   } catch (e) {
     if (accessEl) accessEl.checked = !checked;
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
-}  
-
+}
+ 
 function renderAdminTrainerGroupsView_() {
   const wrap = document.getElementById("adminTrenerGrupyDynamicWrap");
   if (!wrap) return;
@@ -11827,94 +11925,109 @@ async function adminOpenTrainerGroups() {
   }
 }
 
+// =================== ADMIN: GRUPY TRENERA ===================
+ 
 async function adminSaveTrainerGroupsLocal() {
   const trener = window.__adminSelectedTrainer || {};
   const row = Number(trener.row || 0);
   const msg = document.getElementById("adminTrenerGrupyMsg");
-
+ 
   if (!row) {
     if (msg) msg.textContent = "❌ Brak identyfikatora trenera.";
     return;
   }
-
+ 
   const picks = document.querySelectorAll("#adminTrenerGrupyView .adminTrenerGrupaChk");
   const arr = [];
-  picks.forEach(ch => {
-    if (ch.checked) arr.push(String(ch.value || "").trim());
-  });
-
+  picks.forEach(ch => { if (ch.checked) arr.push(String(ch.value || "").trim()); });
+ 
   const grupyCsv = arr
     .filter(Boolean)
     .sort((a, b) => Number(String(a).replace("G", "")) - Number(String(b).replace("G", "")))
     .join(",");
-
+ 
   if (msg) msg.textContent = "⏳ Zapisuję...";
-
+ 
   try {
-    const r = await apiClubPost({
-      action: "adminSetTrainerGroups",
-      row: row,
-      grupy: grupyCsv
-    });
-
+    const r = await apiClubPost({ action: "adminSetTrainerGroups", row, grupy: grupyCsv });
+ 
     if (!r || !r.success) {
       if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
       return;
     }
-
-    if (window.__adminSelectedTrainer) {
-      window.__adminSelectedTrainer.grupy = grupyCsv;
-    }
-
+ 
+    if (window.__adminSelectedTrainer) window.__adminSelectedTrainer.grupy = grupyCsv;
+ 
+    // Aktualizuj cache listy trenerów
     if (Array.isArray(window.__adminTrainerList)) {
       const idx = window.__adminTrainerList.findIndex(x => Number(x?.row || 0) === row);
-      if (idx >= 0) {
-        window.__adminTrainerList[idx].grupy = grupyCsv;
-      }
+      if (idx >= 0) window.__adminTrainerList[idx].grupy = grupyCsv;
+ 
+      try {
+        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admintrainerslist.list-all";
+        const cached = orgCacheRead_("adminTrainersList", { list: "all" });
+        if (cached) {
+          const updated = { ...cached.data };
+          if (updated.trenerzy && Array.isArray(updated.trenerzy)) {
+            const tidx = updated.trenerzy.findIndex(x => Number(x?.row || 0) === row);
+            if (tidx >= 0) updated.trenerzy[tidx].grupy = grupyCsv;
+          }
+          orgCacheWrite_("adminTrainersList", { list: "all" }, updated);
+        }
+      } catch (e) {}
     }
-
+ 
     const infoEl = document.getElementById("adminTrenerInfoGrupy");
-    if (infoEl) {
-      infoEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
-    }
-
+    if (infoEl) infoEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
+ 
     if (msg) msg.textContent = "✅ Zapisano grupy trenera.";
   } catch (e) {
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
 }
 
-  async function adminDeleteTrainerByRow_(row, nazwisko) {
+// =================== ADMIN: USUNIĘCIE TRENERA ===================
+ 
+async function adminDeleteTrainerByRow_(row, nazwisko) {
   const rowNum = Number(row || 0);
   const name = String(nazwisko || "").trim() || "tego trenera";
-
+ 
   if (!rowNum) {
     alert("❌ Brak identyfikatora trenera.");
     return;
   }
-
+ 
   const ok = confirm(`Czy na pewno chcesz usunąć trenera: ${name}?`);
   if (!ok) return;
-
+ 
   try {
-    const res = await apiClubPost({
-      action: "adminDeleteTrainer",
-      row: rowNum
-    });
-
+    const res = await apiClubPost({ action: "adminDeleteTrainer", row: rowNum });
+ 
     if (!res || !res.success) {
       alert("❌ " + (res?.error || res?.message || "Nie udało się usunąć trenera."));
       return;
     }
-
+ 
+    // Aktualizuj cache listy trenerów
     if (Array.isArray(window.__adminTrainerList)) {
       window.__adminTrainerList = window.__adminTrainerList.filter(t => Number(t?.row || 0) !== rowNum);
+ 
+      try {
+        const cached = orgCacheRead_("adminTrainersList", { list: "all" });
+        if (cached) {
+          const updated = { ...cached.data };
+          if (updated.trenerzy && Array.isArray(updated.trenerzy)) {
+            updated.trenerzy = updated.trenerzy.filter(t => Number(t?.row || 0) !== rowNum);
+          }
+          orgCacheWrite_("adminTrainersList", { list: "all" }, updated);
+        }
+      } catch (e) {}
     }
-
+ 
     if (window.__adminSelectedTrainer && Number(window.__adminSelectedTrainer.row || 0) === rowNum) {
       window.__adminSelectedTrainer = null;
     }
-
+ 
     await adminPokazTrenerow();
   } catch (e) {
     alert("❌ " + (e?.message || e));
@@ -12176,51 +12289,63 @@ function adminRenderConsentBadge_(el, enabled, yesText, noText) {
   }
 }  
 
+// =================== ADMIN: DOSTĘP ZAWODNIKA ===================
+ 
 async function adminToggleAccessFromInfo(checked) {
   const nr = String(window.__adminSelectedNr || "").trim();
   const msg = document.getElementById("adminInfoMsg");
   const accessEl = document.getElementById("adminInfoAccess");
-
+ 
   if (!nr) {
     if (msg) msg.textContent = "❌ Brak numeru zawodnika";
     if (accessEl) accessEl.checked = !checked;
     return;
   }
-
+ 
   if (msg) msg.textContent = "⏳ Zmieniam dostęp do aplikacji...";
-
+ 
   try {
     const res = await apiClubPost({
       action: "adminSetAppAccess",
       numer: nr,
       access: checked ? "TRUE" : "FALSE"
     });
-
+ 
     if (!res || res.success === false) {
       if (accessEl) accessEl.checked = !checked;
       if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zmienić dostępu");
       return;
     }
-
+ 
     if (!window.__adminCache) window.__adminCache = {};
     if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
-
-    if (window.__adminCache[nr].info && typeof window.__adminCache[nr].info === "object") {
-      window.__adminCache[nr].info.dostepDoApki = !!checked;
+    if (window.__adminCache[nr].info) window.__adminCache[nr].info.dostepDoApki = !!checked;
+ 
+    // Aktualizuj cache listy zawodników
+    if (Array.isArray(window.__adminPlayersListCache)) {
+      const idx = window.__adminPlayersListCache.findIndex(z => String(z?.nr || "").trim() === nr);
+      if (idx >= 0) window.__adminPlayersListCache[idx].dostepDoApki = !!checked;
+ 
+      try {
+        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerslist.groups-all";
+        localStorage.setItem(cacheKey, JSON.stringify({
+          savedAt: new Date().toISOString(),
+          data: window.__adminPlayersListCache
+        }));
+      } catch (e) {}
     }
-
+ 
     if (msg) {
       msg.textContent = checked
         ? "✅ Dostęp do aplikacji został włączony"
         : "✅ Dostęp do aplikacji został wyłączony";
     }
-
+ 
   } catch (e) {
     if (accessEl) accessEl.checked = !checked;
     if (msg) msg.textContent = "❌ " + (e?.message || e);
   }
 }
-  
   
 // =================== GRUPY ===================
 let __adminGroupsSet = new Set();
@@ -12414,81 +12539,60 @@ async function adminSaveGrupyLocal() {
     if (msg) msg.textContent = "❌ Brak numeru zawodnika.";
     return;
   }
-
+ 
   const picks = document.querySelectorAll("#adminGrupyView .adminGrupaChk");
   const arr = [];
   picks.forEach(ch => {
     if (ch.checked) arr.push(String(ch.value || "").trim());
   });
-
+ 
   const grupyCsv = arr
     .filter(Boolean)
     .sort((a, b) => Number(String(a).replace("G", "")) - Number(String(b).replace("G", "")))
     .join(",");
-
+ 
   if (msg) msg.textContent = "⏳ Zapisuję…";
-
+ 
   try {
-    const r = await apiClubPost({
-      action: "adminSetGrupy",
-      numer: nr,
-      grupy: grupyCsv
-    });
-
+    const r = await apiClubPost({ action: "adminSetGrupy", numer: nr, grupy: grupyCsv });
+ 
     if (!r || !(r.success || r.ok)) {
       if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
       return;
     }
-
+ 
+    // Aktualizuj cache admina
     if (!window.__adminCache) window.__adminCache = {};
     if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
-
-    window.__adminCache[nr].grupy = {
-      success: true,
-      numer: nr,
-      grupy: grupyCsv
-    };
-
-    if (window.__adminCache[nr].info && typeof window.__adminCache[nr].info === "object") {
-      window.__adminCache[nr].info.grupy = grupyCsv;
-    }
-
-    trainerUpdateSelectedGroupsLabel_(grupyCsv);
-    
-    const infoGrupyEl = document.getElementById("adminInfoGrupy");
-    if (infoGrupyEl) {
-      infoGrupyEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
-    }
-
-    if (msg) msg.textContent = "✅ Zmiany zostały zapisane";
-
-    (async () => {
+    window.__adminCache[nr].grupy = { success: true, numer: nr, grupy: grupyCsv };
+    if (window.__adminCache[nr].info) window.__adminCache[nr].info.grupy = grupyCsv;
+ 
+    // Aktualizuj cache listy zawodników
+    if (Array.isArray(window.__adminPlayersListCache)) {
+      const idx = window.__adminPlayersListCache.findIndex(z => String(z?.nr || "").trim() === nr);
+      if (idx >= 0) window.__adminPlayersListCache[idx].grupy = grupyCsv;
+ 
       try {
-        const fresh = await apiClubGet("adminGrupy", { numer: nr });
-        if (fresh && fresh.success) {
-          if (!window.__adminCache) window.__adminCache = {};
-          if (!window.__adminCache[nr]) window.__adminCache[nr] = {};
-
-          window.__adminCache[nr].grupy = fresh;
-
-          if (window.__adminCache[nr].info && typeof window.__adminCache[nr].info === "object") {
-            window.__adminCache[nr].info.grupy = String(fresh.grupy || "").trim();
-          }
-
-        const infoGrupyEl2 = document.getElementById("adminInfoGrupy");
-        if (infoGrupyEl2) {
-          infoGrupyEl2.textContent = formatClubGroupsCsvForUi_(String(fresh.grupy || "").trim()) || "—";
-        }
-        }
-      } catch (e) {
-        console.warn("adminGrupy refresh failed:", e);
-      }
-    })();
-
+        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerslist.groups-all";
+        localStorage.setItem(cacheKey, JSON.stringify({
+          savedAt: new Date().toISOString(),
+          data: window.__adminPlayersListCache
+        }));
+      } catch (e) {}
+    }
+ 
+    trainerUpdateSelectedGroupsLabel_(grupyCsv);
+ 
+    const infoGrupyEl = document.getElementById("adminInfoGrupy");
+    if (infoGrupyEl) infoGrupyEl.textContent = formatClubGroupsCsvForUi_(grupyCsv) || "—";
+ 
+    if (msg) msg.textContent = "✅ Zmiany zostały zapisane";
+ 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   }
 }
+
 
 // ADMIN: Statystyki zawodnika (reuse ekranu zawodnika)
   
@@ -13420,117 +13524,109 @@ function adminConfirmPayment(colNum, label, typ) {
     opacity: getComputedStyle(modal).opacity
   });
 }
+  
+// =================== ADMIN: PŁATNOŚĆ ZAWODNIKA ===================
+ 
 async function adminDoConfirmPayment() {
   const activeModal = String(window.__adminActivePayModal || "adminPayConfirmModal");
   const payType = String(window.__adminPendingPayType || "").trim().toLowerCase();
-
+ 
   let yesId = "adminPayConfirmYesBtn";
   let noId  = "adminPayConfirmNoBtn";
   let msgId = "adminPayConfirmMsg";
-
+ 
   if (activeModal === "adminPayConfirmSkladkaModal" || payType === "skladka") {
     yesId = "adminPayConfirmSkladkaYesBtn";
     noId  = "adminPayConfirmSkladkaNoBtn";
     msgId = "adminPayConfirmSkladkaMsg";
   }
-
+ 
   const yes = document.getElementById(yesId);
   const no  = document.getElementById(noId);
   const msg = document.getElementById(msgId);
-
-  if (yes) {
-    yes.disabled = true;
-    yes.style.opacity = "0.65";
-    yes.textContent = "⏳ Zapisuję…";
-  }
-
-  if (no) {
-    no.disabled = true;
-    no.style.opacity = "0.65";
-  }
-
+ 
+  if (yes) { yes.disabled = true; yes.style.opacity = "0.65"; yes.textContent = "⏳ Zapisuję…"; }
+  if (no)  { no.disabled = true; no.style.opacity = "0.65"; }
+ 
   const col = Number(window.__adminPendingPayCol);
   const nr  = String(window.__adminSelectedNr || "").trim();
-
+ 
   try {
-    const r = await apiClubPost({
-      action: "adminConfirmPlatnosc",
-      numer: nr,
-      col: col
-    });
-
+    const r = await apiClubPost({ action: "adminConfirmPlatnosc", numer: nr, col });
+ 
     if (!r || !(r.success || r.ok)) {
       if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
       return;
     }
-
-    const modalIds = [
-      "adminPayConfirmModal",
-      "adminPayConfirmSkladkaModal"
-    ];
-
-    modalIds.forEach(id => {
-      const modal = document.getElementById(id);
-      if (!modal) return;
-      modal.classList.add("hidden");
-      modal.style.display = "none";
-      modal.style.visibility = "";
-      modal.style.opacity = "";
+ 
+    // Zamknij modale
+    ["adminPayConfirmModal", "adminPayConfirmSkladkaModal"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.classList.add("hidden"); el.style.display = "none"; }
     });
-
-    const msgIds = [
-      "adminPayConfirmMsg",
-      "adminPayConfirmSkladkaMsg"
-    ];
-
-    msgIds.forEach(id => {
+    ["adminPayConfirmMsg", "adminPayConfirmSkladkaMsg"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = "";
     });
-
+ 
+    // Aktualizuj cache płatności zawodnika
+    try {
+      const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerpayments.numer-" + nr + ".default";
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        if (entry && entry.data && entry.data.payments && Array.isArray(entry.data.payments.items)) {
+          entry.data.payments.items = entry.data.payments.items.map(item => {
+            if (Number(item.col || 0) === col) return { ...item, zaplacono: true };
+            return item;
+          });
+          entry.savedAt = new Date().toISOString();
+          localStorage.setItem(cacheKey, JSON.stringify(entry));
+        }
+      }
+    } catch (e) {}
+ 
+    // Aktualizuj cache zaległości (lista płatności zawodników)
+    const now = new Date();
+    const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    try {
+      const debtCacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
+      const raw = localStorage.getItem(debtCacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        if (entry && entry.data && Array.isArray(entry.data.items)) {
+          entry.data.items = entry.data.items.map(player => {
+            if (String(player.numer || "").trim() !== nr) return player;
+            const newDebts = (player.zaleglosci || []).filter(item => Number(item.col || 0) !== col);
+            return { ...player, zaleglosci: newDebts, suma: newDebts.reduce((a, i) => a + Number(i.brakuje || 0), 0) };
+          }).filter(player => (player.zaleglosci || []).length > 0);
+          entry.savedAt = new Date().toISOString();
+          localStorage.setItem(debtCacheKey, JSON.stringify(entry));
+        }
+      }
+    } catch (e) {}
+ 
+    // Aktualizuj UI zaległości
     const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
-      ? window.__adminPlatnosciZawodnikowCache
-      : [];
-
+      ? window.__adminPlatnosciZawodnikowCache : [];
+ 
     const updated = cache
       .map(player => {
         if (String(player.numer || "").trim() !== nr) return player;
-
-        const oldDebts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
-        const newDebts = oldDebts.filter(item => Number(item.col || 0) !== col);
-        const newSum = newDebts.reduce((acc, item) => acc + Number(item.brakuje || 0), 0);
-
-        return {
-          ...player,
-          zaleglosci: newDebts,
-          suma: newSum
-        };
+        const newDebts = (player.zaleglosci || []).filter(item => Number(item.col || 0) !== col);
+        return { ...player, zaleglosci: newDebts, suma: newDebts.reduce((a, i) => a + Number(i.brakuje || 0), 0) };
       })
-      .filter(player => {
-        const debts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
-        return debts.length > 0;
-      });
-
+      .filter(player => (player.zaleglosci || []).length > 0);
+ 
     window.__adminPlatnosciZawodnikowCache = updated;
-    renderAdminPlatnosciZawodnikow_({
-      success: true,
-      items: updated
-    });
-
+    renderAdminPlatnosciZawodnikow_({ success: true, items: updated });
+ 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   } finally {
-    if (yes) {
-      yes.disabled = false;
-      yes.style.opacity = "1";
-      yes.textContent = "TAK";
-    }
-
-    if (no) {
-      no.disabled = false;
-      no.style.opacity = "1";
-    }
-
+    if (yes) { yes.disabled = false; yes.style.opacity = "1"; yes.textContent = "TAK"; }
+    if (no)  { no.disabled = false; no.style.opacity = "1"; }
+ 
     window.__adminPendingPayCol = null;
     window.__adminPendingPayLabel = "";
     window.__adminPendingPayType = "";
@@ -13538,124 +13634,83 @@ async function adminDoConfirmPayment() {
   }
 }
 
+// =================== ADMIN: ZWOLNIENIE Z OPŁATY ===================
+ 
 async function adminMarkPaymentAsZW() {
   const yes = document.getElementById("adminPayConfirmSkladkaYesBtn");
   const no  = document.getElementById("adminPayConfirmSkladkaNoBtn");
   const zw  = document.getElementById("adminPayConfirmSkladkaZwBtn");
   const msg = document.getElementById("adminPayConfirmSkladkaMsg");
-
-  if (yes) {
-    yes.disabled = true;
-    yes.style.opacity = "0.65";
-  }
-
-  if (no) {
-    no.disabled = true;
-    no.style.opacity = "0.65";
-  }
-
-  if (zw) {
-    zw.disabled = true;
-    zw.style.opacity = "0.65";
-    zw.textContent = "⏳ Zapisuję…";
-  }
-
+ 
+  if (yes) { yes.disabled = true; yes.style.opacity = "0.65"; }
+  if (no)  { no.disabled = true; no.style.opacity = "0.65"; }
+  if (zw)  { zw.disabled = true; zw.style.opacity = "0.65"; zw.textContent = "⏳ Zapisuję…"; }
+ 
   const col = Number(window.__adminPendingPayCol);
   const nr  = String(window.__adminSelectedNr || "").trim();
   const payType = String(window.__adminPendingPayType || "").trim().toLowerCase();
-
+ 
   if (payType !== "skladka") {
     if (msg) msg.textContent = "❌ ZWOLNIONY Z OPŁATY można ustawić tylko dla składki.";
     if (yes) { yes.disabled = false; yes.style.opacity = "1"; }
-    if (no)  { no.disabled = false;  no.style.opacity = "1"; }
-    if (zw)  { zw.disabled = false;  zw.style.opacity = "1"; zw.textContent = "ZWOLNIONY Z OPŁATY"; }
+    if (no)  { no.disabled = false; no.style.opacity = "1"; }
+    if (zw)  { zw.disabled = false; zw.style.opacity = "1"; zw.textContent = "ZWOLNIONY Z OPŁATY"; }
     return;
   }
-
+ 
   try {
-    const r = await apiClubPost({
-      action: "adminMarkZwolnionyPlatnosc",
-      numer: nr,
-      col: col
-    });
-
+    const r = await apiClubPost({ action: "adminMarkZwolnionyPlatnosc", numer: nr, col });
+ 
     if (!r || !(r.success || r.ok)) {
       if (msg) msg.textContent = "❌ " + (r?.error || r?.message || "Błąd zapisu");
       return;
     }
-
-    const modalIds = [
-      "adminPayConfirmModal",
-      "adminPayConfirmSkladkaModal"
-    ];
-
-    modalIds.forEach(id => {
-      const modal = document.getElementById(id);
-      if (!modal) return;
-      modal.classList.add("hidden");
-      modal.style.display = "none";
-      modal.style.visibility = "";
-      modal.style.opacity = "";
-    });
-
-    const msgIds = [
-      "adminPayConfirmMsg",
-      "adminPayConfirmSkladkaMsg"
-    ];
-
-    msgIds.forEach(id => {
+ 
+    ["adminPayConfirmModal", "adminPayConfirmSkladkaModal"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = "";
+      if (el) { el.classList.add("hidden"); el.style.display = "none"; }
     });
-
+ 
+    // Aktualizuj cache zaległości
+    const now = new Date();
+    const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    try {
+      const debtCacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
+      const raw = localStorage.getItem(debtCacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        if (entry && entry.data && Array.isArray(entry.data.items)) {
+          entry.data.items = entry.data.items.map(player => {
+            if (String(player.numer || "").trim() !== nr) return player;
+            const newDebts = (player.zaleglosci || []).filter(item => Number(item.col || 0) !== col);
+            return { ...player, zaleglosci: newDebts, suma: newDebts.reduce((a, i) => a + Number(i.brakuje || 0), 0) };
+          }).filter(player => (player.zaleglosci || []).length > 0);
+          entry.savedAt = new Date().toISOString();
+          localStorage.setItem(debtCacheKey, JSON.stringify(entry));
+        }
+      }
+    } catch (e) {}
+ 
     const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
-      ? window.__adminPlatnosciZawodnikowCache
-      : [];
-
+      ? window.__adminPlatnosciZawodnikowCache : [];
+ 
     const updated = cache
       .map(player => {
         if (String(player.numer || "").trim() !== nr) return player;
-
-        const oldDebts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
-        const newDebts = oldDebts.filter(item => Number(item.col || 0) !== col);
-        const newSum = newDebts.reduce((acc, item) => acc + Number(item.brakuje || 0), 0);
-
-        return {
-          ...player,
-          zaleglosci: newDebts,
-          suma: newSum
-        };
+        const newDebts = (player.zaleglosci || []).filter(item => Number(item.col || 0) !== col);
+        return { ...player, zaleglosci: newDebts, suma: newDebts.reduce((a, i) => a + Number(i.brakuje || 0), 0) };
       })
-      .filter(player => {
-        const debts = Array.isArray(player.zaleglosci) ? player.zaleglosci : [];
-        return debts.length > 0;
-      });
-
+      .filter(player => (player.zaleglosci || []).length > 0);
+ 
     window.__adminPlatnosciZawodnikowCache = updated;
-    renderAdminPlatnosciZawodnikow_({
-      success: true,
-      items: updated
-    });
-
+    renderAdminPlatnosciZawodnikow_({ success: true, items: updated });
+ 
   } catch (e) {
     if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
   } finally {
-    if (yes) {
-      yes.disabled = false;
-      yes.style.opacity = "1";
-    }
-
-    if (no) {
-      no.disabled = false;
-      no.style.opacity = "1";
-    }
-
-    if (zw) {
-      zw.disabled = false;
-      zw.style.opacity = "1";
-      zw.textContent = "ZWOLNIONY Z OPŁATY";
-    }
-
+    if (yes) { yes.disabled = false; yes.style.opacity = "1"; }
+    if (no)  { no.disabled = false; no.style.opacity = "1"; }
+    if (zw)  { zw.disabled = false; zw.style.opacity = "1"; zw.textContent = "ZWOLNIONY Z OPŁATY"; }
     window.__adminPendingPayCol = null;
     window.__adminPendingPayLabel = "";
     window.__adminPendingPayType = "";
