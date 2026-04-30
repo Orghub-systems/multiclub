@@ -8052,9 +8052,8 @@ async function pokazPlatnosci() {
   const div = document.getElementById("platnosciSummaryBox");
 
   const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
-  const maxAgeMs = 24 * 60 * 60 * 1000;
 
-  // 1. Pokaż cache natychmiast jeśli istnieje
+  // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
   try {
     const raw = localStorage.getItem(cacheKey);
@@ -8064,6 +8063,13 @@ async function pokazPlatnosci() {
         window.__playerPaymentsPayload = entry.data;
         renderPlatnosciMenu(entry.data);
         hadCache = true;
+
+        // Zablokuj przyciski do czasu załadowania świeżych danych
+        document.querySelectorAll("#platnosciView button.full-btn:not(.alt)").forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = "0.45";
+          btn.dataset.lockedByCache = "1";
+        });
       }
     }
   } catch (e) {}
@@ -8072,7 +8078,7 @@ async function pokazPlatnosci() {
     div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
   }
 
-  // 2. W tle pobierz świeże dane z GAS
+  // 2. Zawsze sprawdź GAS w tle
   try {
     const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
 
@@ -8085,27 +8091,39 @@ async function pokazPlatnosci() {
       }
     } catch (e) {}
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
-    } catch (e) {}
-
-    window.__playerPaymentsPayload = {
+    const payload = {
       biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
       wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
       sumaBiezace: Number(fresh?.sumaBiezace || 0),
       sumaWplacone: Number(fresh?.sumaWplacone || 0)
     };
 
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: payload
+      }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = payload;
+
     if (changed) {
-      renderPlatnosciMenu(window.__playerPaymentsPayload);
+      renderPlatnosciMenu(payload);
     }
+
   } catch (e) {
     if (!hadCache && div) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
+  } finally {
+    // Odblokuj przyciski
+    document.querySelectorAll("#platnosciView button[data-locked-by-cache='1']").forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "";
+      delete btn.dataset.lockedByCache;
+    });
   }
 }
-
 
 async function pokazPlatnosciBiezace() {
   goToView("platnosciBiezaceView");
@@ -8113,16 +8131,22 @@ async function pokazPlatnosciBiezace() {
 
   const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
 
-  // 1. Pokaż z cache natychmiast
+  // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        const payload = entry.data;
-        renderPlatnosciListInto_("listaPlatnosciBiezace", payload.biezace || [], payload.sumaBiezace || 0, "biezace");
+        renderPlatnosciListInto_("listaPlatnosciBiezace", entry.data.biezace || [], entry.data.sumaBiezace || 0, "biezace");
         hadCache = true;
+
+        // Zablokuj przyciski Zapłać teraz
+        div.querySelectorAll("button.playerPayBtn").forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = "0.45";
+          btn.dataset.lockedByCache = "1";
+        });
       }
     }
   } catch (e) {}
@@ -8131,7 +8155,7 @@ async function pokazPlatnosciBiezace() {
     div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
   }
 
-  // 2. W tle pobierz świeże dane
+  // 2. Zawsze sprawdź GAS w tle
   try {
     const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
 
@@ -8144,27 +8168,39 @@ async function pokazPlatnosciBiezace() {
       }
     } catch (e) {}
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
-    } catch (e) {}
-
-    window.__playerPaymentsPayload = {
+    const payload = {
       biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
       wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
       sumaBiezace: Number(fresh?.sumaBiezace || 0),
       sumaWplacone: Number(fresh?.sumaWplacone || 0)
     };
 
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: payload
+      }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = payload;
+
     if (changed) {
-      renderPlatnosciListInto_("listaPlatnosciBiezace", window.__playerPaymentsPayload.biezace, window.__playerPaymentsPayload.sumaBiezace, "biezace");
+      renderPlatnosciListInto_("listaPlatnosciBiezace", payload.biezace, payload.sumaBiezace, "biezace");
     }
+
   } catch (e) {
     if (!hadCache && div) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
+  } finally {
+    // Odblokuj przyciski
+    div.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "";
+      delete btn.dataset.lockedByCache;
+    });
   }
 }
-
 
 async function pokazPlatnosciWplacone() {
   goToView("platnosciWplaconeView");
@@ -8172,15 +8208,14 @@ async function pokazPlatnosciWplacone() {
 
   const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
 
-  // 1. Pokaż z cache natychmiast
+  // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        const payload = entry.data;
-        renderPlatnosciListInto_("listaPlatnosciWplacone", payload.wplacone || [], payload.sumaWplacone || 0, "wplacone");
+        renderPlatnosciListInto_("listaPlatnosciWplacone", entry.data.wplacone || [], entry.data.sumaWplacone || 0, "wplacone");
         hadCache = true;
       }
     }
@@ -8190,7 +8225,7 @@ async function pokazPlatnosciWplacone() {
     div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
   }
 
-  // 2. W tle pobierz świeże dane
+  // 2. Zawsze sprawdź GAS w tle
   try {
     const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
 
@@ -8203,20 +8238,26 @@ async function pokazPlatnosciWplacone() {
       }
     } catch (e) {}
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
-    } catch (e) {}
-
-    window.__playerPaymentsPayload = {
+    const payload = {
       biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
       wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
       sumaBiezace: Number(fresh?.sumaBiezace || 0),
       sumaWplacone: Number(fresh?.sumaWplacone || 0)
     };
 
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: payload
+      }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = payload;
+
     if (changed) {
-      renderPlatnosciListInto_("listaPlatnosciWplacone", window.__playerPaymentsPayload.wplacone, window.__playerPaymentsPayload.sumaWplacone, "wplacone");
+      renderPlatnosciListInto_("listaPlatnosciWplacone", payload.wplacone, payload.sumaWplacone, "wplacone");
     }
+
   } catch (e) {
     if (!hadCache && div) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
@@ -13928,7 +13969,6 @@ function adminCancelConfirmPayment() {
 
 /* =================== 171 ADMIN PŁATNOSCI ZAWODNIKÓW KLUBU =================== */  
 
-
 async function adminOpenPlatnosciZawodnikowView() {
   goToView("adminPlatnosciZawodnikowView");
 
@@ -13938,9 +13978,9 @@ async function adminOpenPlatnosciZawodnikowView() {
 
   const now = new Date();
   const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminDebtsList.month-" + monthKey + ".default";
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
 
-  // 1. Pokaż cache natychmiast
+  // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
   try {
     const raw = localStorage.getItem(cacheKey);
@@ -13950,6 +13990,16 @@ async function adminOpenPlatnosciZawodnikowView() {
         window.__adminPlatnosciZawodnikowCache = Array.isArray(entry.data.items) ? entry.data.items : [];
         renderAdminPlatnosciZawodnikow_(entry.data);
         hadCache = true;
+
+        // Zablokuj przyciski potwierdzeń i ponagleń
+        body.querySelectorAll("button").forEach(btn => {
+          const txt = String(btn.textContent || "").trim();
+          if (txt.includes("Zatwierdź") || txt.includes("Wyślij ponaglenie") || txt.includes("Przypisz")) {
+            btn.disabled = true;
+            btn.style.opacity = "0.45";
+            btn.dataset.lockedByCache = "1";
+          }
+        });
       }
     }
   } catch (e) {}
@@ -13958,7 +14008,7 @@ async function adminOpenPlatnosciZawodnikowView() {
     body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
   }
 
-  // 2. W tle pobierz świeże dane z GAS
+  // 2. Zawsze sprawdź GAS w tle
   try {
     const fresh = await apiClubGet("adminListaZaleglosciPlatnosci", { t: Date.now() });
 
@@ -13972,7 +14022,10 @@ async function adminOpenPlatnosciZawodnikowView() {
     } catch (e) {}
 
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: fresh
+      }));
     } catch (e) {}
 
     if (fresh && fresh.success === true) {
@@ -13982,9 +14035,19 @@ async function adminOpenPlatnosciZawodnikowView() {
     if (changed) {
       renderAdminPlatnosciZawodnikow_(fresh);
     }
+
   } catch (e) {
     if (!hadCache && body) {
       body.innerHTML = `<div class="card" style="background:#700;">❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</div>`;
+    }
+  } finally {
+    // Odblokuj przyciski
+    if (body) {
+      body.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = "";
+        delete btn.dataset.lockedByCache;
+      });
     }
   }
 }
