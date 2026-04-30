@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.49';
+  window.APP_BUILD = 'APP v2.50';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6992,6 +6992,14 @@ async function wyslijRejestracje() {
       document.getElementById("regHaslo").value = "";
 
       msg.innerText = "✅ Rejestracja zakończona!";
+
+      try {
+        orgCacheRemove_("adminPlayersList", { groups: "all" });
+        orgCacheRemove_("trainerPlayersList", { groups: window.grupyTrenera || "all" });
+        orgCacheRemove_("clubPlayersForPowolania", { role: "trainerEvents" });
+        window.__powolaniPlayersCache = [];
+      } catch (e) {}
+      
       setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
     } else {
       msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
@@ -7029,6 +7037,11 @@ async function wyslijRejestracjeTrener() {
     if (data && data.ok) {
       const inic = String(data.inic || "").toUpperCase() || "(?)";
 
+      // Kasuj cache listy trenerów – admin zobaczy świeże dane przy następnym wejściu
+      try {
+        orgCacheRemove_("adminTrainersList", { list: "all" });
+      } catch (e) {}
+
       msg.innerHTML = `
         ✅ <b>Zarejestrowano trenera!</b><br>
         Login do systemu:<br>
@@ -7061,8 +7074,7 @@ async function wyslijRejestracjeTrener() {
             if (btnGo) btnGo.disabled = false;
           } catch (e) {
             if (info) {
-              info.textContent =
-                "❌ Nie udało się skopiować. Zaznacz login ręcznie: " + inic;
+              info.textContent = "❌ Nie udało się skopiować. Zaznacz login ręcznie: " + inic;
             }
           }
         };
@@ -7073,8 +7085,7 @@ async function wyslijRejestracjeTrener() {
       }
 
     } else {
-      msg.innerText =
-        "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
     }
 
   } catch (e) {
