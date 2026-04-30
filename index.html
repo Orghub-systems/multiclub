@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.50';
+  window.APP_BUILD = 'APP v2.51';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2544,6 +2544,26 @@ input[type="number"] {
     </div>
   </div>
 </div>
+
+<!-- ADMIN DELETE TRAINER MODAL
+     Potwierdzenie usunięcia trenera -->
+
+<div id="adminDeleteTrainerPopup" class="modal hidden">
+  <div class="modal-card" onclick="event.stopPropagation();">
+    <h2 style="margin:0 0 8px 0;">Potwierdzenie</h2>
+
+    <div id="adminDeleteTrainerPopupText" style="opacity:0.9; line-height:1.35;">
+      Czy napewno chcesz usunąć trenera?
+    </div>
+
+    <div style="height:10px;"></div>
+
+    <div class="modal-actions">
+      <button class="full-btn green" type="button" onclick="adminDoDeleteTrainer_()">TAK</button>
+      <button class="full-btn alt" type="button" onclick="adminCloseDeleteTrainerPopup_()">NIE</button>
+    </div>
+  </div>
+</div>  
   
 <!-- ADMIN BILLING MODE MODAL
      Wybór sposobu rozliczania zawodnika -->
@@ -4084,6 +4104,17 @@ window.addEventListener("popstate", (event) => {
     hideModal("adminDeletePopup");
     window.__adminDeleteNr = "";
     window.__adminDeleteNazw = "";
+  }
+
+  // popup admin: usuwanie trenera
+  if (
+    document.getElementById("adminDeleteTrainerPopup") &&
+    !document.getElementById("adminDeleteTrainerPopup").classList.contains("hidden") &&
+    !(state && state.modal === "adminDeleteTrainerPopup")
+  ) {
+    hideModal("adminDeleteTrainerPopup");
+    window.__adminDeleteTrainerRow = null;
+    window.__adminDeleteTrainerName = "";
   }
 
   // popup usuwania wydarzenia
@@ -12002,27 +12033,58 @@ async function adminSaveTrainerGroupsLocal() {
 async function adminDeleteTrainerByRow_(row, nazwisko) {
   const rowNum = Number(row || 0);
   const name = String(nazwisko || "").trim() || "tego trenera";
- 
+
   if (!rowNum) {
     alert("❌ Brak identyfikatora trenera.");
     return;
   }
- 
-  const ok = confirm(`Czy na pewno chcesz usunąć trenera: ${name}?`);
-  if (!ok) return;
- 
+
+  window.__adminDeleteTrainerRow = rowNum;
+  window.__adminDeleteTrainerName = name;
+
+  const txt = document.getElementById("adminDeleteTrainerPopupText");
+  if (txt) txt.textContent = `Czy napewno chcesz usunąć trenera: ${name}?`;
+
+  showModal("adminDeleteTrainerPopup");
+  pushPaymentModalHistoryState_("adminDeleteTrainerPopup");
+}
+
+function adminCloseDeleteTrainerPopup_() {
+  if (isHistoryModal_("adminDeleteTrainerPopup")) {
+    history.back();
+    return;
+  }
+  hideModal("adminDeleteTrainerPopup");
+  window.__adminDeleteTrainerRow = null;
+  window.__adminDeleteTrainerName = "";
+}
+
+async function adminDoDeleteTrainer_() {
+  const rowNum = Number(window.__adminDeleteTrainerRow || 0);
+  if (!rowNum) {
+    hideModal("adminDeleteTrainerPopup");
+    return;
+  }
+
+  const btn = document.querySelector("#adminDeleteTrainerPopup .full-btn.green");
+  if (btn) { btn.textContent = "Usuwam…"; btn.disabled = true; btn.classList.add("loading"); }
+
   try {
     const res = await apiClubPost({ action: "adminDeleteTrainer", row: rowNum });
- 
+
     if (!res || !res.success) {
       alert("❌ " + (res?.error || res?.message || "Nie udało się usunąć trenera."));
       return;
     }
- 
+
+    hideModal("adminDeleteTrainerPopup");
+    window.__adminDeleteTrainerRow = null;
+    window.__adminDeleteTrainerName = "";
+
     // Aktualizuj cache listy trenerów
     if (Array.isArray(window.__adminTrainerList)) {
       window.__adminTrainerList = window.__adminTrainerList.filter(t => Number(t?.row || 0) !== rowNum);
- 
+
       try {
         const cached = orgCacheRead_("adminTrainersList", { list: "all" });
         if (cached) {
@@ -12034,14 +12096,17 @@ async function adminDeleteTrainerByRow_(row, nazwisko) {
         }
       } catch (e) {}
     }
- 
+
     if (window.__adminSelectedTrainer && Number(window.__adminSelectedTrainer.row || 0) === rowNum) {
       window.__adminSelectedTrainer = null;
     }
- 
+
     await adminPokazTrenerow();
+
   } catch (e) {
     alert("❌ " + (e?.message || e));
+  } finally {
+    if (btn) { btn.textContent = "TAK"; btn.disabled = false; btn.classList.remove("loading"); }
   }
 }
 
