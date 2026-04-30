@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.51';
+  window.APP_BUILD = 'APP v2.52';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -6145,29 +6145,30 @@ function refreshEmailButtonState_() {
   if (status) status.textContent = "Powiadomienia email są wyłączone.";
 }
 
-async function enablePushFlow_() {
+  async function enablePushFlow_() {
   const btnEnable = document.getElementById("btnEnablePush");
+  const status = document.getElementById("pushStatus");
   if (btnEnable) btnEnable.disabled = true;
 
   try {
     if (!("serviceWorker" in navigator)) {
-      alert("Brak Service Worker.");
+      if (status) status.textContent = "❌ Ta przeglądarka nie obsługuje Service Workera.";
       return;
     }
 
     if (!("PushManager" in window)) {
-      alert("Brak PushManager.");
+      if (status) status.textContent = "❌ Ta przeglądarka nie obsługuje powiadomień push.";
       return;
     }
 
     if ("Notification" in window && Notification.permission === "denied") {
-      alert("Powiadomienia są zablokowane w przeglądarce. Odblokuj je w ustawieniach strony, a potem spróbuj ponownie.");
+      if (status) status.textContent = "❌ Powiadomienia są zablokowane w przeglądarce. Odblokuj je w ustawieniach strony i spróbuj ponownie.";
       return;
     }
 
     const perm = await Notification.requestPermission();
     if (perm !== "granted") {
-      alert("Powiadomienia: brak zgody.");
+      if (status) status.textContent = "❌ Brak zgody na powiadomienia.";
       return;
     }
 
@@ -6176,7 +6177,7 @@ async function enablePushFlow_() {
     const publicKey = String(vapidJson?.publicKey || "").trim();
 
     if (!publicKey) {
-      alert("Brak VAPID_PUBLIC_KEY po stronie Workera.");
+      if (status) status.textContent = "❌ Błąd konfiguracji serwera push.";
       return;
     }
 
@@ -6184,11 +6185,7 @@ async function enablePushFlow_() {
 
     let sub = await reg.pushManager.getSubscription();
     if (sub) {
-      try {
-        await sub.unsubscribe();
-      } catch (e) {
-        console.warn("old subscription unsubscribe error", e);
-      }
+      try { await sub.unsubscribe(); } catch (e) {}
       sub = null;
     }
 
@@ -6204,7 +6201,7 @@ async function enablePushFlow_() {
       (localStorage.getItem("clubId") || "").trim();
 
     if (!cid) {
-      alert("Brak clubId (URL/pamięć).");
+      if (status) status.textContent = "❌ Brak identyfikatora klubu.";
       return;
     }
 
@@ -6213,22 +6210,16 @@ async function enablePushFlow_() {
 
     const numer = getCurrentNotificationLoginId_();
     if (!numer) {
-      alert("Brak numeru zawodnika (zaloguj się ponownie).");
+      if (status) status.textContent = "❌ Brak numeru zawodnika. Zaloguj się ponownie.";
       return;
     }
 
     window.numerZalogowanego = numer;
 
-    const payload = {
-      clubId: String(cid),
-      numer: String(numer),
-      subscription: sub.toJSON(),
-    };
-
     const saveRes = await fetch(PUSH_WORKER_URL + "/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ clubId: String(cid), numer: String(numer), subscription: sub.toJSON() }),
     });
 
     const saveJson = await saveRes.json().catch(() => ({}));
@@ -6241,29 +6232,24 @@ async function enablePushFlow_() {
       await cache.put(
         "/push-meta.json",
         new Response(
-          JSON.stringify({
-            clubId: String(cid),
-            numer: String(numer)
-          }),
-          {
-            headers: { "Content-Type": "application/json" }
-          }
+          JSON.stringify({ clubId: String(cid), numer: String(numer) }),
+          { headers: { "Content-Type": "application/json" } }
         )
       );
-    } catch (e) {
-      console.warn("push-meta cache save error", e);
-    }
+    } catch (e) {}
 
     const setRes = await saveUserNotificationPrefsToServer_({ pushConsent: true });
     if (!setRes || setRes.success !== true) {
-      throw new Error(setRes?.error || "Nie udało się zapisać zgody push w aplikacji.");
+      throw new Error(setRes?.error || "Nie udało się zapisać zgody push.");
     }
 
     await loadUserNotificationPrefsFromServer_();
     await refreshPushButtonState_();
-    alert("✅ Powiadomienia push włączone.");
+
+    if (status) status.textContent = "✅ Powiadomienia push są aktywne na tym urządzeniu.";
+
   } catch (e) {
-    alert("❌ Push error: " + (e?.message || e));
+    if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
     if (btnEnable) btnEnable.disabled = false;
   }
@@ -6271,6 +6257,7 @@ async function enablePushFlow_() {
 
 async function disablePushFlow_() {
   const btnDisable = document.getElementById("btnDisablePush");
+  const status = document.getElementById("pushStatus");
   if (btnDisable) btnDisable.disabled = true;
 
   try {
@@ -6278,11 +6265,7 @@ async function disablePushFlow_() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        try {
-          await sub.unsubscribe();
-        } catch (e) {
-          console.warn("unsubscribe error", e);
-        }
+        try { await sub.unsubscribe(); } catch (e) {}
       }
     }
 
@@ -6290,14 +6273,16 @@ async function disablePushFlow_() {
 
     const setRes = await saveUserNotificationPrefsToServer_({ pushConsent: false });
     if (!setRes || setRes.success !== true) {
-      throw new Error(setRes?.error || "Nie udało się zapisać wyłączenia push w aplikacji.");
+      throw new Error(setRes?.error || "Nie udało się wyłączyć powiadomień push.");
     }
 
     await loadUserNotificationPrefsFromServer_();
     await refreshPushButtonState_();
-    alert("✅ Powiadomienia push wyłączone.");
+
+    if (status) status.textContent = "✅ Powiadomienia push zostały wyłączone.";
+
   } catch (e) {
-    alert("❌ Nie udało się wyłączyć powiadomień: " + (e?.message || e));
+    if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
     if (btnDisable) btnDisable.disabled = false;
   }
@@ -6305,6 +6290,7 @@ async function disablePushFlow_() {
 
 async function enableEmailFlow_() {
   const btnEnable = document.getElementById("btnEnableEmail");
+  const status = document.getElementById("emailStatus");
   if (btnEnable) btnEnable.disabled = true;
 
   try {
@@ -6315,9 +6301,11 @@ async function enableEmailFlow_() {
 
     await loadUserNotificationPrefsFromServer_();
     refreshEmailButtonState_();
-    alert("✅ Powiadomienia email włączone.");
+
+    if (status) status.textContent = "✅ Powiadomienia email są włączone.";
+
   } catch (e) {
-    alert("❌ Błąd email: " + (e?.message || e));
+    if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
     if (btnEnable) btnEnable.disabled = false;
   }
@@ -6325,6 +6313,7 @@ async function enableEmailFlow_() {
 
 async function disableEmailFlow_() {
   const btnDisable = document.getElementById("btnDisableEmail");
+  const status = document.getElementById("emailStatus");
   if (btnDisable) btnDisable.disabled = true;
 
   try {
@@ -6335,9 +6324,11 @@ async function disableEmailFlow_() {
 
     await loadUserNotificationPrefsFromServer_();
     refreshEmailButtonState_();
-    alert("✅ Powiadomienia email wyłączone.");
+
+    if (status) status.textContent = "✅ Powiadomienia email zostały wyłączone.";
+
   } catch (e) {
-    alert("❌ Błąd email: " + (e?.message || e));
+    if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
     if (btnDisable) btnDisable.disabled = false;
   }
