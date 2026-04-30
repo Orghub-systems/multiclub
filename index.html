@@ -6145,10 +6145,11 @@ function refreshEmailButtonState_() {
   if (status) status.textContent = "Powiadomienia email są wyłączone.";
 }
 
-  async function enablePushFlow_() {
+async function enablePushFlow_() {
   const btnEnable = document.getElementById("btnEnablePush");
+  const btnDisable = document.getElementById("btnDisablePush");
   const status = document.getElementById("pushStatus");
-  const btnDisable = document.getElementById("btnDisablePush");  
+
   if (btnEnable) btnEnable.disabled = true;
   if (btnDisable) btnDisable.disabled = true;
 
@@ -6253,17 +6254,18 @@ function refreshEmailButtonState_() {
   } catch (e) {
     if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
-      if (btnEnable) btnEnable.disabled = false;
-      if (btnDisable) btnDisable.disabled = false;
-    }
+    if (btnEnable) btnEnable.disabled = false;
+    if (btnDisable) btnDisable.disabled = false;
+  }
 }
 
 async function disablePushFlow_() {
+  const btnEnable = document.getElementById("btnEnablePush");
   const btnDisable = document.getElementById("btnDisablePush");
   const status = document.getElementById("pushStatus");
-  const btnEnable = document.getElementById("btnEnablePush");
-  if (btnDisable) btnDisable.disabled = true;
+
   if (btnEnable) btnEnable.disabled = true;
+  if (btnDisable) btnDisable.disabled = true;
 
   try {
     if ("serviceWorker" in navigator) {
@@ -6289,15 +6291,16 @@ async function disablePushFlow_() {
   } catch (e) {
     if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
-      if (btnEnable) btnEnable.disabled = false;
-      if (btnDisable) btnDisable.disabled = false;
-    }
+    if (btnEnable) btnEnable.disabled = false;
+    if (btnDisable) btnDisable.disabled = false;
+  }
 }
 
 async function enableEmailFlow_() {
   const btnEnable = document.getElementById("btnEnableEmail");
+  const btnDisable = document.getElementById("btnDisableEmail");
   const status = document.getElementById("emailStatus");
-  const btnDisable = document.getElementById("btnDisablePush");
+
   if (btnEnable) btnEnable.disabled = true;
   if (btnDisable) btnDisable.disabled = true;
 
@@ -6315,17 +6318,18 @@ async function enableEmailFlow_() {
   } catch (e) {
     if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
-      if (btnEnable) btnEnable.disabled = false;
-      if (btnDisable) btnDisable.disabled = false;
-    }
+    if (btnEnable) btnEnable.disabled = false;
+    if (btnDisable) btnDisable.disabled = false;
+  }
 }
 
 async function disableEmailFlow_() {
+  const btnEnable = document.getElementById("btnEnableEmail");
   const btnDisable = document.getElementById("btnDisableEmail");
   const status = document.getElementById("emailStatus");
-  const btnEnable = document.getElementById("btnEnablePush");
-  if (btnDisable) btnDisable.disabled = true;
+
   if (btnEnable) btnEnable.disabled = true;
+  if (btnDisable) btnDisable.disabled = true;
 
   try {
     const setRes = await saveUserNotificationPrefsToServer_({ emailConsent: false });
@@ -6341,9 +6345,9 @@ async function disableEmailFlow_() {
   } catch (e) {
     if (status) status.textContent = "❌ Błąd: " + (e?.message || e);
   } finally {
-      if (btnEnable) btnEnable.disabled = false;
-      if (btnDisable) btnDisable.disabled = false;
-    }
+    if (btnEnable) btnEnable.disabled = false;
+    if (btnDisable) btnDisable.disabled = false;
+  }
 }
 
 function urlBase64ToUint8Array_(base64String) {
