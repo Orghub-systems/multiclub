@@ -8442,30 +8442,36 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
 
 /* ===================== TRENINGI ======================-- */
   
-
 async function pokazTreningi() {
   goToView("homeView");
   const div = document.getElementById("listaTreningow");
 
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerEvents.numer-" + String(numerZalogowanego || "") + ".default";
-  const maxAgeMs = 24 * 60 * 60 * 1000;
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
 
-  // 1. Pokaż cache natychmiast jeśli istnieje
+  // 1. Pokaż cache natychmiast z zablokowanymi przyciskami
+  let hadCache = false;
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
         renderTreningi(entry.data);
+        hadCache = true;
+
+        // Zablokuj wszystkie przyciski zapisz/wypisz
+        setTreningiButtonsLocked_(true);
       }
     }
   } catch (e) {}
 
-  // 2. W tle pobierz świeże dane z GAS
+  if (!hadCache && div) {
+    div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
+  }
+
+  // 2. Zawsze sprawdź GAS w tle
   try {
     const fresh = await apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego });
 
-    // Sprawdź czy coś się zmieniło
     let changed = true;
     try {
       const raw = localStorage.getItem(cacheKey);
@@ -8475,21 +8481,53 @@ async function pokazTreningi() {
       }
     } catch (e) {}
 
-    // Zapisz do cache
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: fresh
+      }));
     } catch (e) {}
 
-    // Podmień UI tylko jeśli dane się zmieniły
     if (changed) {
       renderTreningi(fresh);
     }
+
   } catch (e) {
-    // Jeśli brak cache i brak sieci – pokaż błąd
-    if (div && div.innerHTML.includes("⏳")) {
+    if (!hadCache && div) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
+  } finally {
+    // Odblokuj przyciski po otrzymaniu odpowiedzi z GAS
+    setTreningiButtonsLocked_(false);
   }
+}
+
+function setTreningiButtonsLocked_(locked) {
+  const div = document.getElementById("listaTreningow");
+  if (!div) return;
+
+  div.querySelectorAll("button").forEach(btn => {
+    const txt = String(btn.textContent || "").trim();
+    const isActionBtn =
+      txt.includes("Zapisz się") ||
+      txt.includes("Wypisz się") ||
+      txt.includes("Akceptuję") ||
+      txt.includes("Rezygnuję");
+
+    if (!isActionBtn) return;
+
+    if (locked) {
+      btn.disabled = true;
+      btn.style.opacity = "0.45";
+      btn.dataset.lockedByCache = "1";
+    } else {
+      if (btn.dataset.lockedByCache === "1") {
+        btn.disabled = false;
+        btn.style.opacity = "";
+        delete btn.dataset.lockedByCache;
+      }
+    }
+  });
 }
 
 function powrotDoPlatnosci() {
