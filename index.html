@@ -1281,9 +1281,6 @@ input[type="number"] {
   </button>
 </div>
 
-
-<!-- TRAINER ARCHIVE EVENTS VIEW
-     Archiwalne wydarzenia trenera -->
 <!-- TRAINER ARCHIVE EVENTS VIEW
      Wybór miesiąca archiwalnych wydarzeń -->
 
@@ -1543,7 +1540,7 @@ input[type="number"] {
   <div id="adminGroupsList"></div>
 
   <button id="btnSaveClubGroupsConfig" class="full-btn" type="button" onclick="adminSaveClubGroupsLocal_()">💾 Zapisz grupy</button>
-  <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
+  <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
 <!-- ADMIN REPORTS MENU VIEW
@@ -1718,10 +1715,10 @@ input[type="number"] {
 
   <button class="full-btn" type="button" onclick="adminOpenSystemPrzelewy()">🏦 System przelewy</button>
   <button class="full-btn" type="button" onclick="adminOpenPlatnosciZawodnikowView()">📩 Płatności zawodników</button>
-  <button class="full-btn alt" type="button" onclick="goToView('adminPanelView')">⬅ Powrót</button>
+  <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
-<!-- ADMIN PLATNOSCI ZAWODNIKÓWVIEW
+<!-- ADMIN PLATNOSCI ZAWODNIKÓW VIEW
      Ekran płatnoścI zawodników panel admina -->
   
     <div id="adminPlatnosciZawodnikowView" class="container hidden">
@@ -1730,7 +1727,7 @@ input[type="number"] {
       <div id="adminPlatnosciZawodnikowMsg" style="margin-bottom:10px;"></div>
       <div id="adminPlatnosciZawodnikowBody"></div>
     
-      <button class="full-btn alt" type="button" onclick="goToView('adminObslugaPlatnosciView')">⬅ Powrót</button>
+      <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
     </div>
   
 <!-- ADMIN PAYMENTS VIEW
@@ -3989,18 +3986,42 @@ function showViewFromHistory(viewId, state = null) {
 function appBack() {
   const rootView = getRootViewId_();
 
-  if (!window.__appViewStack || !window.__appViewStack.length) {
+  if (!window.__appViewStack || window.__appViewStack.length <= 1) {
     goToView(rootView, { replace: true });
     return;
   }
 
-  // jeśli jesteśmy już na ekranie głównym aplikacji, nie cofamy dalej "webowo"
-  if (window.__appViewStack.length <= 1) {
+  // Zdejmij aktualny widok ze stosu
+  window.__appViewStack.pop();
+
+  // Pokaż poprzedni widok
+  const prevView = window.__appViewStack[window.__appViewStack.length - 1];
+
+  if (!prevView || !document.getElementById(prevView)) {
     goToView(rootView, { replace: true });
     return;
   }
 
-  history.back();
+  ukryjWszystkie();
+  hideBusy();
+
+  const el = document.getElementById(prevView);
+  if (el) el.classList.remove("hidden");
+
+  currentView = prevView;
+
+  if (prevView === "playerMenuView") {
+    const lbl = document.getElementById("playerNumerLabel");
+    if (lbl) lbl.textContent = String(numerZalogowanego || "");
+    startPrefetchForPlayer_();
+  }
+
+  hookPushButton_();
+
+  try {
+    const state = { view: prevView, appStack: [...window.__appViewStack] };
+    history.replaceState(state, "", location.pathname + location.search);
+  } catch (e) {}
 }
 
 // Sprawdzenie, czy któryś modal płatności jest otwarty  
