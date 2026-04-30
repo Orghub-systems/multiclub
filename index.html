@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.47';
+  window.APP_BUILD = 'APP v2.48';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7979,46 +7979,178 @@ async function getPlayerPaymentsPayload_(forceRefresh = false) {
 
 async function pokazPlatnosci() {
   goToView("platnosciView");
-
   const div = document.getElementById("platnosciSummaryBox");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
 
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const maxAgeMs = 24 * 60 * 60 * 1000;
+
+  // 1. Pokaż cache natychmiast jeśli istnieje
+  let hadCache = false;
   try {
-    const payload = await getPlayerPaymentsPayload_();
-    renderPlatnosciMenu(payload);
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        window.__playerPaymentsPayload = entry.data;
+        renderPlatnosciMenu(entry.data);
+        hadCache = true;
+      }
+    }
+  } catch (e) {}
+
+  if (!hadCache && div) {
+    div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
+  }
+
+  // 2. W tle pobierz świeże dane z GAS
+  try {
+    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
+
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
+      }
+    } catch (e) {}
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = {
+      biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
+      wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
+      sumaBiezace: Number(fresh?.sumaBiezace || 0),
+      sumaWplacone: Number(fresh?.sumaWplacone || 0)
+    };
+
+    if (changed) {
+      renderPlatnosciMenu(window.__playerPaymentsPayload);
+    }
   } catch (e) {
-    console.error("pokazPlatnosci error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
+    if (!hadCache && div) {
+      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
+    }
   }
 }
+
 
 async function pokazPlatnosciBiezace() {
   goToView("platnosciBiezaceView");
-
   const div = document.getElementById("listaPlatnosciBiezace");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
 
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+
+  // 1. Pokaż z cache natychmiast
+  let hadCache = false;
   try {
-    const payload = await getPlayerPaymentsPayload_();
-    renderPlatnosciListInto_("listaPlatnosciBiezace", payload.biezace, payload.sumaBiezace, "biezace");
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        const payload = entry.data;
+        renderPlatnosciListInto_("listaPlatnosciBiezace", payload.biezace || [], payload.sumaBiezace || 0, "biezace");
+        hadCache = true;
+      }
+    }
+  } catch (e) {}
+
+  if (!hadCache && div) {
+    div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
+  }
+
+  // 2. W tle pobierz świeże dane
+  try {
+    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
+
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
+      }
+    } catch (e) {}
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = {
+      biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
+      wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
+      sumaBiezace: Number(fresh?.sumaBiezace || 0),
+      sumaWplacone: Number(fresh?.sumaWplacone || 0)
+    };
+
+    if (changed) {
+      renderPlatnosciListInto_("listaPlatnosciBiezace", window.__playerPaymentsPayload.biezace, window.__playerPaymentsPayload.sumaBiezace, "biezace");
+    }
   } catch (e) {
-    console.error("pokazPlatnosciBiezace error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
+    if (!hadCache && div) {
+      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
+    }
   }
 }
 
+
 async function pokazPlatnosciWplacone() {
   goToView("platnosciWplaconeView");
-
   const div = document.getElementById("listaPlatnosciWplacone");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
 
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+
+  // 1. Pokaż z cache natychmiast
+  let hadCache = false;
   try {
-    const payload = await getPlayerPaymentsPayload_();
-    renderPlatnosciListInto_("listaPlatnosciWplacone", payload.wplacone, payload.sumaWplacone, "wplacone");
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        const payload = entry.data;
+        renderPlatnosciListInto_("listaPlatnosciWplacone", payload.wplacone || [], payload.sumaWplacone || 0, "wplacone");
+        hadCache = true;
+      }
+    }
+  } catch (e) {}
+
+  if (!hadCache && div) {
+    div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
+  }
+
+  // 2. W tle pobierz świeże dane
+  try {
+    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
+
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
+      }
+    } catch (e) {}
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = {
+      biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
+      wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
+      sumaBiezace: Number(fresh?.sumaBiezace || 0),
+      sumaWplacone: Number(fresh?.sumaWplacone || 0)
+    };
+
+    if (changed) {
+      renderPlatnosciListInto_("listaPlatnosciWplacone", window.__playerPaymentsPayload.wplacone, window.__playerPaymentsPayload.sumaWplacone, "wplacone");
+    }
   } catch (e) {
-    console.error("pokazPlatnosciWplacone error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd pobierania płatności: ${String(e?.message || e)}</p>`;
+    if (!hadCache && div) {
+      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
+    }
   }
 }
 
@@ -8240,18 +8372,53 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
 
 /* ===================== TRENINGI ======================-- */
   
+
 async function pokazTreningi() {
   goToView("homeView");
   const div = document.getElementById("listaTreningow");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
 
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerEvents.numer-" + String(numerZalogowanego || "") + ".default";
+  const maxAgeMs = 24 * 60 * 60 * 1000;
+
+  // 1. Pokaż cache natychmiast jeśli istnieje
   try {
-    const p = window.__prefetch?.treningiP;
-    const lista = await (p || apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego }));
-    renderTreningi(lista);
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        renderTreningi(entry.data);
+      }
+    }
+  } catch (e) {}
+
+  // 2. W tle pobierz świeże dane z GAS
+  try {
+    const fresh = await apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego });
+
+    // Sprawdź czy coś się zmieniło
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
+      }
+    } catch (e) {}
+
+    // Zapisz do cache
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+    } catch (e) {}
+
+    // Podmień UI tylko jeśli dane się zmieniły
+    if (changed) {
+      renderTreningi(fresh);
+    }
   } catch (e) {
-    console.error("pokazTreningi error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd ładowania wydarzeń: ${String(e?.message || e)}</p>`;
+    // Jeśli brak cache i brak sieci – pokaż błąd
+    if (div && div.innerHTML.includes("⏳")) {
+      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
+    }
   }
 }
 
@@ -12916,6 +13083,7 @@ async function adminSetRozlicz(kod) {
 }
 
 // =================== PŁATNOŚCI ===================
+
 async function adminOpenPayments() {
   const nr = String(window.__adminSelectedNr || "").trim();
   if (!nr) return alert("❌ Brak wybranego zawodnika.");
@@ -12926,28 +13094,66 @@ async function adminOpenPayments() {
   if (title) title.textContent = `Płatności — #${nr}`;
 
   const body = document.getElementById("adminPaymentsBody");
-  const msg  = document.getElementById("adminPaymentsMsg");
+  const msg = document.getElementById("adminPaymentsMsg");
   if (msg) msg.textContent = "";
-  if (body) body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
 
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminPlayerPayments.numer-" + nr + ".default";
+
+  // 1. Pokaż cache natychmiast
+  let hadCache = false;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        window.__adminRozliczKod = entry.data.rozliczKod || "S";
+        window.__adminLastPaymentsRes = entry.data.payments;
+        renderAdminPayments_(entry.data.payments);
+        hadCache = true;
+      }
+    }
+  } catch (e) {}
+
+  if (!hadCache && body) {
+    body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+  }
+
+  // 2. W tle pobierz świeże dane z GAS
   try {
     const [resPay, resRozl] = await Promise.all([
       apiClubGet("platnosciAdmin", { numer: nr, t: Date.now() }),
       apiClubGet("adminGetRozliczanie", { numer: nr, t: Date.now() })
-]);
+    ]);
 
-    // cache na potrzeby renderu
-    window.__adminRozliczKod = (resRozl && (resRozl.kod || resRozl.value))
+    const freshRozliczKod = (resRozl && (resRozl.kod || resRozl.value))
       ? String(resRozl.kod || resRozl.value).trim().toUpperCase()
       : "S";
 
-    // zapamiętujemy ostatnie dane płatności,
-    // żeby po zmianie sposobu rozliczania nie robić pełnego ładowania ekranu
+    const freshData = { payments: resPay, rozliczKod: freshRozliczKod };
+
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(freshData);
+      }
+    } catch (e) {}
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: freshData }));
+    } catch (e) {}
+
+    window.__adminRozliczKod = freshRozliczKod;
     window.__adminLastPaymentsRes = resPay;
 
-    renderAdminPayments_(resPay);
+    if (changed) {
+      renderAdminPayments_(resPay);
+    }
   } catch (e) {
-    if (body) body.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+    if (!hadCache && body) {
+      body.innerHTML = `<div class="card" style="background:#700;">❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</div>`;
+    }
   }
 }
 
@@ -13525,28 +13731,63 @@ function adminCancelConfirmPayment() {
 
 /* =================== 171 ADMIN PŁATNOSCI ZAWODNIKÓW KLUBU =================== */  
 
+
 async function adminOpenPlatnosciZawodnikowView() {
   goToView("adminPlatnosciZawodnikowView");
 
   const body = document.getElementById("adminPlatnosciZawodnikowBody");
   const msg = document.getElementById("adminPlatnosciZawodnikowMsg");
-
   if (msg) msg.textContent = "";
-  if (body) body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
 
+  const now = new Date();
+  const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminDebtsList.month-" + monthKey + ".default";
+
+  // 1. Pokaż cache natychmiast
+  let hadCache = false;
   try {
-    const res = await apiClubGet("adminListaZaleglosciPlatnosci", { t: Date.now() });
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        window.__adminPlatnosciZawodnikowCache = Array.isArray(entry.data.items) ? entry.data.items : [];
+        renderAdminPlatnosciZawodnikow_(entry.data);
+        hadCache = true;
+      }
+    }
+  } catch (e) {}
 
-    if (res && res.success === true) {
-      window.__adminPlatnosciZawodnikowCache = Array.isArray(res.items) ? res.items : [];
-    } else {
-      window.__adminPlatnosciZawodnikowCache = [];
+  if (!hadCache && body) {
+    body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+  }
+
+  // 2. W tle pobierz świeże dane z GAS
+  try {
+    const fresh = await apiClubGet("adminListaZaleglosciPlatnosci", { t: Date.now() });
+
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
+      }
+    } catch (e) {}
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh }));
+    } catch (e) {}
+
+    if (fresh && fresh.success === true) {
+      window.__adminPlatnosciZawodnikowCache = Array.isArray(fresh.items) ? fresh.items : [];
     }
 
-    renderAdminPlatnosciZawodnikow_(res);
+    if (changed) {
+      renderAdminPlatnosciZawodnikow_(fresh);
+    }
   } catch (e) {
-    if (body) {
-      body.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+    if (!hadCache && body) {
+      body.innerHTML = `<div class="card" style="background:#700;">❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</div>`;
     }
   }
 }
