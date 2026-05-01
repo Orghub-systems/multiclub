@@ -9467,27 +9467,7 @@ window.trainerPokazWydarzenia = async function trainerPokazWydarzenia() {
   window.__trainerEventsRenderTarget = "";
 
   goToView("trainerWydarzeniaView");
-  bindTrainerEventsModeButtons_();
 };
-
-function bindTrainerEventsModeButtons_() {
-  const btnCurrent = document.getElementById("btnTrainerEventsCurrent");
-  const btnArchive = document.getElementById("btnTrainerEventsArchive");
-
-  if (btnCurrent && btnCurrent.dataset.bound !== "1") {
-    btnCurrent.dataset.bound = "1";
-    btnCurrent.onclick = function () {
-      trainerShowCurrentEvents_();
-    };
-  }
-
-  if (btnArchive && btnArchive.dataset.bound !== "1") {
-    btnArchive.dataset.bound = "1";
-    btnArchive.onclick = function () {
-      trainerShowArchiveEventsMode_();
-    };
-  }
-}
 
 function trainerSetAddEventButtonLoaded_(loaded) {
   const btn = document.getElementById("btnTrainerAddEvent");
