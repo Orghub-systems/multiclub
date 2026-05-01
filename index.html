@@ -1175,7 +1175,7 @@ input[type="number"] {
     <div id="trainerPanelView" class="container hidden">
       <h1>Panel trenera</h1>
       <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
-      <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
+      <button class="full-btn" onclick="goToView('trainerWydarzeniaView')">🏒 Wydarzenia</button>
       <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
       <button class="full-btn" onclick="trainerPokazRaportObecnosci()">📋 Raport obecności</button>
       <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
@@ -1275,7 +1275,7 @@ input[type="number"] {
   <button
     class="full-btn alt"
     type="button"
-    onclick="trainerPokazWydarzenia()"
+    onclick="goToView('trainerWydarzeniaView')"
   >
     ⬅ Powrót
   </button>
@@ -1299,7 +1299,7 @@ input[type="number"] {
   <button
     class="full-btn alt"
     type="button"
-    onclick="trainerPokazWydarzenia()"
+    onclick="goToView('trainerWydarzeniaView')"
   >
     ⬅ Powrót
   </button>
