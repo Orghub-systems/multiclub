@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.52';
+  window.APP_BUILD = 'APP v2.53';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9508,29 +9508,82 @@ async function trainerShowCurrentEvents_() {
   trainerSetAddEventButtonLoaded_(false);
 
   const div = document.getElementById("trainerCurrentListaWydarzen");
-  if (div) {
+  const groupsKey = String(window.grupyTrenera || "").trim();
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".trainerCurrentEvents.groups-" + (groupsKey || "all");
+
+  // 1. Zawsze pokaż cache natychmiast z zablokowanymi przyciskami
+  let hadCache = false;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        renderTreningiTrainer(entry.data);
+        hadCache = true;
+
+        // Zablokuj przyciski edycji i usunięcia do czasu świeżych danych
+        div.querySelectorAll("button").forEach(btn => {
+          const txt = String(btn.textContent || "").trim();
+          if (txt.includes("Edytuj") || txt.includes("Usuń") || txt.includes("Dodaj")) {
+            btn.disabled = true;
+            btn.style.opacity = "0.45";
+            btn.dataset.lockedByCache = "1";
+          }
+        });
+      }
+    }
+  } catch (e) {}
+
+  if (!hadCache && div) {
     div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
   }
 
+  // 2. Zawsze sprawdź GAS w tle
   try {
-    const lista = await apiClubGet("treningiTrener", {
-      grupa: window.grupyTrenera || ""
+    const fresh = await apiClubGet("treningiTrener", {
+      grupa: groupsKey
     });
 
-    if (lista && lista.success === false) {
-      throw new Error(lista.error || "Błąd pobierania bieżących wydarzeń");
+    if (fresh && fresh.success === false) {
+      throw new Error(fresh.error || "Błąd pobierania bieżących wydarzeń");
     }
 
-    renderTreningiTrainer(lista);
+    let changed = true;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
+      }
+    } catch (e) {}
 
-    // Przycisk dodawania uaktywnia się dopiero po zakończeniu ładowania.
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: fresh
+      }));
+    } catch (e) {}
+
+    if (changed) {
+      renderTreningiTrainer(fresh);
+    }
+
     trainerSetAddEventButtonLoaded_(true);
 
   } catch (e) {
     trainerSetAddEventButtonLoaded_(false);
 
-    if (div) {
+    if (!hadCache && div) {
       div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+    }
+  } finally {
+    // Odblokuj przyciski
+    if (div) {
+      div.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = "";
+        delete btn.dataset.lockedByCache;
+      });
     }
   }
 }
