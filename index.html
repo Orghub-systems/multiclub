@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.53';
+  window.APP_BUILD = 'APP v2.54';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9024,8 +9024,6 @@ async function loadStatystykiCached_(numer, hooks = {}) {
     throw new Error("Brak numeru zawodnika dla statystyk");
   }
 
-  const STATS_CACHE_24H = 24 * 60 * 60 * 1000;
-
   return await orgCachedApiGet_({
     scope: "playerStats",
     parts: {
@@ -9033,15 +9031,15 @@ async function loadStatystykiCached_(numer, hooks = {}) {
     },
     action: "statystyki",
     params: {
-      numer: nr,
-      _ts: Date.now()
+      numer: nr
     },
-    maxAgeMs: STATS_CACHE_24H,
+    maxAgeMs: 0,
     useStale: true,
+    backgroundRefresh: true,
     onCached: hooks.onCached,
     onFresh: hooks.onFresh
   });
-}  
+}
   
 async function pokazStatystyki() {
   goToView("statsView");
