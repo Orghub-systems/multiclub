@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.57';
+  window.APP_BUILD = 'APP v2.54';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -857,7 +857,7 @@ input[type="number"] {
       <h1 style="margin:0 0 40px 0;">Logowanie</h1>
       
       <form class="login-box" onsubmit="zaloguj(); return false;">
-        <input id="numer" type="text" placeholder="Login" autocomplete="username">
+        <input id="numer" type="text" placeholder="Numer / Inicjały" autocomplete="username">
         <input id="haslo" type="password" placeholder="Hasło" autocomplete="current-password">
       
         <button type="submit" class="full-btn">Zaloguj</button>
@@ -884,7 +884,7 @@ input[type="number"] {
     <div id="registerZawodnikView" class="container hidden">
       <h1>Rejestracja zawodnika</h1>
       <div class="login-box">
-        <input id="regLogin" type="text" placeholder="Login">
+        <input id="regNumer" type="text" placeholder="Numer zawodnika" readonly onclick="openFreeNumbersPopup()">
         <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
         <input id="regEmail" type="email" placeholder="Adres email">
         <input id="regHaslo" type="password" placeholder="Ustaw hasło">
@@ -6825,7 +6825,7 @@ async function zaloguj() {
   komunikat.innerText = "Trwa logowanie...";
 
   try {
-    const data = await apiClubPost({ mode: "login", login, haslo });
+    const data = await apiClubPost({ mode: "login", numer: login, haslo });
 
         if (!data.success) {
       const err = String(data?.error || data?.message || "Błąd logowania").trim();
@@ -7025,40 +7025,34 @@ async function zaloguj() {
 /* =================== 91 REJESTRACJA =================== */
   
 async function wyslijRejestracje() {
-  const login = document.getElementById("regLogin")?.value.trim() || "";
-  const nazwisko = document.getElementById("regNazwisko")?.value.trim() || "";
-  const email = document.getElementById("regEmail")?.value.trim() || "";
-  const haslo = document.getElementById("regHaslo")?.value.trim() || "";
+  const numer = document.getElementById("regNumer").value.trim();
+  const nazwisko = document.getElementById("regNazwisko").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const haslo = document.getElementById("regHaslo").value.trim();
   const msg = document.getElementById("regMsg");
 
-  if (!login || !nazwisko || !email || !haslo) {
-    if (msg) msg.innerText = "Wypełnij wszystkie pola.";
+  if (!numer || !nazwisko || !email || !haslo) {
+    msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
 
-  if (/\s/.test(login)) {
-    if (msg) msg.innerText = "Login nie może zawierać spacji.";
-    return;
-  }
-
-  if (msg) msg.innerText = "⏳ Rejestracja...";
-
+  msg.innerText = "⏳ Rejestracja...";
   try {
     const data = await apiClubPost({
       mode: "rejestracja",
-      login,
+      numer,
       nazwisko,
       email,
       haslo
     });
 
     if (data && data.ok) {
-      document.getElementById("regLogin").value = "";
+      document.getElementById("regNumer").value = "";
       document.getElementById("regNazwisko").value = "";
       document.getElementById("regEmail").value = "";
       document.getElementById("regHaslo").value = "";
 
-      if (msg) msg.innerText = "✅ Rejestracja zakończona!";
+      msg.innerText = "✅ Rejestracja zakończona!";
 
       try {
         orgCacheRemove_("adminPlayersList", { groups: "all" });
@@ -7066,18 +7060,13 @@ async function wyslijRejestracje() {
         orgCacheRemove_("clubPlayersForPowolania", { role: "trainerEvents" });
         window.__powolaniPlayersCache = [];
       } catch (e) {}
-
-      setTimeout(() => {
-        if (msg) msg.innerText = "";
-        pokazLogowanie();
-      }, 1500);
-
+      
+      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
     } else {
-      if (msg) msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
     }
-
   } catch (e) {
-    if (msg) msg.innerText = "❌ " + (e?.message || e);
+    msg.innerText = "❌ " + (e?.message || e);
   }
 }
 
