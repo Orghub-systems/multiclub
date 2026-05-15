@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.59';
+  window.APP_BUILD = 'APP v2.60';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1227,6 +1227,68 @@ input[type="number"] {
   <p id="trainerZawodnikMsg" style="margin-top:10px;"></p>
 
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
+
+  <!-- TRAINER EDIT PLAYER VISIBLE NUMBER POPUP
+     Edycja numeru widocznego zawodnika przez trenera -->
+
+<div
+  id="trainerPlayerNumberPopup"
+  class="hidden"
+  style="
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    background:rgba(0,0,0,.72);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  "
+>
+  <div
+    class="card"
+    style="
+      width:100%;
+      max-width:420px;
+      text-align:left;
+      background:#111;
+      border:1px solid rgba(255,255,255,.18);
+    "
+  >
+    <h2 style="margin-top:0;text-align:center;">Numer zawodnika</h2>
+
+    <div style="opacity:.75;font-size:13px;margin-bottom:6px;">
+      Zawodnik
+    </div>
+
+    <div
+      id="trainerPlayerNumberName"
+      style="font-size:20px;font-weight:900;margin-bottom:14px;"
+    >
+      —
+    </div>
+
+    <input
+      id="trainerPlayerNumberInput"
+      type="text"
+      placeholder="Wpisz numer zawodnika"
+      style="width:100%;box-sizing:border-box;margin-bottom:10px;"
+    >
+
+    <div
+      id="trainerPlayerNumberMsg"
+      style="min-height:22px;margin:8px 0 12px 0;text-align:center;font-weight:700;"
+    ></div>
+
+    <button class="full-btn" onclick="trainerSavePlayerVisibleNumber_()">
+      Zapisz numer
+    </button>
+
+    <button class="full-btn alt" onclick="trainerClosePlayerVisibleNumberEdit_()">
+      Anuluj
+    </button>
+  </div>
 </div>
   
 <!-- TRAINER EVENTS MENU VIEW
@@ -11737,6 +11799,96 @@ async function adminPokazZawodnikow() {
   }
 }
 
+function trainerOpenPlayerVisibleNumberEdit_() {
+  const popup = document.getElementById("trainerPlayerNumberPopup");
+  const nameEl = document.getElementById("trainerPlayerNumberName");
+  const input = document.getElementById("trainerPlayerNumberInput");
+  const msg = document.getElementById("trainerPlayerNumberMsg");
+  const currentEl = document.getElementById("trainerInfoNumerWidoczny");
+
+  if (!popup) return;
+
+  const nazwisko = String(window.__trainerSelectedNazwisko || "").trim() || "—";
+  const current = String(currentEl?.textContent || "").trim();
+
+  if (nameEl) nameEl.textContent = nazwisko;
+
+  if (input) {
+    input.value = current && current !== "—" && current !== "Nie ustawiono"
+      ? current
+      : "";
+    setTimeout(() => input.focus(), 50);
+  }
+
+  if (msg) msg.textContent = "";
+
+  popup.classList.remove("hidden");
+  popup.style.display = "flex";
+}
+
+function trainerClosePlayerVisibleNumberEdit_() {
+  const popup = document.getElementById("trainerPlayerNumberPopup");
+  if (!popup) return;
+
+  popup.classList.add("hidden");
+  popup.style.display = "none";
+}
+
+async function trainerSavePlayerVisibleNumber_() {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const input = document.getElementById("trainerPlayerNumberInput");
+  const msg = document.getElementById("trainerPlayerNumberMsg");
+  const currentEl = document.getElementById("trainerInfoNumerWidoczny");
+
+  const visibleNumber = String(input?.value || "").trim();
+
+  if (!nr) {
+    if (msg) msg.textContent = "❌ Brak ID zawodnika.";
+    return;
+  }
+
+  if (visibleNumber.length > 12) {
+    if (msg) msg.textContent = "Numer jest za długi.";
+    return;
+  }
+
+  if (msg) msg.textContent = "⏳ Zapisuję...";
+
+  try {
+    const res = await apiClubPost({
+      action: "trainerSetPlayerVisibleNumber",
+      numer: nr,
+      visibleNumber
+    });
+
+    if (!res || res.success !== true) {
+      if (msg) msg.textContent = "❌ " + (res?.error || res?.message || "Nie udało się zapisać numeru.");
+      return;
+    }
+
+    if (currentEl) {
+      currentEl.textContent = visibleNumber || "Nie ustawiono";
+    }
+
+    // Odświeżamy cache danych zawodnika w pamięci, jeśli istnieje.
+    try {
+      if (window.__adminCache && window.__adminCache[nr] && window.__adminCache[nr].info) {
+        window.__adminCache[nr].info.numerWidoczny = visibleNumber;
+      }
+    } catch (e) {}
+
+    if (msg) msg.textContent = "✅ Zapisano.";
+
+    setTimeout(() => {
+      trainerClosePlayerVisibleNumberEdit_();
+      if (msg) msg.textContent = "";
+    }, 600);
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+  
   // ===== ADMIN: USUWANIE ZAWODNIKA (POPUP TAK/NIE) =====
 function adminOpenDeletePopup(nr, nazwisko) {
   const numer = String(nr || "").trim();
