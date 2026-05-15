@@ -7025,23 +7025,23 @@ async function zaloguj() {
 /* =================== 91 REJESTRACJA =================== */
   
 async function wyslijRejestracje() {
-  const login = document.getElementById("regLogin").value.trim();
-  const nazwisko = document.getElementById("regNazwisko").value.trim();
-  const email = document.getElementById("regEmail").value.trim();
-  const haslo = document.getElementById("regHaslo").value.trim();
+  const login = document.getElementById("regLogin")?.value.trim() || "";
+  const nazwisko = document.getElementById("regNazwisko")?.value.trim() || "";
+  const email = document.getElementById("regEmail")?.value.trim() || "";
+  const haslo = document.getElementById("regHaslo")?.value.trim() || "";
   const msg = document.getElementById("regMsg");
 
   if (!login || !nazwisko || !email || !haslo) {
-    msg.innerText = "Wypełnij wszystkie pola.";
+    if (msg) msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
 
   if (/\s/.test(login)) {
-    msg.innerText = "Login nie może zawierać spacji.";
+    if (msg) msg.innerText = "Login nie może zawierać spacji.";
     return;
   }
 
-  msg.innerText = "⏳ Rejestracja...";
+  if (msg) msg.innerText = "⏳ Rejestracja...";
 
   try {
     const data = await apiClubPost({
@@ -7058,7 +7058,7 @@ async function wyslijRejestracje() {
       document.getElementById("regEmail").value = "";
       document.getElementById("regHaslo").value = "";
 
-      msg.innerText = "✅ Rejestracja zakończona!";
+      if (msg) msg.innerText = "✅ Rejestracja zakończona!";
 
       try {
         orgCacheRemove_("adminPlayersList", { groups: "all" });
@@ -7068,16 +7068,16 @@ async function wyslijRejestracje() {
       } catch (e) {}
 
       setTimeout(() => {
-        msg.innerText = "";
+        if (msg) msg.innerText = "";
         pokazLogowanie();
       }, 1500);
 
     } else {
-      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      if (msg) msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
     }
 
   } catch (e) {
-    msg.innerText = "❌ " + (e?.message || e);
+    if (msg) msg.innerText = "❌ " + (e?.message || e);
   }
 }
 
