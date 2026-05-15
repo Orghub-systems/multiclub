@@ -7025,29 +7025,35 @@ async function zaloguj() {
 /* =================== 91 REJESTRACJA =================== */
   
 async function wyslijRejestracje() {
-  const numer = document.getElementById("regNumer").value.trim();
+  const login = document.getElementById("regLogin").value.trim();
   const nazwisko = document.getElementById("regNazwisko").value.trim();
   const email = document.getElementById("regEmail").value.trim();
   const haslo = document.getElementById("regHaslo").value.trim();
   const msg = document.getElementById("regMsg");
 
-  if (!numer || !nazwisko || !email || !haslo) {
+  if (!login || !nazwisko || !email || !haslo) {
     msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
 
+  if (/\s/.test(login)) {
+    msg.innerText = "Login nie może zawierać spacji.";
+    return;
+  }
+
   msg.innerText = "⏳ Rejestracja...";
+
   try {
     const data = await apiClubPost({
       mode: "rejestracja",
-      numer,
+      login,
       nazwisko,
       email,
       haslo
     });
 
     if (data && data.ok) {
-      document.getElementById("regNumer").value = "";
+      document.getElementById("regLogin").value = "";
       document.getElementById("regNazwisko").value = "";
       document.getElementById("regEmail").value = "";
       document.getElementById("regHaslo").value = "";
@@ -7060,11 +7066,16 @@ async function wyslijRejestracje() {
         orgCacheRemove_("clubPlayersForPowolania", { role: "trainerEvents" });
         window.__powolaniPlayersCache = [];
       } catch (e) {}
-      
-      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
+
+      setTimeout(() => {
+        msg.innerText = "";
+        pokazLogowanie();
+      }, 1500);
+
     } else {
       msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
     }
+
   } catch (e) {
     msg.innerText = "❌ " + (e?.message || e);
   }
