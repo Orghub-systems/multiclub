@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.57';
+  window.APP_BUILD = 'APP v2.58';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1618,6 +1618,27 @@ input[type="number"] {
     
 <div id="adminZawodnikView" class="container hidden">
   <h1 id="adminZawodnikTitle">Zawodnik</h1>
+
+  <div class="card" style="text-align:left; margin-bottom:14px;">
+    <div style="font-size:13px; opacity:.7; margin-bottom:6px;">
+      Numer zawodnika
+    </div>
+
+    <div
+      id="adminPlayerVisibleNumberText"
+      style="font-size:24px; font-weight:900; margin-bottom:12px;"
+    >
+      —
+    </div>
+
+    <button
+      class="full-btn"
+      onclick="adminOpenPlayerNumberPopup()"
+      style="margin-bottom:0;"
+    >
+      Edytuj numer zawodnika
+    </button>
+  </div>
 
   <button class="full-btn" onclick="adminOpenPlayerInfo()">Informacje o zawodniku</button>
   <button class="full-btn" onclick="adminOpenStats();">Statystyki</button>
@@ -12315,7 +12336,7 @@ async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   const btnRozlicz = document.getElementById("btnAdminPlayerRozlicz");
 
   if (title) {
-    title.textContent = `Zawodnik #${window.__adminSelectedNr} — ${window.__adminSelectedNazwisko || "—"}`;
+    title.textContent = window.__adminSelectedNazwisko || "—";
   }
 
   if (msg) msg.textContent = "";
@@ -12541,6 +12562,10 @@ async function adminOpenPlayerInfo() {
   }
 }
 
+function adminOpenPlayerNumberPopup() {
+  alert("Edycja numeru zawodnika będzie dodana w następnym kroku.");
+}
+  
 function adminRenderConsentBadge_(el, enabled, yesText, noText) {
   if (!el) return;
 
