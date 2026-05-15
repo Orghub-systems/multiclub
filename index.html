@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.54';
+  window.APP_BUILD = 'APP v2.55';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -881,18 +881,18 @@ input[type="number"] {
 <!-- REGISTER PLAYER VIEW
      Rejestracja nowego zawodnika -->
     
-    <div id="registerZawodnikView" class="container hidden">
-      <h1>Rejestracja zawodnika</h1>
-      <div class="login-box">
-        <input id="regNumer" type="text" placeholder="Numer zawodnika" readonly onclick="openFreeNumbersPopup()">
-        <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
-        <input id="regEmail" type="email" placeholder="Adres email">
-        <input id="regHaslo" type="password" placeholder="Ustaw hasło">
-        <button class="full-btn" onclick="wyslijRejestracje()">Zarejestruj</button>
-      </div>
-      <p id="regMsg"></p>
-      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
-    </div>
+<div id="registerZawodnikView" class="container hidden">
+  <h1>Rejestracja zawodnika</h1>
+  <div class="login-box">
+    <input id="regLogin" type="text" placeholder="Login">
+    <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
+    <input id="regEmail" type="email" placeholder="Adres email">
+    <input id="regHaslo" type="password" placeholder="Ustaw hasło">
+    <button class="full-btn" onclick="wyslijRejestracje()">Zarejestruj</button>
+  </div>
+  <p id="regMsg"></p>
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
 
 <!-- REGISTER TRAINER VIEW
      Rejestracja nowego trenera -->
