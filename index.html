@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.55';
+  window.APP_BUILD = 'APP v2.56';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -7025,34 +7025,45 @@ async function zaloguj() {
 /* =================== 91 REJESTRACJA =================== */
   
 async function wyslijRejestracje() {
-  const numer = document.getElementById("regNumer").value.trim();
-  const nazwisko = document.getElementById("regNazwisko").value.trim();
-  const email = document.getElementById("regEmail").value.trim();
-  const haslo = document.getElementById("regHaslo").value.trim();
+  const login = document.getElementById("regLogin")?.value.trim() || "";
+  const nazwisko = document.getElementById("regNazwisko")?.value.trim() || "";
+  const email = document.getElementById("regEmail")?.value.trim() || "";
+  const haslo = document.getElementById("regHaslo")?.value.trim() || "";
   const msg = document.getElementById("regMsg");
 
-  if (!numer || !nazwisko || !email || !haslo) {
-    msg.innerText = "Wypełnij wszystkie pola.";
+  if (!login || !nazwisko || !email || !haslo) {
+    if (msg) msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
 
-  msg.innerText = "⏳ Rejestracja...";
+  if (/\s/.test(login)) {
+    if (msg) msg.innerText = "Login nie może zawierać spacji.";
+    return;
+  }
+
+  if (String(login).toLowerCase() === "admin") {
+    if (msg) msg.innerText = "Login 'admin' jest zarezerwowany.";
+    return;
+  }
+
+  if (msg) msg.innerText = "⏳ Rejestracja...";
+
   try {
     const data = await apiClubPost({
       mode: "rejestracja",
-      numer,
+      login,
       nazwisko,
       email,
       haslo
     });
 
     if (data && data.ok) {
-      document.getElementById("regNumer").value = "";
+      document.getElementById("regLogin").value = "";
       document.getElementById("regNazwisko").value = "";
       document.getElementById("regEmail").value = "";
       document.getElementById("regHaslo").value = "";
 
-      msg.innerText = "✅ Rejestracja zakończona!";
+      if (msg) msg.innerText = "✅ Rejestracja zakończona!";
 
       try {
         orgCacheRemove_("adminPlayersList", { groups: "all" });
@@ -7060,67 +7071,91 @@ async function wyslijRejestracje() {
         orgCacheRemove_("clubPlayersForPowolania", { role: "trainerEvents" });
         window.__powolaniPlayersCache = [];
       } catch (e) {}
-      
-      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
+
+      setTimeout(() => {
+        if (msg) msg.innerText = "";
+        pokazLogowanie();
+      }, 1500);
+
     } else {
-      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      if (msg) {
+        msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      }
     }
+
   } catch (e) {
-    msg.innerText = "❌ " + (e?.message || e);
+    if (msg) msg.innerText = "❌ " + (e?.message || e);
   }
 }
 
 async function wyslijRejestracjeTrener() {
+  const poleLogin = document.getElementById("regLoginTrener");
   const poleNazw = document.getElementById("regNazwiskoTrener");
   const poleEmail = document.getElementById("regEmailTrener");
   const poleHaslo = document.getElementById("regHasloTrener");
   const msg = document.getElementById("regMsgTrener");
 
-  const nazwisko = poleNazw.value.trim();
-  const email = poleEmail.value.trim();
-  const haslo = poleHaslo.value.trim();
+  const login = poleLogin?.value.trim() || "";
+  const nazwisko = poleNazw?.value.trim() || "";
+  const email = poleEmail?.value.trim() || "";
+  const haslo = poleHaslo?.value.trim() || "";
 
-  if (!nazwisko || !email || !haslo) {
-    msg.innerText = "Wypełnij wszystkie pola.";
+  if (!login || !nazwisko || !email || !haslo) {
+    if (msg) msg.innerText = "Wypełnij wszystkie pola.";
     return;
   }
 
-  msg.innerText = "⏳ Rejestracja...";
+  if (/\s/.test(login)) {
+    if (msg) msg.innerText = "Login nie może zawierać spacji.";
+    return;
+  }
+
+  if (String(login).toLowerCase() === "admin") {
+    if (msg) msg.innerText = "Login 'admin' jest zarezerwowany.";
+    return;
+  }
+
+  if (msg) msg.innerText = "⏳ Rejestracja...";
 
   try {
     const data = await apiClubPost({
       mode: "rejestracjaTrener",
+      login,
       nazwisko,
       email,
       haslo
     });
 
     if (data && data.ok) {
-      const inic = String(data.inic || "").toUpperCase() || "(?)";
+      const loginFinal = String(data.login || data.inic || login || "").trim();
 
-      // Kasuj cache listy trenerów – admin zobaczy świeże dane przy następnym wejściu
+      // Kasuj cache list trenerów
       try {
         orgCacheRemove_("adminTrainersList", { list: "all" });
+        orgCacheRemove_("clubTrainers", { list: "all" });
       } catch (e) {}
 
-      msg.innerHTML = `
-        ✅ <b>Zarejestrowano trenera!</b><br>
-        Login do systemu:<br>
-        <div style="font-size:22px;font-weight:800;letter-spacing:2px;margin:10px 0 14px 0;">
-          ${inic}
-        </div>
+      if (msg) {
+        msg.innerHTML = `
+          ✅ <b>Zarejestrowano trenera!</b><br>
+          Login do systemu:<br>
+          <div style="font-size:22px;font-weight:800;letter-spacing:2px;margin:10px 0 14px 0;">
+            ${loginFinal}
+          </div>
 
-        <button class="full-btn" id="btnCopyInic">📋 Skopiuj login</button>
-        <button class="full-btn alt" id="btnGoLogin" disabled>
-          ➡️ Przejdź do logowania
-        </button>
+          <button class="full-btn" id="btnCopyInic">📋 Skopiuj login</button>
+          <button class="full-btn alt" id="btnGoLogin" disabled>
+            ➡️ Przejdź do logowania
+          </button>
 
-        <div id="copyInfo" style="opacity:.8;margin-top:10px;font-size:13px;"></div>
-      `;
+          <div id="copyInfo" style="opacity:.8;margin-top:10px;font-size:13px;"></div>
+        `;
+      }
 
-      poleNazw.value = "";
-      poleEmail.value = "";
-      poleHaslo.value = "";
+      if (poleLogin) poleLogin.value = "";
+      if (poleNazw) poleNazw.value = "";
+      if (poleEmail) poleEmail.value = "";
+      if (poleHaslo) poleHaslo.value = "";
 
       const btnCopy = document.getElementById("btnCopyInic");
       const btnGo = document.getElementById("btnGoLogin");
@@ -7129,13 +7164,13 @@ async function wyslijRejestracjeTrener() {
       if (btnCopy) {
         btnCopy.onclick = async () => {
           try {
-            await navigator.clipboard.writeText(inic);
+            await navigator.clipboard.writeText(loginFinal);
             btnCopy.textContent = "✅ Skopiowano";
             if (info) info.textContent = "Możesz teraz przejść do logowania.";
             if (btnGo) btnGo.disabled = false;
           } catch (e) {
             if (info) {
-              info.textContent = "❌ Nie udało się skopiować. Zaznacz login ręcznie: " + inic;
+              info.textContent = "❌ Nie udało się skopiować. Zaznacz login ręcznie: " + loginFinal;
             }
           }
         };
@@ -7146,11 +7181,13 @@ async function wyslijRejestracjeTrener() {
       }
 
     } else {
-      msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      if (msg) {
+        msg.innerText = "❌ " + (data?.error || data?.message || data?.msg || JSON.stringify(data));
+      }
     }
 
   } catch (e) {
-    msg.innerText = "❌ " + (e?.message || e);
+    if (msg) msg.innerText = "❌ " + (e?.message || e);
   }
 }
 
