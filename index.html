@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.58';
+  window.APP_BUILD = 'APP v2.59';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9292,6 +9292,7 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   goToView("trainerZawodnikView");
 
   const title = document.getElementById("trainerZawodnikTitle");
+  const numerWidocznyEl = document.getElementById("trainerInfoNumerWidoczny");
   const joinEl = document.getElementById("trainerInfoJoinDate");
   const grupyEl = document.getElementById("trainerInfoGrupy");
   const statsEl = document.getElementById("trainerInfoStats");
@@ -9303,6 +9304,7 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     title.textContent = window.__trainerSelectedNazwisko || "—";
   }
   
+  if (numerWidocznyEl) numerWidocznyEl.textContent = "—";
   if (joinEl) joinEl.textContent = "—";
   if (grupyEl) grupyEl.textContent = "—";
   if (msg) msg.textContent = "";
@@ -9344,11 +9346,18 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     if (grupyRes && grupyRes.success !== false) {
       window.__adminCache[nrSafe].grupy = grupyRes;
     }
-
+    
     if (!infoRes || infoRes.success === false) {
+      if (numerWidocznyEl) numerWidocznyEl.textContent = "—";
       if (joinEl) joinEl.textContent = "—";
       if (msg) msg.textContent = "⚠️ Nie udało się pobrać informacji o zawodniku.";
     } else {
+      const numerWidoczny = String(infoRes.numerWidoczny || "").trim();
+    
+      if (numerWidocznyEl) {
+        numerWidocznyEl.textContent = numerWidoczny || "Nie ustawiono";
+      }
+    
       if (joinEl) {
         joinEl.textContent = String(infoRes.joinDate || "").trim() || "—";
       }
