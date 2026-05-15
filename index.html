@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.57';
+  window.APP_BUILD = 'APP v2.58';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1196,6 +1196,15 @@ input[type="number"] {
 
 <div id="trainerZawodnikView" class="container hidden">
   <h1 id="trainerZawodnikTitle">Zawodnik</h1>
+
+  <div class="card" style="text-align:left; margin-bottom:12px;">
+    <div style="opacity:.75; font-size:13px;">Numer zawodnika</div>
+    <div id="trainerInfoNumerWidoczny" style="margin-top:4px; font-size:22px; font-weight:900;">—</div>
+
+    <button class="full-btn" style="margin-top:12px;" onclick="trainerOpenPlayerVisibleNumberEdit_()">
+      Edytuj numer zawodnika
+    </button>
+  </div>
 
   <div class="card" style="text-align:left; margin-bottom:12px;">
     <div style="opacity:.75; font-size:13px;">Data dołączenia</div>
@@ -9291,9 +9300,9 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   const nrSafe = window.__trainerSelectedNr;
 
   if (title) {
-    title.textContent = `Zawodnik #${nrSafe} — ${window.__trainerSelectedNazwisko || "—"}`;
+    title.textContent = window.__trainerSelectedNazwisko || "—";
   }
-
+  
   if (joinEl) joinEl.textContent = "—";
   if (grupyEl) grupyEl.textContent = "—";
   if (msg) msg.textContent = "";
