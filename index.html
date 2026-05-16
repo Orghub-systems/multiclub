@@ -1173,12 +1173,21 @@ input[type="number"] {
      Główne menu trenera -->
     
     <div id="trainerPanelView" class="container hidden">
-      <h1>Panel trenera<span id="trainerMedicalAlertBeacon"
-          style=" display:none;
+      <h1>
+        Panel trenera
+        <span
+          id="trainerMedicalAlertBeacon"
+          style="
+            display:none;
             margin-left:8px;
             color:#ff1f1f;
-            filter:drop-shadow(0 0 8px rgba(255,0,0,.85)); "
-            title= "Zawodnikom kończy się ważność badań lekarskich" >🚨</span></h1>
+            filter:drop-shadow(0 0 8px rgba(255,0,0,.85));
+          "
+          title="Zawodnikom kończy się ważność badań lekarskich"
+        >
+          🚨
+        </span>
+      </h1>
       <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
       <button class="full-btn" onclick="goToView('trainerWydarzeniaView')">🏒 Wydarzenia</button>
       <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
@@ -9460,10 +9469,6 @@ async function trainerPokazZawodnicy() {
       `;
     }).join("");
 
-      if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
-      trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-    }
-
     const tiles = box.querySelectorAll(".trainer-player-tile");
 
     tiles.forEach(tile => {
@@ -9890,7 +9895,10 @@ window.__trainerMedicalBeaconBlinkTimer = window.__trainerMedicalBeaconBlinkTime
 
 function trainerSetMedicalAlertBeacon_(count) {
   const beacon = document.getElementById("trainerMedicalAlertBeacon");
-  if (!beacon) return;
+  if (!beacon) {
+    console.warn("Brak elementu trainerMedicalAlertBeacon");
+    return;
+  }
 
   const n = Number(count || 0);
 
@@ -9921,7 +9929,6 @@ function trainerSetMedicalAlertBeacon_(count) {
   }
 }
 
-
 function trainerBuildMedicalAlertsMap_(alerts) {
   const map = {};
   const arr = Array.isArray(alerts) ? alerts : [];
@@ -9934,7 +9941,6 @@ function trainerBuildMedicalAlertsMap_(alerts) {
 
   return map;
 }
-
 
 async function trainerRefreshMedicalExamAlerts_() {
   const groups = String(window.grupyTrenera || "").trim();
@@ -9950,6 +9956,8 @@ async function trainerRefreshMedicalExamAlerts_() {
       grupy: groups,
       t: Date.now()
     });
+
+    console.log("trainerMedicalExamAlerts:", res);
 
     if (!res || res.success !== true || res.enabled !== true) {
       return;
@@ -9968,10 +9976,12 @@ async function trainerRefreshMedicalExamAlerts_() {
   }
 }
 
-
 function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
   const map = window.__trainerMedicalExamAlertsByNr || {};
   const tiles = document.querySelectorAll("[data-trainer-player-nr]");
+
+  console.log("medical alerts map:", map);
+  console.log("trainer player tiles:", tiles.length);
 
   tiles.forEach(tile => {
     const nr = String(tile.getAttribute("data-trainer-player-nr") || "").trim();
@@ -9984,20 +9994,23 @@ function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
 
     const warn = document.createElement("div");
     warn.className = "trainer-medical-warning-inline";
-    warn.style.cssText = `
-      color:#ff3b3b;
-      font-weight:900;
-      margin-top:7px;
-      font-size:13px;
-      letter-spacing:.4px;
-      text-transform:uppercase;
-      filter:drop-shadow(0 0 5px rgba(255,0,0,.65));
-    `;
+    warn.style.cssText = [
+      "color:#ff3b3b",
+      "font-weight:900",
+      "margin-top:7px",
+      "font-size:13px",
+      "letter-spacing:.4px",
+      "text-transform:uppercase",
+      "filter:drop-shadow(0 0 5px rgba(255,0,0,.65))"
+    ].join(";");
+
     warn.textContent = "🚨 WAŻNOŚĆ BADAŃ";
 
     tile.appendChild(warn);
   });
-}  
+}
+
+
   
 /* ------------- statystyki do kafla w ekranie zawodnika w panelu trenera------------*/
   // dane z funkcji pokazstatystyki
