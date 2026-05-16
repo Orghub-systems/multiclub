@@ -9400,74 +9400,27 @@ function renderTrainerPlayers_(lista) {
     return;
   }
 
-  const medicalAlertsMap = window.__trainerMedicalExamAlertsByNr || {};
-
-  box.innerHTML = lista.map((z, idx) => {
+  box.innerHTML = lista.map(z => {
     const nr = String(z.nr || "").trim();
     const nazwisko = String(z.nazwisko || "").trim();
 
-    const nrHtml = nr
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    const nazwiskoHtml = nazwisko
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    const hasMedicalAlert = !!medicalAlertsMap[nr];
-
-    const medicalWarningHtml = hasMedicalAlert
-      ? `
-        <div class="trainer-medical-warning-inline">
-          🚨 WAŻNOŚĆ BADAŃ
-        </div>
-      `
-      : "";
-
     return `
       <div
-        class="card trainer-player-tile"
-        data-trainer-player-index="${idx}"
-        data-trainer-player-nr="${nrHtml}"
+        class="card"
+        onclick="trainerOpenZawodnik_(decodeURIComponent('${encodeURIComponent(nr)}'), decodeURIComponent('${encodeURIComponent(nazwisko)}'))"
         style="
           text-align:left;
           cursor:pointer;
           user-select:none;
         "
       >
-        <b>${nazwiskoHtml}</b>
-
+        <b>${nazwisko}</b>
         <div style="opacity:.65; font-size:13px; margin-top:6px;">
           Kliknij, aby zobaczyć szczegóły
         </div>
-
-        ${medicalWarningHtml}
       </div>
     `;
   }).join("");
-
-  const tiles = box.querySelectorAll(".trainer-player-tile");
-
-  tiles.forEach(tile => {
-    tile.onclick = () => {
-      const idx = Number(tile.getAttribute("data-trainer-player-index"));
-      const z = lista[idx];
-
-      if (!z) return;
-
-      trainerOpenZawodnik_(
-        String(z.nr || "").trim(),
-        String(z.nazwisko || "").trim()
-      );
-    };
-  });
-
-  if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
-    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-  }
 }
 
 function setTrainerZawodnikViewBusy_(busy, text) {
