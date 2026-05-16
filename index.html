@@ -16132,7 +16132,9 @@ function renderAdminFeatures_(features) {
               onchange="adminToggleFeature_(decodeURIComponent('${safeKey}'), this.checked)"
               style="width:22px; height:22px;"
             >
-            ${enabled ? "Włączone" : "Wyłączone"}
+            <span id="featureEnabledText_${safeKey}">
+              ${enabled ? "Włączone" : "Wyłączone"}
+            </span>
           </label>
         </div>
 
@@ -16152,6 +16154,7 @@ async function adminToggleFeature_(featureKey, enabled) {
 
   const msg = document.getElementById("adminFeaturesMsg");
   const statusEl = document.getElementById("featureStatus_" + encodeURIComponent(key));
+  const textEl = document.getElementById("featureEnabledText_" + encodeURIComponent(key));
 
   if (statusEl) statusEl.textContent = "⏳ Zapisuję...";
   if (msg) msg.textContent = "";
@@ -16168,12 +16171,18 @@ async function adminToggleFeature_(featureKey, enabled) {
       if (statusEl) statusEl.textContent = "";
       if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zapisać ustawienia.");
 
-      // Przy błędzie odświeżamy ekran, żeby checkbox wrócił do prawdziwego stanu.
-      setTimeout(() => {
-        adminPokazFunkcjeDodatkowe();
-      }, 500);
+      // Cofamy checkbox do poprzedniego stanu bez odświeżania całego widoku.
+      const checkbox = document.querySelector(
+        `input[type="checkbox"][onchange*="${key}"]`
+      );
+      if (checkbox) checkbox.checked = !enabled;
 
+      if (textEl) textEl.textContent = !enabled ? "Włączone" : "Wyłączone";
       return;
+    }
+
+    if (textEl) {
+      textEl.textContent = enabled ? "Włączone" : "Wyłączone";
     }
 
     if (statusEl) {
@@ -16182,17 +16191,22 @@ async function adminToggleFeature_(featureKey, enabled) {
         : "✅ Funkcja została wyłączona.";
     }
 
+    // Bez odświeżania ekranu.
     setTimeout(() => {
-      adminPokazFunkcjeDodatkowe();
-    }, 500);
+      if (statusEl) statusEl.textContent = "";
+    }, 1400);
 
   } catch (e) {
     if (statusEl) statusEl.textContent = "";
     if (msg) msg.textContent = "❌ " + (e?.message || e);
 
-    setTimeout(() => {
-      adminPokazFunkcjeDodatkowe();
-    }, 500);
+    // Cofamy checkbox do poprzedniego stanu bez przeładowania.
+    const checkbox = document.querySelector(
+      `input[type="checkbox"][onchange*="${key}"]`
+    );
+    if (checkbox) checkbox.checked = !enabled;
+
+    if (textEl) textEl.textContent = !enabled ? "Włączone" : "Wyłączone";
   }
 }
   
