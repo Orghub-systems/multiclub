@@ -7146,15 +7146,13 @@ async function zaloguj() {
         expiresAt: String(data.sessionExpiresAt || "").trim(),
         validatedAt: new Date().toISOString()
       });
-      
+
       goToView("trainerPanelView");
-      
-      setTimeout(() => {
-        if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
-          trainerRefreshMedicalExamAlerts_();
-        }
-      }, 300);
-      
+
+      if (typeof trainerScheduleMedicalExamAlertsCheck_ === "function") {
+        trainerScheduleMedicalExamAlertsCheck_(300, true);
+      }
+
       return;
     }
 
@@ -9694,8 +9692,12 @@ trainerRefreshMedicalFeatureState_().then(enabled => {
     }
   }
 
-/* ------------- badania do kafla w ekranie zawodnika w panelu trenera------------*/  
+/* ------------- BADANIA ZAWODNIKÓW / PANEL TRENERA ------------*/
 
+/**
+ * Czy moduł badań zawodników jest włączony według cache funkcji dodatkowych.
+ * Używane do natychmiastowego pokazania kafla na ekranie zawodnika.
+ */
 function trainerIsMedicalFeatureEnabledFromCache_() {
   const cacheKey =
     "orghub.cache.v1." +
@@ -9707,9 +9709,9 @@ function trainerIsMedicalFeatureEnabledFromCache_() {
     if (!raw) return false;
 
     const entry = JSON.parse(raw);
-    const features = entry?.data?.features;
-
-    if (!Array.isArray(features)) return false;
+    const features = entry && entry.data && Array.isArray(entry.data.features)
+      ? entry.data.features
+      : [];
 
     const f = features.find(x => String(x.key || "").trim() === "player_medical_exams");
     if (!f) return false;
@@ -9726,6 +9728,10 @@ function trainerIsMedicalFeatureEnabledFromCache_() {
 }
 
 
+/**
+ * Odświeża stan funkcji dodatkowych z GAS i aktualizuje cache.
+ * Zwraca true/false dla modułu badań zawodników.
+ */
 async function trainerRefreshMedicalFeatureState_() {
   const cacheKey =
     "orghub.cache.v1." +
@@ -9763,6 +9769,9 @@ async function trainerRefreshMedicalFeatureState_() {
 }
 
 
+/**
+ * Pokazuje / ukrywa kafel badań na ekranie zawodnika w panelu trenera.
+ */
 function trainerSetMedicalExamCardVisible_(visible) {
   const card = document.getElementById("trainerMedicalExamCard");
   if (!card) return;
@@ -9775,6 +9784,10 @@ function trainerSetMedicalExamCardVisible_(visible) {
 }
 
 
+/**
+ * Odczyt daty ważności badań wybranego zawodnika.
+ * Dane są w Kartoteka!AG.
+ */
 async function trainerLoadMedicalExamForSelectedPlayer_() {
   const nr = String(window.__trainerSelectedNr || "").trim();
   const dateEl = document.getElementById("trainerMedicalExamDate");
@@ -9806,6 +9819,9 @@ async function trainerLoadMedicalExamForSelectedPlayer_() {
 }
 
 
+/**
+ * Otwiera popup edycji daty badań.
+ */
 function trainerOpenMedicalExamPopup_() {
   const popup = document.getElementById("trainerMedicalExamPopup");
   const nameEl = document.getElementById("trainerMedicalExamName");
@@ -9816,7 +9832,7 @@ function trainerOpenMedicalExamPopup_() {
   if (!popup) return;
 
   const nazwisko = String(window.__trainerSelectedNazwisko || "").trim() || "—";
-  const current = String(dateEl?.textContent || "").trim();
+  const current = String(dateEl && dateEl.textContent ? dateEl.textContent : "").trim();
 
   if (nameEl) nameEl.textContent = nazwisko;
 
@@ -9832,6 +9848,9 @@ function trainerOpenMedicalExamPopup_() {
 }
 
 
+/**
+ * Zamyka popup edycji badań.
+ */
 function trainerCloseMedicalExamPopup_() {
   const popup = document.getElementById("trainerMedicalExamPopup");
   if (!popup) return;
@@ -9841,13 +9860,16 @@ function trainerCloseMedicalExamPopup_() {
 }
 
 
+/**
+ * Zapisuje datę ważności badań do Kartoteka!AG.
+ */
 async function trainerSaveMedicalExam_() {
   const nr = String(window.__trainerSelectedNr || "").trim();
   const input = document.getElementById("trainerMedicalExamInput");
   const msg = document.getElementById("trainerMedicalExamMsg");
   const dateEl = document.getElementById("trainerMedicalExamDate");
 
-  const validUntil = String(input?.value || "").trim();
+  const validUntil = String(input && input.value ? input.value : "").trim();
 
   if (!nr) {
     if (msg) msg.textContent = "❌ Brak ID zawodnika.";
@@ -9869,7 +9891,7 @@ async function trainerSaveMedicalExam_() {
     });
 
     if (!res || res.success !== true) {
-      if (msg) msg.textContent = "❌ " + (res?.error || res?.message || "Nie udało się zapisać daty.");
+      if (msg) msg.textContent = "❌ " + (res && (res.error || res.message) ? (res.error || res.message) : "Nie udało się zapisać daty.");
       return;
     }
 
@@ -9879,26 +9901,37 @@ async function trainerSaveMedicalExam_() {
 
     if (msg) msg.textContent = "✅ Zapisano.";
 
+    // Po zapisie odświeżamy alerty, bo data mogła wejść / wypaść z zakresu 10 dni.
+    if (typeof trainerScheduleMedicalExamAlertsCheck_ === "function") {
+      trainerScheduleMedicalExamAlertsCheck_(200, true);
+    }
+
     setTimeout(() => {
       trainerCloseMedicalExamPopup_();
       if (msg) msg.textContent = "";
     }, 600);
 
   } catch (e) {
-    if (msg) msg.textContent = "❌ " + (e?.message || e);
+    if (msg) msg.textContent = "❌ " + (e && e.message ? e.message : e);
   }
 }
+
+
+/* ------------- ALERT BADAŃ / KOGUT / OZNACZENIA KAFELKÓW ------------*/
 
 window.__trainerMedicalExamAlertsByNr = window.__trainerMedicalExamAlertsByNr || {};
 window.__trainerMedicalExamAlertsCount = window.__trainerMedicalExamAlertsCount || 0;
 window.__trainerMedicalBeaconBlinkTimer = window.__trainerMedicalBeaconBlinkTimer || null;
+window.__trainerMedicalExamAlertStartTimer = window.__trainerMedicalExamAlertStartTimer || null;
+window.__trainerMedicalExamAlertLastCheckMs = window.__trainerMedicalExamAlertLastCheckMs || 0;
 
+
+/**
+ * Pokazuje / ukrywa migający kogut przy nagłówku "Panel trenera".
+ */
 function trainerSetMedicalAlertBeacon_(count) {
   const beacon = document.getElementById("trainerMedicalAlertBeacon");
-  if (!beacon) {
-    console.warn("Brak elementu trainerMedicalAlertBeacon");
-    return;
-  }
+  if (!beacon) return;
 
   const n = Number(count || 0);
 
@@ -9908,7 +9941,11 @@ function trainerSetMedicalAlertBeacon_(count) {
   }
 
   if (n > 0) {
+    beacon.classList.remove("hidden");
     beacon.style.display = "inline-block";
+    beacon.style.marginLeft = "8px";
+    beacon.style.color = "#ff1f1f";
+    beacon.style.filter = "drop-shadow(0 0 8px rgba(255,0,0,.85))";
     beacon.title = "Kończy się ważność badań lekarskich: " + n;
 
     let on = true;
@@ -9922,6 +9959,7 @@ function trainerSetMedicalAlertBeacon_(count) {
     }, 650);
 
   } else {
+    beacon.classList.add("hidden");
     beacon.style.display = "none";
     beacon.title = "";
     beacon.style.opacity = "1";
@@ -9929,12 +9967,16 @@ function trainerSetMedicalAlertBeacon_(count) {
   }
 }
 
+
+/**
+ * Buduje mapę alertów po numerze technicznym zawodnika.
+ */
 function trainerBuildMedicalAlertsMap_(alerts) {
   const map = {};
   const arr = Array.isArray(alerts) ? alerts : [];
 
   for (const a of arr) {
-    const nr = String(a.numer || a.player_id || "").trim();
+    const nr = String(a && (a.numer || a.player_id) ? (a.numer || a.player_id) : "").trim();
     if (!nr) continue;
     map[nr] = a;
   }
@@ -9942,14 +9984,56 @@ function trainerBuildMedicalAlertsMap_(alerts) {
   return map;
 }
 
+
+/**
+ * Harmonogram sprawdzania alertów.
+ * Używamy po wejściu trenera do panelu i przy wejściu w listę zawodników.
+ */
+function trainerScheduleMedicalExamAlertsCheck_(delayMs, force) {
+  if (window.__trainerMedicalExamAlertStartTimer) {
+    clearTimeout(window.__trainerMedicalExamAlertStartTimer);
+    window.__trainerMedicalExamAlertStartTimer = null;
+  }
+
+  window.__trainerMedicalExamAlertStartTimer = setTimeout(() => {
+    if (typeof trainerRefreshMedicalExamAlerts_ !== "function") return;
+
+    const now = Date.now();
+    const last = Number(window.__trainerMedicalExamAlertLastCheckMs || 0);
+
+    // Bez force nie odpytujemy backendu częściej niż raz na minutę.
+    if (!force && last && now - last < 60 * 1000) {
+      trainerSetMedicalAlertBeacon_(window.__trainerMedicalExamAlertsCount || 0);
+
+      if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
+        trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+      }
+
+      return;
+    }
+
+    window.__trainerMedicalExamAlertLastCheckMs = now;
+    trainerRefreshMedicalExamAlerts_();
+
+  }, Number(delayMs || 300));
+}
+
+
+/**
+ * Pobiera alerty badań z GAS.
+ * Backend zwraca zawodników z datą badań w zakresie dzisiaj -> +10 dni.
+ */
 async function trainerRefreshMedicalExamAlerts_() {
   const groups = String(window.grupyTrenera || "").trim();
 
-  window.__trainerMedicalExamAlertsByNr = {};
-  window.__trainerMedicalExamAlertsCount = 0;
-  trainerSetMedicalAlertBeacon_(0);
-
-  if (!groups) return;
+  // Trener bez grup nie widzi zawodników, więc alertów też nie ma.
+  if (!groups) {
+    window.__trainerMedicalExamAlertsByNr = {};
+    window.__trainerMedicalExamAlertsCount = 0;
+    trainerSetMedicalAlertBeacon_(0);
+    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+    return;
+  }
 
   try {
     const res = await apiClubGet("trainerMedicalExamAlerts", {
@@ -9957,9 +10041,11 @@ async function trainerRefreshMedicalExamAlerts_() {
       t: Date.now()
     });
 
-    console.log("trainerMedicalExamAlerts:", res);
-
     if (!res || res.success !== true || res.enabled !== true) {
+      window.__trainerMedicalExamAlertsByNr = {};
+      window.__trainerMedicalExamAlertsCount = 0;
+      trainerSetMedicalAlertBeacon_(0);
+      trainerApplyMedicalAlertsToVisiblePlayerTiles_();
       return;
     }
 
@@ -9972,16 +10058,19 @@ async function trainerRefreshMedicalExamAlerts_() {
     trainerApplyMedicalAlertsToVisiblePlayerTiles_();
 
   } catch (e) {
+    // Nie pokazujemy błędu użytkownikowi. Alert działa w tle.
     console.warn("trainerRefreshMedicalExamAlerts_ error:", e);
   }
 }
 
+
+/**
+ * Dorysowuje czerwony napis "WAŻNOŚĆ BADAŃ" na widocznych kaflach zawodników.
+ * Wymaga, żeby kafle miały data-trainer-player-nr="ID".
+ */
 function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
   const map = window.__trainerMedicalExamAlertsByNr || {};
   const tiles = document.querySelectorAll("[data-trainer-player-nr]");
-
-  console.log("medical alerts map:", map);
-  console.log("trainer player tiles:", tiles.length);
 
   tiles.forEach(tile => {
     const nr = String(tile.getAttribute("data-trainer-player-nr") || "").trim();
@@ -10009,8 +10098,6 @@ function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
     tile.appendChild(warn);
   });
 }
-
-
   
 /* ------------- statystyki do kafla w ekranie zawodnika w panelu trenera------------*/
   // dane z funkcji pokazstatystyki
