@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.64';
+  window.APP_BUILD = 'APP v2.65';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1217,6 +1217,23 @@ input[type="number"] {
     </button>
   </div>
 
+  <div
+  id="trainerMedicalExamCard"
+  class="card hidden"
+  style="text-align:left; margin-bottom:12px;"
+>
+  <div style="opacity:.75; font-size:13px;">Ważność badań lekarskich</div>
+
+  <div
+    id="trainerMedicalExamDate"
+    style="margin-top:4px; font-size:18px; font-weight:800;"
+  >
+    —
+  </div>
+
+  <button class="full-btn" style="margin-top:12px;" onclick="trainerOpenMedicalExamPopup_()"> Edytuj datę badań </button>
+</div>
+
   <div class="card" style="text-align:left; margin-bottom:12px;">
     <div style="opacity:.75; font-size:13px;">Statystyki</div>
     <div id="trainerInfoStats" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
@@ -1305,6 +1322,83 @@ input[type="number"] {
     </button>
   </div>
 </div>
+
+<!-- TRAINER MEDICAL EXAM POPUP
+     Edycja ważności badań lekarskich zawodnika -->
+
+<div
+  id="trainerMedicalExamPopup"
+  class="hidden"
+  style="
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    background:rgba(0,0,0,.72);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  "
+>
+  <div
+    class="card"
+    style="
+      width:100%;
+      max-width:420px;
+      text-align:left;
+      background:#111;
+      border:1px solid rgba(255,255,255,.18);
+    "
+  >
+    <h2 style="margin-top:0;text-align:center;">Badania lekarskie</h2>
+
+    <div style="opacity:.75;font-size:13px;margin-bottom:6px;">
+      Zawodnik
+    </div>
+
+    <div
+      id="trainerMedicalExamName"
+      style="font-size:20px;font-weight:900;margin-bottom:14px;"
+    >
+      —
+    </div>
+
+    <input
+      id="trainerMedicalExamInput"
+      type="date"
+      style="
+        width:100%;
+        box-sizing:border-box;
+        display:block;
+        margin:0 0 14px 0;
+        padding:14px 18px;
+        min-height:46px;
+        border-radius:14px;
+        border:1px solid rgba(255,255,255,.22);
+        background:#1b1b1b;
+        color:#fff;
+        font-size:17px;
+        font-weight:800;
+        outline:none;
+        appearance:none;
+        -webkit-appearance:none;
+      "
+    >
+
+    <div
+      id="trainerMedicalExamMsg"
+      style="min-height:22px;margin:8px 0 12px 0;text-align:center;font-weight:700;"
+    ></div>
+
+    <button class="full-btn" onclick="trainerSaveMedicalExam_()">
+      Zapisz datę
+    </button>
+
+    <button class="full-btn alt" onclick="trainerCloseMedicalExamPopup_()">
+      Anuluj
+    </button>
+  </div>
+</div>  
   
 <!-- TRAINER EVENTS MENU VIEW
      Główne menu wydarzeń trenera -->
@@ -9402,6 +9496,26 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   if (grupyEl) grupyEl.textContent = "—";
   if (msg) msg.textContent = "";
 
+  trainerSetMedicalExamCardVisible_(false);
+
+const medicalDateEl = document.getElementById("trainerMedicalExamDate");
+if (medicalDateEl) medicalDateEl.textContent = "—";
+
+if (trainerIsMedicalFeatureEnabledFromCache_()) {
+  trainerSetMedicalExamCardVisible_(true);
+  trainerLoadMedicalExamForSelectedPlayer_();
+}
+
+trainerRefreshMedicalFeatureState_().then(enabled => {
+  if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+
+  trainerSetMedicalExamCardVisible_(enabled);
+
+  if (enabled) {
+    trainerLoadMedicalExamForSelectedPlayer_();
+  }
+});
+
     // Statystyki załadują się automatycznie po danych podstawowych.
     // Nie blokują głównego ekranu zawodnika.
     if (statsEl) {
@@ -9493,6 +9607,202 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
     }
   }
 
+/* ------------- badania do kafla w ekranie zawodnika w panelu trenera------------*/  
+
+function trainerIsMedicalFeatureEnabledFromCache_() {
+  const cacheKey =
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".adminFeaturesList.default";
+
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return false;
+
+    const entry = JSON.parse(raw);
+    const features = entry?.data?.features;
+
+    if (!Array.isArray(features)) return false;
+
+    const f = features.find(x => String(x.key || "").trim() === "player_medical_exams");
+    if (!f) return false;
+
+    return (
+      f.enabled === true ||
+      f.enabled === 1 ||
+      String(f.enabled || "").trim() === "1" ||
+      String(f.enabled || "").trim().toUpperCase() === "TRUE"
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+
+async function trainerRefreshMedicalFeatureState_() {
+  const cacheKey =
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".adminFeaturesList.default";
+
+  try {
+    const res = await apiClubGet("adminFeaturesList", { t: Date.now() });
+
+    if (!res || res.success !== true || !Array.isArray(res.features)) {
+      return trainerIsMedicalFeatureEnabledFromCache_();
+    }
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: {
+          features: res.features
+        }
+      }));
+    } catch (e) {}
+
+    const f = res.features.find(x => String(x.key || "").trim() === "player_medical_exams");
+
+    return !!(f && (
+      f.enabled === true ||
+      f.enabled === 1 ||
+      String(f.enabled || "").trim() === "1" ||
+      String(f.enabled || "").trim().toUpperCase() === "TRUE"
+    ));
+
+  } catch (e) {
+    return trainerIsMedicalFeatureEnabledFromCache_();
+  }
+}
+
+
+function trainerSetMedicalExamCardVisible_(visible) {
+  const card = document.getElementById("trainerMedicalExamCard");
+  if (!card) return;
+
+  if (visible) {
+    card.classList.remove("hidden");
+  } else {
+    card.classList.add("hidden");
+  }
+}
+
+
+async function trainerLoadMedicalExamForSelectedPlayer_() {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const dateEl = document.getElementById("trainerMedicalExamDate");
+
+  if (!nr) return;
+
+  if (dateEl) dateEl.textContent = "⏳ Ładowanie...";
+
+  try {
+    const res = await apiClubGet("trainerPlayerMedicalExam", {
+      numer: nr,
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true) {
+      if (dateEl) dateEl.textContent = "Nie ustawiono";
+      return;
+    }
+
+    const validUntil = String(res.validUntil || "").trim();
+
+    if (dateEl) {
+      dateEl.textContent = validUntil || "Nie ustawiono";
+    }
+
+  } catch (e) {
+    if (dateEl) dateEl.textContent = "Nie ustawiono";
+  }
+}
+
+
+function trainerOpenMedicalExamPopup_() {
+  const popup = document.getElementById("trainerMedicalExamPopup");
+  const nameEl = document.getElementById("trainerMedicalExamName");
+  const input = document.getElementById("trainerMedicalExamInput");
+  const msg = document.getElementById("trainerMedicalExamMsg");
+  const dateEl = document.getElementById("trainerMedicalExamDate");
+
+  if (!popup) return;
+
+  const nazwisko = String(window.__trainerSelectedNazwisko || "").trim() || "—";
+  const current = String(dateEl?.textContent || "").trim();
+
+  if (nameEl) nameEl.textContent = nazwisko;
+
+  if (input) {
+    input.value = /^\d{4}-\d{2}-\d{2}$/.test(current) ? current : "";
+    setTimeout(() => input.focus(), 50);
+  }
+
+  if (msg) msg.textContent = "";
+
+  popup.classList.remove("hidden");
+  popup.style.display = "flex";
+}
+
+
+function trainerCloseMedicalExamPopup_() {
+  const popup = document.getElementById("trainerMedicalExamPopup");
+  if (!popup) return;
+
+  popup.classList.add("hidden");
+  popup.style.display = "none";
+}
+
+
+async function trainerSaveMedicalExam_() {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const input = document.getElementById("trainerMedicalExamInput");
+  const msg = document.getElementById("trainerMedicalExamMsg");
+  const dateEl = document.getElementById("trainerMedicalExamDate");
+
+  const validUntil = String(input?.value || "").trim();
+
+  if (!nr) {
+    if (msg) msg.textContent = "❌ Brak ID zawodnika.";
+    return;
+  }
+
+  if (validUntil && !/^\d{4}-\d{2}-\d{2}$/.test(validUntil)) {
+    if (msg) msg.textContent = "Nieprawidłowy format daty.";
+    return;
+  }
+
+  if (msg) msg.textContent = "⏳ Zapisuję...";
+
+  try {
+    const res = await apiClubPost({
+      action: "trainerSetPlayerMedicalExam",
+      numer: nr,
+      validUntil
+    });
+
+    if (!res || res.success !== true) {
+      if (msg) msg.textContent = "❌ " + (res?.error || res?.message || "Nie udało się zapisać daty.");
+      return;
+    }
+
+    if (dateEl) {
+      dateEl.textContent = validUntil || "Nie ustawiono";
+    }
+
+    if (msg) msg.textContent = "✅ Zapisano.";
+
+    setTimeout(() => {
+      trainerCloseMedicalExamPopup_();
+      if (msg) msg.textContent = "";
+    }, 600);
+
+  } catch (e) {
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+  }
+}
+
+  
 /* ------------- statystyki do kafla w ekranie zawodnika w panelu trenera------------*/
   // dane z funkcji pokazstatystyki
   
