@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.63';
+  window.APP_BUILD = 'APP v2.64';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -16052,112 +16052,132 @@ async function adminLoadRaportRezerwacja_() {
 async function adminPokazFunkcjeDodatkowe() {
   goToView("adminFeaturesView");
 
-  const body = document.getElementById("adminFeaturesBody");
   const msg = document.getElementById("adminFeaturesMsg");
-
-  if (body) {
-    body.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie...</div>`;
-  }
-
   if (msg) msg.textContent = "";
 
+  const cacheKey =
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".adminFeaturesList.default";
+
+  // 1. Ekran stały — kafle pokazujemy od razu, bez ładowania.
+  renderAdminFeaturesStatic_();
+
+  // 2. Odtwórz stan checkboxów z pamięci.
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      const features = entry?.data?.features;
+
+      if (Array.isArray(features)) {
+        applyAdminFeaturesState_(features);
+      }
+    }
+  } catch (e) {}
+
+  // 3. W tle dociągnij świeży stan z GAS.
   try {
     const res = await apiClubGet("adminFeaturesList", { t: Date.now() });
 
     if (!res || res.success !== true) {
-      if (body) {
-        body.innerHTML = `
-          <div class="card" style="background:#700;">
-            ❌ ${res?.error || "Nie udało się pobrać funkcji dodatkowych."}
-          </div>
-        `;
-      }
       return;
     }
 
-    renderAdminFeatures_(res.features || []);
+    const freshData = {
+      features: Array.isArray(res.features) ? res.features : []
+    };
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: freshData
+      }));
+    } catch (e) {}
+
+    // 4. Podmień tylko stan checkboxów, bez przebudowy ekranu.
+    applyAdminFeaturesState_(freshData.features);
 
   } catch (e) {
-    if (body) {
-      body.innerHTML = `
-        <div class="card" style="background:#700;">
-          ❌ ${e?.message || e}
-        </div>
-      `;
-    }
+    // Cisza. Jeśli jest cache, użytkownik ma ostatni znany stan.
+    // Jak nie ma internetu, ekran i tak zostaje normalny.
   }
 }
 
-
-function renderAdminFeatures_(features) {
+function renderAdminFeaturesStatic_() {
   const body = document.getElementById("adminFeaturesBody");
   if (!body) return;
 
-  if (!Array.isArray(features) || !features.length) {
-    body.innerHTML = `
-      <div class="card" style="background:#111;">
-        Brak funkcji dodatkowych do konfiguracji.
-      </div>
-    `;
-    return;
-  }
-
-  body.innerHTML = features.map(f => {
-    const key = String(f.key || "").trim();
-    const label = String(f.label || key || "Funkcja").trim();
-    const description = String(f.description || "").trim();
-    const enabled = f.enabled === true;
-
-    const safeKey = encodeURIComponent(key);
-
-    return `
-      <div class="card" style="text-align:left; margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-          <div style="min-width:0;">
-            <div style="font-size:18px; font-weight:900;">
-              ${escapeHtml_(label)}
-            </div>
-
-            ${description ? `
-              <div style="opacity:.75; font-size:13px; margin-top:6px; line-height:1.35;">
-                ${escapeHtml_(description)}
-              </div>
-            ` : ``}
+  body.innerHTML = `
+    <div class="card" style="text-align:left; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+        <div style="min-width:0;">
+          <div style="font-size:18px; font-weight:900;">
+            Badania zawodników
           </div>
 
-          <label style="display:flex; align-items:center; gap:8px; font-weight:800; white-space:nowrap;">
-            <input
-              type="checkbox"
-              ${enabled ? "checked" : ""}
-              onchange="adminToggleFeature_(decodeURIComponent('${safeKey}'), this.checked)"
-              style="width:22px; height:22px;"
-            >
-            <span id="featureEnabledText_${safeKey}">
-              ${enabled ? "Włączone" : "Wyłączone"}
-            </span>
-          </label>
+          <div style="opacity:.75; font-size:13px; margin-top:6px; line-height:1.35;">
+            Kontrola ważności badań lekarskich zawodników.
+          </div>
         </div>
 
-        <div
-          id="featureStatus_${safeKey}"
-          style="font-size:13px; opacity:.75; margin-top:10px;"
-        ></div>
+        <label style="display:flex; align-items:center; gap:8px; font-weight:800; white-space:nowrap;">
+          <input
+            id="featureCheck_player_medical_exams"
+            type="checkbox"
+            onchange="adminToggleFeature_('player_medical_exams', this.checked)"
+            style="width:22px; height:22px;"
+          >
+          <span id="featureEnabledText_player_medical_exams">Wyłączone</span>
+        </label>
       </div>
-    `;
-  }).join("");
-}
 
+      <div
+        id="featureStatus_player_medical_exams"
+        style="font-size:13px; opacity:.75; margin-top:10px;"
+      ></div>
+    </div>
+  `;
+}  
+
+function applyAdminFeaturesState_(features) {
+  if (!Array.isArray(features)) return;
+
+  for (const f of features) {
+    const key = String(f.key || "").trim();
+    if (!key) continue;
+
+    const enabled =
+      f.enabled === true ||
+      f.enabled === 1 ||
+      String(f.enabled || "").trim() === "1" ||
+      String(f.enabled || "").trim().toUpperCase() === "TRUE";
+
+    const checkbox = document.getElementById("featureCheck_" + key);
+    const textEl = document.getElementById("featureEnabledText_" + key);
+
+    if (checkbox) checkbox.checked = enabled;
+    if (textEl) textEl.textContent = enabled ? "Włączone" : "Wyłączone";
+  }
+}  
 
 async function adminToggleFeature_(featureKey, enabled) {
   const key = String(featureKey || "").trim();
   if (!key) return;
 
   const msg = document.getElementById("adminFeaturesMsg");
-  const statusEl = document.getElementById("featureStatus_" + encodeURIComponent(key));
-  const textEl = document.getElementById("featureEnabledText_" + encodeURIComponent(key));
+  const statusEl = document.getElementById("featureStatus_" + key);
+  const textEl = document.getElementById("featureEnabledText_" + key);
+  const checkbox = document.getElementById("featureCheck_" + key);
 
-  if (statusEl) statusEl.textContent = "⏳ Zapisuję...";
+  const cacheKey =
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".adminFeaturesList.default";
+
   if (msg) msg.textContent = "";
+  if (statusEl) statusEl.textContent = "⏳ Zapisuję...";
+  if (textEl) textEl.textContent = enabled ? "Włączone" : "Wyłączone";
 
   try {
     const res = await apiClubPost({
@@ -16171,19 +16191,50 @@ async function adminToggleFeature_(featureKey, enabled) {
       if (statusEl) statusEl.textContent = "";
       if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zapisać ustawienia.");
 
-      // Cofamy checkbox do poprzedniego stanu bez odświeżania całego widoku.
-      const checkbox = document.querySelector(
-        `input[type="checkbox"][onchange*="${key}"]`
-      );
       if (checkbox) checkbox.checked = !enabled;
-
       if (textEl) textEl.textContent = !enabled ? "Włączone" : "Wyłączone";
       return;
     }
 
-    if (textEl) {
-      textEl.textContent = enabled ? "Włączone" : "Wyłączone";
-    }
+    // Aktualizacja pamięci bez przebudowy widoku.
+    try {
+      let features = [];
+
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        if (entry?.data && Array.isArray(entry.data.features)) {
+          features = entry.data.features;
+        }
+      }
+
+      let found = false;
+
+      features = features.map(f => {
+        if (String(f.key || "").trim() !== key) return f;
+
+        found = true;
+        return {
+          ...f,
+          enabled: !!enabled
+        };
+      });
+
+      if (!found) {
+        features.push({
+          key,
+          label: "Badania zawodników",
+          description: "Kontrola ważności badań lekarskich zawodników.",
+          enabled: !!enabled
+        });
+      }
+
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: { features }
+      }));
+
+    } catch (e) {}
 
     if (statusEl) {
       statusEl.textContent = enabled
@@ -16191,7 +16242,6 @@ async function adminToggleFeature_(featureKey, enabled) {
         : "✅ Funkcja została wyłączona.";
     }
 
-    // Bez odświeżania ekranu.
     setTimeout(() => {
       if (statusEl) statusEl.textContent = "";
     }, 1400);
@@ -16200,12 +16250,7 @@ async function adminToggleFeature_(featureKey, enabled) {
     if (statusEl) statusEl.textContent = "";
     if (msg) msg.textContent = "❌ " + (e?.message || e);
 
-    // Cofamy checkbox do poprzedniego stanu bez przeładowania.
-    const checkbox = document.querySelector(
-      `input[type="checkbox"][onchange*="${key}"]`
-    );
     if (checkbox) checkbox.checked = !enabled;
-
     if (textEl) textEl.textContent = !enabled ? "Włączone" : "Wyłączone";
   }
 }
