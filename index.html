@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.61';
+  window.APP_BUILD = 'APP v2.62';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -13799,20 +13799,48 @@ function renderPaymentsSection_(title, arr) {
   
 function renderPaymentTile_(p) {
   const isZwolniony = !!p.zwolniony;
-  const paid = !!p.zaplacono && !isZwolniony;
-  const kw = Number(p.kwota || 0);
+
+  const isPartial =
+    p.wplataCzesciowa === true ||
+    String(p.wplataCzesciowa || "").trim().toUpperCase() === "TRUE";
+
+  const paidFull = !!p.zaplacono && !isZwolniony && !isPartial;
+
+  const paidAmount = Number(p.zaplaconoKwota || 0);
+  const missingAmount = Number(p.brakuje || 0);
+  const dueAmount = Number(p.naleznosc || p.kwota || 0);
+
+  // Główna kwota na kaflu:
+  // - zwolniony: tekst ZW
+  // - częściowa wpłata: pokazujemy ile brakuje
+  // - zapłacone: pokazujemy wpłatę / kwotę
+  // - niezapłacone: pokazujemy kwotę do zapłaty
+  const kw = isPartial && missingAmount > 0
+    ? missingAmount
+    : Number(p.kwota || 0);
+
+  function money_(v) {
+    const n = Number(v || 0);
+    if (!isFinite(n)) return "0 zł";
+    return `${Math.round(n * 100) / 100} zł`;
+  }
 
   const bg = isZwolniony
     ? "#2f2410"
-    : (paid ? "#123a1a" : "#3a1414");
+    : isPartial
+      ? "#3a2d14"
+      : paidFull
+        ? "#123a1a"
+        : "#3a1414";
 
   const badge = isZwolniony
     ? ""
-    : (paid
+    : isPartial
+      ? `<span style="color:#FFD37C; font-weight:700;">WPŁATA CZĘŚCIOWA</span>`
+      : paidFull
         ? `<span style="color:#7CFF7C; font-weight:700;">ZAPŁACONE</span>`
-        : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`);
+        : `<span style="color:#FF7C7C; font-weight:700;">NIEZAPŁACONE</span>`;
 
-  const colNum = Number(p.col);
   const typTxt = String(p.typ || "").trim();
 
   // Bezpieczny tekst do HTML
@@ -13824,11 +13852,18 @@ function renderPaymentTile_(p) {
 
   const kwotaTxt = isZwolniony
     ? String(p.kwotaLabel || "ZWOLNIONY Z WPŁATY")
-    : `${kw} zł`;
+    : isPartial
+      ? `Brakuje: ${money_(missingAmount)}`
+      : `${money_(kw)}`;
 
-  // Bezpieczny tekst do dataset
-  const labelData = encodeURIComponent(labelTxt);
-  const typData = encodeURIComponent(typTxt);
+  const partialInfo = isPartial
+    ? `
+      <div style="margin-top:8px; font-size:13px; opacity:.9; line-height:1.35;">
+        Wpłacono: <b>${money_(paidAmount)}</b><br>
+        Należność: <b>${money_(dueAmount)}</b>
+      </div>
+    `
+    : "";
 
   const btn = "";
 
@@ -13838,6 +13873,7 @@ function renderPaymentTile_(p) {
         <div>
           <div style="opacity:.9; font-size:14px;">${p.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe"}</div>
           <div style="font-size:18px; font-weight:800;">${labelHtml}</div>
+          ${partialInfo}
         </div>
         <div style="text-align:right;">
           <div style="font-size:18px; font-weight:800;">${kwotaTxt}</div>
