@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.66';
+  window.APP_BUILD = 'APP v2.67';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9357,63 +9357,8 @@ function powrotDoTreningow() {
 /* =================== 130 TRENER: LISTA / WYDARZENIA / DODAWANIE / USUWANIE =================== */
   
 function trainerPowrot() { appBack(); }
-
-async function trainerPokazZawodnicy() {
-  goToView("trainerZawodnicyView");
-
-  const box = document.getElementById("trainerListaZawodnikow");
-  if (!box) return;
-
-  const groupsKey = String(window.grupyTrenera || "").trim();
-  const PLAYERS_CACHE_24H = 24 * 60 * 60 * 1000;
-
-      // Cicho odśwież alerty badań w tle.
-    // Lista ma się otworzyć od razu, bez czekania na ten request.
-    if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
-      setTimeout(() => {
-        trainerRefreshMedicalExamAlerts_();
-      }, 0);
-    }
-
-  if (!groupsKey) {
-    box.innerHTML = `
-      <div class='card' style='background:#111; text-align:center;'>
-        Brak przypisanych grup.<br>
-        Skontaktuj się z administratorem klubu.
-      </div>
-    `;
-    return;
-  }
   
-function renderTrainerPlayers_(lista) {
-  if (!Array.isArray(lista) || lista.length === 0) {
-    box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
-    return;
-  }
-
-  box.innerHTML = lista.map(z => {
-    const nr = String(z.nr || "").trim();
-    const nazwisko = String(z.nazwisko || "").trim();
-
-    return `
-      <div
-        class="card"
-        onclick="trainerOpenZawodnik_(decodeURIComponent('${encodeURIComponent(nr)}'), decodeURIComponent('${encodeURIComponent(nazwisko)}'))"
-        style="
-          text-align:left;
-          cursor:pointer;
-          user-select:none;
-        "
-      >
-        <b>${nazwisko}</b>
-        <div style="opacity:.65; font-size:13px; margin-top:6px;">
-          Kliknij, aby zobaczyć szczegóły
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-  }
+async function trainerPokazZawodnicy() {
 
 function setTrainerZawodnikViewBusy_(busy, text) {
   const view = document.getElementById("trainerZawodnikView");
