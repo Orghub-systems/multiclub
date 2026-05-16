@@ -406,6 +406,16 @@ input[type="number"] {
     filter: grayscale(0.25);
     transition: opacity 0.15s ease, filter 0.15s ease;
   }
+
+    .trainer-medical-warning-inline {
+  color: #ff3b3b;
+  font-weight: 900;
+  margin-top: 7px;
+  font-size: 13px;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  filter: drop-shadow(0 0 5px rgba(255, 0, 0, .65));
+}
     
   </style>
   
@@ -9376,69 +9386,54 @@ async function trainerPokazZawodnicy() {
     return;
   }
   
-  function renderTrainerPlayers_(lista) {
-    if (!Array.isArray(lista) || lista.length === 0) {
-      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
-      return;
-    }
-
-    box.innerHTML = lista.map(z => {
-      const nr = String(z.nr || "").trim();
-      const nazwisko = String(z.nazwisko || "").trim();
-
-      return `
-        <div
-          class="card"
-          onclick="trainerOpenZawodnik_(decodeURIComponent('${encodeURIComponent(nr)}'), decodeURIComponent('${encodeURIComponent(nazwisko)}'))"
-          style="
-            text-align:left;
-            cursor:pointer;
-            user-select:none;
-          "
-        >
-          <b>${nazwisko}</b>
-          <div style="opacity:.65; font-size:13px; margin-top:6px;">
-            Kliknij, aby zobaczyć szczegóły
-          </div>
-        </div>
-      `;
-    }).join("");
+function renderTrainerPlayers_(lista) {
+  if (!Array.isArray(lista) || lista.length === 0) {
+    box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
+    return;
   }
 
-  box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+  const medicalAlertsMap = window.__trainerMedicalExamAlertsByNr || {};
 
-  try {
-    let renderedFromHook = false;
+  box.innerHTML = lista.map(z => {
+    const nr = String(z.nr || "").trim();
+    const nazwisko = String(z.nazwisko || "").trim();
 
-    const lista = await orgCachedApiGet_({
-      scope: "trainerPlayersList",
-      parts: {
-        groups: groupsKey || "all"
-      },
-      action: "listaZawodnikow",
-      params: {
-        grupy: groupsKey,
-        _ts: Date.now()
-      },
-      maxAgeMs: PLAYERS_CACHE_24H,
-      useStale: true,
-      onCached: (cachedLista) => {
-        renderedFromHook = true;
-        renderTrainerPlayers_(cachedLista);
-      },
-      onFresh: (freshLista) => {
-        renderedFromHook = true;
-        renderTrainerPlayers_(freshLista);
-      }
-    });
+    const hasMedicalAlert = !!medicalAlertsMap[nr];
 
-    if (!renderedFromHook) {
-      renderTrainerPlayers_(lista);
-    }
+    const medicalWarningHtml = hasMedicalAlert
+      ? `
+        <div class="trainer-medical-warning-inline">
+          🚨 WAŻNOŚĆ BADAŃ
+        </div>
+      `
+      : "";
 
-  } catch (e) {
-    console.warn("trainerPokazZawodnicy error:", e);
-    box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
+    return `
+      <div
+        class="card"
+        data-trainer-player-nr="${nr.replace(/"/g, "&quot;")}"
+        onclick="trainerOpenZawodnik_(decodeURIComponent('${encodeURIComponent(nr)}'), decodeURIComponent('${encodeURIComponent(nazwisko)}'))"
+        style="
+          text-align:left;
+          cursor:pointer;
+          user-select:none;
+        "
+      >
+        <b>${nazwisko}</b>
+
+        <div style="opacity:.65; font-size:13px; margin-top:6px;">
+          Kliknij, aby zobaczyć szczegóły
+        </div>
+
+        ${medicalWarningHtml}
+      </div>
+    `;
+  }).join("");
+
+  // Jeśli alerty przyszły z backendu chwilę po wyrenderowaniu listy,
+  // ta funkcja dorysuje / zdejmie oznaczenia bez przeładowania listy.
+  if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
+    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
   }
 }
 
