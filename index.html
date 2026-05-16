@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.67';
+  window.APP_BUILD = 'APP v2.68';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1173,7 +1173,12 @@ input[type="number"] {
      Główne menu trenera -->
     
     <div id="trainerPanelView" class="container hidden">
-      <h1>Panel trenera</h1>
+      <h1>Panel trenera<span id="trainerMedicalAlertBeacon"
+          style=" display:none;
+            margin-left:8px;
+            color:#ff1f1f;
+            filter:drop-shadow(0 0 8px rgba(255,0,0,.85)); "
+            title= "Zawodnikom kończy się ważność badań lekarskich" >🚨</span></h1>
       <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
       <button class="full-btn" onclick="goToView('trainerWydarzeniaView')">🏒 Wydarzenia</button>
       <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
@@ -7132,8 +7137,15 @@ async function zaloguj() {
         expiresAt: String(data.sessionExpiresAt || "").trim(),
         validatedAt: new Date().toISOString()
       });
-
+      
       goToView("trainerPanelView");
+      
+      setTimeout(() => {
+        if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
+          trainerRefreshMedicalExamAlerts_();
+        }
+      }, 300);
+      
       return;
     }
 
@@ -9448,6 +9460,10 @@ async function trainerPokazZawodnicy() {
       `;
     }).join("");
 
+      if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
+      trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+    }
+
     const tiles = box.querySelectorAll(".trainer-player-tile");
 
     tiles.forEach(tile => {
@@ -9868,6 +9884,120 @@ async function trainerSaveMedicalExam_() {
   }
 }
 
+window.__trainerMedicalExamAlertsByNr = window.__trainerMedicalExamAlertsByNr || {};
+window.__trainerMedicalExamAlertsCount = window.__trainerMedicalExamAlertsCount || 0;
+window.__trainerMedicalBeaconBlinkTimer = window.__trainerMedicalBeaconBlinkTimer || null;
+
+function trainerSetMedicalAlertBeacon_(count) {
+  const beacon = document.getElementById("trainerMedicalAlertBeacon");
+  if (!beacon) return;
+
+  const n = Number(count || 0);
+
+  if (window.__trainerMedicalBeaconBlinkTimer) {
+    clearInterval(window.__trainerMedicalBeaconBlinkTimer);
+    window.__trainerMedicalBeaconBlinkTimer = null;
+  }
+
+  if (n > 0) {
+    beacon.style.display = "inline-block";
+    beacon.title = "Kończy się ważność badań lekarskich: " + n;
+
+    let on = true;
+    beacon.style.opacity = "1";
+    beacon.style.transform = "scale(1)";
+
+    window.__trainerMedicalBeaconBlinkTimer = setInterval(() => {
+      on = !on;
+      beacon.style.opacity = on ? "1" : "0.25";
+      beacon.style.transform = on ? "scale(1)" : "scale(1.18)";
+    }, 650);
+
+  } else {
+    beacon.style.display = "none";
+    beacon.title = "";
+    beacon.style.opacity = "1";
+    beacon.style.transform = "scale(1)";
+  }
+}
+
+
+function trainerBuildMedicalAlertsMap_(alerts) {
+  const map = {};
+  const arr = Array.isArray(alerts) ? alerts : [];
+
+  for (const a of arr) {
+    const nr = String(a.numer || a.player_id || "").trim();
+    if (!nr) continue;
+    map[nr] = a;
+  }
+
+  return map;
+}
+
+
+async function trainerRefreshMedicalExamAlerts_() {
+  const groups = String(window.grupyTrenera || "").trim();
+
+  window.__trainerMedicalExamAlertsByNr = {};
+  window.__trainerMedicalExamAlertsCount = 0;
+  trainerSetMedicalAlertBeacon_(0);
+
+  if (!groups) return;
+
+  try {
+    const res = await apiClubGet("trainerMedicalExamAlerts", {
+      grupy: groups,
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true || res.enabled !== true) {
+      return;
+    }
+
+    const alerts = Array.isArray(res.alerts) ? res.alerts : [];
+
+    window.__trainerMedicalExamAlertsByNr = trainerBuildMedicalAlertsMap_(alerts);
+    window.__trainerMedicalExamAlertsCount = alerts.length;
+
+    trainerSetMedicalAlertBeacon_(alerts.length);
+    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+
+  } catch (e) {
+    console.warn("trainerRefreshMedicalExamAlerts_ error:", e);
+  }
+}
+
+
+function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
+  const map = window.__trainerMedicalExamAlertsByNr || {};
+  const tiles = document.querySelectorAll("[data-trainer-player-nr]");
+
+  tiles.forEach(tile => {
+    const nr = String(tile.getAttribute("data-trainer-player-nr") || "").trim();
+    if (!nr) return;
+
+    const old = tile.querySelector(".trainer-medical-warning-inline");
+    if (old) old.remove();
+
+    if (!map[nr]) return;
+
+    const warn = document.createElement("div");
+    warn.className = "trainer-medical-warning-inline";
+    warn.style.cssText = `
+      color:#ff3b3b;
+      font-weight:900;
+      margin-top:7px;
+      font-size:13px;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      filter:drop-shadow(0 0 5px rgba(255,0,0,.65));
+    `;
+    warn.textContent = "🚨 WAŻNOŚĆ BADAŃ";
+
+    tile.appendChild(warn);
+  });
+}  
   
 /* ------------- statystyki do kafla w ekranie zawodnika w panelu trenera------------*/
   // dane z funkcji pokazstatystyki
