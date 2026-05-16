@@ -9359,6 +9359,154 @@ function powrotDoTreningow() {
 function trainerPowrot() { appBack(); }
   
 async function trainerPokazZawodnicy() {
+  goToView("trainerZawodnicyView");
+
+  const box = document.getElementById("trainerListaZawodnikow");
+  if (!box) return;
+
+  const groupsKey = String(window.grupyTrenera || "").trim();
+  const PLAYERS_CACHE_24H = 24 * 60 * 60 * 1000;
+
+  if (!groupsKey) {
+    box.innerHTML = `
+      <div class='card' style='background:#111; text-align:center;'>
+        Brak przypisanych grup.<br>
+        Skontaktuj się z administratorem klubu.
+      </div>
+    `;
+    return;
+  }
+
+  // Cicho odśwież alerty badań w tle.
+  // Lista ma się otworzyć od razu, bez czekania na ten request.
+  if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
+    setTimeout(() => {
+      trainerRefreshMedicalExamAlerts_();
+    }, 0);
+  }
+
+  function escapeHtmlLocal_(txt) {
+    return String(txt || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderTrainerPlayers_(lista) {
+    if (!Array.isArray(lista) || lista.length === 0) {
+      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
+      return;
+    }
+
+    const medicalAlertsMap = window.__trainerMedicalExamAlertsByNr || {};
+
+    box.innerHTML = lista.map((z, idx) => {
+      const nr = String(z.nr || "").trim();
+      const nazwisko = String(z.nazwisko || "").trim();
+
+      const hasMedicalAlert = !!medicalAlertsMap[nr];
+
+      const medicalWarningHtml = hasMedicalAlert
+        ? `
+          <div
+            class="trainer-medical-warning-inline"
+            style="
+              color:#ff3b3b;
+              font-weight:900;
+              margin-top:7px;
+              font-size:13px;
+              letter-spacing:.4px;
+              text-transform:uppercase;
+              filter:drop-shadow(0 0 5px rgba(255,0,0,.65));
+            "
+          >
+            🚨 WAŻNOŚĆ BADAŃ
+          </div>
+        `
+        : "";
+
+      return `
+        <div
+          class="card trainer-player-tile"
+          data-trainer-player-index="${idx}"
+          data-trainer-player-nr="${escapeHtmlLocal_(nr)}"
+          style="
+            text-align:left;
+            cursor:pointer;
+            user-select:none;
+          "
+        >
+          <b>${escapeHtmlLocal_(nazwisko)}</b>
+
+          <div style="opacity:.65; font-size:13px; margin-top:6px;">
+            Kliknij, aby zobaczyć szczegóły
+          </div>
+
+          ${medicalWarningHtml}
+        </div>
+      `;
+    }).join("");
+
+    const tiles = box.querySelectorAll(".trainer-player-tile");
+
+    tiles.forEach(tile => {
+      tile.onclick = () => {
+        const idx = Number(tile.getAttribute("data-trainer-player-index"));
+        const z = lista[idx];
+
+        if (!z) return;
+
+        trainerOpenZawodnik_(
+          String(z.nr || "").trim(),
+          String(z.nazwisko || "").trim()
+        );
+      };
+    });
+
+    // Jeśli alerty przyszły z backendu chwilę po wyrenderowaniu listy,
+    // ta funkcja dorysuje / zdejmie oznaczenia bez przeładowania listy.
+    if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
+      trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+    }
+  }
+
+  box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+
+  try {
+    let renderedFromHook = false;
+
+    const lista = await orgCachedApiGet_({
+      scope: "trainerPlayersList",
+      parts: {
+        groups: groupsKey || "all"
+      },
+      action: "listaZawodnikow",
+      params: {
+        grupy: groupsKey,
+        _ts: Date.now()
+      },
+      maxAgeMs: PLAYERS_CACHE_24H,
+      useStale: true,
+      onCached: (cachedLista) => {
+        renderedFromHook = true;
+        renderTrainerPlayers_(cachedLista);
+      },
+      onFresh: (freshLista) => {
+        renderedFromHook = true;
+        renderTrainerPlayers_(freshLista);
+      }
+    });
+
+    if (!renderedFromHook) {
+      renderTrainerPlayers_(lista);
+    }
+
+  } catch (e) {
+    console.warn("trainerPokazZawodnicy error:", e);
+    box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
+  }
+}
 
 function setTrainerZawodnikViewBusy_(busy, text) {
   const view = document.getElementById("trainerZawodnikView");
