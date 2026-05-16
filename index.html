@@ -13658,7 +13658,7 @@ async function adminOpenGroups() {
   goToView("adminGrupyView");
 
   const t = document.getElementById("adminGrupyTitle");
-  if (t) t.textContent = `Grupy — ${nazw ? "— " + nazw : ""}`;
+  if (t) t.textContent = `Grupy ${nazw ? "— " + nazw : ""}`;
 
   renderAdminPlayerGroupsView_();
 
