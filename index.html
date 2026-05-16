@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.60';
+  window.APP_BUILD = 'APP v2.61';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -12622,7 +12622,12 @@ async function adminOpenPlayerInfo() {
   const emailBadge = document.getElementById("adminInfoEmailBadge");
 
   if (title) {
-    title.textContent = `Informacje — #${nr}${nazwisko ? " — " + nazwisko : ""}`;
+    title.innerHTML = `
+      <div>Informacje o zawodniku</div>
+      <div style="font-size:18px;font-weight:800;opacity:.9;margin-top:6px;">
+        ${escapeHtml_(nazwisko || "—")}
+      </div>
+    `;
   }
 
   if (msg) msg.textContent = "⏳ Ładuję dane zawodnika...";
@@ -12686,6 +12691,16 @@ async function adminOpenPlayerInfo() {
     const email = String(infoRes.email || "").trim() || "—";
     const grupyCsv = String((grupyRes && grupyRes.success ? grupyRes.grupy : infoRes.grupy) || "").trim();
     const grupy = formatClubGroupsCsvForUi_(grupyCsv) || "—";
+    const numerWidoczny = String(infoRes.numerWidoczny || "").trim();
+
+    if (title) {
+      title.innerHTML = `
+        <div>Informacje o zawodniku</div>
+        <div style="font-size:18px;font-weight:800;opacity:.9;margin-top:6px;">
+          ${escapeHtml_(String(infoRes.nazwisko || nazwisko || "—").trim())}${numerWidoczny ? " nr. " + escapeHtml_(numerWidoczny) : ""}
+        </div>
+      `;
+    }
 
     const access =
       infoRes.dostepDoApki === true ||
