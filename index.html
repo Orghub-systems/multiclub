@@ -12500,7 +12500,7 @@ async function adminOpenZawodnik(nr, nazwisko, joinDate) {
   const btnRozlicz = document.getElementById("btnAdminPlayerRozlicz");
 
   if (title) {
-    title.textContent = `Zawodnik #${window.__adminSelectedNr} — ${window.__adminSelectedNazwisko || "—"}`;
+    title.textContent = window.__adminSelectedNazwisko || "—";
   }
 
   if (msg) msg.textContent = "";
@@ -13659,7 +13659,7 @@ async function adminOpenPayments() {
   goToView("adminPaymentsView");
 
   const title = document.getElementById("adminPaymentsTitle");
-  if (title) title.textContent = `Płatności — #${nr}`;
+  if (title) title.textContent = `Wpłaty zaksięgowane`;
 
   const body = document.getElementById("adminPaymentsBody");
   const msg = document.getElementById("adminPaymentsMsg");
