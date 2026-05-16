@@ -9919,6 +9919,84 @@ async function trainerSaveMedicalExam_() {
 
 /* ------------- ALERT BADAŃ / KOGUT / OZNACZENIA KAFELKÓW ------------*/
 
+function trainerStartMedicalAlertsFromActiveSession_() {
+  if (typeof trainerScheduleMedicalExamAlertsCheck_ !== "function") {
+    return false;
+  }
+
+  let sess = null;
+
+  try {
+    if (typeof loadAppSession_ === "function") {
+      sess = loadAppSession_();
+    }
+  } catch (e) {
+    sess = null;
+  }
+
+  const role = String(sess?.role || "").trim().toLowerCase();
+
+  if (role !== "trener") {
+    return false;
+  }
+
+  const sessionGroups = String(sess?.grupa || "").trim();
+  const currentGroups = String(window.grupyTrenera || "").trim();
+
+  // Przy aktywnej sesji czasem window.grupyTrenera nie jest jeszcze ustawione.
+  // Bierzemy grupy z zapisanej sesji.
+  if (!currentGroups && sessionGroups) {
+    window.grupyTrenera = sessionGroups;
+  }
+
+  const finalGroups = String(window.grupyTrenera || "").trim();
+
+  // Trener bez grup nie ma alertów, ale uznajemy start za wykonany.
+  if (!finalGroups) {
+    trainerSetMedicalAlertBeacon_(0);
+    return true;
+  }
+
+  trainerScheduleMedicalExamAlertsCheck_(300, true);
+  return true;
+}
+
+
+function trainerBootMedicalAlertsWatcher_() {
+  if (window.__trainerMedicalBootWatcherStarted) return;
+  window.__trainerMedicalBootWatcherStarted = true;
+
+  let tries = 0;
+  const maxTries = 20; // ok. 10 sekund
+
+  const timer = setInterval(() => {
+    tries++;
+
+    const started = trainerStartMedicalAlertsFromActiveSession_();
+
+    if (started || tries >= maxTries) {
+      clearInterval(timer);
+    }
+  }, 500);
+}
+
+
+// Start po załadowaniu aplikacji — obsługuje przypadek aktywnej sesji/PWA.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    trainerBootMedicalAlertsWatcher_();
+  });
+} else {
+  setTimeout(() => {
+    trainerBootMedicalAlertsWatcher_();
+  }, 0);
+}
+
+// Dodatkowo po powrocie do aplikacji / odblokowaniu PWA.
+window.addEventListener("focus", () => {
+  trainerStartMedicalAlertsFromActiveSession_();
+});
+  
 window.__trainerMedicalExamAlertsByNr = window.__trainerMedicalExamAlertsByNr || {};
 window.__trainerMedicalExamAlertsCount = window.__trainerMedicalExamAlertsCount || 0;
 window.__trainerMedicalBeaconBlinkTimer = window.__trainerMedicalBeaconBlinkTimer || null;
