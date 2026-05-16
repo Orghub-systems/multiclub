@@ -10170,9 +10170,17 @@ function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
       "text-transform:uppercase",
       "filter:drop-shadow(0 0 5px rgba(255,0,0,.65))"
     ].join(";");
-
-    warn.textContent = "🚨 WAŻNOŚĆ BADAŃ";
-
+    const alert = map[nr] || {};
+    const daysLeft = Number(alert.daysLeft);
+    
+    if (isFinite(daysLeft) && daysLeft < 0) {
+      warn.textContent = "🚨 BADANIA PO TERMINIE";
+    } else if (isFinite(daysLeft) && daysLeft === 0) {
+      warn.textContent = "🚨 BADANIA DO DZISIAJ";
+    } else {
+      warn.textContent = "🚨 WAŻNOŚĆ BADAŃ";
+    }
+    
     tile.appendChild(warn);
   });
 }
