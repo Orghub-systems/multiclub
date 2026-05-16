@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.62';
+  window.APP_BUILD = 'APP v2.63';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1547,6 +1547,7 @@ input[type="number"] {
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
+  <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
   <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
 </div>
 
@@ -1879,6 +1880,21 @@ input[type="number"] {
   </div>
 </div>
 
+<!-- ADMIN FEATURES VIEW
+     Funkcje dodatkowe klubu -->
+
+<div id="adminFeaturesView" class="container hidden">
+  <h1>Funkcje dodatkowe</h1>
+
+  <div id="adminFeaturesBody">
+    <div class="card" style="background:#222;">⏳ Ładowanie...</div>
+  </div>
+
+  <p id="adminFeaturesMsg" style="margin-top:10px;"></p>
+
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
+  
 <!-- =========================================================
      SHARED VIEWS
      Ekrany współdzielone przez admina i trenera
@@ -16030,6 +16046,157 @@ async function adminLoadRaportRezerwacja_() {
 }
 
 /* =================== KONIEC SEKTORA 190 =================== */
+
+/* =================== SEKTOR 191 - funkcje dodatkowe =================== */
+
+async function adminPokazFunkcjeDodatkowe() {
+  goToView("adminFeaturesView");
+
+  const body = document.getElementById("adminFeaturesBody");
+  const msg = document.getElementById("adminFeaturesMsg");
+
+  if (body) {
+    body.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie...</div>`;
+  }
+
+  if (msg) msg.textContent = "";
+
+  try {
+    const res = await apiClubGet("adminFeaturesList", { t: Date.now() });
+
+    if (!res || res.success !== true) {
+      if (body) {
+        body.innerHTML = `
+          <div class="card" style="background:#700;">
+            ❌ ${res?.error || "Nie udało się pobrać funkcji dodatkowych."}
+          </div>
+        `;
+      }
+      return;
+    }
+
+    renderAdminFeatures_(res.features || []);
+
+  } catch (e) {
+    if (body) {
+      body.innerHTML = `
+        <div class="card" style="background:#700;">
+          ❌ ${e?.message || e}
+        </div>
+      `;
+    }
+  }
+}
+
+
+function renderAdminFeatures_(features) {
+  const body = document.getElementById("adminFeaturesBody");
+  if (!body) return;
+
+  if (!Array.isArray(features) || !features.length) {
+    body.innerHTML = `
+      <div class="card" style="background:#111;">
+        Brak funkcji dodatkowych do konfiguracji.
+      </div>
+    `;
+    return;
+  }
+
+  body.innerHTML = features.map(f => {
+    const key = String(f.key || "").trim();
+    const label = String(f.label || key || "Funkcja").trim();
+    const description = String(f.description || "").trim();
+    const enabled = f.enabled === true;
+
+    const safeKey = encodeURIComponent(key);
+
+    return `
+      <div class="card" style="text-align:left; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+          <div style="min-width:0;">
+            <div style="font-size:18px; font-weight:900;">
+              ${escapeHtml_(label)}
+            </div>
+
+            ${description ? `
+              <div style="opacity:.75; font-size:13px; margin-top:6px; line-height:1.35;">
+                ${escapeHtml_(description)}
+              </div>
+            ` : ``}
+          </div>
+
+          <label style="display:flex; align-items:center; gap:8px; font-weight:800; white-space:nowrap;">
+            <input
+              type="checkbox"
+              ${enabled ? "checked" : ""}
+              onchange="adminToggleFeature_(decodeURIComponent('${safeKey}'), this.checked)"
+              style="width:22px; height:22px;"
+            >
+            ${enabled ? "Włączone" : "Wyłączone"}
+          </label>
+        </div>
+
+        <div
+          id="featureStatus_${safeKey}"
+          style="font-size:13px; opacity:.75; margin-top:10px;"
+        ></div>
+      </div>
+    `;
+  }).join("");
+}
+
+
+async function adminToggleFeature_(featureKey, enabled) {
+  const key = String(featureKey || "").trim();
+  if (!key) return;
+
+  const msg = document.getElementById("adminFeaturesMsg");
+  const statusEl = document.getElementById("featureStatus_" + encodeURIComponent(key));
+
+  if (statusEl) statusEl.textContent = "⏳ Zapisuję...";
+  if (msg) msg.textContent = "";
+
+  try {
+    const res = await apiClubPost({
+      action: "adminSetFeature",
+      featureKey: key,
+      enabled: enabled ? "TRUE" : "FALSE",
+      updatedBy: "admin"
+    });
+
+    if (!res || res.success !== true) {
+      if (statusEl) statusEl.textContent = "";
+      if (msg) msg.textContent = "❌ " + (res?.error || "Nie udało się zapisać ustawienia.");
+
+      // Przy błędzie odświeżamy ekran, żeby checkbox wrócił do prawdziwego stanu.
+      setTimeout(() => {
+        adminPokazFunkcjeDodatkowe();
+      }, 500);
+
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.textContent = enabled
+        ? "✅ Funkcja została włączona."
+        : "✅ Funkcja została wyłączona.";
+    }
+
+    setTimeout(() => {
+      adminPokazFunkcjeDodatkowe();
+    }, 500);
+
+  } catch (e) {
+    if (statusEl) statusEl.textContent = "";
+    if (msg) msg.textContent = "❌ " + (e?.message || e);
+
+    setTimeout(() => {
+      adminPokazFunkcjeDodatkowe();
+    }, 500);
+  }
+}
+  
+/* =================== KONIEC SEKTORA 191 =================== */  
   
 /* =================== 200 MANUAL PUSH / GROUPS =================== */
 
