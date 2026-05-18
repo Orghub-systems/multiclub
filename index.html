@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.69';
+  window.APP_BUILD = 'APP v2.70';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8303,6 +8303,18 @@ async function getPlayerPaymentsPayload_(forceRefresh = false) {
   return window.__playerPaymentsPayload;
 }
 
+function normalizePlayerPaymentsPayload_(fresh) {
+  return {
+    biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
+    wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
+    spodziewane: Array.isArray(fresh?.spodziewane) ? fresh.spodziewane : [],
+
+    sumaBiezace: Number(fresh?.sumaBiezace || 0),
+    sumaWplacone: Number(fresh?.sumaWplacone || 0),
+    sumaSpodziewane: Number(fresh?.sumaSpodziewane || 0)
+  };
+}
+  
 async function pokazPlatnosci() {
   goToView("platnosciView");
   const div = document.getElementById("platnosciSummaryBox");
@@ -8347,12 +8359,7 @@ async function pokazPlatnosci() {
       }
     } catch (e) {}
 
-    const payload = {
-      biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
-      wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
-      sumaBiezace: Number(fresh?.sumaBiezace || 0),
-      sumaWplacone: Number(fresh?.sumaWplacone || 0)
-    };
+    const payload = normalizePlayerPaymentsPayload_(fresh);
 
     try {
       localStorage.setItem(cacheKey, JSON.stringify({
@@ -8424,12 +8431,7 @@ async function pokazPlatnosciBiezace() {
       }
     } catch (e) {}
 
-    const payload = {
-      biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
-      wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
-      sumaBiezace: Number(fresh?.sumaBiezace || 0),
-      sumaWplacone: Number(fresh?.sumaWplacone || 0)
-    };
+    const payload = normalizePlayerPaymentsPayload_(fresh);
 
     try {
       localStorage.setItem(cacheKey, JSON.stringify({
@@ -8494,12 +8496,7 @@ async function pokazPlatnosciWplacone() {
       }
     } catch (e) {}
 
-    const payload = {
-      biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
-      wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
-      sumaBiezace: Number(fresh?.sumaBiezace || 0),
-      sumaWplacone: Number(fresh?.sumaWplacone || 0)
-    };
+    const payload = normalizePlayerPaymentsPayload_(fresh);
 
     try {
       localStorage.setItem(cacheKey, JSON.stringify({
@@ -8525,20 +8522,59 @@ function renderPlatnosciMenu(payload) {
   const div = document.getElementById("platnosciSummaryBox");
   if (!div) return;
 
-  const biezace = Array.isArray(payload?.biezace) ? payload.biezace : [];
-  const wplacone = Array.isArray(payload?.wplacone) ? payload.wplacone : [];
-  const sumaBiezace = Number(payload?.sumaBiezace || 0);
-  const sumaWplacone = Number(payload?.sumaWplacone || 0);
+  const data = normalizePlayerPaymentsPayload_(payload);
+
+  const biezace = data.biezace;
+  const wplacone = data.wplacone;
+  const spodziewane = data.spodziewane;
+
+  const sumaBiezace = Number(data.sumaBiezace || 0);
+  const sumaWplacone = Number(data.sumaWplacone || 0);
+  const sumaSpodziewane = Number(data.sumaSpodziewane || 0);
 
   div.innerHTML = `
-    <div class="card" style="background:#3a1414; text-align:left; margin-top:10px; border:2px solid #ff5c5c; box-shadow:0 0 18px rgba(255,92,92,.18); position:relative; overflow:hidden;">
+    <div class="card" style="
+      background:#3a1414;
+      text-align:left;
+      margin-top:10px;
+      border:2px solid #ff5c5c;
+      box-shadow:0 0 18px rgba(255,92,92,.18);
+      position:relative;
+      overflow:hidden;
+    ">
       <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ff5c5c;"></div>
       <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">📌 Bieżące</div>
       <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaBiezace} zł</div>
       <div style="margin-top:8px; color:#FF9A9A; font-weight:800; font-size:15px;">Pozycji: ${biezace.length}</div>
     </div>
+
+    <div class="card" style="
+      background:#3a2614;
+      text-align:left;
+      margin-top:14px;
+      border:2px solid #ffb347;
+      box-shadow:0 0 18px rgba(255,179,71,.18);
+      position:relative;
+      overflow:hidden;
+    ">
+      <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ffb347;"></div>
+      <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">🟠 Spodziewane</div>
+      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaSpodziewane} zł</div>
+      <div style="margin-top:8px; color:#FFD28A; font-weight:800; font-size:15px;">Pozycji: ${spodziewane.length}</div>
+      <div style="margin-top:6px; opacity:.78; font-size:13px;">
+        Kwoty z bieżącego miesiąca — jeszcze niewymagane do zapłaty.
+      </div>
+    </div>
   
-    <div class="card" style="background:#123a1a; text-align:left; margin-top:14px; border:2px solid #5cff8d; box-shadow:0 0 18px rgba(92,255,141,.16); position:relative; overflow:hidden;">
+    <div class="card" style="
+      background:#123a1a;
+      text-align:left;
+      margin-top:14px;
+      border:2px solid #5cff8d;
+      box-shadow:0 0 18px rgba(92,255,141,.16);
+      position:relative;
+      overflow:hidden;
+    ">
       <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#5cff8d;"></div>
       <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">✅ Wpłacone</div>
       <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaWplacone} zł</div>
