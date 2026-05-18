@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.70';
+  window.APP_BUILD = 'APP v2.71';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -925,7 +925,36 @@ input[type="number"] {
     <div id="clubIdBadge_menu" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
   </div>
 
-  <h1 style="margin:0 0 25px 0;">Panel zawodnika</h1>
+  <h1>
+  Panel zawodnika
+  <span
+    id="playerMedicalAlertBeacon"
+    style="
+      display:none;
+      margin-left:8px;
+      color:#ff1f1f;
+      filter:drop-shadow(0 0 8px rgba(255,0,0,.85));
+    "
+    title="Kończy się ważność badań lekarskich"
+  >
+    🚨
+  </span>
+</h1>
+
+<div
+  id="playerMedicalExamAlertBox"
+  class="card"
+  style="
+    display:none;
+    background:#3a1414;
+    border:2px solid #ff5c5c;
+    box-shadow:0 0 18px rgba(255,92,92,.18);
+    color:#fff;
+    text-align:left;
+    margin-top:10px;
+    margin-bottom:14px;
+  "
+></div>
 
   <div class="login-box">
     <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
@@ -7109,6 +7138,10 @@ async function zaloguj() {
       goToView("playerMenuView");
       loadClubAd();
 
+      if (typeof playerScheduleMedicalExamAlertCheck_ === "function") {
+        playerScheduleMedicalExamAlertCheck_(300, true);
+      }
+
       try {
         await refreshPlayerMenuPushAlert_();
       } catch (e) {
@@ -7967,6 +8000,209 @@ function renderClubAd(ad) {
     link.href = "#";
   }
 }
+
+/* =================== player Medical Alert =================== */
+
+window.__playerMedicalBeaconBlinkTimer = window.__playerMedicalBeaconBlinkTimer || null;
+window.__playerMedicalAlertStartTimer = window.__playerMedicalAlertStartTimer || null;
+window.__playerMedicalAlertLastCheckMs = window.__playerMedicalAlertLastCheckMs || 0;
+
+function playerSetMedicalAlertVisible_(alertData) {
+  const beacon = document.getElementById("playerMedicalAlertBeacon");
+  const box = document.getElementById("playerMedicalExamAlertBox");
+
+  if (!beacon || !box) return;
+
+  if (window.__playerMedicalBeaconBlinkTimer) {
+    clearInterval(window.__playerMedicalBeaconBlinkTimer);
+    window.__playerMedicalBeaconBlinkTimer = null;
+  }
+
+  const show =
+    alertData &&
+    alertData.showAlert === true &&
+    alertData.enabled === true;
+
+  if (!show) {
+    beacon.style.display = "none";
+    beacon.style.opacity = "1";
+    beacon.style.transform = "scale(1)";
+
+    box.style.display = "none";
+    box.innerHTML = "";
+
+    return;
+  }
+
+  const dateLabel = String(alertData.validUntilLabel || alertData.validUntil || "").trim();
+  const daysLeft = Number(alertData.daysLeft);
+
+  let title = "🚨 Badania lekarskie";
+  let text = dateLabel
+    ? `W dniu ${dateLabel} kończy się termin badań lekarskich.`
+    : "Kończy się termin badań lekarskich.";
+
+  if (isFinite(daysLeft) && daysLeft < 0) {
+    title = "🚨 Badania po terminie";
+    text = dateLabel
+      ? `W dniu ${dateLabel} minął termin badań lekarskich.`
+      : "Termin badań lekarskich minął.";
+  }
+
+  beacon.style.display = "inline-block";
+  beacon.title = title;
+
+  let on = true;
+  beacon.style.opacity = "1";
+  beacon.style.transform = "scale(1)";
+
+  window.__playerMedicalBeaconBlinkTimer = setInterval(() => {
+    on = !on;
+    beacon.style.opacity = on ? "1" : "0.25";
+    beacon.style.transform = on ? "scale(1)" : "scale(1.18)";
+  }, 650);
+
+  box.style.display = "block";
+  box.innerHTML = `
+    <div style="font-size:15px; opacity:.95; font-weight:800;">
+      ${title}
+    </div>
+    <div style="font-size:17px; font-weight:900; margin-top:6px; color:#ffb3b3;">
+      ${text}
+    </div>
+    <div style="font-size:13px; opacity:.78; margin-top:6px;">
+      Skontaktuj się z trenerem lub administratorem klubu.
+    </div>
+  `;
+}
+
+
+async function playerRefreshMedicalExamAlert_() {
+  const nr = String(window.numerZalogowanego || numerZalogowanego || "").trim();
+
+  if (!nr) {
+    playerSetMedicalAlertVisible_(null);
+    return;
+  }
+
+  try {
+    const res = await apiClubGet("playerMedicalExamAlert", {
+      numer: nr,
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true) {
+      playerSetMedicalAlertVisible_(null);
+      return;
+    }
+
+    playerSetMedicalAlertVisible_(res);
+
+  } catch (e) {
+    console.warn("playerRefreshMedicalExamAlert_ error:", e);
+  }
+}
+
+
+function playerScheduleMedicalExamAlertCheck_(delayMs, force) {
+  if (window.__playerMedicalAlertStartTimer) {
+    clearTimeout(window.__playerMedicalAlertStartTimer);
+    window.__playerMedicalAlertStartTimer = null;
+  }
+
+  window.__playerMedicalAlertStartTimer = setTimeout(() => {
+    if (typeof playerRefreshMedicalExamAlert_ !== "function") return;
+
+    const now = Date.now();
+    const last = Number(window.__playerMedicalAlertLastCheckMs || 0);
+
+    // Bez force nie odpytujemy backendu częściej niż raz na minutę.
+    if (!force && last && now - last < 60 * 1000) {
+      return;
+    }
+
+    window.__playerMedicalAlertLastCheckMs = now;
+    playerRefreshMedicalExamAlert_();
+
+  }, Number(delayMs || 300));
+}
+
+
+function playerStartMedicalAlertFromActiveSession_() {
+  if (typeof playerScheduleMedicalExamAlertCheck_ !== "function") {
+    return false;
+  }
+
+  let sess = null;
+
+  try {
+    if (typeof loadAppSession_ === "function") {
+      sess = loadAppSession_();
+    }
+  } catch (e) {
+    sess = null;
+  }
+
+  const role = String(sess?.role || "").trim().toLowerCase();
+
+  if (role !== "zawodnik") {
+    return false;
+  }
+
+  const sessionLogin = String(sess?.loginId || sess?.numer || "").trim();
+  const currentNr = String(window.numerZalogowanego || numerZalogowanego || "").trim();
+
+  if (!currentNr && sessionLogin) {
+    window.numerZalogowanego = sessionLogin;
+    try { numerZalogowanego = sessionLogin; } catch (e) {}
+  }
+
+  const finalNr = String(window.numerZalogowanego || numerZalogowanego || "").trim();
+
+  if (!finalNr) {
+    return false;
+  }
+
+  playerScheduleMedicalExamAlertCheck_(300, true);
+  return true;
+}
+
+
+function playerBootMedicalAlertWatcher_() {
+  if (window.__playerMedicalBootWatcherStarted) return;
+  window.__playerMedicalBootWatcherStarted = true;
+
+  let tries = 0;
+  const maxTries = 20; // około 10 sekund
+
+  const timer = setInterval(() => {
+    tries++;
+
+    const started = playerStartMedicalAlertFromActiveSession_();
+
+    if (started || tries >= maxTries) {
+      clearInterval(timer);
+    }
+  }, 500);
+}
+
+
+// Start po załadowaniu aplikacji — działa przy aktywnej sesji/PWA.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    playerBootMedicalAlertWatcher_();
+  });
+} else {
+  setTimeout(() => {
+    playerBootMedicalAlertWatcher_();
+  }, 0);
+}
+
+// Dodatkowo po powrocie do aplikacji / odblokowaniu PWA.
+window.addEventListener("focus", () => {
+  playerStartMedicalAlertFromActiveSession_();
+});
+  
 
 /* =================== KONIEC SEKTORA 100 =================== */  
 
