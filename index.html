@@ -3490,6 +3490,7 @@ function applyTheme_(theme) {
 /* =================== APP SESSION / LOCAL =================== */
 
 const ORGHUB_SESSION_KEY = "orghub_app_session_v1";
+const ORGHUB_LAST_VIEW_KEY = "orghub_last_view_v1";
 
 function saveAppSession_(sessionObj) {
   try {
@@ -3514,9 +3515,117 @@ function loadAppSession_() {
   }
 }
 
+function getDefaultViewForRole_(role) {
+  const r = String(role || "").trim().toLowerCase();
+
+  if (r === "zawodnik") return "playerMenuView";
+  if (r === "trener") return "trainerPanelView";
+  if (r === "admin") return "adminPanelView";
+
+  return "loginView";
+}
+
+
+function isRestorableAppView_(viewId) {
+  const id = String(viewId || "").trim();
+  if (!id) return false;
+
+  const blocked = {
+    loginView: true,
+    orgHubLandingView: true,
+    clubConfigView: true,
+    clubSetupView: true
+  };
+
+  if (blocked[id]) return false;
+
+  const el = document.getElementById(id);
+  if (!el) return false;
+
+  return el.classList.contains("container") || el.classList.contains("view");
+}
+
+
+function saveLastAppView_(viewId) {
+  try {
+    const id = String(viewId || "").trim();
+    if (!isRestorableAppView_(id)) return false;
+
+    const sess = loadAppSession_();
+    const cid = String(clubId || getClubIdFromUrl_() || "").trim();
+
+    if (!sess || !cid) return false;
+    if (String(sess.clubId || "").trim() !== cid) return false;
+
+    const appStack = Array.isArray(window.__appViewStack) && window.__appViewStack.length
+      ? [...window.__appViewStack]
+      : [id];
+
+    const payload = {
+      clubId: cid,
+      role: String(sess.role || "").trim().toLowerCase(),
+      viewId: id,
+      appStack: appStack,
+      savedAt: Date.now()
+    };
+
+    localStorage.setItem(ORGHUB_LAST_VIEW_KEY, JSON.stringify(payload));
+    return true;
+
+  } catch (e) {
+    console.warn("saveLastAppView_ error", e);
+    return false;
+  }
+}
+
+
+function loadLastAppViewForSession_(sess) {
+  try {
+    const raw = localStorage.getItem(ORGHUB_LAST_VIEW_KEY);
+    if (!raw) return null;
+
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== "object") return null;
+
+    const sessionClubId = String(sess?.clubId || "").trim();
+    const sessionRole = String(sess?.role || "").trim().toLowerCase();
+
+    if (!sessionClubId || !sessionRole) return null;
+
+    if (String(saved.clubId || "").trim() !== sessionClubId) return null;
+    if (String(saved.role || "").trim().toLowerCase() !== sessionRole) return null;
+
+    const viewId = String(saved.viewId || "").trim();
+    if (!isRestorableAppView_(viewId)) return null;
+
+    return {
+      viewId: viewId,
+      appStack: Array.isArray(saved.appStack) && saved.appStack.length
+        ? saved.appStack.filter(function(id) {
+            return isRestorableAppView_(id) || id === getDefaultViewForRole_(sessionRole);
+          })
+        : [viewId]
+    };
+
+  } catch (e) {
+    console.warn("loadLastAppViewForSession_ error", e);
+    return null;
+  }
+}
+
+
+function clearLastAppView_() {
+  try {
+    localStorage.removeItem(ORGHUB_LAST_VIEW_KEY);
+  } catch (e) {
+    console.warn("clearLastAppView_ error", e);
+  }
+}
+
 function clearAppSession_() {
   try {
     localStorage.removeItem(ORGHUB_SESSION_KEY);
+    localStorage.removeItem(ORGHUB_LAST_VIEW_KEY);
   } catch (e) {
     console.warn("clearAppSession_ error", e);
   }
@@ -3557,16 +3666,35 @@ function applyAppSessionToGlobals_(sess) {
   try { sessionStorage.setItem("userEmailConsent", window.userEmailConsent ? "1" : "0"); } catch (e) {}
 }
 
-function openPanelFromAppSession_(sess) {
+function openPanelFromAppSession_(sess, options = {}) {
   const s = sess || {};
-  const role = String(s.role || "").trim();
+  const role = String(s.role || "").trim().toLowerCase();
+  const preferLastView = options && options.preferLastView === true;
 
   refreshClubBadge_();
   prefetchClubGroupsConfig_();
 
-  if (role === "zawodnik") {
-    goToView("playerMenuView", { replace: true });
+  let targetView = "";
 
+  if (preferLastView) {
+    const saved = loadLastAppViewForSession_(s);
+
+    if (saved && saved.viewId) {
+      targetView = saved.viewId;
+
+      if (Array.isArray(saved.appStack) && saved.appStack.length) {
+        window.__appViewStack = [...saved.appStack];
+      }
+    }
+  }
+
+  if (!targetView) {
+    targetView = getDefaultViewForRole_(role);
+  }
+
+  goToView(targetView, { replace: true });
+
+  if (role === "zawodnik") {
     const numerLabel = document.getElementById("playerNumerLabel");
     if (numerLabel) {
       numerLabel.textContent = String(s.loginId || "").trim();
@@ -3586,21 +3714,7 @@ function openPanelFromAppSession_(sess) {
     refreshPlayerNotificationsBell_().catch(function (e) {
       console.warn("refreshPlayerNotificationsBell_ error:", e);
     });
-
-    return;
   }
-
-  if (role === "trener") {
-    goToView("trainerPanelView", { replace: true });
-    return;
-  }
-
-  if (role === "admin") {
-    goToView("adminPanelView", { replace: true });
-    return;
-  }
-
-  goToView("loginView", { replace: true });
 }
 
 async function validateStoredSessionInBackground_(sess) {
@@ -4120,6 +4234,8 @@ function goToView(viewId, options = {}) {
   if (viewId === "loginView") {
     const komunikat = document.getElementById("komunikat");
     if (komunikat) komunikat.innerText = "";
+
+      saveLastAppView_(viewId);
   }
 
   // =================== APP STACK ===================
@@ -4223,6 +4339,7 @@ function showViewFromHistory(viewId, state = null) {
   if (viewId === "playerSettingsView") {
     refreshPushButtonState_();
   }
+    saveLastAppView_(viewId);
 }
 
 // Powrót do poprzedniego widoku aplikacji  
@@ -4536,7 +4653,7 @@ async function startApp_() {
 
   if (sessionForThisClub) {
     applyAppSessionToGlobals_(sessionForThisClub);
-    openPanelFromAppSession_(sessionForThisClub);
+    openPanelFromAppSession_(sessionForThisClub, { preferLastView: true });
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
