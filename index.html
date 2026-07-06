@@ -11847,6 +11847,11 @@ async function wyslijNoweWydarzenie() {
     submitBtn.textContent = "⏳ Dodawanie...";
   }
 
+  if (window.__addEventMsgTimer) {
+  clearTimeout(window.__addEventMsgTimer);
+  window.__addEventMsgTimer = null;
+}
+  
   msg.innerText = "⏳ Dodawanie wydarzenia...";
  
   try {
@@ -11869,9 +11874,20 @@ async function wyslijNoweWydarzenie() {
       powolani
     });
  
-    msg.innerText = r.message || "Nieznany wynik.";
- 
+    const resultMsg = r.message || "Nieznany wynik.";
+    msg.innerText = resultMsg;
+    
     if (r.success) {
+      window.__addEventMsgTimer = setTimeout(function() {
+        const currentMsg = document.getElementById("eventMsg");
+    
+        if (currentMsg && currentMsg.innerText === resultMsg) {
+          currentMsg.innerText = "";
+        }
+    
+        window.__addEventMsgTimer = null;
+      }, 3000);
+  
       document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
         if (i.type !== "checkbox" && i.type !== "hidden") i.value = "";
         else if (i.type === "checkbox") i.checked = false;
