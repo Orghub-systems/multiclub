@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.71';
+  window.APP_BUILD = 'APP v2.72';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1641,7 +1641,7 @@ input[type="number"] {
       </label>
 
       <div style="margin-top:10px;">
-        <button class="full-btn" onclick="wyslijNoweWydarzenie()">💾 Dodaj wydarzenie</button>
+        <button id="btnDodajWydarzenie" class="full-btn" onclick="wyslijNoweWydarzenie()">💾 Dodaj wydarzenie</button>
         <button class="full-btn alt" onclick="appBack()">Anuluj</button>
       </div>
 
@@ -11776,6 +11776,11 @@ function applyPowolaniPopup() {
 // =================== TRENER: DODANIE WYDARZENIA ===================
  
 async function wyslijNoweWydarzenie() {
+    const submitBtn = document.getElementById("btnDodajWydarzenie");
+
+  if (submitBtn && submitBtn.dataset.busy === "1") {
+    return;
+  }
   const data = document.getElementById("eventData").value;
   let dataKoniec = document.getElementById("eventDataEnd")?.value || "";
   const start = document.getElementById("eventStart").value;
@@ -11834,6 +11839,14 @@ async function wyslijNoweWydarzenie() {
     return;
   }
  
+    if (submitBtn) {
+    submitBtn.dataset.busy = "1";
+    submitBtn.disabled = true;
+    submitBtn.classList.add("loading");
+    submitBtn.dataset.originalText = submitBtn.textContent || "💾 Dodaj wydarzenie";
+    submitBtn.textContent = "⏳ Dodawanie...";
+  }
+
   msg.innerText = "⏳ Dodawanie wydarzenia...";
  
   try {
@@ -11890,6 +11903,14 @@ async function wyslijNoweWydarzenie() {
  
   } catch (err) {
     msg.innerText = "❌ Błąd połączenia: " + err;
+
+  } finally {
+    if (submitBtn) {
+      submitBtn.dataset.busy = "0";
+      submitBtn.disabled = false;
+      submitBtn.classList.remove("loading");
+      submitBtn.textContent = submitBtn.dataset.originalText || "💾 Dodaj wydarzenie";
+    }
   }
 }
 
