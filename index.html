@@ -410,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.74';
+  window.APP_BUILD = 'APP v2.75';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3621,6 +3621,139 @@ function clearLastAppView_() {
   }
 }
 
+  function restoreViewDataAfterRefresh_(viewId, sess) {
+  const id = String(viewId || "").trim();
+
+  try {
+    // ===================
+    // ZAWODNIK
+    // ===================
+
+    if (id === "platnosciView") {
+      pokazPlatnosci();
+      return true;
+    }
+
+    if (id === "platnosciBiezaceView") {
+      pokazPlatnosciBiezace();
+      return true;
+    }
+
+    if (id === "platnosciWplaconeView") {
+      pokazPlatnosciWplacone();
+      return true;
+    }
+
+    if (id === "homeView") {
+      pokazTreningi();
+      return true;
+    }
+
+    if (id === "statsView") {
+      pokazStatystyki();
+      return true;
+    }
+
+    if (id === "playerNotificationsView") {
+      openPlayerNotificationsView_();
+      return true;
+    }
+
+    if (id === "playerSettingsView") {
+      goToView("playerSettingsView", { replace: true });
+      refreshPushButtonState_();
+      return true;
+    }
+
+    // ===================
+    // TRENER
+    // ===================
+
+    if (id === "trainerZawodnicyView") {
+      trainerPokazZawodnicy();
+      return true;
+    }
+
+    if (id === "trainerWydarzeniaCurrentView") {
+      trainerShowCurrentEvents_();
+      return true;
+    }
+
+    if (id === "trainerWydarzeniaArchiveView") {
+      trainerShowArchiveEventsMode_();
+      return true;
+    }
+
+    if (id === "trainerRaportObecnosciView") {
+      trainerPokazRaportObecnosci();
+      return true;
+    }
+
+    // Ekran szczegółów zawodnika wymaga wybranego zawodnika.
+    // Po odświeżeniu nie odtwarzamy go na siłę bez nr zawodnika.
+    if (id === "trainerZawodnikView") {
+      trainerPokazZawodnicy();
+      return true;
+    }
+
+    // ===================
+    // ADMIN
+    // ===================
+
+    if (id === "adminZawodnicyView") {
+      adminPokazZawodnikow();
+      return true;
+    }
+
+    if (id === "adminTrenerzyView") {
+      adminPokazTrenerow();
+      return true;
+    }
+
+    if (id === "adminGroupsView") {
+      openAdminClubGroupsView();
+      return true;
+    }
+
+    if (id === "adminRaportWydarzeniaView") {
+      adminRaportyOpenWydarzenia();
+      return true;
+    }
+
+    if (id === "adminRaportTrenerzyView") {
+      adminRaportyOpenTrenerzy();
+      return true;
+    }
+
+    if (id === "adminRaportRezerwacjaView") {
+      adminRaportyOpenRezerwacja();
+      return true;
+    }
+
+    // Szczegóły zawodnika/admina/trenera wymagają wybranego rekordu.
+    // Bez tego po refreshu będzie pusty ekran, więc wracamy na listę.
+    if (id === "adminZawodnikView") {
+      adminPokazZawodnikow();
+      return true;
+    }
+
+    if (id === "adminTrenerInfoView" || id === "adminTrenerGrupyView") {
+      adminPokazTrenerow();
+      return true;
+    }
+
+    return false;
+
+  } catch (e) {
+    console.warn("restoreViewDataAfterRefresh_ error:", {
+      viewId: id,
+      error: e?.message || e
+    });
+
+    return false;
+  }
+}
+
 function clearAppSession_() {
   try {
     localStorage.removeItem(ORGHUB_SESSION_KEY);
@@ -3686,12 +3819,17 @@ function openPanelFromAppSession_(sess, options = {}) {
       }
     }
   }
-
   if (!targetView) {
     targetView = getDefaultViewForRole_(role);
   }
 
-  goToView(targetView, { replace: true });
+  const restoredByLoader = preferLastView
+    ? restoreViewDataAfterRefresh_(targetView, s)
+    : false;
+
+  if (!restoredByLoader) {
+    goToView(targetView, { replace: true });
+  }
 
   if (role === "zawodnik") {
     const numerLabel = document.getElementById("playerNumerLabel");
