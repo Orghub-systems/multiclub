@@ -30,7 +30,6 @@
       color: #fff;
       text-align: center;
     }
-
     .hidden { display: none !important; }
     .container { margin-top: 40px; }
 
@@ -411,7 +410,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.73';
+  window.APP_BUILD = 'APP v2.74';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4234,8 +4233,6 @@ function goToView(viewId, options = {}) {
   if (viewId === "loginView") {
     const komunikat = document.getElementById("komunikat");
     if (komunikat) komunikat.innerText = "";
-
-      saveLastAppView_(viewId);
   }
 
   // =================== APP STACK ===================
@@ -4269,6 +4266,8 @@ function goToView(viewId, options = {}) {
       else history.pushState(state, "", urlKeep);
     } catch (e) {}
   }
+
+  saveLastAppView_(viewId);
 }
 
   function hookOrgHubInstallCardIntoGoToView_() {
@@ -4382,6 +4381,8 @@ function appBack() {
     const state = { view: prevView, appStack: [...window.__appViewStack] };
     history.replaceState(state, "", location.pathname + location.search);
   } catch (e) {}
+
+  saveLastAppView_(prevView);
 }
 
 // Sprawdzenie, czy któryś modal płatności jest otwarty  
