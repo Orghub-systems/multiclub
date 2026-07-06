@@ -4417,6 +4417,11 @@ window.addEventListener("popstate", (event) => {
     hidePowolaniPopup_();
   }
 
+    // popup trenera: edycja numeru zawodnika
+  if (isTrainerPlayerNumberPopupOpen_() && !(state && state.modal === "trainerPlayerNumberPopup")) {
+    hideTrainerPlayerNumberEdit_();
+  }
+
     // popup rejestracji: wybór wolnego numeru
   const freeNumbersPopup = document.getElementById("freeNumbersPopup");
   if (
@@ -12831,6 +12836,28 @@ async function adminPokazZawodnikow() {
   }
 }
 
+function isTrainerPlayerNumberPopupOpen_() {
+  const popup = document.getElementById("trainerPlayerNumberPopup");
+  if (!popup) return false;
+
+  return (
+    !popup.classList.contains("hidden") &&
+    popup.style.display !== "none"
+  );
+}
+
+
+function hideTrainerPlayerNumberEdit_() {
+  const popup = document.getElementById("trainerPlayerNumberPopup");
+  if (!popup) return;
+
+  popup.classList.add("hidden");
+  popup.style.display = "none";
+
+  const msg = document.getElementById("trainerPlayerNumberMsg");
+  if (msg) msg.textContent = "";
+}
+  
 function trainerOpenPlayerVisibleNumberEdit_() {
   const popup = document.getElementById("trainerPlayerNumberPopup");
   const nameEl = document.getElementById("trainerPlayerNumberName");
@@ -12856,14 +12883,17 @@ function trainerOpenPlayerVisibleNumberEdit_() {
 
   popup.classList.remove("hidden");
   popup.style.display = "flex";
+
+  pushPaymentModalHistoryState_("trainerPlayerNumberPopup");
 }
 
 function trainerClosePlayerVisibleNumberEdit_() {
-  const popup = document.getElementById("trainerPlayerNumberPopup");
-  if (!popup) return;
+  if (isHistoryModal_("trainerPlayerNumberPopup")) {
+    history.back();
+    return;
+  }
 
-  popup.classList.add("hidden");
-  popup.style.display = "none";
+  hideTrainerPlayerNumberEdit_();
 }
 
 async function trainerSavePlayerVisibleNumber_() {
