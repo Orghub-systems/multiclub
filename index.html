@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.82';
+  window.APP_BUILD = 'APP v2.83';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -15554,7 +15554,7 @@ async function adminOpenPlatnosciZawodnikowView() {
 
   const now = new Date();
   const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
+  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
 
   // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
@@ -15653,72 +15653,73 @@ function renderAdminPlatnosciZawodnikow_(res) {
   body.innerHTML = items.map(renderAdminDebtTile_).join("");
 }
 
-function renderAdminDebtTile_(p) {
-  const numer = String(p.numer || "").trim();
-  const nazwisko = escapeHtml_(String(p.nazwisko || ""));
-  const email = String(p.email || "").trim();
-  const suma = Number(p.suma || 0);
+const detailsHtml = zaleglosci.map(z => {
+  const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
+  const labelTxt = String(z.label || "");
+  const label = escapeHtml_(labelTxt);
+  const brakuje = Number(z.brakuje || 0);
+  const col = Number(z.col || 0);
+  const typRaw = String(z.typ || "").trim();
 
-  const rawLastReminder = p.lastReminderAt || p.last_reminder_at || "";
-  let lastReminderHtml = "";
+  const sourceSheet = String(z.sourceSheet || p.sourceSheet || "Kartoteka").trim();
+  const sourceType = String(z.sourceType || p.sourceType || "current").trim();
+  const isArchive = sourceType === "archive";
 
-  if (rawLastReminder) {
-    const d = new Date(rawLastReminder);
-    const isValid = !isNaN(d.getTime());
+  const seasonLabel = sourceSheet
+    ? sourceSheet.replace(/\s*Kartoteka\s*$/i, "").trim()
+    : "";
 
-    const formatted = isValid
-      ? d.toLocaleString("pl-PL", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        })
-      : escapeHtml_(String(rawLastReminder));
-
-    lastReminderHtml = `
-      <div style="margin-top:10px; font-size:13px; color:#b8b8b8; line-height:1.35;">
-        Ostatnie ponaglenie: ${escapeHtml_(formatted)}
+  const archiveBadgeHtml = isArchive
+    ? `
+      <div style="
+        display:inline-block;
+        margin-top:7px;
+        padding:3px 7px;
+        border-radius:999px;
+        background:#3a2600;
+        border:1px solid #ffb000;
+        color:#ffd37a;
+        font-size:11px;
+        font-weight:900;
+        letter-spacing:.4px;
+        text-transform:uppercase;
+      ">
+        ARCHIWUM ${escapeHtml_(seasonLabel || sourceSheet)}
       </div>
-    `;
-  }
+    `
+    : "";
 
-  const zaleglosci = Array.isArray(p.zaleglosci) ? p.zaleglosci : [];
-  
-  const detailsHtml = zaleglosci.map(z => {
-    const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
-    const labelTxt = String(z.label || "");
-    const label = escapeHtml_(labelTxt);
-    const brakuje = Number(z.brakuje || 0);
-    const col = Number(z.col || 0);
-    const typRaw = String(z.typ || "").trim();
-  
-    return `
-      <button
-        type="button"
-        data-col="${Number.isFinite(col) ? col : ""}"
-        data-label="${encodeURIComponent(labelTxt)}"
-        data-typ="${encodeURIComponent(typRaw)}"
-        onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
-        style="
-          display:block;
-          width:100%;
-          margin-top:8px;
-          padding:10px 12px;
-          border-radius:12px;
-          border:1px solid #3a3a3a;
-          background:linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
-          color:#fff;
-          text-align:left;
-          font-size:15px;
-          font-weight:600;
-          cursor:pointer;
-        ">
+  return `
+    <button
+      type="button"
+      data-col="${Number.isFinite(col) ? col : ""}"
+      data-label="${encodeURIComponent(labelTxt)}"
+      data-typ="${encodeURIComponent(typRaw)}"
+      data-source-sheet="${encodeURIComponent(sourceSheet)}"
+      data-source-type="${encodeURIComponent(sourceType)}"
+      onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
+      style="
+        display:block;
+        width:100%;
+        margin-top:8px;
+        padding:10px 12px;
+        border-radius:12px;
+        border:1px solid ${isArchive ? "#ffb000" : "#3a3a3a"};
+        background:${isArchive ? "linear-gradient(180deg, #211800 0%, #15110a 100%)" : "linear-gradient(180deg, #1b1b1b 0%, #151515 100%)"};
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+        color:#fff;
+        text-align:left;
+        font-size:15px;
+        font-weight:600;
+        cursor:pointer;
+      ">
+      <div>
         ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
-      </button>
-    `;
-  }).join("");
+      </div>
+      ${archiveBadgeHtml}
+    </button>
+  `;
+}).join("");
 
   const btnHtml = email
     ? `<button class="full-btn"
@@ -15766,6 +15767,9 @@ function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
   const label = decodeURIComponent(String(btnEl?.dataset?.label || ""));
   const typ = decodeURIComponent(String(btnEl?.dataset?.typ || ""));
 
+  const sourceSheet = decodeURIComponent(String(btnEl?.dataset?.sourceSheet || "Kartoteka"));
+  const sourceType = decodeURIComponent(String(btnEl?.dataset?.sourceType || "current"));
+
   if (!col) {
     alert("❌ Brak kolumny płatności.");
     return;
@@ -15773,8 +15777,13 @@ function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
 
   window.__adminSelectedNr = numer;
 
+  // Dane źródła długu — potrzebne, żeby płatność archiwalna trafiła
+  // do właściwej zakładki, np. "2025-2026 Kartoteka".
+  window.__adminSelectedDebtSourceSheet = sourceSheet || "Kartoteka";
+  window.__adminSelectedDebtSourceType = sourceType || "current";
+
   adminConfirmPayment(col, label, typ);
-}  
+}
   
 async function adminSendPaymentReminder(numerEncoded, btnEl) {
   const numer = decodeURIComponent(String(numerEncoded || "")).trim();
