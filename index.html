@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.83';
+  window.APP_BUILD = 'APP v2.82';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -15554,7 +15554,7 @@ async function adminOpenPlatnosciZawodnikowView() {
 
   const now = new Date();
   const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
+  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
 
   // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
@@ -15653,41 +15653,73 @@ function renderAdminPlatnosciZawodnikow_(res) {
   body.innerHTML = items.map(renderAdminDebtTile_).join("");
 }
 
-const detailsHtml = zaleglosci.map(z => {
-  const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
-  const labelTxt = String(z.label || "");
-  const label = escapeHtml_(labelTxt);
-  const brakuje = Number(z.brakuje || 0);
-  const col = Number(z.col || 0);
-  const typRaw = String(z.typ || "").trim();
+function renderAdminDebtTile_(p) {
+  const numer = String(p.numer || "").trim();
+  const nazwisko = escapeHtml_(String(p.nazwisko || ""));
+  const email = String(p.email || "").trim();
+  const suma = Number(p.suma || 0);
 
-  return `
-    <button
-      type="button"
-      data-col="${Number.isFinite(col) ? col : ""}"
-      data-label="${encodeURIComponent(labelTxt)}"
-      data-typ="${encodeURIComponent(typRaw)}"
-      onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
-      style="
-        display:block;
-        width:100%;
-        margin-top:8px;
-        padding:10px 12px;
-        border-radius:12px;
-        border:1px solid #3a3a3a;
-        background:linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
-        box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
-        color:#fff;
-        text-align:left;
-        font-size:15px;
-        font-weight:600;
-        cursor:pointer;
-      ">
-      ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
-    </button>
-  `;
-}).join("");
+  const rawLastReminder = p.lastReminderAt || p.last_reminder_at || "";
+  let lastReminderHtml = "";
+
+  if (rawLastReminder) {
+    const d = new Date(rawLastReminder);
+    const isValid = !isNaN(d.getTime());
+
+    const formatted = isValid
+      ? d.toLocaleString("pl-PL", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      : escapeHtml_(String(rawLastReminder));
+
+    lastReminderHtml = `
+      <div style="margin-top:10px; font-size:13px; color:#b8b8b8; line-height:1.35;">
+        Ostatnie ponaglenie: ${escapeHtml_(formatted)}
+      </div>
+    `;
+  }
+
+  const zaleglosci = Array.isArray(p.zaleglosci) ? p.zaleglosci : [];
   
+  const detailsHtml = zaleglosci.map(z => {
+    const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
+    const labelTxt = String(z.label || "");
+    const label = escapeHtml_(labelTxt);
+    const brakuje = Number(z.brakuje || 0);
+    const col = Number(z.col || 0);
+    const typRaw = String(z.typ || "").trim();
+  
+    return `
+      <button
+        type="button"
+        data-col="${Number.isFinite(col) ? col : ""}"
+        data-label="${encodeURIComponent(labelTxt)}"
+        data-typ="${encodeURIComponent(typRaw)}"
+        onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
+        style="
+          display:block;
+          width:100%;
+          margin-top:8px;
+          padding:10px 12px;
+          border-radius:12px;
+          border:1px solid #3a3a3a;
+          background:linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+          color:#fff;
+          text-align:left;
+          font-size:15px;
+          font-weight:600;
+          cursor:pointer;
+        ">
+        ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
+      </button>
+    `;
+  }).join("");
+
   const btnHtml = email
     ? `<button class="full-btn"
          style="margin:0; background:#8b0000; border:1px solid #ff2b2b; width:auto; min-width:210px;"
@@ -15742,7 +15774,7 @@ function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
   window.__adminSelectedNr = numer;
 
   adminConfirmPayment(col, label, typ);
-}
+}  
   
 async function adminSendPaymentReminder(numerEncoded, btnEl) {
   const numer = decodeURIComponent(String(numerEncoded || "")).trim();
