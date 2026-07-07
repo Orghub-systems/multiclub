@@ -15782,6 +15782,9 @@ function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
   const label = decodeURIComponent(String(btnEl?.dataset?.label || ""));
   const typ = decodeURIComponent(String(btnEl?.dataset?.typ || ""));
 
+  const sourceSheet = decodeURIComponent(String(btnEl?.dataset?.sourceSheet || "Kartoteka"));
+  const sourceType = decodeURIComponent(String(btnEl?.dataset?.sourceType || "current"));
+
   if (!col) {
     alert("❌ Brak kolumny płatności.");
     return;
@@ -15789,8 +15792,14 @@ function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
 
   window.__adminSelectedNr = numer;
 
+  // Źródło długu:
+  // current → Kartoteka
+  // archive → np. 2025-2026 Kartoteka
+  window.__adminSelectedDebtSourceSheet = sourceSheet || "Kartoteka";
+  window.__adminSelectedDebtSourceType = sourceType || "current";
+
   adminConfirmPayment(col, label, typ);
-}  
+}
   
 async function adminSendPaymentReminder(numerEncoded, btnEl) {
   const numer = decodeURIComponent(String(numerEncoded || "")).trim();
