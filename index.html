@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.76';
+  window.APP_BUILD = 'APP v2.77';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4234,37 +4234,23 @@ function appBack() {
     return;
   }
 
-  // Zdejmij aktualny widok ze stosu
-  window.__appViewStack.pop();
-
-  // Pokaż poprzedni widok
-  const prevView = window.__appViewStack[window.__appViewStack.length - 1];
-
-  if (!prevView || !document.getElementById(prevView)) {
-    goToView(rootView, { replace: true });
-    return;
-  }
-
-  ukryjWszystkie();
-  hideBusy();
-
-  const el = document.getElementById(prevView);
-  if (el) el.classList.remove("hidden");
-
-  currentView = prevView;
-
-  if (prevView === "playerMenuView") {
-    const lbl = document.getElementById("playerNumerLabel");
-    if (lbl) lbl.textContent = String(numerZalogowanego || "");
-    startPrefetchForPlayer_();
-  }
-
-  hookPushButton_();
-
   try {
-    const state = { view: prevView, appStack: [...window.__appViewStack] };
-    history.replaceState(state, "", location.pathname + location.search);
-  } catch (e) {}
+    history.back();
+  } catch (e) {
+    window.__appViewStack.pop();
+
+    const prevView = window.__appViewStack[window.__appViewStack.length - 1];
+
+    if (!prevView || !document.getElementById(prevView)) {
+      goToView(rootView, { replace: true });
+      return;
+    }
+
+    showViewFromHistory(prevView, {
+      view: prevView,
+      appStack: [...window.__appViewStack]
+    });
+  }
 }
 
 // Sprawdzenie, czy któryś modal płatności jest otwarty  
