@@ -15692,6 +15692,19 @@ function renderAdminDebtTile_(p) {
     const brakuje = Number(z.brakuje || 0);
     const col = Number(z.col || 0);
     const typRaw = String(z.typ || "").trim();
+    const sourceSheet = String(z.sourceSheet || "Kartoteka").trim();
+    const sourceType = String(z.sourceType || "current").trim();
+    const isArchive = sourceType === "archive";
+    
+    const seasonLabel = sourceSheet
+      .replace(/\s*Kartoteka\s*$/i, "")
+      .trim();
+    
+    const archiveBadgeHtml = isArchive
+      ? `<div style="margin-top:6px; color:#ffd37a; font-size:11px; font-weight:900;">
+           ARCHIWUM ${escapeHtml_(seasonLabel || sourceSheet)}
+         </div>`
+      : "";
   
     return `
       <button
@@ -15699,6 +15712,8 @@ function renderAdminDebtTile_(p) {
         data-col="${Number.isFinite(col) ? col : ""}"
         data-label="${encodeURIComponent(labelTxt)}"
         data-typ="${encodeURIComponent(typRaw)}"
+        data-source-sheet="${encodeURIComponent(sourceSheet)}"
+        data-source-type="${encodeURIComponent(sourceType)}"
         onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
         style="
           display:block;
@@ -15716,6 +15731,7 @@ function renderAdminDebtTile_(p) {
           cursor:pointer;
         ">
         ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
+        ${archiveBadgeHtml}
       </button>
     `;
   }).join("");
