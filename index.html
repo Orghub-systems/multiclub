@@ -3823,13 +3823,7 @@ function openPanelFromAppSession_(sess, options = {}) {
     targetView = getDefaultViewForRole_(role);
   }
 
-  const restoredByLoader = preferLastView
-    ? restoreViewDataAfterRefresh_(targetView, s)
-    : false;
-
-  if (!restoredByLoader) {
-    goToView(targetView, { replace: true });
-  }
+  goToView(targetView, { replace: true });
 
   if (role === "zawodnik") {
     const numerLabel = document.getElementById("playerNumerLabel");
