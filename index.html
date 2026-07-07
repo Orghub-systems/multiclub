@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.80';
+  window.APP_BUILD = 'APP v2.81';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9884,27 +9884,18 @@ trainerRefreshMedicalFeatureState_().then(enabled => {
       statsEl.innerHTML = "";
     }
 
-  setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
+   setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
 
   try {
-    const [infoResult, grupyResult] = await Promise.allSettled([
-      apiClubPost({
-        action: "adminPlayerInfo",
-        numer: nrSafe
-      }),
-      apiClubGet("adminGrupy", {
-        numer: nrSafe
-      })
-    ]);
+    const infoRes = await apiClubPost({
+      action: "adminPlayerInfo",
+      numer: nrSafe
+    });
 
     // Jeśli w międzyczasie kliknięto innego zawodnika — nie nadpisujemy widoku.
     if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
 
-    const infoRes = infoResult.status === "fulfilled" ? infoResult.value : null;
-    const grupyRes = grupyResult.status === "fulfilled" ? grupyResult.value : null;
-
     // Cache dla istniejącego ekranu edycji grup.
-    // Dzięki temu "Edytuj grupy" korzysta z już pobranych danych.
     if (!window.__adminCache) window.__adminCache = {};
     if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
 
@@ -9912,41 +9903,24 @@ trainerRefreshMedicalFeatureState_().then(enabled => {
       window.__adminCache[nrSafe].info = infoRes;
     }
 
-    if (grupyRes && grupyRes.success !== false) {
-      window.__adminCache[nrSafe].grupy = grupyRes;
-    }
-    
     if (!infoRes || infoRes.success === false) {
       if (numerWidocznyEl) numerWidocznyEl.textContent = "—";
       if (joinEl) joinEl.textContent = "—";
       if (msg) msg.textContent = "⚠️ Nie udało się pobrać informacji o zawodniku.";
     } else {
       const numerWidoczny = String(infoRes.numerWidoczny || "").trim();
-    
+
       if (numerWidocznyEl) {
         numerWidocznyEl.textContent = numerWidoczny || "Nie ustawiono";
       }
-    
+
       if (joinEl) {
         joinEl.textContent = String(infoRes.joinDate || "").trim() || "—";
       }
     }
 
-    if (!grupyRes || grupyRes.success === false) {
-      if (grupyEl) grupyEl.textContent = "—";
-    } else {
-      const grupyRaw = String(grupyRes.grupy || "").trim();
-      window.__trainerSelectedGroupsRaw = grupyRaw;
-
-      const grupyLabel = grupyRaw
-        ? grupyRaw
-            .split(",")
-            .map(x => getClubGroupLabel_(x.trim()))
-            .filter(Boolean)
-            .join(", ")
-        : "—";
-
-      if (grupyEl) grupyEl.textContent = grupyLabel;
+    if (grupyEl) {
+      grupyEl.textContent = "Ładuję grupy...";
     }
 
   } catch (e) {
@@ -9956,17 +9930,54 @@ trainerRefreshMedicalFeatureState_().then(enabled => {
     if (grupyEl) grupyEl.textContent = "—";
     if (msg) msg.textContent = "❌ Błąd pobierania danych zawodnika.";
 
-    } finally {
-      setTrainerZawodnikViewBusy_(false);
-  
-      // Statystyki odpalamy dopiero po załadowaniu danych podstawowych,
-      // żeby nie spowalniały wejścia w ekran zawodnika.
-      if (String(window.__trainerSelectedNr || "").trim() === nrSafe) {
-        setTimeout(() => {
-          trainerLoadSelectedPlayerStats_();
-        }, 0);
-      }
+  } finally {
+    setTrainerZawodnikViewBusy_(false);
+
+    // Statystyki odpalamy po załadowaniu danych podstawowych.
+    if (String(window.__trainerSelectedNr || "").trim() === nrSafe) {
+      setTimeout(() => {
+        trainerLoadSelectedPlayerStats_();
+      }, 0);
     }
+
+    // Grupy ładujemy w tle — nie blokują ekranu zawodnika.
+    setTimeout(() => {
+      if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+
+      apiClubGet("adminGrupy", {
+        numer: nrSafe
+      }).then(grupyRes => {
+        if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+
+        if (!window.__adminCache) window.__adminCache = {};
+        if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
+
+        if (grupyRes && grupyRes.success !== false) {
+          window.__adminCache[nrSafe].grupy = grupyRes;
+
+          const grupyRaw = String(grupyRes.grupy || "").trim();
+          window.__trainerSelectedGroupsRaw = grupyRaw;
+
+          const grupyLabel = grupyRaw
+            ? grupyRaw
+                .split(",")
+                .map(x => getClubGroupLabel_(x.trim()))
+                .filter(Boolean)
+                .join(", ")
+            : "—";
+
+          if (grupyEl) grupyEl.textContent = grupyLabel;
+        } else {
+          if (grupyEl) grupyEl.textContent = "—";
+        }
+
+      }).catch(e => {
+        console.warn("trainerOpenZawodnik_ adminGrupy background error:", e);
+
+        if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+        if (grupyEl) grupyEl.textContent = "—";
+      });
+    }, 0);
   }
 
 /* ------------- BADANIA ZAWODNIKÓW / PANEL TRENERA ------------*/
