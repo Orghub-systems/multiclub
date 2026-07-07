@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.78';
+  window.APP_BUILD = 'APP v2.79';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9773,7 +9773,7 @@ async function trainerPokazZawodnicy() {
     let renderedFromHook = false;
 
     const lista = await orgCachedApiGet_({
-      scope: "trainerPlayersList",
+      scope: "trainerPlayersListV2",
       parts: {
         groups: groupsKey || "all"
       },
