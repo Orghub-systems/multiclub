@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.79';
+  window.APP_BUILD = 'APP v2.80';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -12867,6 +12867,7 @@ function trainerOpenPlayerVisibleNumberEdit_() {
 
   if (!popup) return;
 
+  const selectedNr = String(window.__trainerSelectedNr || "").trim();
   const nazwisko = String(window.__trainerSelectedNazwisko || "").trim() || "—";
   const current = String(currentEl?.textContent || "").trim();
 
@@ -12880,6 +12881,188 @@ function trainerOpenPlayerVisibleNumberEdit_() {
   }
 
   if (msg) msg.textContent = "";
+
+  let toolsBox = document.getElementById("trainerPlayerNumberToolsBox");
+
+  if (!toolsBox) {
+    toolsBox = document.createElement("div");
+    toolsBox.id = "trainerPlayerNumberToolsBox";
+    toolsBox.style.marginTop = "12px";
+    toolsBox.style.textAlign = "left";
+
+    const insertBefore = msg || null;
+    if (insertBefore && insertBefore.parentNode) {
+      insertBefore.parentNode.insertBefore(toolsBox, insertBefore);
+    } else {
+      popup.appendChild(toolsBox);
+    }
+  }
+
+  function getPlayers_() {
+    return Array.isArray(window.__trainerPlayersListCache)
+      ? window.__trainerPlayersListCache
+      : [];
+  }
+
+  function getUsedNumbers_(filterText) {
+    const q = String(filterText || "").trim().toLowerCase();
+
+    return getPlayers_()
+      .map(z => ({
+        nr: String(z.nr || "").trim(),
+        nazwisko: String(z.nazwisko || "").trim(),
+        numerWidoczny: String(z.numerWidoczny || "").trim()
+      }))
+      .filter(z => z.numerWidoczny)
+      .filter(z => {
+        if (!q) return true;
+
+        return (
+          z.nr.toLowerCase().includes(q) ||
+          z.nazwisko.toLowerCase().includes(q) ||
+          z.numerWidoczny.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        const an = Number(a.numerWidoczny);
+        const bn = Number(b.numerWidoczny);
+
+        if (!isNaN(an) && !isNaN(bn) && an !== bn) return an - bn;
+
+        return String(a.numerWidoczny).localeCompare(String(b.numerWidoczny), "pl");
+      });
+  }
+
+  function escapeHtmlLocal_(txt) {
+    return String(txt || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderUsedNumbers_(filterText) {
+    const rows = getUsedNumbers_(filterText);
+
+    const rowsHtml = rows.length
+      ? rows.map(z => {
+          const isCurrent = z.nr === selectedNr;
+
+          return `
+            <div style="
+              padding:7px 8px;
+              border-bottom:1px solid rgba(255,255,255,.08);
+              ${isCurrent ? "background:rgba(25,166,66,.16);" : ""}
+            ">
+              <b>#${escapeHtmlLocal_(z.numerWidoczny)}</b>
+              <span style="opacity:.85;"> — ${escapeHtmlLocal_(z.nazwisko)}</span>
+              <span style="opacity:.5; font-size:12px;"> / ID ${escapeHtmlLocal_(z.nr)}</span>
+              ${isCurrent ? `<span style="color:#19a642; font-weight:900;"> — obecny numer</span>` : ""}
+            </div>
+          `;
+        }).join("")
+      : `<div style="padding:8px; opacity:.65;">Brak wyników.</div>`;
+
+    toolsBox.innerHTML = `
+      <div id="trainerPlayerNumberWarning" style="
+        min-height:18px;
+        margin:0 0 8px 0;
+        color:#ffcc00;
+        font-weight:800;
+        line-height:1.35;
+      "></div>
+
+      <div style="font-size:13px; opacity:.75; margin-bottom:6px;">
+        Zajęte numery widoczne:
+      </div>
+
+      <input
+        id="trainerPlayerNumberSearch"
+        type="text"
+        placeholder="Szukaj po numerze, nazwisku albo ID..."
+        value="${escapeHtmlLocal_(filterText || "")}"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          margin:0 0 8px 0;
+          padding:9px 10px;
+          border-radius:10px;
+          border:1px solid #333;
+          background:#111;
+          color:#fff;
+        "
+      >
+
+      <div id="trainerPlayerNumberUsedList" style="
+        max-height:190px;
+        overflow:auto;
+        border:1px solid #333;
+        border-radius:10px;
+        background:#090909;
+        font-size:13px;
+      ">
+        ${rowsHtml}
+      </div>
+
+      <div style="font-size:12px; opacity:.55; margin-top:7px; line-height:1.35;">
+        Duplikaty są dozwolone. Ostrzeżenie ma tylko pokazać, że taki numer już ktoś ma.
+      </div>
+    `;
+
+    const search = document.getElementById("trainerPlayerNumberSearch");
+    if (search) {
+      search.oninput = () => {
+        renderUsedNumbers_(search.value);
+        updateDuplicateWarning_();
+      };
+
+      const val = String(search.value || "");
+      search.focus();
+      search.value = "";
+      search.value = val;
+
+      if (input) {
+        setTimeout(() => input.focus(), 30);
+      }
+    }
+
+    updateDuplicateWarning_();
+  }
+
+  function updateDuplicateWarning_() {
+    const warning = document.getElementById("trainerPlayerNumberWarning");
+    if (!warning || !input) return;
+
+    const typed = String(input.value || "").trim();
+
+    if (!typed) {
+      warning.textContent = "";
+      return;
+    }
+
+    const conflicts = getPlayers_().filter(z =>
+      String(z.numerWidoczny || "").trim() === typed &&
+      String(z.nr || "").trim() !== selectedNr
+    );
+
+    if (!conflicts.length) {
+      warning.textContent = "";
+      return;
+    }
+
+    const names = conflicts
+      .map(z => String(z.nazwisko || "").trim())
+      .filter(Boolean)
+      .join(", ");
+
+    warning.textContent = "⚠️ Ten numer jest już przypisany do: " + names;
+  }
+
+  if (input) {
+    input.oninput = updateDuplicateWarning_;
+  }
+
+  renderUsedNumbers_("");
 
   popup.classList.remove("hidden");
   popup.style.display = "flex";
@@ -12931,6 +13114,18 @@ async function trainerSavePlayerVisibleNumber_() {
     if (currentEl) {
       currentEl.textContent = visibleNumber || "Nie ustawiono";
     }
+
+    try {
+    if (Array.isArray(window.__trainerPlayersListCache)) {
+      const item = window.__trainerPlayersListCache.find(z =>
+        String(z.nr || "").trim() === nr
+      );
+  
+      if (item) {
+        item.numerWidoczny = visibleNumber;
+      }
+    }
+  } catch (e) {}
 
     // Odświeżamy cache danych zawodnika w pamięci, jeśli istnieje.
     try {
