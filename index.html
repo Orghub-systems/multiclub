@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.77';
+  window.APP_BUILD = 'APP v2.78';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9648,6 +9648,7 @@ async function trainerPokazZawodnicy() {
 
   const groupsKey = String(window.grupyTrenera || "").trim();
   const PLAYERS_CACHE_24H = 24 * 60 * 60 * 1000;
+  window.__trainerPlayersListCache = [];
 
   if (!groupsKey) {
     box.innerHTML = `
