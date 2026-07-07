@@ -15193,9 +15193,14 @@ function adminConfirmPayment(colNum, label, typ) {
     return;
   }
 
+  const sourceSheet = String(window.__adminSelectedDebtSourceSheet || "Kartoteka").trim();
+  const sourceType = String(window.__adminSelectedDebtSourceType || "current").trim();
+  
   window.__adminPendingPayCol = col;
   window.__adminPendingPayLabel = String(label || "");
   window.__adminPendingPayType = payType;
+  window.__adminPendingPaySourceSheet = sourceSheet || "Kartoteka";
+  window.__adminPendingPaySourceType = sourceType || "current";
 
   // Domyślnie: stary modal
   let modalId = "adminPayConfirmModal";
@@ -15247,9 +15252,13 @@ function adminConfirmPayment(colNum, label, typ) {
     return;
   }
 
+  const archiveInfo = window.__adminPendingPaySourceType === "archive"
+    ? " / ARCHIWUM: " + window.__adminPendingPaySourceSheet.replace(/\s*Kartoteka\s*$/i, "").trim()
+    : "";
+  
   text.textContent = window.__adminPendingPayLabel
-    ? ("Potwierdzam zapłatę: " + window.__adminPendingPayLabel)
-    : "Potwierdzam zapłatę";
+    ? ("Potwierdzam zapłatę: " + window.__adminPendingPayLabel + archiveInfo)
+    : ("Potwierdzam zapłatę" + archiveInfo);
 
   if (msg) msg.textContent = "";
 
