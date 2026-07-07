@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.81';
+  window.APP_BUILD = 'APP v2.82';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9852,7 +9852,7 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
   if (title) {
     title.textContent = window.__trainerSelectedNazwisko || "—";
   }
-  
+
   if (numerWidocznyEl) numerWidocznyEl.textContent = "—";
   if (joinEl) joinEl.textContent = "—";
   if (grupyEl) grupyEl.textContent = "—";
@@ -9860,31 +9860,35 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
 
   trainerSetMedicalExamCardVisible_(false);
 
-const medicalDateEl = document.getElementById("trainerMedicalExamDate");
-if (medicalDateEl) medicalDateEl.textContent = "—";
+  const medicalDateEl = document.getElementById("trainerMedicalExamDate");
+  if (medicalDateEl) medicalDateEl.textContent = "—";
 
-if (trainerIsMedicalFeatureEnabledFromCache_()) {
-  trainerSetMedicalExamCardVisible_(true);
-  trainerLoadMedicalExamForSelectedPlayer_();
-}
-
-trainerRefreshMedicalFeatureState_().then(enabled => {
-  if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
-
-  trainerSetMedicalExamCardVisible_(enabled);
-
-  if (enabled) {
+  if (trainerIsMedicalFeatureEnabledFromCache_()) {
+    trainerSetMedicalExamCardVisible_(true);
     trainerLoadMedicalExamForSelectedPlayer_();
   }
-});
 
-    // Statystyki załadują się automatycznie po danych podstawowych.
-    // Nie blokują głównego ekranu zawodnika.
-    if (statsEl) {
-      statsEl.innerHTML = "";
-    }
+  trainerRefreshMedicalFeatureState_()
+    .then(enabled => {
+      if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
 
-   setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
+      trainerSetMedicalExamCardVisible_(enabled);
+
+      if (enabled) {
+        trainerLoadMedicalExamForSelectedPlayer_();
+      }
+    })
+    .catch(e => {
+      console.warn("trainerRefreshMedicalFeatureState_ error:", e);
+    });
+
+  // Statystyki załadują się automatycznie po danych podstawowych.
+  // Nie blokują głównego ekranu zawodnika.
+  if (statsEl) {
+    statsEl.innerHTML = "";
+  }
+
+  setTrainerZawodnikViewBusy_(true, "Ładuję dane zawodnika...");
 
   try {
     const infoRes = await apiClubPost({
@@ -9946,39 +9950,41 @@ trainerRefreshMedicalFeatureState_().then(enabled => {
 
       apiClubGet("adminGrupy", {
         numer: nrSafe
-      }).then(grupyRes => {
-        if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
+      })
+        .then(grupyRes => {
+          if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
 
-        if (!window.__adminCache) window.__adminCache = {};
-        if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
+          if (!window.__adminCache) window.__adminCache = {};
+          if (!window.__adminCache[nrSafe]) window.__adminCache[nrSafe] = {};
 
-        if (grupyRes && grupyRes.success !== false) {
-          window.__adminCache[nrSafe].grupy = grupyRes;
+          if (grupyRes && grupyRes.success !== false) {
+            window.__adminCache[nrSafe].grupy = grupyRes;
 
-          const grupyRaw = String(grupyRes.grupy || "").trim();
-          window.__trainerSelectedGroupsRaw = grupyRaw;
+            const grupyRaw = String(grupyRes.grupy || "").trim();
+            window.__trainerSelectedGroupsRaw = grupyRaw;
 
-          const grupyLabel = grupyRaw
-            ? grupyRaw
-                .split(",")
-                .map(x => getClubGroupLabel_(x.trim()))
-                .filter(Boolean)
-                .join(", ")
-            : "—";
+            const grupyLabel = grupyRaw
+              ? grupyRaw
+                  .split(",")
+                  .map(x => getClubGroupLabel_(x.trim()))
+                  .filter(Boolean)
+                  .join(", ")
+              : "—";
 
-          if (grupyEl) grupyEl.textContent = grupyLabel;
-        } else {
+            if (grupyEl) grupyEl.textContent = grupyLabel;
+          } else {
+            if (grupyEl) grupyEl.textContent = "—";
+          }
+        })
+        .catch(e => {
+          console.warn("trainerOpenZawodnik_ adminGrupy background error:", e);
+
+          if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
           if (grupyEl) grupyEl.textContent = "—";
-        }
-
-      }).catch(e => {
-        console.warn("trainerOpenZawodnik_ adminGrupy background error:", e);
-
-        if (String(window.__trainerSelectedNr || "").trim() !== nrSafe) return;
-        if (grupyEl) grupyEl.textContent = "—";
-      });
+        });
     }, 0);
   }
+}
 
 /* ------------- BADANIA ZAWODNIKÓW / PANEL TRENERA ------------*/
 
