@@ -9675,12 +9675,14 @@ async function trainerPokazZawodnicy() {
       .replace(/"/g, "&quot;");
   }
 
+  function renderTrainerPlayers_(lista) {
+  
   if (!Array.isArray(lista) || lista.length === 0) {
     window.__trainerPlayersListCache = [];
     box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
     return;
   }
-  
+
   window.__trainerPlayersListCache = lista.map(z => ({
     nr: String(z.nr || "").trim(),
     nazwisko: String(z.nazwisko || "").trim(),
