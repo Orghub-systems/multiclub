@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.83';
+  window.APP_BUILD = 'APP v2.84';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -15667,6 +15667,12 @@ async function adminOpenPlatnosciZawodnikowView() {
       renderAdminPlatnosciZawodnikow_(fresh);
     }
 
+    if (fresh && fresh.success === true) {
+      setTimeout(() => {
+        adminAskCloseArchivePaymentsIfNeeded_(fresh);
+      }, 0);
+    }
+
   } catch (e) {
     if (!hadCache && body) {
       body.innerHTML = `<div class="card" style="background:#700;">❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</div>`;
@@ -15706,6 +15712,82 @@ function renderAdminPlatnosciZawodnikow_(res) {
   }
 
   body.innerHTML = items.map(renderAdminDebtTile_).join("");
+}
+
+  async function adminAskCloseArchivePaymentsIfNeeded_(res) {
+  const archives = Array.isArray(res?.archivesToConfirmClosed)
+    ? res.archivesToConfirmClosed
+    : [];
+
+  if (!archives.length) return;
+
+  for (const archive of archives) {
+    const sheetName = String(archive.sheetName || "").trim();
+    const seasonLabel = String(archive.seasonLabel || "")
+      .trim()
+      .replace(/\s*Kartoteka\s*$/i, "");
+
+    if (!sheetName) continue;
+
+    const promptKey = "orghub.archiveClosePrompt." +
+      String(clubId || "").toLowerCase() +
+      "." +
+      sheetName;
+
+    // Nie pytamy wielokrotnie w tej samej sesji przeglądarki.
+    if (sessionStorage.getItem(promptKey) === "1") {
+      continue;
+    }
+
+    sessionStorage.setItem(promptKey, "1");
+
+    const ok = window.confirm(
+      "Czy płatności w sezonie " +
+      (seasonLabel || sheetName) +
+      " zostały spłacone?\n\n" +
+      "TAK — zamknij sezon i nie skanuj tej Kartoteki więcej.\n" +
+      "NIE — zostaw aktywne skanowanie archiwum."
+    );
+
+    if (!ok) {
+      continue;
+    }
+
+    try {
+      const closeRes = await apiClubPost({
+        action: "adminCloseArchivePaymentsScan",
+        sheetName: sheetName
+      });
+
+      if (!closeRes || closeRes.success !== true) {
+        alert("❌ Nie udało się zamknąć sezonu: " + (closeRes?.error || "Błąd zapisu A1."));
+        continue;
+      }
+
+      // Czyścimy cache listy zaległości, bo archiwum zostało zamknięte.
+      try {
+        const now = new Date();
+        const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+        const debtCacheKey = "orghub.cache.v2." +
+          String(clubId || "").toLowerCase() +
+          ".admindebtlist.month-" +
+          monthKey +
+          ".with-archives";
+
+        localStorage.removeItem(debtCacheKey);
+      } catch (e) {}
+
+      alert("✅ Sezon " + (seasonLabel || sheetName) + " został zamknięty dla skanowania płatności.");
+
+      // Odświeżamy listę po zamknięciu archiwum.
+      adminOpenPlatnosciZawodnikowView();
+
+      return;
+
+    } catch (e) {
+      alert("❌ Błąd połączenia przy zamykaniu sezonu: " + (e?.message || e));
+    }
+  }
 }
 
 function renderAdminDebtTile_(p) {
