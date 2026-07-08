@@ -18222,7 +18222,15 @@ function renderAdminClubFormalSettings_(res) {
     </div>
   `;
 }
+  
 async function adminEditBankSettings_() {
+  // Modal pokazujemy natychmiast, bez czekania na backend.
+  adminShowBankSettingsModal_({
+    bankReceiver: "",
+    bankAccount: "",
+    loading: true
+  });
+
   try {
     const res = await apiClubGet("adminGetClubSeasonSettings", {
       includeLogo: "0",
@@ -18230,9 +18238,7 @@ async function adminEditBankSettings_() {
     });
 
     if (!res || res.success !== true) {
-      adminShowBankSettingsModal_({
-        bankReceiver: "",
-        bankAccount: "",
+      adminFillBankSettingsModal_({
         error: res?.error || "Nie udało się pobrać danych do przelewów."
       });
       return;
@@ -18240,15 +18246,13 @@ async function adminEditBankSettings_() {
 
     const s = res.settings || {};
 
-    adminShowBankSettingsModal_({
+    adminFillBankSettingsModal_({
       bankReceiver: String(s.bankReceiver || "").trim(),
       bankAccount: String(s.bankAccount || "").replace(/\s+/g, "").trim()
     });
 
   } catch (e) {
-    adminShowBankSettingsModal_({
-      bankReceiver: "",
-      bankAccount: "",
+    adminFillBankSettingsModal_({
       error: "Błąd połączenia: " + String(e?.message || e)
     });
   }
@@ -18257,6 +18261,7 @@ async function adminEditBankSettings_() {
 
 function adminShowBankSettingsModal_(data) {
   const payload = data || {};
+  const isLoading = payload.loading === true;
 
   function esc(txt) {
     return String(txt ?? "")
@@ -18297,11 +18302,7 @@ function adminShowBankSettingsModal_(data) {
       box-sizing:border-box;
       text-align:left;
     ">
-      <div style="
-        font-size:20px;
-        font-weight:900;
-        margin-bottom:6px;
-      ">
+      <div style="font-size:20px; font-weight:900; margin-bottom:6px;">
         Dane do przelewów
       </div>
 
@@ -18322,6 +18323,8 @@ function adminShowBankSettingsModal_(data) {
         id="adminBankReceiverInput"
         type="text"
         value="${esc(payload.bankReceiver || "")}"
+        placeholder="${isLoading ? "Ładowanie..." : ""}"
+        ${isLoading ? "disabled" : ""}
         style="
           width:100%;
           box-sizing:border-box;
@@ -18333,6 +18336,7 @@ function adminShowBankSettingsModal_(data) {
           font-size:15px;
           outline:none;
           margin-bottom:14px;
+          opacity:${isLoading ? ".65" : "1"};
         "
       >
 
@@ -18345,7 +18349,8 @@ function adminShowBankSettingsModal_(data) {
         type="text"
         inputmode="numeric"
         value="${esc(payload.bankAccount || "")}"
-        placeholder="26 cyfr"
+        placeholder="${isLoading ? "Ładowanie..." : "26 cyfr"}"
+        ${isLoading ? "disabled" : ""}
         style="
           width:100%;
           box-sizing:border-box;
@@ -18357,6 +18362,7 @@ function adminShowBankSettingsModal_(data) {
           font-size:15px;
           outline:none;
           margin-bottom:8px;
+          opacity:${isLoading ? ".65" : "1"};
         "
       >
 
@@ -18375,25 +18381,23 @@ function adminShowBankSettingsModal_(data) {
           min-height:18px;
           font-size:13px;
           line-height:1.35;
-          color:#ff8d8d;
+          color:${payload.error ? "#ff8d8d" : "#b8b8b8"};
           margin-bottom:12px;
         "
-      >${payload.error ? "❌ " + esc(payload.error) : ""}</div>
+      >${
+        payload.error
+          ? "❌ " + esc(payload.error)
+          : isLoading
+            ? "⏳ Ładowanie danych..."
+            : ""
+      }</div>
 
-      <div style="
-        display:flex;
-        gap:10px;
-        justify-content:flex-end;
-      ">
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button
           type="button"
           class="full-btn alt"
           onclick="adminCloseBankSettingsModal_()"
-          style="
-            width:auto;
-            min-width:110px;
-            margin:0;
-          "
+          style="width:auto; min-width:110px; margin:0;"
         >
           Anuluj
         </button>
@@ -18403,10 +18407,12 @@ function adminShowBankSettingsModal_(data) {
           type="button"
           class="full-btn"
           onclick="adminSaveBankSettingsFromModal_()"
+          ${isLoading ? "disabled" : ""}
           style="
             width:auto;
             min-width:120px;
             margin:0;
+            opacity:${isLoading ? ".65" : "1"};
           "
         >
           Zapisz
@@ -18416,13 +18422,72 @@ function adminShowBankSettingsModal_(data) {
   `;
 
   document.body.appendChild(modal);
-
-  setTimeout(() => {
-    const input = document.getElementById("adminBankReceiverInput");
-    if (input) input.focus();
-  }, 50);
 }
 
+function adminFillBankSettingsModal_(data) {
+  const payload = data || {};
+
+  const modal = document.getElementById("adminBankSettingsModal");
+  if (!modal) return;
+
+  const receiverInput = document.getElementById("adminBankReceiverInput");
+  const accountInput = document.getElementById("adminBankAccountInput");
+  const msg = document.getElementById("adminBankSettingsMsg");
+  const saveBtn = document.getElementById("adminBankSaveBtn");
+
+  if (payload.error) {
+    if (msg) {
+      msg.style.color = "#ff8d8d";
+      msg.textContent = "❌ " + payload.error;
+    }
+
+    if (receiverInput) {
+      receiverInput.disabled = true;
+      receiverInput.style.opacity = ".65";
+    }
+
+    if (accountInput) {
+      accountInput.disabled = true;
+      accountInput.style.opacity = ".65";
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = ".65";
+    }
+
+    return;
+  }
+
+  if (receiverInput) {
+    receiverInput.value = String(payload.bankReceiver || "").trim();
+    receiverInput.disabled = false;
+    receiverInput.style.opacity = "1";
+    receiverInput.placeholder = "";
+  }
+
+  if (accountInput) {
+    accountInput.value = String(payload.bankAccount || "").replace(/\s+/g, "").trim();
+    accountInput.disabled = false;
+    accountInput.style.opacity = "1";
+    accountInput.placeholder = "26 cyfr";
+  }
+
+  if (msg) {
+    msg.style.color = "#b8b8b8";
+    msg.textContent = "";
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = "1";
+  }
+
+  setTimeout(() => {
+    if (receiverInput) receiverInput.focus();
+  }, 50);
+}
+  
 
 function adminCloseBankSettingsModal_() {
   const modal = document.getElementById("adminBankSettingsModal");
