@@ -18222,59 +18222,277 @@ function renderAdminClubFormalSettings_(res) {
     </div>
   `;
 }
+async function adminEditBankSettings_() {
+  try {
+    const res = await apiClubGet("adminGetClubSeasonSettings", {
+      includeLogo: "0",
+      t: Date.now()
+    });
 
-  async function adminEditBankSettings_() {
-  const res = await apiClubGet("adminGetClubSeasonSettings", {
-    includeLogo: "0",
-    t: Date.now()
-  });
+    if (!res || res.success !== true) {
+      adminShowBankSettingsModal_({
+        bankReceiver: "",
+        bankAccount: "",
+        error: res?.error || "Nie udało się pobrać danych do przelewów."
+      });
+      return;
+    }
 
-  if (!res || res.success !== true) {
-    alert("❌ " + (res?.error || "Nie udało się pobrać danych do przelewów."));
-    return;
+    const s = res.settings || {};
+
+    adminShowBankSettingsModal_({
+      bankReceiver: String(s.bankReceiver || "").trim(),
+      bankAccount: String(s.bankAccount || "").replace(/\s+/g, "").trim()
+    });
+
+  } catch (e) {
+    adminShowBankSettingsModal_({
+      bankReceiver: "",
+      bankAccount: "",
+      error: "Błąd połączenia: " + String(e?.message || e)
+    });
+  }
+}
+
+
+function adminShowBankSettingsModal_(data) {
+  const payload = data || {};
+
+  function esc(txt) {
+    return String(txt ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
-  const s = res.settings || {};
+  const old = document.getElementById("adminBankSettingsModal");
+  if (old) old.remove();
 
-  const currentReceiver = String(s.bankReceiver || "").trim();
-  const currentAccount = String(s.bankAccount || "").replace(/\s+/g, "").trim();
+  const modal = document.createElement("div");
+  modal.id = "adminBankSettingsModal";
 
-  const bankReceiver = prompt("Nazwa odbiorcy wpłat:", currentReceiver);
-  if (bankReceiver === null) return;
+  modal.style.cssText = `
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(0,0,0,.72);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    box-sizing:border-box;
+  `;
 
-  const bankAccountInput = prompt("Numer rachunku bankowego — 26 cyfr:", currentAccount);
-  if (bankAccountInput === null) return;
+  modal.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:360px;
+      background:#101010;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:18px;
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      padding:18px;
+      box-sizing:border-box;
+      text-align:left;
+    ">
+      <div style="
+        font-size:20px;
+        font-weight:900;
+        margin-bottom:6px;
+      ">
+        Dane do przelewów
+      </div>
 
-  const bankAccount = String(bankAccountInput || "").replace(/\s+/g, "").trim();
+      <div style="
+        font-size:13px;
+        opacity:.75;
+        line-height:1.4;
+        margin-bottom:16px;
+      ">
+        Te dane będą widoczne zawodnikom przy płatnościach.
+      </div>
 
-  if (!String(bankReceiver || "").trim()) {
-    alert("❌ Brak nazwy odbiorcy wpłat.");
+      <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">
+        Odbiorca wpłat
+      </label>
+
+      <input
+        id="adminBankReceiverInput"
+        type="text"
+        value="${esc(payload.bankReceiver || "")}"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:12px;
+          border-radius:12px;
+          border:1px solid #444;
+          background:#181818;
+          color:#fff;
+          font-size:15px;
+          outline:none;
+          margin-bottom:14px;
+        "
+      >
+
+      <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">
+        Numer rachunku bankowego
+      </label>
+
+      <input
+        id="adminBankAccountInput"
+        type="text"
+        inputmode="numeric"
+        value="${esc(payload.bankAccount || "")}"
+        placeholder="26 cyfr"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:12px;
+          border-radius:12px;
+          border:1px solid #444;
+          background:#181818;
+          color:#fff;
+          font-size:15px;
+          outline:none;
+          margin-bottom:8px;
+        "
+      >
+
+      <div style="
+        font-size:12px;
+        opacity:.65;
+        line-height:1.35;
+        margin-bottom:14px;
+      ">
+        Możesz wkleić numer ze spacjami — system zapisze same cyfry.
+      </div>
+
+      <div
+        id="adminBankSettingsMsg"
+        style="
+          min-height:18px;
+          font-size:13px;
+          line-height:1.35;
+          color:#ff8d8d;
+          margin-bottom:12px;
+        "
+      >${payload.error ? "❌ " + esc(payload.error) : ""}</div>
+
+      <div style="
+        display:flex;
+        gap:10px;
+        justify-content:flex-end;
+      ">
+        <button
+          type="button"
+          class="full-btn alt"
+          onclick="adminCloseBankSettingsModal_()"
+          style="
+            width:auto;
+            min-width:110px;
+            margin:0;
+          "
+        >
+          Anuluj
+        </button>
+
+        <button
+          id="adminBankSaveBtn"
+          type="button"
+          class="full-btn"
+          onclick="adminSaveBankSettingsFromModal_()"
+          style="
+            width:auto;
+            min-width:120px;
+            margin:0;
+          "
+        >
+          Zapisz
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  setTimeout(() => {
+    const input = document.getElementById("adminBankReceiverInput");
+    if (input) input.focus();
+  }, 50);
+}
+
+
+function adminCloseBankSettingsModal_() {
+  const modal = document.getElementById("adminBankSettingsModal");
+  if (modal) modal.remove();
+}
+
+
+async function adminSaveBankSettingsFromModal_() {
+  const receiverInput = document.getElementById("adminBankReceiverInput");
+  const accountInput = document.getElementById("adminBankAccountInput");
+  const msg = document.getElementById("adminBankSettingsMsg");
+  const btn = document.getElementById("adminBankSaveBtn");
+
+  const bankReceiver = String(receiverInput?.value || "").trim();
+  const bankAccount = String(accountInput?.value || "")
+    .replace(/\s+/g, "")
+    .trim();
+
+  if (msg) msg.textContent = "";
+
+  if (!bankReceiver) {
+    if (msg) msg.textContent = "❌ Wpisz nazwę odbiorcy wpłat.";
     return;
   }
 
   if (!/^\d{26}$/.test(bankAccount)) {
-    alert("❌ Numer konta musi mieć dokładnie 26 cyfr.");
+    if (msg) msg.textContent = "❌ Numer konta musi mieć dokładnie 26 cyfr.";
     return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Zapisuję...";
+    btn.style.opacity = ".65";
   }
 
   try {
     const saveRes = await apiClubPost({
       action: "adminSaveClubBankSettings",
-      bankReceiver: String(bankReceiver || "").trim(),
+      bankReceiver: bankReceiver,
       bankAccount: bankAccount
     });
 
     if (!saveRes || saveRes.success !== true) {
-      alert("❌ " + (saveRes?.error || "Nie udało się zapisać danych do przelewów."));
+      if (msg) msg.textContent = "❌ " + (saveRes?.error || "Nie udało się zapisać danych do przelewów.");
       return;
     }
 
-    alert("✅ Dane do przelewów zostały zapisane.");
+    if (msg) {
+      msg.style.color = "#8dff9a";
+      msg.textContent = "✅ Dane zostały zapisane.";
+    }
 
-    adminOpenClubFormalSettingsView();
+    setTimeout(() => {
+      adminCloseBankSettingsModal_();
+      adminOpenClubFormalSettingsView();
+    }, 650);
 
   } catch (e) {
-    alert("❌ Błąd połączenia: " + (e?.message || e));
+    if (msg) {
+      msg.style.color = "#ff8d8d";
+      msg.textContent = "❌ Błąd połączenia: " + String(e?.message || e);
+    }
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Zapisz";
+      btn.style.opacity = "1";
+    }
   }
 }
   
