@@ -18190,7 +18190,7 @@ function renderAdminClubFormalSettings_(res) {
         ${feesPreview}
       </div>
 
-      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+      <button class="full-btn alt" type="button" onclick="adminEditBankSettings_()">
         Dane klubu do odbioru wpłat
       </button>
 
@@ -18221,6 +18221,61 @@ function renderAdminClubFormalSettings_(res) {
       </div>
     </div>
   `;
+}
+
+  async function adminEditBankSettings_() {
+  const res = await apiClubGet("adminGetClubSeasonSettings", {
+    includeLogo: "0",
+    t: Date.now()
+  });
+
+  if (!res || res.success !== true) {
+    alert("❌ " + (res?.error || "Nie udało się pobrać danych do przelewów."));
+    return;
+  }
+
+  const s = res.settings || {};
+
+  const currentReceiver = String(s.bankReceiver || "").trim();
+  const currentAccount = String(s.bankAccount || "").replace(/\s+/g, "").trim();
+
+  const bankReceiver = prompt("Nazwa odbiorcy wpłat:", currentReceiver);
+  if (bankReceiver === null) return;
+
+  const bankAccountInput = prompt("Numer rachunku bankowego — 26 cyfr:", currentAccount);
+  if (bankAccountInput === null) return;
+
+  const bankAccount = String(bankAccountInput || "").replace(/\s+/g, "").trim();
+
+  if (!String(bankReceiver || "").trim()) {
+    alert("❌ Brak nazwy odbiorcy wpłat.");
+    return;
+  }
+
+  if (!/^\d{26}$/.test(bankAccount)) {
+    alert("❌ Numer konta musi mieć dokładnie 26 cyfr.");
+    return;
+  }
+
+  try {
+    const saveRes = await apiClubPost({
+      action: "adminSaveClubBankSettings",
+      bankReceiver: String(bankReceiver || "").trim(),
+      bankAccount: bankAccount
+    });
+
+    if (!saveRes || saveRes.success !== true) {
+      alert("❌ " + (saveRes?.error || "Nie udało się zapisać danych do przelewów."));
+      return;
+    }
+
+    alert("✅ Dane do przelewów zostały zapisane.");
+
+    adminOpenClubFormalSettingsView();
+
+  } catch (e) {
+    alert("❌ Błąd połączenia: " + (e?.message || e));
+  }
 }
   
 function renderAdminClubSeasonSettings_(res) {
