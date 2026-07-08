@@ -17763,6 +17763,13 @@ function renderAdminClubVisualSettings_(res) {
   const bgColor = String(s.bgColor || "#000000").trim() || "#000000";
   const logoData = String(s.logoData || "").trim();
 
+    window.__adminClubVisualSettingsDraft = {
+    bgColor: bgColor,
+    originalBgColor: bgColor,
+    logoData: logoData,
+    logoChanged: false
+  };
+
   const palette = [
     "#000000", "#202020", "#1b2838", "#2f4a6b",
     "#243866", "#405da8", "#193d3b", "#45918e",
@@ -17772,10 +17779,11 @@ function renderAdminClubVisualSettings_(res) {
 
   const colorGridHtml = palette.map(color => {
     const selected = color.toLowerCase() === bgColor.toLowerCase();
-
+  
     return `
       <button type="button"
-        onclick="adminSettingsTodo_()"
+        data-admin-visual-color="${esc(color)}"
+        onclick="adminVisualPickColor_('${esc(color)}')"
         style="
           width:100%;
           aspect-ratio:1/1;
@@ -17843,14 +17851,14 @@ function renderAdminClubVisualSettings_(res) {
         font-size:13px;
         opacity:.95;
       ">
-        <div style="
-          width:28px;
-          height:28px;
-          border-radius:7px;
-          background:${esc(bgColor)};
-          border:1px solid rgba(255,255,255,.35);
-        "></div>
-        <div style="font-weight:800;">${esc(bgColor)}</div>
+      <div id="adminVisualColorPreview" style="
+        width:28px;
+        height:28px;
+        border-radius:7px;
+        background:${esc(bgColor)};
+        border:1px solid rgba(255,255,255,.35);
+      "></div>
+      <div id="adminVisualColorCode" style="font-weight:800;">${esc(bgColor)}</div>
       </div>
 
       <div style="
@@ -17861,8 +17869,12 @@ function renderAdminClubVisualSettings_(res) {
       ">
         ${colorGridHtml}
       </div>
-
-      <button class="full-btn" type="button" style="margin-top:16px;" onclick="adminSettingsTodo_()" disabled>
+      <button id="adminVisualSaveBtn"
+        class="full-btn"
+        type="button"
+        style="margin-top:16px;"
+        onclick="adminSaveClubVisualSettings_()"
+        disabled>
         Zapisz zmiany
       </button>
 
@@ -17871,6 +17883,97 @@ function renderAdminClubVisualSettings_(res) {
       </div>
     </div>
   `;
+}
+
+  function adminVisualPickColor_(color) {
+  const picked = String(color || "").trim();
+
+  if (!/^#[0-9a-fA-F]{6}$/.test(picked)) {
+    alert("❌ Nieprawidłowy kolor: " + picked);
+    return;
+  }
+
+  const draft = window.__adminClubVisualSettingsDraft || {};
+  draft.bgColor = picked;
+  window.__adminClubVisualSettingsDraft = draft;
+
+  const preview = document.getElementById("adminVisualColorPreview");
+  if (preview) preview.style.background = picked;
+
+  const code = document.getElementById("adminVisualColorCode");
+  if (code) code.textContent = picked;
+
+  document.querySelectorAll("[data-admin-visual-color]").forEach(btn => {
+    const btnColor = String(btn.dataset.adminVisualColor || "").trim().toLowerCase();
+    const isSelected = btnColor === picked.toLowerCase();
+
+    btn.style.border = isSelected
+      ? "3px solid #ffffff"
+      : "1px solid rgba(255,255,255,.20)";
+
+    btn.style.boxShadow = isSelected
+      ? "0 0 0 2px rgba(255,255,255,.25)"
+      : "none";
+  });
+
+  const saveBtn = document.getElementById("adminVisualSaveBtn");
+  if (saveBtn) {
+    const original = String(draft.originalBgColor || "").trim().toLowerCase();
+    const current = String(draft.bgColor || "").trim().toLowerCase();
+
+    saveBtn.disabled = original === current && !draft.logoChanged;
+  }
+}
+
+async function adminSaveClubVisualSettings_() {
+  const draft = window.__adminClubVisualSettingsDraft || {};
+  const bgColor = String(draft.bgColor || "").trim();
+
+  if (!/^#[0-9a-fA-F]{6}$/.test(bgColor)) {
+    alert("❌ Nieprawidłowy kolor tła.");
+    return;
+  }
+
+  const btn = document.getElementById("adminVisualSaveBtn");
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Zapisuję...";
+    btn.style.opacity = "0.65";
+  }
+
+  try {
+    const res = await apiClubPost({
+      action: "adminSaveClubVisualSettings",
+      bgColor: bgColor
+    });
+
+    if (!res || res.success !== true) {
+      alert("❌ " + (res?.error || "Nie udało się zapisać ustawień wizualnych."));
+      return;
+    }
+
+    window.__adminClubVisualSettingsDraft = {
+      ...draft,
+      bgColor: bgColor,
+      originalBgColor: bgColor,
+      logoChanged: false
+    };
+
+    document.body.style.backgroundColor = bgColor;
+
+    alert("✅ Kolor tła został zapisany.");
+
+    adminOpenClubVisualSettingsView();
+
+  } catch (e) {
+    alert("❌ Błąd połączenia: " + (e?.message || e));
+  } finally {
+    if (btn) {
+      btn.textContent = "Zapisz zmiany";
+      btn.style.opacity = "1";
+    }
+  }
 }
 
   async function adminOpenClubFormalSettingsView() {
