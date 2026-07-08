@@ -17801,9 +17801,17 @@ function renderAdminClubVisualSettings_(res) {
 
   body.innerHTML = `
     <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
-      <button class="full-btn" type="button" onclick="adminSettingsTodo_()">
-        Zmień logo
-      </button>
+    <button class="full-btn" type="button" onclick="adminPickClubLogo_()">
+      Zmień logo
+    </button>
+    
+    <input
+      id="adminVisualLogoInput"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      onchange="adminVisualLogoSelected_(this)"
+    >
 
       <div style="margin-top:8px;">
         ${
@@ -17885,6 +17893,68 @@ function renderAdminClubVisualSettings_(res) {
   `;
 }
 
+  function adminPickClubLogo_() {
+  const input = document.getElementById("adminVisualLogoInput");
+  if (input) {
+    input.value = "";
+    input.click();
+  }
+}
+
+function adminVisualLogoSelected_(input) {
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+
+  if (!String(file.type || "").startsWith("image/")) {
+    alert("❌ Wybierz plik graficzny.");
+    return;
+  }
+
+  const maxSize = 1024 * 1024 * 2; // 2 MB
+  if (file.size > maxSize) {
+    alert("❌ Logo jest za duże. Maksymalny rozmiar to 2 MB.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const dataUrl = String(e.target && e.target.result || "");
+
+    if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(dataUrl)) {
+      alert("❌ Nie udało się odczytać logo.");
+      return;
+    }
+
+    const draft = window.__adminClubVisualSettingsDraft || {};
+    draft.logoData = dataUrl;
+    draft.logoChanged = true;
+    window.__adminClubVisualSettingsDraft = draft;
+
+    const img = document.getElementById("adminVisualLogoPreview");
+    if (img) {
+      img.src = dataUrl;
+      img.style.display = "block";
+    }
+
+    const empty = document.getElementById("adminVisualLogoEmpty");
+    if (empty) {
+      empty.style.display = "none";
+    }
+
+    const saveBtn = document.getElementById("adminVisualSaveBtn");
+    if (saveBtn) {
+      saveBtn.disabled = false;
+    }
+  };
+
+  reader.onerror = function() {
+    alert("❌ Nie udało się odczytać pliku logo.");
+  };
+
+  reader.readAsDataURL(file);
+}
+
   function adminVisualPickColor_(color) {
   const picked = String(color || "").trim();
 
@@ -17928,9 +17998,15 @@ function renderAdminClubVisualSettings_(res) {
 async function adminSaveClubVisualSettings_() {
   const draft = window.__adminClubVisualSettingsDraft || {};
   const bgColor = String(draft.bgColor || "").trim();
+  const logoData = draft.logoChanged ? String(draft.logoData || "").trim() : "";
 
   if (!/^#[0-9a-fA-F]{6}$/.test(bgColor)) {
     alert("❌ Nieprawidłowy kolor tła.");
+    return;
+  }
+
+  if (logoData && !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(logoData)) {
+    alert("❌ Nieprawidłowy format logo.");
     return;
   }
 
@@ -17945,7 +18021,8 @@ async function adminSaveClubVisualSettings_() {
   try {
     const res = await apiClubPost({
       action: "adminSaveClubVisualSettings",
-      bgColor: bgColor
+      bgColor: bgColor,
+      logoData: logoData
     });
 
     if (!res || res.success !== true) {
@@ -17954,15 +18031,19 @@ async function adminSaveClubVisualSettings_() {
     }
 
     window.__adminClubVisualSettingsDraft = {
-      ...draft,
       bgColor: bgColor,
       originalBgColor: bgColor,
+      logoData: draft.logoData || "",
       logoChanged: false
     };
 
     document.body.style.backgroundColor = bgColor;
 
-    alert("✅ Kolor tła został zapisany.");
+    if (res.warning) {
+      alert("✅ Logo zapisane, ale jest ostrzeżenie:\n" + res.warning);
+    } else {
+      alert(draft.logoChanged ? "✅ Logo i kolor zostały zapisane." : "✅ Kolor został zapisany.");
+    }
 
     adminOpenClubVisualSettingsView();
 
