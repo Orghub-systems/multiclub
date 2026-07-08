@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.89';
+  window.APP_BUILD = 'APP v2.90';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -18150,11 +18150,11 @@ function renderAdminClubFormalSettings_(res) {
         </div>
       </div>
 
-      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+      <button class="full-btn alt" type="button" onclick="adminEditSeasonStartSettings_()">
         Początek sezonu: ${esc(formatDatePL(s.seasonStart) || "nie ustawiono")}
       </button>
 
-      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+      <button class="full-btn alt" type="button" onclick="adminEditSeasonEndSettings_()">
         Koniec sezonu: ${esc(formatDatePL(s.seasonEnd) || "nie ustawiono")}
       </button>
 
@@ -18836,13 +18836,384 @@ function adminEditClubColorSettings_() {
 }
 
 function adminEditSeasonStartSettings_() {
-  adminSettingsTodo_();
+  adminOpenSeasonDateSettingsModal_("start");
 }
+
 
 function adminEditSeasonEndSettings_() {
-  adminSettingsTodo_();
+  adminOpenSeasonDateSettingsModal_("end");
 }
 
+
+async function adminOpenSeasonDateSettingsModal_(target) {
+  adminShowSeasonDateSettingsModal_({
+    target: target,
+    loading: true
+  });
+
+  try {
+    const res = await apiClubGet("adminGetClubSeasonSettings", {
+      includeLogo: "0",
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true) {
+      adminFillSeasonDateSettingsModal_({
+        error: res?.error || "Nie udało się pobrać ustawień sezonu."
+      });
+      return;
+    }
+
+    const s = res.settings || {};
+
+    adminFillSeasonDateSettingsModal_({
+      target: target,
+      seasonStart: String(s.seasonStart || "").trim(),
+      seasonEnd: String(s.seasonEnd || "").trim()
+    });
+
+  } catch (e) {
+    adminFillSeasonDateSettingsModal_({
+      error: "Błąd połączenia: " + String(e?.message || e)
+    });
+  }
+}
+
+
+function adminShowSeasonDateSettingsModal_(data) {
+  const payload = data || {};
+  const target = String(payload.target || "").trim();
+  const isLoading = payload.loading === true;
+
+  const isStart = target === "start";
+  const title = isStart ? "Początek sezonu" : "Koniec sezonu";
+
+  const old = document.getElementById("adminSeasonDateSettingsModal");
+  if (old) old.remove();
+
+  window.__adminSeasonDateSettingsDraft = {
+    target: target,
+    seasonStart: "",
+    seasonEnd: ""
+  };
+
+  const modal = document.createElement("div");
+  modal.id = "adminSeasonDateSettingsModal";
+
+  modal.style.cssText = `
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(0,0,0,.72);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    box-sizing:border-box;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:390px;
+      max-height:88vh;
+      overflow:auto;
+      background:#101010;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:18px;
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      padding:18px;
+      box-sizing:border-box;
+      text-align:left;
+    ">
+      <div style="font-size:20px; font-weight:900; margin-bottom:6px;">
+        ${title}
+      </div>
+
+      <div
+        id="adminSeasonDateDescription"
+        style="
+          font-size:13px;
+          opacity:.75;
+          line-height:1.4;
+          margin-bottom:16px;
+        "
+      >
+        ${isLoading ? "Ładowanie aktualnych ustawień sezonu..." : ""}
+      </div>
+
+      <div style="
+        background:#151515;
+        border:1px solid #333;
+        border-radius:14px;
+        padding:12px;
+        margin-bottom:14px;
+        font-size:13px;
+        line-height:1.5;
+      ">
+        <div><b>Aktualny początek:</b> <span id="adminSeasonCurrentStart">...</span></div>
+        <div><b>Aktualny koniec:</b> <span id="adminSeasonCurrentEnd">...</span></div>
+      </div>
+
+      <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">
+        Nowa data
+      </label>
+
+      <input
+        id="adminSeasonDateInput"
+        type="date"
+        disabled
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:12px;
+          border-radius:12px;
+          border:1px solid #444;
+          background:#181818;
+          color:#fff;
+          font-size:15px;
+          outline:none;
+          margin-bottom:12px;
+          opacity:.65;
+        "
+      >
+
+      <div style="
+        background:#1a1408;
+        border:1px solid rgba(255,200,90,.35);
+        border-radius:14px;
+        padding:10px;
+        margin-bottom:14px;
+        font-size:12px;
+        line-height:1.45;
+        color:#ffd98a;
+      ">
+        <b>Blokada bezpieczeństwa:</b><br>
+        Minionych miesięcy nie można ruszać. Bieżący miesiąc można zmienić tylko wtedy,
+        gdy jego kolumny w Kartotece są puste. Backend sprawdza to przed zapisem.
+      </div>
+
+      <div
+        id="adminSeasonDateSettingsMsg"
+        style="
+          min-height:18px;
+          font-size:13px;
+          line-height:1.35;
+          color:#b8b8b8;
+          margin-bottom:12px;
+        "
+      >${isLoading ? "⏳ Ładowanie danych..." : ""}</div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button
+          type="button"
+          class="full-btn alt"
+          onclick="adminCloseSeasonDateSettingsModal_()"
+          style="width:auto; min-width:110px; margin:0;"
+        >
+          Anuluj
+        </button>
+
+        <button
+          id="adminSeasonDateSaveBtn"
+          type="button"
+          class="full-btn"
+          onclick="adminSaveSeasonDateSettingsFromModal_()"
+          disabled
+          style="
+            width:auto;
+            min-width:120px;
+            margin:0;
+            opacity:.65;
+          "
+        >
+          Zapisz
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+
+function adminFillSeasonDateSettingsModal_(data) {
+  const payload = data || {};
+
+  const modal = document.getElementById("adminSeasonDateSettingsModal");
+  if (!modal) return;
+
+  const draft = window.__adminSeasonDateSettingsDraft || {};
+  const target = String(payload.target || draft.target || "").trim();
+  const isStart = target === "start";
+
+  const input = document.getElementById("adminSeasonDateInput");
+  const msg = document.getElementById("adminSeasonDateSettingsMsg");
+  const saveBtn = document.getElementById("adminSeasonDateSaveBtn");
+  const currentStartEl = document.getElementById("adminSeasonCurrentStart");
+  const currentEndEl = document.getElementById("adminSeasonCurrentEnd");
+  const desc = document.getElementById("adminSeasonDateDescription");
+
+  if (payload.error) {
+    if (msg) {
+      msg.style.color = "#ff8d8d";
+      msg.textContent = "❌ " + payload.error;
+    }
+
+    if (input) {
+      input.disabled = true;
+      input.style.opacity = ".65";
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = ".65";
+    }
+
+    return;
+  }
+
+  const seasonStart = String(payload.seasonStart || "").trim();
+  const seasonEnd = String(payload.seasonEnd || "").trim();
+
+  window.__adminSeasonDateSettingsDraft = {
+    target: target,
+    seasonStart: seasonStart,
+    seasonEnd: seasonEnd
+  };
+
+  if (currentStartEl) currentStartEl.textContent = adminFormatDatePL_(seasonStart);
+  if (currentEndEl) currentEndEl.textContent = adminFormatDatePL_(seasonEnd);
+
+  if (desc) {
+    desc.textContent = isStart
+      ? "Zmieniasz początek sezonu. System nie pozwoli usunąć ani przesunąć miesięcy, które mają już dane w Kartotece."
+      : "Zmieniasz koniec sezonu. System pozwoli skrócić lub wydłużyć tylko bezpieczny zakres sezonu.";
+  }
+
+  if (input) {
+    input.value = isStart ? seasonStart : seasonEnd;
+    input.disabled = false;
+    input.style.opacity = "1";
+  }
+
+  if (msg) {
+    msg.style.color = "#b8b8b8";
+    msg.textContent = "";
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = "1";
+  }
+
+  setTimeout(function() {
+    if (input) input.focus();
+  }, 50);
+}
+
+
+function adminCloseSeasonDateSettingsModal_() {
+  const modal = document.getElementById("adminSeasonDateSettingsModal");
+  if (modal) modal.remove();
+}
+
+
+async function adminSaveSeasonDateSettingsFromModal_() {
+  const draft = window.__adminSeasonDateSettingsDraft || {};
+  const target = String(draft.target || "").trim();
+
+  const input = document.getElementById("adminSeasonDateInput");
+  const msg = document.getElementById("adminSeasonDateSettingsMsg");
+  const btn = document.getElementById("adminSeasonDateSaveBtn");
+
+  const date = String(input?.value || "").trim();
+
+  if (msg) {
+    msg.style.color = "#ff8d8d";
+    msg.textContent = "";
+  }
+
+  if (target !== "start" && target !== "end") {
+    if (msg) msg.textContent = "❌ Nieprawidłowy typ edycji daty.";
+    return;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (msg) msg.textContent = "❌ Wybierz poprawną datę.";
+    return;
+  }
+
+  const seasonStart = String(draft.seasonStart || "").trim();
+  const seasonEnd = String(draft.seasonEnd || "").trim();
+
+  if (target === "start" && seasonEnd && date > seasonEnd) {
+    if (msg) msg.textContent = "❌ Początek sezonu nie może być później niż koniec sezonu.";
+    return;
+  }
+
+  if (target === "end" && seasonStart && date < seasonStart) {
+    if (msg) msg.textContent = "❌ Koniec sezonu nie może być wcześniej niż początek sezonu.";
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Sprawdzam...";
+    btn.style.opacity = ".65";
+  }
+
+  try {
+    const saveRes = await apiClubPost({
+      action: "adminSaveClubSeasonDateSettings",
+      target: target,
+      date: date
+    });
+
+    if (!saveRes || saveRes.success !== true) {
+      if (msg) {
+        msg.style.color = "#ff8d8d";
+        msg.textContent = "❌ " + (saveRes?.error || "Nie udało się zapisać daty sezonu.");
+      }
+      return;
+    }
+
+    if (msg) {
+      msg.style.color = "#8dff9a";
+      msg.textContent = "✅ Data sezonu została zapisana.";
+    }
+
+    setTimeout(function() {
+      adminCloseSeasonDateSettingsModal_();
+      adminOpenClubFormalSettingsView();
+    }, 650);
+
+  } catch (e) {
+    if (msg) {
+      msg.style.color = "#ff8d8d";
+      msg.textContent = "❌ Błąd połączenia: " + String(e?.message || e);
+    }
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Zapisz";
+      btn.style.opacity = "1";
+    }
+  }
+}
+
+
+function adminFormatDatePL_(v) {
+  const s = String(v || "").trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!m) return s || "-";
+
+  return m[3] + "." + m[2] + "." + m[1];
+}
+  
 async function adminEditPaymentSettings_() {
   adminShowPaymentSettingsModal_({
     loading: true
