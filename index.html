@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.84';
+  window.APP_BUILD = 'APP v2.85';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8514,20 +8514,18 @@ async function getPlayerPaymentsPayload_(forceRefresh = false) {
     Array.isArray(cached.biezace) &&
     Array.isArray(cached.wplacone)
   ) {
-    return cached;
+    const normalized = normalizePlayerPaymentsPayload_(cached);
+    window.__playerPaymentsPayload = normalized;
+    return normalized;
   }
 
   const p = window.__prefetch?.platnosciP;
   const payload = await (p || apiClubGet("platnosci", { numer: numerZalogowanego }));
 
-  window.__playerPaymentsPayload = {
-    biezace: Array.isArray(payload?.biezace) ? payload.biezace : [],
-    wplacone: Array.isArray(payload?.wplacone) ? payload.wplacone : [],
-    sumaBiezace: Number(payload?.sumaBiezace || 0),
-    sumaWplacone: Number(payload?.sumaWplacone || 0)
-  };
+  const normalized = normalizePlayerPaymentsPayload_(payload);
+  window.__playerPaymentsPayload = normalized;
 
-  return window.__playerPaymentsPayload;
+  return normalized;
 }
 
 function normalizePlayerPaymentsPayload_(fresh) {
@@ -8546,7 +8544,7 @@ async function pokazPlatnosci() {
   goToView("platnosciView");
   const div = document.getElementById("platnosciSummaryBox");
 
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
 
   // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
@@ -8619,7 +8617,7 @@ async function pokazPlatnosciBiezace() {
   goToView("platnosciBiezaceView");
   const div = document.getElementById("listaPlatnosciBiezace");
 
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
 
   // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
@@ -8691,7 +8689,7 @@ async function pokazPlatnosciWplacone() {
   goToView("platnosciWplaconeView");
   const div = document.getElementById("listaPlatnosciWplacone");
 
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
 
   // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
@@ -8745,6 +8743,20 @@ async function pokazPlatnosciWplacone() {
   }
 }
 
+function formatPlayerSeasonShortLabel_(item) {
+  const sourceType = String(item?.sourceType || "current").trim();
+  if (sourceType !== "archive") return "";
+
+  const raw = String(item?.seasonLabel || item?.sourceSheet || "").trim();
+
+  const m = raw.match(/(20\d{2})\s*[-/]\s*(20\d{2})/);
+  if (m) {
+    return "Sezon " + m[1].slice(2) + "-" + m[2].slice(2);
+  }
+
+  return "Sezon poprzedni";
+}
+  
 function renderPlatnosciMenu(payload) {
   const div = document.getElementById("platnosciSummaryBox");
   if (!div) return;
@@ -8758,6 +8770,31 @@ function renderPlatnosciMenu(payload) {
   const sumaBiezace = Number(data.sumaBiezace || 0);
   const sumaWplacone = Number(data.sumaWplacone || 0);
   const sumaSpodziewane = Number(data.sumaSpodziewane || 0);
+
+  const hasSpodziewane =
+    Array.isArray(spodziewane) &&
+    spodziewane.length > 0 &&
+    sumaSpodziewane > 0;
+
+  const spodziewaneCardHtml = hasSpodziewane ? `
+    <div class="card" style="
+      background:#3a2614;
+      text-align:left;
+      margin-top:14px;
+      border:2px solid #ffb347;
+      box-shadow:0 0 18px rgba(255,179,71,.18);
+      position:relative;
+      overflow:hidden;
+    ">
+      <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ffb347;"></div>
+      <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">🟠 Spodziewane</div>
+      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaSpodziewane} zł</div>
+      <div style="margin-top:8px; color:#FFD28A; font-weight:800; font-size:15px;">Pozycji: ${spodziewane.length}</div>
+      <div style="margin-top:6px; opacity:.78; font-size:13px; line-height:1.35;">
+        Zajęcia dodatkowe z bieżącego miesiąca. Są już naliczone w Kartotece, ale jeszcze nie są wymagane do zapłaty.
+      </div>
+    </div>
+  ` : "";
 
   div.innerHTML = `
     <div class="card" style="
@@ -8775,24 +8812,8 @@ function renderPlatnosciMenu(payload) {
       <div style="margin-top:8px; color:#FF9A9A; font-weight:800; font-size:15px;">Pozycji: ${biezace.length}</div>
     </div>
 
-    <div class="card" style="
-      background:#3a2614;
-      text-align:left;
-      margin-top:14px;
-      border:2px solid #ffb347;
-      box-shadow:0 0 18px rgba(255,179,71,.18);
-      position:relative;
-      overflow:hidden;
-    ">
-      <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ffb347;"></div>
-      <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">🟠 Spodziewane</div>
-      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaSpodziewane} zł</div>
-      <div style="margin-top:8px; color:#FFD28A; font-weight:800; font-size:15px;">Pozycji: ${spodziewane.length}</div>
-      <div style="margin-top:6px; opacity:.78; font-size:13px;">
-        Kwoty z bieżącego miesiąca — jeszcze niewymagane do zapłaty.
-      </div>
-    </div>
-  
+    ${spodziewaneCardHtml}
+
     <div class="card" style="
       background:#123a1a;
       text-align:left;
@@ -8850,48 +8871,84 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
         if (pa.monthIdx !== pb.monthIdx) return pa.monthIdx - pb.monthIdx;
         if (pa.typeOrder !== pb.typeOrder) return pa.typeOrder - pb.typeOrder;
 
+        const sa = String(a?.sourceSheet || "");
+        const sb = String(b?.sourceSheet || "");
+        if (sa !== sb) return sa.localeCompare(sb, "pl");
+
         return String(a?.nazwa || "").localeCompare(String(b?.nazwa || ""), "pl");
       })
     : [];
 
   const isPaidMode = mode === "wplacone";
+  const isExpectedMode = mode === "spodziewane";
+  const isCurrentDebtMode = mode === "biezace";
+
+  const theme = isPaidMode
+    ? {
+        bg: "#123a1a",
+        border: "#5cff8d",
+        glow: "rgba(92,255,141,.16)",
+        title: "✅ Wpłacone",
+        empty: "Brak wpłaconych pozycji",
+        badge: `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
+      }
+    : isExpectedMode
+      ? {
+          bg: "#3a2614",
+          border: "#ffb347",
+          glow: "rgba(255,179,71,.18)",
+          title: "🟠 Spodziewane",
+          empty: "Brak spodziewanych płatności",
+          badge: `<span style="color:#FFD28A; font-weight:700;">SPODZIEWANE</span>`
+        }
+      : {
+          bg: "#3a1414",
+          border: "#ff5c5c",
+          glow: "rgba(255,92,92,.18)",
+          title: "📌 Bieżące",
+          empty: "Brak bieżących należności ✅",
+          badge: `<span style="color:#FF7C7C; font-weight:700;">BIEŻĄCE</span>`
+        };
 
   if (sorted.length === 0) {
     div.innerHTML = `
-      <div class="card" style="background:${isPaidMode ? "#123a1a" : "#3a1414"};">
-        ${isPaidMode ? "Brak wpłaconych pozycji" : "Brak bieżących należności ✅"}
+      <div class="card" style="background:${theme.bg};">
+        ${theme.empty}
       </div>
     `;
     return;
   }
-    
-    const summaryCard = `
-      <div class="card" style="
-        background:${isPaidMode ? "#123a1a" : "#3a1414"};
-        text-align:left;
-        margin-top:10px;
-        border:2px solid ${isPaidMode ? "#5cff8d" : "#ff5c5c"};
-        box-shadow:0 0 18px ${isPaidMode ? "rgba(92,255,141,.16)" : "rgba(255,92,92,.18)"};
-        position:relative;
-        overflow:hidden;
-      ">
-        <div style="position:absolute; top:0; left:0; right:0; height:6px; background:${isPaidMode ? "#5cff8d" : "#ff5c5c"};"></div>
-        <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">
-          ${isPaidMode ? "✅ Wpłacone" : "📌 Bieżące"}
-        </div>
-        <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">
-          ${Number(suma || 0)} zł
-        </div>
+
+  const summaryCard = `
+    <div class="card" style="
+      background:${theme.bg};
+      text-align:left;
+      margin-top:10px;
+      border:2px solid ${theme.border};
+      box-shadow:0 0 18px ${theme.glow};
+      position:relative;
+      overflow:hidden;
+    ">
+      <div style="position:absolute; top:0; left:0; right:0; height:6px; background:${theme.border};"></div>
+      <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">
+        ${theme.title}
       </div>
-    `;
+      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">
+        ${Number(suma || 0)} zł
+      </div>
+      ${isExpectedMode ? `
+        <div style="margin-top:6px; opacity:.78; font-size:13px; line-height:1.35;">
+          Zajęcia dodatkowe naliczone w Kartotece, ale jeszcze niewymagane do zapłaty.
+        </div>
+      ` : ""}
+    </div>
+  `;
 
   const itemsHtml = sorted.map(p => {
-    const bg = isPaidMode ? "#123a1a" : "#3a1414";
-    const badge = isPaidMode
-      ? `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
-      : `<span style="color:#FF7C7C; font-weight:700;">BIEŻĄCE</span>`;
+    const bg = theme.bg;
+    const badge = theme.badge;
 
-    const payBtn = !isPaidMode
+    const payBtn = isCurrentDebtMode
       ? `<button class="full-btn playerPayBtn"
             style="margin-top:10px;"
             onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)})">
@@ -8903,12 +8960,20 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
     const kwota = Number(p?.kwota || 0);
     const typLabel = p?.kind === "skladka" ? "Składka" : "Zajęcia dodatkowe";
 
+    const seasonLabel = formatPlayerSeasonShortLabel_(p);
+    const seasonHtml = seasonLabel
+      ? `<div style="margin-top:5px; color:#FFD28A; font-size:12px; font-weight:900;">
+           ${escapeHtml_(seasonLabel)}
+         </div>`
+      : "";
+
     return `
       <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
         <div style="display:flex; justify-content:space-between; gap:10px;">
           <div>
             <div style="opacity:.9; font-size:14px;">${typLabel}</div>
             <div style="font-size:18px; font-weight:800;">${nazwa}</div>
+            ${seasonHtml}
           </div>
           <div style="text-align:right;">
             <div style="font-size:18px; font-weight:800;">${kwota} zł</div>
