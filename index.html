@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.87';
+  window.APP_BUILD = 'APP v2.88';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8543,35 +8543,56 @@ async function getPlayerPaymentsPayload_(forceRefresh = false) {
 }
 
 function normalizePlayerPaymentsPayload_(fresh) {
-  return {
-    biezace: Array.isArray(fresh?.biezace) ? fresh.biezace : [],
-    wplacone: Array.isArray(fresh?.wplacone) ? fresh.wplacone : [],
-    spodziewane: Array.isArray(fresh?.spodziewane) ? fresh.spodziewane : [],
+  const biezace = Array.isArray(fresh?.biezace) ? fresh.biezace : [];
+  const wplacone = Array.isArray(fresh?.wplacone) ? fresh.wplacone : [];
+  const spodziewane = Array.isArray(fresh?.spodziewane) ? fresh.spodziewane : [];
 
-    sumaBiezace: Number(fresh?.sumaBiezace || 0),
-    sumaWplacone: Number(fresh?.sumaWplacone || 0),
-    sumaSpodziewane: Number(fresh?.sumaSpodziewane || 0)
+  function round2(n) {
+    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  }
+
+  return {
+    biezace,
+    wplacone,
+    spodziewane,
+    sumaBiezace: Number.isFinite(Number(fresh?.sumaBiezace))
+      ? Number(fresh?.sumaBiezace)
+      : round2(biezace.reduce((acc, p) => acc + Number(p?.kwota || 0), 0)),
+    sumaWplacone: Number.isFinite(Number(fresh?.sumaWplacone))
+      ? Number(fresh?.sumaWplacone)
+      : round2(wplacone.reduce((acc, p) => acc + Number(p?.kwota || 0), 0)),
+    sumaSpodziewane: Number.isFinite(Number(fresh?.sumaSpodziewane))
+      ? Number(fresh?.sumaSpodziewane)
+      : round2(spodziewane.reduce((acc, p) => acc + Number(p?.kwota || 0), 0))
   };
 }
-  
+
 async function pokazPlatnosci() {
   goToView("platnosciView");
+
   const div = document.getElementById("platnosciSummaryBox");
+  if (!div) return;
 
-  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const cacheKey =
+    "orghub.cache.v3." +
+    String(clubId || "").toLowerCase() +
+    ".playerPayments.numer-" +
+    String(numerZalogowanego || "") +
+    ".seasons";
 
-  // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
+
+  // 1. Cache natychmiast
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        window.__playerPaymentsPayload = entry.data;
-        renderPlatnosciMenu(entry.data);
+        const cachedPayload = normalizePlayerPaymentsPayload_(entry.data);
+        window.__playerPaymentsPayload = cachedPayload;
+        renderPlatnosciMenu(cachedPayload);
         hadCache = true;
 
-        // Zablokuj przyciski do czasu załadowania świeżych danych
         document.querySelectorAll("#platnosciView button.full-btn:not(.alt)").forEach(btn => {
           btn.disabled = true;
           btn.style.opacity = "0.45";
@@ -8581,22 +8602,16 @@ async function pokazPlatnosci() {
     }
   } catch (e) {}
 
-  if (!hadCache && div) {
+  if (!hadCache) {
     div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
   }
 
-  // 2. Zawsze sprawdź GAS w tle
+  // 2. Świeże dane w tle
   try {
-    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
-
-    let changed = true;
-    try {
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
-      }
-    } catch (e) {}
+    const fresh = await apiClubGet("platnosci", {
+      numer: numerZalogowanego,
+      t: Date.now()
+    });
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
@@ -8608,17 +8623,13 @@ async function pokazPlatnosci() {
     } catch (e) {}
 
     window.__playerPaymentsPayload = payload;
-
-    if (changed) {
-      renderPlatnosciMenu(payload);
-    }
+    renderPlatnosciMenu(payload);
 
   } catch (e) {
-    if (!hadCache && div) {
+    if (!hadCache) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
   } finally {
-    // Odblokuj przyciski
     document.querySelectorAll("#platnosciView button[data-locked-by-cache='1']").forEach(btn => {
       btn.disabled = false;
       btn.style.opacity = "";
@@ -8629,21 +8640,36 @@ async function pokazPlatnosci() {
 
 async function pokazPlatnosciBiezace() {
   goToView("platnosciBiezaceView");
+
   const div = document.getElementById("listaPlatnosciBiezace");
+  if (!div) return;
 
-  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const cacheKey =
+    "orghub.cache.v3." +
+    String(clubId || "").toLowerCase() +
+    ".playerPayments.numer-" +
+    String(numerZalogowanego || "") +
+    ".seasons";
 
-  // 1. Zawsze pokaż cache natychmiast
   let hadCache = false;
+
+  // 1. Cache natychmiast
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        renderPlatnosciListInto_("listaPlatnosciBiezace", entry.data.biezace || [], entry.data.sumaBiezace || 0, "biezace");
+        const data = normalizePlayerPaymentsPayload_(entry.data);
+
+        renderPlatnosciListInto_(
+          "listaPlatnosciBiezace",
+          data.biezace,
+          data.biezace.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+          "biezace"
+        );
+
         hadCache = true;
 
-        // Zablokuj przyciski Zapłać teraz
         div.querySelectorAll("button.playerPayBtn").forEach(btn => {
           btn.disabled = true;
           btn.style.opacity = "0.45";
@@ -8653,22 +8679,16 @@ async function pokazPlatnosciBiezace() {
     }
   } catch (e) {}
 
-  if (!hadCache && div) {
+  if (!hadCache) {
     div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
   }
 
-  // 2. Zawsze sprawdź GAS w tle
+  // 2. Świeże dane
   try {
-    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
-
-    let changed = true;
-    try {
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
-      }
-    } catch (e) {}
+    const fresh = await apiClubGet("platnosci", {
+      numer: numerZalogowanego,
+      t: Date.now()
+    });
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
@@ -8681,16 +8701,18 @@ async function pokazPlatnosciBiezace() {
 
     window.__playerPaymentsPayload = payload;
 
-    if (changed) {
-      renderPlatnosciListInto_("listaPlatnosciBiezace", payload.biezace, payload.sumaBiezace, "biezace");
-    }
+    renderPlatnosciListInto_(
+      "listaPlatnosciBiezace",
+      payload.biezace,
+      payload.biezace.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+      "biezace"
+    );
 
   } catch (e) {
-    if (!hadCache && div) {
+    if (!hadCache) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
   } finally {
-    // Odblokuj przyciski
     div.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
       btn.disabled = false;
       btn.style.opacity = "";
@@ -8701,40 +8723,70 @@ async function pokazPlatnosciBiezace() {
 
 async function pokazPlatnosciWplacone() {
   goToView("platnosciWplaconeView");
+
   const div = document.getElementById("listaPlatnosciWplacone");
+  if (!div) return;
 
-  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".default";
+  const cacheKey =
+    "orghub.cache.v3." +
+    String(clubId || "").toLowerCase() +
+    ".playerPayments.numer-" +
+    String(numerZalogowanego || "") +
+    ".seasons";
 
-  // 1. Zawsze pokaż cache natychmiast
+  function renderPaidScreenFromPayload_(payload) {
+    const data = normalizePlayerPaymentsPayload_(payload);
+
+    const currentPaid = data.wplacone.filter(p =>
+      String(p?.sourceType || "current").trim() !== "archive"
+    );
+
+    const archivePaid = data.wplacone.filter(p =>
+      String(p?.sourceType || "current").trim() === "archive"
+    );
+
+    renderPlatnosciListInto_(
+      "listaPlatnosciWplacone",
+      currentPaid,
+      currentPaid.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+      "wplacone"
+    );
+
+    if (archivePaid.length > 0) {
+      div.insertAdjacentHTML("beforeend", `
+        <button class="full-btn alt"
+          style="margin-top:14px;"
+          onclick="pokazPlatnosciZakonczoneSezony()">
+          Zakończone sezony
+        </button>
+      `);
+    }
+  }
+
   let hadCache = false;
+
+  // 1. Cache natychmiast
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        const currentPaid = getCurrentPlayerPayments_(entry.data.wplacone || []);
-        renderPlatnosciListInto_("listaPlatnosciWplacone", currentPaid, sumPlayerPayments_(currentPaid), "wplacone");
+        renderPaidScreenFromPayload_(entry.data);
         hadCache = true;
       }
     }
   } catch (e) {}
 
-  if (!hadCache && div) {
+  if (!hadCache) {
     div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
   }
 
-  // 2. Zawsze sprawdź GAS w tle
+  // 2. Świeże dane
   try {
-    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
-
-    let changed = true;
-    try {
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
-      }
-    } catch (e) {}
+    const fresh = await apiClubGet("platnosci", {
+      numer: numerZalogowanego,
+      t: Date.now()
+    });
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
@@ -8746,71 +8798,52 @@ async function pokazPlatnosciWplacone() {
     } catch (e) {}
 
     window.__playerPaymentsPayload = payload;
-
-    if (changed) {
-    const data = normalizePlayerPaymentsPayload_(entry.data);
-    const currentPaid = getCurrentPlayerPayments_(data.wplacone || []);
-    const archivePaid = getArchivePlayerPayments_(data.wplacone || []);
-    
-    renderPlatnosciListInto_(
-      "listaPlatnosciWplacone",
-      currentPaid,
-      sumPlayerPayments_(currentPaid),
-      "wplacone"
-    );
-    
-    renderPlatnosciWplaconeArchiveButton_(archivePaid);
-    }
+    renderPaidScreenFromPayload_(payload);
 
   } catch (e) {
-    if (!hadCache && div) {
+    if (!hadCache) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
   }
 }
 
-  function renderPlatnosciWplaconeArchiveButton_(archivePaid) {
-  const div = document.getElementById("listaPlatnosciWplacone");
-  if (!div) return;
-
-  const items = Array.isArray(archivePaid) ? archivePaid : [];
-  if (!items.length) return;
-
-  div.insertAdjacentHTML("beforeend", `
-    <button class="full-btn alt"
-      style="margin-top:14px;"
-      onclick="pokazPlatnosciZakonczoneSezony()">
-      Zakończone sezony
-    </button>
-  `);
-}
-
-  async function pokazPlatnosciZakonczoneSezony() {
+async function pokazPlatnosciZakonczoneSezony() {
   goToView("platnosciZakonczoneSezonyView");
 
   const div = document.getElementById("listaPlatnosciZakonczoneSezony");
   if (!div) return;
 
-  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".with-seasons-spodziewane";
+  const cacheKey =
+    "orghub.cache.v3." +
+    String(clubId || "").toLowerCase() +
+    ".playerPayments.numer-" +
+    String(numerZalogowanego || "") +
+    ".seasons";
 
-  // 1. Cache natychmiast
+  function renderArchivePaidFromPayload_(payload) {
+    const data = normalizePlayerPaymentsPayload_(payload);
+
+    const archivePaid = data.wplacone.filter(p =>
+      String(p?.sourceType || "current").trim() === "archive"
+    );
+
+    renderPlatnosciListInto_(
+      "listaPlatnosciZakonczoneSezony",
+      archivePaid,
+      archivePaid.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+      "zakonczone"
+    );
+  }
+
   let hadCache = false;
 
+  // 1. Cache natychmiast
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        const data = normalizePlayerPaymentsPayload_(entry.data);
-        const archivePaid = getArchivePlayerPayments_(data.wplacone || []);
-
-        renderPlatnosciListInto_(
-          "listaPlatnosciZakonczoneSezony",
-          archivePaid,
-          sumPlayerPayments_(archivePaid),
-          "zakonczone"
-        );
-
+        renderArchivePaidFromPayload_(entry.data);
         hadCache = true;
       }
     }
@@ -8822,7 +8855,11 @@ async function pokazPlatnosciWplacone() {
 
   // 2. Świeże dane
   try {
-    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
+    const fresh = await apiClubGet("platnosci", {
+      numer: numerZalogowanego,
+      t: Date.now()
+    });
+
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
     try {
@@ -8833,15 +8870,7 @@ async function pokazPlatnosciWplacone() {
     } catch (e) {}
 
     window.__playerPaymentsPayload = payload;
-
-    const archivePaid = getArchivePlayerPayments_(payload.wplacone || []);
-
-    renderPlatnosciListInto_(
-      "listaPlatnosciZakonczoneSezony",
-      archivePaid,
-      sumPlayerPayments_(archivePaid),
-      "zakonczone"
-    );
+    renderArchivePaidFromPayload_(payload);
 
   } catch (e) {
     if (!hadCache) {
@@ -8850,44 +8879,6 @@ async function pokazPlatnosciWplacone() {
   }
 }
 
-function formatPlayerSeasonShortLabel_(item) {
-  const sourceType = String(item?.sourceType || "current").trim();
-  if (sourceType !== "archive") return "";
-
-  const raw = String(item?.seasonLabel || item?.sourceSheet || "").trim();
-
-  const m = raw.match(/(20\d{2})\s*[-/]\s*(20\d{2})/);
-  if (m) {
-    return "Sezon " + m[1].slice(2) + "-" + m[2].slice(2);
-  }
-
-  return "Sezon poprzedni";
-}
-
-  function isArchivePlayerPayment_(item) {
-  return String(item?.sourceType || "current").trim() === "archive";
-}
-
-function getCurrentPlayerPayments_(items) {
-  return Array.isArray(items)
-    ? items.filter(item => !isArchivePlayerPayment_(item))
-    : [];
-}
-
-function getArchivePlayerPayments_(items) {
-  return Array.isArray(items)
-    ? items.filter(item => isArchivePlayerPayment_(item))
-    : [];
-}
-
-function sumPlayerPayments_(items) {
-  return roundMoneyClient_(items.reduce((acc, item) => acc + Number(item?.kwota || 0), 0));
-}
-
-function roundMoneyClient_(n) {
-  return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-}
-  
 function renderPlatnosciMenu(payload) {
   const div = document.getElementById("platnosciSummaryBox");
   if (!div) return;
@@ -8897,14 +8888,14 @@ function renderPlatnosciMenu(payload) {
   const biezace = data.biezace;
   const wplacone = data.wplacone;
   const spodziewane = data.spodziewane;
-  
-  const wplaconeBiezace = getCurrentPlayerPayments_(wplacone);
-  const wplaconeArchiwalne = getArchivePlayerPayments_(wplacone);
-  
-  const sumaBiezace = Number(data.sumaBiezace || 0);
-  const sumaWplacone = sumPlayerPayments_(wplaconeBiezace);
-  
-  const sumaSpodziewane = Number(data.sumaSpodziewane || 0);
+
+  const currentPaid = wplacone.filter(p =>
+    String(p?.sourceType || "current").trim() !== "archive"
+  );
+
+  const sumaBiezace = biezace.reduce((acc, p) => acc + Number(p?.kwota || 0), 0);
+  const sumaWplacone = currentPaid.reduce((acc, p) => acc + Number(p?.kwota || 0), 0);
+  const sumaSpodziewane = spodziewane.reduce((acc, p) => acc + Number(p?.kwota || 0), 0);
 
   const hasSpodziewane =
     Array.isArray(spodziewane) &&
@@ -8923,7 +8914,7 @@ function renderPlatnosciMenu(payload) {
     ">
       <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ffb347;"></div>
       <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">🟠 Spodziewane</div>
-      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaSpodziewane} zł</div>
+      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${Math.round((sumaSpodziewane + Number.EPSILON) * 100) / 100} zł</div>
       <div style="margin-top:8px; color:#FFD28A; font-weight:800; font-size:15px;">Pozycji: ${spodziewane.length}</div>
       <div style="margin-top:6px; opacity:.78; font-size:13px; line-height:1.35;">
         Zajęcia dodatkowe z bieżącego miesiąca. Są już naliczone w Kartotece, ale jeszcze nie są wymagane do zapłaty.
@@ -8943,7 +8934,7 @@ function renderPlatnosciMenu(payload) {
     ">
       <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ff5c5c;"></div>
       <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">📌 Bieżące</div>
-      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaBiezace} zł</div>
+      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${Math.round((sumaBiezace + Number.EPSILON) * 100) / 100} zł</div>
       <div style="margin-top:8px; color:#FF9A9A; font-weight:800; font-size:15px;">Pozycji: ${biezace.length}</div>
     </div>
 
@@ -8960,10 +8951,9 @@ function renderPlatnosciMenu(payload) {
     ">
       <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#5cff8d;"></div>
       <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">✅ Wpłacone</div>
-      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaWplacone} zł</div>
-      <div style="margin-top:8px; color:#A6FFC0; font-weight:800; font-size:15px;">Pozycji: ${wplaconeBiezace.length}</div>
+      <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${Math.round((sumaWplacone + Number.EPSILON) * 100) / 100} zł</div>
+      <div style="margin-top:8px; color:#A6FFC0; font-weight:800; font-size:15px;">Pozycji: ${currentPaid.length}</div>
     </div>
-    
   `;
 }
 
@@ -8983,52 +8973,66 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
       .replace(/>/g, "&gt;");
   }
 
-  function parsePaymentOrder_(name) {
-    const txt = String(name || "").trim();
+  function paymentOrder_(item) {
+    const txt = String(item?.nazwa || "").trim();
     const lower = txt.toLowerCase();
 
     const yearMatch = lower.match(/20\d{2}/);
     const year = yearMatch ? Number(yearMatch[0]) : 9999;
 
-    const monthIdx = miesiace.findIndex(m => lower.includes(m));
-    const safeMonthIdx = monthIdx >= 0 ? monthIdx : 99;
+    const monthIdxRaw = miesiace.findIndex(m => lower.includes(m));
+    const monthIdx = monthIdxRaw >= 0 ? monthIdxRaw : 99;
 
     const typeOrder = lower.startsWith("składka") ? 0 : 1;
 
-    return { year, monthIdx: safeMonthIdx, typeOrder };
+    const sourceType = String(item?.sourceType || "current").trim();
+    const sourceOrder = sourceType === "archive" ? 0 : 1;
+
+    return { year, monthIdx, typeOrder, sourceOrder };
+  }
+
+  function seasonLabel_(item) {
+    const sourceType = String(item?.sourceType || "current").trim();
+    if (sourceType !== "archive") return "";
+
+    const raw = String(item?.seasonLabel || item?.sourceSheet || "").trim();
+    const m = raw.match(/(20\d{2})\s*[-/]\s*(20\d{2})/);
+
+    if (m) {
+      return "Sezon " + m[1].slice(2) + "-" + m[2].slice(2);
+    }
+
+    return "Sezon poprzedni";
   }
 
   const sorted = Array.isArray(lista)
     ? [...lista].sort((a, b) => {
-        const pa = parsePaymentOrder_(a?.nazwa);
-        const pb = parsePaymentOrder_(b?.nazwa);
+        const pa = paymentOrder_(a);
+        const pb = paymentOrder_(b);
 
         if (pa.year !== pb.year) return pa.year - pb.year;
         if (pa.monthIdx !== pb.monthIdx) return pa.monthIdx - pb.monthIdx;
         if (pa.typeOrder !== pb.typeOrder) return pa.typeOrder - pb.typeOrder;
-
-        const sa = String(a?.sourceSheet || "");
-        const sb = String(b?.sourceSheet || "");
-        if (sa !== sb) return sa.localeCompare(sb, "pl");
+        if (pa.sourceOrder !== pb.sourceOrder) return pa.sourceOrder - pb.sourceOrder;
 
         return String(a?.nazwa || "").localeCompare(String(b?.nazwa || ""), "pl");
       })
     : [];
 
-    const isPaidMode = mode === "wplacone";
-    const isArchivePaidMode = mode === "zakonczone";
-    const isExpectedMode = mode === "spodziewane";
-    const isCurrentDebtMode = mode === "biezace";
+  const isPaidMode = mode === "wplacone";
+  const isArchivePaidMode = mode === "zakonczone";
+  const isExpectedMode = mode === "spodziewane";
+  const isCurrentDebtMode = mode === "biezace";
 
-    const theme = (isPaidMode || isArchivePaidMode)
-  ? {
-      bg: "#123a1a",
-      border: "#5cff8d",
-      glow: "rgba(92,255,141,.16)",
-      title: isArchivePaidMode ? "🏁 Zakończone sezony" : "✅ Wpłacone",
-      empty: isArchivePaidMode ? "Brak wpłat z zakończonych sezonów" : "Brak wpłaconych pozycji",
-      badge: `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
-    }
+  const theme = (isPaidMode || isArchivePaidMode)
+    ? {
+        bg: "#123a1a",
+        border: "#5cff8d",
+        glow: "rgba(92,255,141,.16)",
+        title: isArchivePaidMode ? "🏁 Zakończone sezony" : "✅ Wpłacone",
+        empty: isArchivePaidMode ? "Brak wpłat z zakończonych sezonów" : "Brak wpłaconych pozycji",
+        badge: `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
+      }
     : isExpectedMode
       ? {
           bg: "#3a2614",
@@ -9056,6 +9060,8 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
     return;
   }
 
+  const sumaRounded = Math.round((Number(suma || 0) + Number.EPSILON) * 100) / 100;
+
   const summaryCard = `
     <div class="card" style="
       background:${theme.bg};
@@ -9071,7 +9077,7 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
         ${theme.title}
       </div>
       <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">
-        ${Number(suma || 0)} zł
+        ${sumaRounded} zł
       </div>
       ${isExpectedMode ? `
         <div style="margin-top:6px; opacity:.78; font-size:13px; line-height:1.35;">
@@ -9082,8 +9088,16 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
   `;
 
   const itemsHtml = sorted.map(p => {
-    const bg = theme.bg;
-    const badge = theme.badge;
+    const nazwa = escapeHtml_(p?.nazwa || "");
+    const kwota = Math.round((Number(p?.kwota || 0) + Number.EPSILON) * 100) / 100;
+    const typLabel = p?.kind === "skladka" ? "Składka" : "Zajęcia dodatkowe";
+    const season = seasonLabel_(p);
+
+    const seasonHtml = season
+      ? `<div style="margin-top:5px; color:#FFD28A; font-size:12px; font-weight:900;">
+           ${escapeHtml_(season)}
+         </div>`
+      : "";
 
     const payBtn = isCurrentDebtMode
       ? `<button class="full-btn playerPayBtn"
@@ -9093,19 +9107,8 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
          </button>`
       : "";
 
-    const nazwa = escapeHtml_(p?.nazwa || "");
-    const kwota = Number(p?.kwota || 0);
-    const typLabel = p?.kind === "skladka" ? "Składka" : "Zajęcia dodatkowe";
-
-    const seasonLabel = formatPlayerSeasonShortLabel_(p);
-    const seasonHtml = seasonLabel
-      ? `<div style="margin-top:5px; color:#FFD28A; font-size:12px; font-weight:900;">
-           ${escapeHtml_(seasonLabel)}
-         </div>`
-      : "";
-
     return `
-      <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
+      <div class="card" style="background:${theme.bg}; text-align:left; margin-top:10px;">
         <div style="display:flex; justify-content:space-between; gap:10px;">
           <div>
             <div style="opacity:.9; font-size:14px;">${typLabel}</div>
@@ -9114,7 +9117,7 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
           </div>
           <div style="text-align:right;">
             <div style="font-size:18px; font-weight:800;">${kwota} zł</div>
-            <div style="margin-top:2px;">${badge}</div>
+            <div style="margin-top:2px;">${theme.badge}</div>
           </div>
         </div>
         ${payBtn}
@@ -9125,16 +9128,17 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
   div.innerHTML = summaryCard + itemsHtml;
 }
 
-  function parsePlatnoscMeta_(nazwa){
+function parsePlatnoscMeta_(nazwa) {
   if (!nazwa) return null;
 
-  const lower = nazwa.toLowerCase();
+  const lower = String(nazwa).toLowerCase();
 
   const isSkladka = lower.startsWith("składka");
   const isZajecia = lower.startsWith("zajęcia");
 
-  const yearMatch = nazwa.match(/20\d{2}/);
+  const yearMatch = String(nazwa).match(/20\d{2}/);
   if (!yearMatch) return null;
+
   const year = Number(yearMatch[0]);
 
   const miesiace = [
@@ -9152,54 +9156,47 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
   };
 }
 
- function getPlatnoscColor_(meta, today){
-  if (!meta) return "#b30000"; // mocna czerwień fallback
+function getPlatnoscColor_(meta, today) {
+  if (!meta) return "#b30000";
 
-  const GREEN = "#00c853";  // zielony jak sygnalizacja (mocny)
-  const RED   = "#ff0000";  // agresywna czerwień
+  const GREEN = "#00c853";
+  const RED = "#ff0000";
 
-  const paymentMonth = new Date(meta.year, meta.monthIdx, 1);
-  const nextMonth = new Date(meta.year, meta.monthIdx + 1, 1);
-
-  // ======================
-  // SKŁADKA
-  // ======================
   if (meta.type === "S") {
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
 
-    // bieżący miesiąc → zielony
     if (meta.year === currentYear && meta.monthIdx === currentMonth) {
       return GREEN;
     }
 
-    // zaległe → czerwony
     return RED;
   }
 
-  // ======================
-  // ZAJĘCIA DODATKOWE
-  // ======================
   if (meta.type === "Z") {
-    // deadline: 15 dzień następnego miesiąca
     const deadline = new Date(meta.year, meta.monthIdx + 1, 15);
-    deadline.setHours(0,0,0,0);
+    deadline.setHours(0, 0, 0, 0);
 
     if (today <= deadline) {
-      return GREEN; // jeszcze czas na rozliczenie
-    } else {
-      return RED;   // po 15 – wali po oczach
+      return GREEN;
     }
+
+    return RED;
   }
 
   return RED;
 }
 
-  function formatPlatnoscNazwa_(txt){
+function formatPlatnoscNazwa_(txt) {
   if (!txt) return "";
+
   return String(txt)
     .replace(/^Składka\s*\(.*?\)\s*/i, "Składka ")
     .replace(/^Zajęcia dodatkowe\s*/i, "Zajęcia ");
+}
+
+function powrotDoPlatnosci() {
+  goToView("platnosciView", { replace: true });
 }
 
 /* ===================== TRENINGI ======================-- */
