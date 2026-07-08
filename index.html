@@ -2048,15 +2048,59 @@ input[type="number"] {
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
-  <!-- ADMIN: USTAWIENIA SEZONU / KLUBU -->
+<!-- ADMIN: USTAWIENIA SEZONU / KLUBU - MENU -->
 <div id="adminClubSeasonSettingsView" class="container hidden">
   <h1>Ustawienia sezonu / klubu</h1>
 
-  <div id="adminClubSeasonSettingsBody">
-    <p>⏳ Ładowanie ustawień...</p>
+  <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
+    <button class="full-btn" type="button" onclick="adminOpenClubVisualSettingsView()">
+      Ustawienia wizualne
+    </button>
+
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 16px 0;">
+      Logo klubu oraz kolor tła aplikacji.
+    </div>
+
+    <button class="full-btn" type="button" onclick="adminOpenClubFormalSettingsView()">
+      Ustawienia formalne
+    </button>
+
+    <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 16px 0;">
+      Daty sezonu, płatności, limit treningów oraz dane do przelewów.
+    </div>
+
+    <button class="full-btn alt" type="button" onclick="appBack()">
+      ⬅ Wróć
+    </button>
+  </div>
+</div>
+
+
+<!-- ADMIN: USTAWIENIA WIZUALNE -->
+<div id="adminClubVisualSettingsView" class="container hidden">
+  <h1>Ustawienia wizualne</h1>
+
+  <div id="adminClubVisualSettingsBody">
+    <p>⏳ Ładowanie...</p>
   </div>
 
-  <button class="full-btn alt" onclick="appBack()">⬅ Wróć</button>
+  <button class="full-btn alt" type="button" onclick="appBack()">
+    ⬅ Wróć
+  </button>
+</div>
+
+
+<!-- ADMIN: USTAWIENIA FORMALNE -->
+<div id="adminClubFormalSettingsView" class="container hidden">
+  <h1>Ustawienia formalne</h1>
+
+  <div id="adminClubFormalSettingsBody">
+    <p>⏳ Ładowanie...</p>
+  </div>
+
+  <button class="full-btn alt" type="button" onclick="appBack()">
+    ⬅ Wróć
+  </button>
 </div>
   
 <!-- =========================================================
@@ -17665,21 +17709,25 @@ async function adminLoadRaportRezerwacja_() {
 
 /* =================== SEKTOR 190 A - ADMIN EDYCJA USTAWIEŃ KLUBU =================== */
 
-async function adminOpenClubSeasonSettingsView() {
+function adminOpenClubSeasonSettingsView() {
   goToView("adminClubSeasonSettingsView");
+}
 
-  const body = document.getElementById("adminClubSeasonSettingsBody");
+  async function adminOpenClubVisualSettingsView() {
+  goToView("adminClubVisualSettingsView");
+
+  const body = document.getElementById("adminClubVisualSettingsBody");
   if (!body) return;
 
-  body.innerHTML = `<p>⏳ Ładowanie ustawień...</p>`;
+  body.innerHTML = "<p>⏳ Ładowanie ustawień wizualnych...</p>";
 
   try {
     const res = await apiClubGet("adminGetClubSeasonSettings", {
-      includeLogo: "0",
+      includeLogo: "1",
       t: Date.now()
     });
 
-    renderAdminClubSeasonSettings_(res);
+    renderAdminClubVisualSettings_(res);
 
   } catch (e) {
     body.innerHTML = `
@@ -17689,6 +17737,311 @@ async function adminOpenClubSeasonSettingsView() {
     `;
   }
 }
+
+function renderAdminClubVisualSettings_(res) {
+  const body = document.getElementById("adminClubVisualSettingsBody");
+  if (!body) return;
+
+  function esc(txt) {
+    return String(txt ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  if (!res || res.success !== true) {
+    body.innerHTML = `
+      <div class="card" style="background:#700; text-align:left;">
+        ❌ ${esc(res?.error || "Nie udało się pobrać ustawień.")}
+      </div>
+    `;
+    return;
+  }
+
+  const s = res.settings || {};
+  const bgColor = String(s.bgColor || "#000000").trim() || "#000000";
+  const logoData = String(s.logoData || "").trim();
+
+  const palette = [
+    "#000000", "#202020", "#1b2838", "#2f4a6b",
+    "#243866", "#405da8", "#193d3b", "#45918e",
+    "#183c27", "#3c8548", "#343817", "#7d8235",
+    "#352516", "#a96535", "#351525", "#712b45"
+  ];
+
+  const colorGridHtml = palette.map(color => {
+    const selected = color.toLowerCase() === bgColor.toLowerCase();
+
+    return `
+      <button type="button"
+        onclick="adminSettingsTodo_()"
+        style="
+          width:100%;
+          aspect-ratio:1/1;
+          border-radius:9px;
+          background:${esc(color)};
+          border:${selected ? "3px solid #ffffff" : "1px solid rgba(255,255,255,.20)"};
+          box-shadow:${selected ? "0 0 0 2px rgba(255,255,255,.25)" : "none"};
+          box-sizing:border-box;
+          padding:0;
+        "
+        title="${esc(color)}">
+      </button>
+    `;
+  }).join("");
+
+  body.innerHTML = `
+    <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
+      <button class="full-btn" type="button" onclick="adminSettingsTodo_()">
+        Zmień logo
+      </button>
+
+      <div style="margin-top:8px;">
+        ${
+          logoData
+            ? `<img src="${esc(logoData)}" alt="Logo klubu" style="
+                 display:block;
+                 width:160px;
+                 max-height:160px;
+                 object-fit:contain;
+                 margin:0 auto;
+                 border-radius:10px;
+                 border:1px solid #444;
+                 background:#050505;
+               ">`
+            : `<div style="
+                 width:160px;
+                 height:160px;
+                 margin:0 auto;
+                 border-radius:10px;
+                 border:1px solid #444;
+                 background:#050505;
+                 display:flex;
+                 align-items:center;
+                 justify-content:center;
+                 font-size:13px;
+                 opacity:.75;
+               ">Brak logo</div>`
+        }
+
+        <div style="font-size:12px;opacity:0.75;margin-top:6px;">
+          PNG/JPG, najlepiej kwadrat, np. 512×512
+        </div>
+      </div>
+
+      <button class="full-btn alt" type="button" style="margin-top:14px;" onclick="adminSettingsTodo_()">
+        Kolor tła
+      </button>
+
+      <div style="
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:10px;
+        margin-top:8px;
+        font-size:13px;
+        opacity:.95;
+      ">
+        <div style="
+          width:28px;
+          height:28px;
+          border-radius:7px;
+          background:${esc(bgColor)};
+          border:1px solid rgba(255,255,255,.35);
+        "></div>
+        <div style="font-weight:800;">${esc(bgColor)}</div>
+      </div>
+
+      <div style="
+        margin-top:10px;
+        display:grid;
+        grid-template-columns:repeat(4, 1fr);
+        gap:8px;
+      ">
+        ${colorGridHtml}
+      </div>
+
+      <button class="full-btn" type="button" style="margin-top:16px;" onclick="adminSettingsTodo_()" disabled>
+        Zapisz zmiany
+      </button>
+
+      <div style="text-align:left; opacity:.65; font-size:12px; line-height:1.4; margin-top:8px;">
+        Zapis logo i koloru dodamy w kolejnym kroku.
+      </div>
+    </div>
+  `;
+}
+
+  async function adminOpenClubFormalSettingsView() {
+  goToView("adminClubFormalSettingsView");
+
+  const body = document.getElementById("adminClubFormalSettingsBody");
+  if (!body) return;
+
+  body.innerHTML = "<p>⏳ Ładowanie ustawień formalnych...</p>";
+
+  try {
+    const res = await apiClubGet("adminGetClubSeasonSettings", {
+      includeLogo: "0",
+      t: Date.now()
+    });
+
+    renderAdminClubFormalSettings_(res);
+
+  } catch (e) {
+    body.innerHTML = `
+      <div class="card" style="background:#700; text-align:left;">
+        ❌ Błąd połączenia: ${String(e?.message || e)}
+      </div>
+    `;
+  }
+}
+
+function renderAdminClubFormalSettings_(res) {
+  const body = document.getElementById("adminClubFormalSettingsBody");
+  if (!body) return;
+
+  function esc(txt) {
+    return String(txt ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function money(v) {
+    const n = Number(String(v ?? "").replace(",", "."));
+    if (!Number.isFinite(n)) return "";
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+  }
+
+  function bankFormat(v) {
+    const s = String(v || "").replace(/\s+/g, "");
+    if (!s) return "";
+    return s.replace(/(.{2})(?=.)/g, "$1 ").trim();
+  }
+
+  function formatDatePL(v) {
+    const s = String(v || "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return s;
+    return `${m[3]}.${m[2]}.${m[1]}`;
+  }
+
+  if (!res || res.success !== true) {
+    body.innerHTML = `
+      <div class="card" style="background:#700; text-align:left;">
+        ❌ ${esc(res?.error || "Nie udało się pobrać ustawień.")}
+      </div>
+    `;
+    return;
+  }
+
+  const s = res.settings || {};
+  const fees = Array.isArray(s.monthlyFees) ? s.monthlyFees : [];
+
+  const feesPreview = fees.length
+    ? fees.map(item => `
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+          padding:8px 0;
+          border-bottom:1px solid rgba(255,255,255,.08);
+          font-size:13px;
+        ">
+          <div style="font-weight:800;">${esc(item.label || "-")}</div>
+          <div style="font-weight:900; white-space:nowrap;">${money(item.fee)} zł</div>
+        </div>
+      `).join("")
+    : `<div style="opacity:.75; font-size:13px;">Brak składek miesięcznych.</div>`;
+
+  body.innerHTML = `
+    <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
+      <div style="text-align:left; background:#111; border:1px solid #333; border-radius:12px; padding:12px; margin-bottom:16px;">
+        <div style="font-weight:900; font-size:16px; margin-bottom:8px;">
+          Ustawienia formalne
+        </div>
+
+        <div style="opacity:.9; line-height:1.45; font-size:13px;">
+          Daty sezonu, płatności, limit treningów oraz dane do odbioru wpłat.
+        </div>
+      </div>
+
+      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+        Początek sezonu: ${esc(formatDatePL(s.seasonStart) || "nie ustawiono")}
+      </button>
+
+      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+        Koniec sezonu: ${esc(formatDatePL(s.seasonEnd) || "nie ustawiono")}
+      </button>
+
+      <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:10px 0 16px 0;">
+        Daty sezonu określają, dla jakich miesięcy system przygotowuje płatności, statystyki i strukturę pracy klubu.
+      </div>
+
+      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+        Płatności
+      </button>
+
+      <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 10px 0;">
+        Składki miesięczne, cena zajęć dodatkowych i limit treningów w składce.
+      </div>
+
+      <div style="
+        text-align:left;
+        background:#151515;
+        border:1px solid #333;
+        border-radius:12px;
+        padding:10px;
+        margin-bottom:14px;
+      ">
+        <div style="font-size:13px; line-height:1.5;">
+          <div><b>Cena zajęć dodatkowych:</b> ${money(s.singleTrainingPrice)} zł</div>
+          <div><b>Limit treningów w składce:</b> ${esc(s.membershipLimit || "")}</div>
+        </div>
+
+        <div style="margin-top:10px; font-weight:900; font-size:13px;">
+          Składki miesięczne
+        </div>
+
+        ${feesPreview}
+      </div>
+
+      <button class="full-btn alt" type="button" onclick="adminSettingsTodo_()">
+        Dane klubu do odbioru wpłat
+      </button>
+
+      <div style="text-align:left; opacity:.75; font-size:12px; line-height:1.4; margin:6px 0 10px 0;">
+        Odbiorca i numer rachunku używane przy płatnościach zawodników.
+      </div>
+
+      <div style="
+        text-align:left;
+        background:#151515;
+        border:1px solid #333;
+        border-radius:12px;
+        padding:10px;
+        margin-bottom:16px;
+        font-size:13px;
+        line-height:1.5;
+      ">
+        <div><b>Odbiorca:</b> ${esc(s.bankReceiver || "")}</div>
+        <div><b>Konto:</b> ${esc(bankFormat(s.bankAccount || ""))}</div>
+      </div>
+
+      <button class="full-btn" type="button" onclick="adminSettingsTodo_()" disabled>
+        Zapisz zmiany
+      </button>
+
+      <div style="text-align:left; opacity:.65; font-size:12px; line-height:1.4; margin-top:8px;">
+        Zapis ustawień formalnych dodamy po przygotowaniu edycji sekcji.
+      </div>
+    </div>
+  `;
+}
+  
 function renderAdminClubSeasonSettings_(res) {
   const body = document.getElementById("adminClubSeasonSettingsBody");
   if (!body) return;
