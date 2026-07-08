@@ -18843,15 +18843,436 @@ function adminEditSeasonEndSettings_() {
   adminSettingsTodo_();
 }
 
-function adminEditPaymentSettings_() {
-  adminSettingsTodo_();
+async function adminEditPaymentSettings_() {
+  adminShowPaymentSettingsModal_({
+    loading: true
+  });
+
+  try {
+    const res = await apiClubGet("adminGetClubSeasonSettings", {
+      includeLogo: "0",
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true) {
+      adminFillPaymentSettingsModal_({
+        error: res?.error || "Nie udało się pobrać ustawień płatności."
+      });
+      return;
+    }
+
+    const s = res.settings || {};
+
+    adminFillPaymentSettingsModal_({
+      singleTrainingPrice: s.singleTrainingPrice,
+      membershipLimit: s.membershipLimit,
+      monthlyFees: Array.isArray(s.monthlyFees) ? s.monthlyFees : []
+    });
+
+  } catch (e) {
+    adminFillPaymentSettingsModal_({
+      error: "Błąd połączenia: " + String(e?.message || e)
+    });
+  }
 }
 
+function adminShowPaymentSettingsModal_(data) {
+  const payload = data || {};
+  const isLoading = payload.loading === true;
+
+  const old = document.getElementById("adminPaymentSettingsModal");
+  if (old) old.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "adminPaymentSettingsModal";
+
+  modal.style.cssText = `
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(0,0,0,.72);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    box-sizing:border-box;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:390px;
+      max-height:88vh;
+      overflow:auto;
+      background:#101010;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:18px;
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      padding:18px;
+      box-sizing:border-box;
+      text-align:left;
+    ">
+      <div style="font-size:20px; font-weight:900; margin-bottom:6px;">
+        Płatności
+      </div>
+
+      <div style="
+        font-size:13px;
+        opacity:.75;
+        line-height:1.4;
+        margin-bottom:16px;
+      ">
+        Edycja składek miesięcznych, ceny zajęć dodatkowych oraz limitu treningów w składce.
+      </div>
+
+      <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">
+        Cena zajęć dodatkowych
+      </label>
+
+      <input
+        id="adminSingleTrainingPriceInput"
+        type="text"
+        inputmode="decimal"
+        placeholder="${isLoading ? "Ładowanie..." : "np. 30"}"
+        ${isLoading ? "disabled" : ""}
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:12px;
+          border-radius:12px;
+          border:1px solid #444;
+          background:#181818;
+          color:#fff;
+          font-size:15px;
+          outline:none;
+          margin-bottom:14px;
+          opacity:${isLoading ? ".65" : "1"};
+        "
+      >
+
+      <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">
+        Limit treningów w składce
+      </label>
+
+      <input
+        id="adminMembershipLimitInput"
+        type="text"
+        inputmode="numeric"
+        placeholder="${isLoading ? "Ładowanie..." : "np. 8"}"
+        ${isLoading ? "disabled" : ""}
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:12px;
+          border-radius:12px;
+          border:1px solid #444;
+          background:#181818;
+          color:#fff;
+          font-size:15px;
+          outline:none;
+          margin-bottom:16px;
+          opacity:${isLoading ? ".65" : "1"};
+        "
+      >
+
+      <div style="
+        font-size:15px;
+        font-weight:900;
+        margin:8px 0 10px 0;
+      ">
+        Składki miesięczne
+      </div>
+
+      <div
+        id="adminMonthlyFeesBox"
+        style="
+          background:#151515;
+          border:1px solid #333;
+          border-radius:14px;
+          padding:10px;
+          margin-bottom:14px;
+        "
+      >
+        ${isLoading ? `<div style="opacity:.75;font-size:13px;">⏳ Ładowanie miesięcy...</div>` : ""}
+      </div>
+
+      <div
+        id="adminPaymentSettingsMsg"
+        style="
+          min-height:18px;
+          font-size:13px;
+          line-height:1.35;
+          color:#b8b8b8;
+          margin-bottom:12px;
+        "
+      >${isLoading ? "⏳ Ładowanie danych..." : ""}</div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button
+          type="button"
+          class="full-btn alt"
+          onclick="adminClosePaymentSettingsModal_()"
+          style="width:auto; min-width:110px; margin:0;"
+        >
+          Anuluj
+        </button>
+
+        <button
+          id="adminPaymentSaveBtn"
+          type="button"
+          class="full-btn"
+          onclick="adminSavePaymentSettingsFromModal_()"
+          ${isLoading ? "disabled" : ""}
+          style="
+            width:auto;
+            min-width:120px;
+            margin:0;
+            opacity:${isLoading ? ".65" : "1"};
+          "
+        >
+          Zapisz
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+  
 function adminSaveClubSeasonSettings_() {
   adminSettingsTodo_();
 }
 
-  
+  function adminFillPaymentSettingsModal_(data) {
+  const payload = data || {};
+
+  const modal = document.getElementById("adminPaymentSettingsModal");
+  if (!modal) return;
+
+  const singleInput = document.getElementById("adminSingleTrainingPriceInput");
+  const limitInput = document.getElementById("adminMembershipLimitInput");
+  const feesBox = document.getElementById("adminMonthlyFeesBox");
+  const msg = document.getElementById("adminPaymentSettingsMsg");
+  const saveBtn = document.getElementById("adminPaymentSaveBtn");
+
+  function esc(txt) {
+    return String(txt ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  if (payload.error) {
+    if (msg) {
+      msg.style.color = "#ff8d8d";
+      msg.textContent = "❌ " + payload.error;
+    }
+
+    [singleInput, limitInput].forEach(input => {
+      if (input) {
+        input.disabled = true;
+        input.style.opacity = ".65";
+      }
+    });
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = ".65";
+    }
+
+    return;
+  }
+
+  const monthlyFees = Array.isArray(payload.monthlyFees) ? payload.monthlyFees : [];
+
+  if (singleInput) {
+    singleInput.value = String(payload.singleTrainingPrice ?? "").replace(".", ",");
+    singleInput.disabled = false;
+    singleInput.style.opacity = "1";
+    singleInput.placeholder = "np. 30";
+  }
+
+  if (limitInput) {
+    limitInput.value = String(payload.membershipLimit ?? "");
+    limitInput.disabled = false;
+    limitInput.style.opacity = "1";
+    limitInput.placeholder = "np. 8";
+  }
+
+  if (feesBox) {
+    feesBox.innerHTML = monthlyFees.length
+      ? monthlyFees.map((item, i) => {
+          const label = String(item.label || ("Miesiąc " + (i + 1)));
+          const fee = String(item.fee ?? "").replace(".", ",");
+
+          const col = Number(item.col || item.column || 0);
+
+          return `
+            <div style="
+              display:grid;
+              grid-template-columns:1fr 90px;
+              gap:10px;
+              align-items:center;
+              padding:8px 0;
+              border-bottom:${i === monthlyFees.length - 1 ? "none" : "1px solid rgba(255,255,255,.08)"};
+            ">
+              <div style="font-size:13px; font-weight:800;">
+                ${esc(label)}
+              </div>
+
+              <input
+                class="adminMonthlyFeeInput"
+                type="text"
+                inputmode="decimal"
+                value="${esc(fee)}"
+                data-label="${esc(label)}"
+                data-col="${Number.isFinite(col) ? col : ""}"
+                style="
+                  width:100%;
+                  box-sizing:border-box;
+                  padding:9px;
+                  border-radius:10px;
+                  border:1px solid #444;
+                  background:#181818;
+                  color:#fff;
+                  font-size:14px;
+                  outline:none;
+                  text-align:right;
+                "
+              >
+            </div>
+          `;
+        }).join("")
+      : `<div style="opacity:.75;font-size:13px;">Brak miesięcy do edycji.</div>`;
+  }
+
+  if (msg) {
+    msg.style.color = "#b8b8b8";
+    msg.textContent = "";
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = "1";
+  }
+
+  setTimeout(() => {
+    if (singleInput) singleInput.focus();
+  }, 50);
+}
+
+  function adminClosePaymentSettingsModal_() {
+  const modal = document.getElementById("adminPaymentSettingsModal");
+  if (modal) modal.remove();
+}
+
+
+async function adminSavePaymentSettingsFromModal_() {
+  const singleInput = document.getElementById("adminSingleTrainingPriceInput");
+  const limitInput = document.getElementById("adminMembershipLimitInput");
+  const feeInputs = Array.from(document.querySelectorAll(".adminMonthlyFeeInput"));
+
+  const msg = document.getElementById("adminPaymentSettingsMsg");
+  const btn = document.getElementById("adminPaymentSaveBtn");
+
+  if (msg) {
+    msg.style.color = "#ff8d8d";
+    msg.textContent = "";
+  }
+
+  const singleTrainingPriceRaw = String(singleInput?.value || "")
+    .replace(",", ".")
+    .trim();
+
+  const membershipLimitRaw = String(limitInput?.value || "")
+    .replace(",", ".")
+    .trim();
+
+  const singleTrainingPrice = Number(singleTrainingPriceRaw);
+  const membershipLimit = Number(membershipLimitRaw);
+
+  if (!Number.isFinite(singleTrainingPrice) || singleTrainingPrice < 0) {
+    if (msg) msg.textContent = "❌ Podaj poprawną cenę zajęć dodatkowych.";
+    return;
+  }
+
+  if (!Number.isFinite(membershipLimit) || membershipLimit < 0 || Math.floor(membershipLimit) !== membershipLimit) {
+    if (msg) msg.textContent = "❌ Limit treningów musi być liczbą całkowitą 0 lub większą.";
+    return;
+  }
+
+  const monthlyFees = [];
+
+  for (const input of feeInputs) {
+    const label = String(input.dataset.label || "").trim();
+    const col = Number(input.dataset.col || 0);
+
+    const feeRaw = String(input.value || "")
+      .replace(",", ".")
+      .trim();
+
+    const fee = Number(feeRaw);
+
+    if (!Number.isFinite(fee) || fee < 0) {
+      if (msg) msg.textContent = "❌ Nieprawidłowa składka miesięczna: " + (label || "bez nazwy");
+      return;
+    }
+
+    monthlyFees.push({
+      label: label,
+      col: col,
+      fee: fee
+    });
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Zapisuję...";
+    btn.style.opacity = ".65";
+  }
+
+  try {
+    const saveRes = await apiClubPost({
+      action: "adminSaveClubPaymentSettings",
+      singleTrainingPrice: singleTrainingPrice,
+      membershipLimit: membershipLimit,
+      monthlyFees: JSON.stringify(monthlyFees)
+    });
+
+    if (!saveRes || saveRes.success !== true) {
+      if (msg) {
+        msg.style.color = "#ff8d8d";
+        msg.textContent = "❌ " + (saveRes?.error || "Nie udało się zapisać ustawień płatności.");
+      }
+      return;
+    }
+
+    if (msg) {
+      msg.style.color = "#8dff9a";
+      msg.textContent = "✅ Ustawienia płatności zostały zapisane.";
+    }
+
+    setTimeout(() => {
+      adminClosePaymentSettingsModal_();
+      adminOpenClubFormalSettingsView();
+    }, 650);
+
+  } catch (e) {
+    if (msg) {
+      msg.style.color = "#ff8d8d";
+      msg.textContent = "❌ Błąd połączenia: " + String(e?.message || e);
+    }
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Zapisz";
+      btn.style.opacity = "1";
+    }
+  }
+}
 
 /* =================== KONIEC SEKTORA 190 a =================== */
 
