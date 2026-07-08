@@ -1699,6 +1699,7 @@ input[type="number"] {
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
+  <button class="full-btn" type="button" onclick="adminOpenClubSeasonSettingsView()">⚙️ Ustawienia sezonu / klubu</button>
   <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
   <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
 </div>
@@ -2045,6 +2046,17 @@ input[type="number"] {
   <p id="adminFeaturesMsg" style="margin-top:10px;"></p>
 
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+</div>
+
+  <!-- ADMIN: USTAWIENIA SEZONU / KLUBU -->
+<div id="adminClubSeasonSettingsView" class="container hidden">
+  <h1>Ustawienia sezonu / klubu</h1>
+
+  <div id="adminClubSeasonSettingsBody">
+    <p>⏳ Ładowanie ustawień...</p>
+  </div>
+
+  <button class="full-btn alt" onclick="appBack()">⬅ Wróć</button>
 </div>
   
 <!-- =========================================================
@@ -17650,6 +17662,149 @@ async function adminLoadRaportRezerwacja_() {
 }
 
 /* =================== KONIEC SEKTORA 190 =================== */
+
+/* =================== SEKTOR 190 A - ADMIN EDYCJA USTAWIEŃ KLUBU =================== */
+
+async function adminOpenClubSeasonSettingsView() {
+  goToView("adminClubSeasonSettingsView");
+
+  const body = document.getElementById("adminClubSeasonSettingsBody");
+  if (!body) return;
+
+  body.innerHTML = `<p>⏳ Ładowanie ustawień...</p>`;
+
+  try {
+    const res = await apiClubGet("adminGetClubSeasonSettings", {
+      includeLogo: "0",
+      t: Date.now()
+    });
+
+    renderAdminClubSeasonSettings_(res);
+
+  } catch (e) {
+    body.innerHTML = `
+      <div class="card" style="background:#700; text-align:left;">
+        ❌ Błąd połączenia: ${String(e?.message || e)}
+      </div>
+    `;
+  }
+}
+
+function renderAdminClubSeasonSettings_(res) {
+  const body = document.getElementById("adminClubSeasonSettingsBody");
+  if (!body) return;
+
+  function esc(txt) {
+    return String(txt ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function money(v) {
+    const n = Number(v || 0);
+    if (!Number.isFinite(n)) return "";
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+  }
+
+  function bankFormat(v) {
+    const s = String(v || "").replace(/\s+/g, "");
+    if (!s) return "";
+    return s.replace(/(.{2})(?=.)/g, "$1 ").trim();
+  }
+
+  if (!res || res.success !== true) {
+    body.innerHTML = `
+      <div class="card" style="background:#700; text-align:left;">
+        ❌ ${esc(res?.error || "Nie udało się pobrać ustawień.")}
+      </div>
+    `;
+    return;
+  }
+
+  const s = res.settings || {};
+  const fees = Array.isArray(s.monthlyFees) ? s.monthlyFees : [];
+
+  const feesHtml = fees.length
+    ? fees.map(item => `
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          gap:12px;
+          padding:10px 0;
+          border-bottom:1px solid rgba(255,255,255,.08);
+        ">
+          <div>
+            <div style="font-weight:800;">${esc(item.label || "-")}</div>
+            <div style="opacity:.65; font-size:12px;">${esc(item.feeHeader || "")}</div>
+          </div>
+          <div style="font-weight:900; white-space:nowrap;">
+            ${money(item.fee)} zł
+          </div>
+        </div>
+      `).join("")
+    : `<div style="opacity:.75;">Brak wpisanych składek miesięcznych.</div>`;
+
+  body.innerHTML = `
+    <div class="card" style="background:#111; text-align:left;">
+      <div style="font-size:18px; font-weight:900; margin-bottom:12px;">
+        Dane klubu
+      </div>
+
+      <div style="line-height:1.55;">
+        <div><b>Club ID:</b> ${esc(s.clubId || "")}</div>
+        <div><b>Nazwa klubu:</b> ${esc(s.clubName || "")}</div>
+        <div><b>Kolor tła:</b> ${esc(s.bgColor || "")}</div>
+        <div><b>Logo:</b> ${s.hasLogoData ? "zapisane ✅" : "brak"}</div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#111; text-align:left; margin-top:12px;">
+      <div style="font-size:18px; font-weight:900; margin-bottom:12px;">
+        Sezon
+      </div>
+
+      <div style="line-height:1.55;">
+        <div><b>Początek sezonu:</b> ${esc(s.seasonStart || "")}</div>
+        <div><b>Koniec sezonu:</b> ${esc(s.seasonEnd || "")}</div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#111; text-align:left; margin-top:12px;">
+      <div style="font-size:18px; font-weight:900; margin-bottom:12px;">
+        Płatności
+      </div>
+
+      <div style="line-height:1.55; margin-bottom:12px;">
+        <div><b>Cena zajęć dodatkowych:</b> ${money(s.singleTrainingPrice)} zł</div>
+        <div><b>Limit treningów w składce:</b> ${esc(s.membershipLimit || "")}</div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div style="font-weight:900; margin-bottom:6px;">Składki miesięczne</div>
+        ${feesHtml}
+      </div>
+    </div>
+
+    <div class="card" style="background:#111; text-align:left; margin-top:12px;">
+      <div style="font-size:18px; font-weight:900; margin-bottom:12px;">
+        Dane do przelewów
+      </div>
+
+      <div style="line-height:1.55;">
+        <div><b>Odbiorca:</b> ${esc(s.bankReceiver || "")}</div>
+        <div><b>Numer konta:</b> ${esc(bankFormat(s.bankAccount || ""))}</div>
+      </div>
+    </div>
+  `;
+}
+
+
+
+  
+
+/* =================== KONIEC SEKTORA 190 a =================== */
+
 
 /* =================== SEKTOR 191 - funkcje dodatkowe =================== */
 
