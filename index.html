@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.85';
+  window.APP_BUILD = 'APP v2.86';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1073,6 +1073,20 @@ input[type="number"] {
 </div>
     </div>
 
+  <!-- PLAYER PAYMENTS PAID VIEW
+     Wpłacone płatności zawodnika z poprzednich sezonów -->
+
+<div id="platnosciZakonczoneSezonyView" class="view hidden">
+  <h2>Zakończone sezony</h2>
+
+  <div id="listaPlatnosciZakonczoneSezony"></div>
+
+  <button class="full-btn alt" onclick="appBack()">
+    Wróć
+  </button>
+</div>
+
+  
 <!-- PLAYER EVENTS VIEW
      Lista wydarzeń i treningów zawodnika -->
     
@@ -8698,7 +8712,8 @@ async function pokazPlatnosciWplacone() {
     if (raw) {
       const entry = JSON.parse(raw);
       if (entry && entry.data) {
-        renderPlatnosciListInto_("listaPlatnosciWplacone", entry.data.wplacone || [], entry.data.sumaWplacone || 0, "wplacone");
+        const currentPaid = getCurrentPlayerPayments_(entry.data.wplacone || []);
+        renderPlatnosciListInto_("listaPlatnosciWplacone", currentPaid, sumPlayerPayments_(currentPaid), "wplacone");
         hadCache = true;
       }
     }
@@ -8733,11 +8748,77 @@ async function pokazPlatnosciWplacone() {
     window.__playerPaymentsPayload = payload;
 
     if (changed) {
-      renderPlatnosciListInto_("listaPlatnosciWplacone", payload.wplacone, payload.sumaWplacone, "wplacone");
+      const currentPaid = getCurrentPlayerPayments_(payload.wplacone || []);
+      renderPlatnosciListInto_("listaPlatnosciWplacone", currentPaid, sumPlayerPayments_(currentPaid), "wplacone");
     }
 
   } catch (e) {
     if (!hadCache && div) {
+      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
+    }
+  }
+}
+
+  async function pokazPlatnosciZakonczoneSezony() {
+  goToView("platnosciZakonczoneSezonyView");
+
+  const div = document.getElementById("listaPlatnosciZakonczoneSezony");
+  if (!div) return;
+
+  const cacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".playerPayments.numer-" + String(numerZalogowanego || "") + ".with-seasons-spodziewane";
+
+  // 1. Cache natychmiast
+  let hadCache = false;
+
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (entry && entry.data) {
+        const data = normalizePlayerPaymentsPayload_(entry.data);
+        const archivePaid = getArchivePlayerPayments_(data.wplacone || []);
+
+        renderPlatnosciListInto_(
+          "listaPlatnosciZakonczoneSezony",
+          archivePaid,
+          sumPlayerPayments_(archivePaid),
+          "zakonczone"
+        );
+
+        hadCache = true;
+      }
+    }
+  } catch (e) {}
+
+  if (!hadCache) {
+    div.innerHTML = "<p>⏳ Ładowanie zakończonych sezonów...</p>";
+  }
+
+  // 2. Świeże dane
+  try {
+    const fresh = await apiClubGet("platnosci", { numer: numerZalogowanego });
+    const payload = normalizePlayerPaymentsPayload_(fresh);
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data: payload
+      }));
+    } catch (e) {}
+
+    window.__playerPaymentsPayload = payload;
+
+    const archivePaid = getArchivePlayerPayments_(payload.wplacone || []);
+
+    renderPlatnosciListInto_(
+      "listaPlatnosciZakonczoneSezony",
+      archivePaid,
+      sumPlayerPayments_(archivePaid),
+      "zakonczone"
+    );
+
+  } catch (e) {
+    if (!hadCache) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
   }
@@ -8756,6 +8837,30 @@ function formatPlayerSeasonShortLabel_(item) {
 
   return "Sezon poprzedni";
 }
+
+  function isArchivePlayerPayment_(item) {
+  return String(item?.sourceType || "current").trim() === "archive";
+}
+
+function getCurrentPlayerPayments_(items) {
+  return Array.isArray(items)
+    ? items.filter(item => !isArchivePlayerPayment_(item))
+    : [];
+}
+
+function getArchivePlayerPayments_(items) {
+  return Array.isArray(items)
+    ? items.filter(item => isArchivePlayerPayment_(item))
+    : [];
+}
+
+function sumPlayerPayments_(items) {
+  return roundMoneyClient_(items.reduce((acc, item) => acc + Number(item?.kwota || 0), 0));
+}
+
+function roundMoneyClient_(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
   
 function renderPlatnosciMenu(payload) {
   const div = document.getElementById("platnosciSummaryBox");
@@ -8766,9 +8871,13 @@ function renderPlatnosciMenu(payload) {
   const biezace = data.biezace;
   const wplacone = data.wplacone;
   const spodziewane = data.spodziewane;
-
+  
+  const wplaconeBiezace = getCurrentPlayerPayments_(wplacone);
+  const wplaconeArchiwalne = getArchivePlayerPayments_(wplacone);
+  
   const sumaBiezace = Number(data.sumaBiezace || 0);
-  const sumaWplacone = Number(data.sumaWplacone || 0);
+  const sumaWplacone = sumPlayerPayments_(wplaconeBiezace);
+  
   const sumaSpodziewane = Number(data.sumaSpodziewane || 0);
 
   const hasSpodziewane =
@@ -8826,8 +8935,16 @@ function renderPlatnosciMenu(payload) {
       <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#5cff8d;"></div>
       <div style="font-size:15px; opacity:.95; font-weight:700; margin-top:6px;">✅ Wpłacone</div>
       <div style="font-size:34px; font-weight:900; line-height:1.1; margin-top:6px;">${sumaWplacone} zł</div>
-      <div style="margin-top:8px; color:#A6FFC0; font-weight:800; font-size:15px;">Pozycji: ${wplacone.length}</div>
+      <div style="margin-top:8px; color:#A6FFC0; font-weight:800; font-size:15px;">Pozycji: ${wplaconeBiezace.length}</div>
     </div>
+    
+      ${wplaconeArchiwalne.length > 0 ? `
+      <button class="full-btn alt"
+        style="margin-top:14px;"
+        onclick="pokazPlatnosciZakonczoneSezony()">
+        Zakończone sezony
+      </button>
+    ` : ""}
   `;
 }
 
@@ -8879,19 +8996,20 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
       })
     : [];
 
-  const isPaidMode = mode === "wplacone";
-  const isExpectedMode = mode === "spodziewane";
-  const isCurrentDebtMode = mode === "biezace";
+    const isPaidMode = mode === "wplacone";
+    const isArchivePaidMode = mode === "zakonczone";
+    const isExpectedMode = mode === "spodziewane";
+    const isCurrentDebtMode = mode === "biezace";
 
-  const theme = isPaidMode
-    ? {
-        bg: "#123a1a",
-        border: "#5cff8d",
-        glow: "rgba(92,255,141,.16)",
-        title: "✅ Wpłacone",
-        empty: "Brak wpłaconych pozycji",
-        badge: `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
-      }
+    const theme = (isPaidMode || isArchivePaidMode)
+  ? {
+      bg: "#123a1a",
+      border: "#5cff8d",
+      glow: "rgba(92,255,141,.16)",
+      title: isArchivePaidMode ? "🏁 Zakończone sezony" : "✅ Wpłacone",
+      empty: isArchivePaidMode ? "Brak wpłat z zakończonych sezonów" : "Brak wpłaconych pozycji",
+      badge: `<span style="color:#7CFF7C; font-weight:700;">WPŁACONE</span>`
+    }
     : isExpectedMode
       ? {
           bg: "#3a2614",
