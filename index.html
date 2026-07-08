@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.86';
+  window.APP_BUILD = 'APP v2.87';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8748,8 +8748,18 @@ async function pokazPlatnosciWplacone() {
     window.__playerPaymentsPayload = payload;
 
     if (changed) {
-      const currentPaid = getCurrentPlayerPayments_(payload.wplacone || []);
-      renderPlatnosciListInto_("listaPlatnosciWplacone", currentPaid, sumPlayerPayments_(currentPaid), "wplacone");
+    const data = normalizePlayerPaymentsPayload_(entry.data);
+    const currentPaid = getCurrentPlayerPayments_(data.wplacone || []);
+    const archivePaid = getArchivePlayerPayments_(data.wplacone || []);
+    
+    renderPlatnosciListInto_(
+      "listaPlatnosciWplacone",
+      currentPaid,
+      sumPlayerPayments_(currentPaid),
+      "wplacone"
+    );
+    
+    renderPlatnosciWplaconeArchiveButton_(archivePaid);
     }
 
   } catch (e) {
@@ -8757,6 +8767,22 @@ async function pokazPlatnosciWplacone() {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
   }
+}
+
+  function renderPlatnosciWplaconeArchiveButton_(archivePaid) {
+  const div = document.getElementById("listaPlatnosciWplacone");
+  if (!div) return;
+
+  const items = Array.isArray(archivePaid) ? archivePaid : [];
+  if (!items.length) return;
+
+  div.insertAdjacentHTML("beforeend", `
+    <button class="full-btn alt"
+      style="margin-top:14px;"
+      onclick="pokazPlatnosciZakonczoneSezony()">
+      Zakończone sezony
+    </button>
+  `);
 }
 
   async function pokazPlatnosciZakonczoneSezony() {
@@ -8938,13 +8964,6 @@ function renderPlatnosciMenu(payload) {
       <div style="margin-top:8px; color:#A6FFC0; font-weight:800; font-size:15px;">Pozycji: ${wplaconeBiezace.length}</div>
     </div>
     
-      ${wplaconeArchiwalne.length > 0 ? `
-      <button class="full-btn alt"
-        style="margin-top:14px;"
-        onclick="pokazPlatnosciZakonczoneSezony()">
-        Zakończone sezony
-      </button>
-    ` : ""}
   `;
 }
 
