@@ -4419,6 +4419,30 @@ window.addEventListener("popstate", (event) => {
     adminCancelConfirmPayment();
   }
 
+    // popup admin: ustawienia formalne — dane do przelewów
+  if (
+    isAdminBankSettingsModalOpen_() &&
+    !(state && state.modal === "adminBankSettingsModal")
+  ) {
+    hideAdminBankSettingsModal_();
+  }
+
+  // popup admin: ustawienia formalne — płatności
+  if (
+    isAdminPaymentSettingsModalOpen_() &&
+    !(state && state.modal === "adminPaymentSettingsModal")
+  ) {
+    hideAdminPaymentSettingsModal_();
+  }
+
+  // popup admin: ustawienia formalne — daty sezonu
+  if (
+    isAdminSeasonDateSettingsModalOpen_() &&
+    !(state && state.modal === "adminSeasonDateSettingsModal")
+  ) {
+    hideAdminSeasonDateSettingsModal_();
+  }
+
   // popup admin: usuwanie zawodnika
   if (isAdminDeletePopupOpen_() && !(state && state.modal === "adminDeletePopup")) {
     hideModal("adminDeletePopup");
@@ -4504,7 +4528,43 @@ window.addEventListener("popstate", (event) => {
 
   // popupy edycji wydarzenia
   syncTrainerEditPopupsToHistoryState_(state);
+
 });
+
+  
+  function isAdminBankSettingsModalOpen_() {
+  const el = document.getElementById("adminBankSettingsModal");
+  return !!(el && getComputedStyle(el).display !== "none");
+  }
+  
+  
+  function isAdminPaymentSettingsModalOpen_() {
+    const el = document.getElementById("adminPaymentSettingsModal");
+    return !!(el && getComputedStyle(el).display !== "none");
+  }
+  
+  
+  function isAdminSeasonDateSettingsModalOpen_() {
+    const el = document.getElementById("adminSeasonDateSettingsModal");
+    return !!(el && getComputedStyle(el).display !== "none");
+  }
+
+  function hideAdminBankSettingsModal_() {
+  const el = document.getElementById("adminBankSettingsModal");
+  if (el) el.remove();
+  }
+  
+  
+  function hideAdminPaymentSettingsModal_() {
+    const el = document.getElementById("adminPaymentSettingsModal");
+    if (el) el.remove();
+  }
+  
+  
+  function hideAdminSeasonDateSettingsModal_() {
+    const el = document.getElementById("adminSeasonDateSettingsModal");
+    if (el) el.remove();
+  }
 
 /* =================== KONIEC SEKTORA 50 =================== */
 
@@ -18421,7 +18481,8 @@ function adminShowBankSettingsModal_(data) {
     </div>
   `;
 
-  document.body.appendChild(modal);
+document.body.appendChild(modal);
+pushAppModalHistoryState_("adminBankSettingsModal");
 }
 
 function adminFillBankSettingsModal_(data) {
@@ -18490,8 +18551,12 @@ function adminFillBankSettingsModal_(data) {
   
 
 function adminCloseBankSettingsModal_() {
-  const modal = document.getElementById("adminBankSettingsModal");
-  if (modal) modal.remove();
+  if (isHistoryModal_("adminBankSettingsModal")) {
+    history.back();
+    return;
+  }
+
+  hideAdminBankSettingsModal_();
 }
 
 
@@ -19034,7 +19099,8 @@ function adminShowSeasonDateSettingsModal_(data) {
     </div>
   `;
 
-  document.body.appendChild(modal);
+document.body.appendChild(modal);
+pushAppModalHistoryState_("adminSeasonDateSettingsModal");
 }
 
 
@@ -19115,8 +19181,12 @@ function adminFillSeasonDateSettingsModal_(data) {
 
 
 function adminCloseSeasonDateSettingsModal_() {
-  const modal = document.getElementById("adminSeasonDateSettingsModal");
-  if (modal) modal.remove();
+  if (isHistoryModal_("adminSeasonDateSettingsModal")) {
+    history.back();
+    return;
+  }
+
+  hideAdminSeasonDateSettingsModal_();
 }
 
 
@@ -19408,7 +19478,8 @@ function adminShowPaymentSettingsModal_(data) {
     </div>
   `;
 
-  document.body.appendChild(modal);
+document.body.appendChild(modal);
+pushAppModalHistoryState_("adminPaymentSettingsModal");
 }
   
 function adminSaveClubSeasonSettings_() {
@@ -19534,9 +19605,13 @@ function adminSaveClubSeasonSettings_() {
   }, 50);
 }
 
-  function adminClosePaymentSettingsModal_() {
-  const modal = document.getElementById("adminPaymentSettingsModal");
-  if (modal) modal.remove();
+function adminClosePaymentSettingsModal_() {
+  if (isHistoryModal_("adminPaymentSettingsModal")) {
+    history.back();
+    return;
+  }
+
+  hideAdminPaymentSettingsModal_();
 }
 
 
