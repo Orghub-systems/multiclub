@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.92';
+  window.APP_BUILD = 'APP v2.93';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9466,12 +9466,19 @@ function renderTreningi(lista) {
     })
     .sort((a, b) => parseEventDateTime_(a) - parseEventDateTime_(b));
 
-  if (!listaPoFiltrowaniu.length) {
-    div.innerHTML = "<p>Brak wydarzeń</p>";
-    return;
-  }
-
-  div.innerHTML = listaPoFiltrowaniu.map(t => {
+    window.__playerEventsById = {};
+    
+    listaPoFiltrowaniu.forEach(t => {
+      const eid = String(t?.id || "").trim();
+      if (eid) window.__playerEventsById[eid] = t;
+    });
+    
+    if (!listaPoFiltrowaniu.length) {
+      div.innerHTML = "<p>Brak wydarzeń</p>";
+      return;
+    }
+    
+    div.innerHTML = listaPoFiltrowaniu.map(t => {
     const isPowolanie = !!t.powolaniaMode;
     const acceptedPowolanie = !!t.zaakceptowalPowolanie;
 
@@ -9660,7 +9667,7 @@ async function toggleZapisani(id) {
 
 // =================== ZAWODNIK: Link do kalendarza google ===================
   
-async function playerAddEventToGoogleCalendar(treningId) {
+function playerAddEventToGoogleCalendar(treningId) {
   const id = String(treningId || "").trim();
 
   if (!id) {
@@ -9668,118 +9675,140 @@ async function playerAddEventToGoogleCalendar(treningId) {
     return;
   }
 
+  const ev = window.__playerEventsById && window.__playerEventsById[id];
+
+  if (!ev) {
+    alert("Nie udało się znaleźć danych wydarzenia na ekranie.");
+    return;
+  }
+
+  const url = playerBuildGoogleCalendarUrl_(ev);
+
+  if (!url) {
+    alert("Nie udało się przygotować linku do kalendarza.");
+    return;
+  }
+
   const btn = document.getElementById(`calendar-${id}`);
   const oldText = btn ? btn.textContent : "";
 
-  let calendarWin = null;
-
-  // Ważne: nową kartę otwieramy NATYCHMIAST po kliknięciu,
-  // zanim zacznie się await / fetch do GAS.
-  try {
-    calendarWin = window.open("", "_blank");
-
-    if (calendarWin) {
-      try {
-        calendarWin.document.write(`
-          <!doctype html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <title>ORG HUB — Kalendarz</title>
-              <style>
-                body {
-                  margin:0;
-                  min-height:100vh;
-                  display:flex;
-                  align-items:center;
-                  justify-content:center;
-                  background:#000;
-                  color:#fff;
-                  font-family:Arial,sans-serif;
-                  text-align:center;
-                  padding:20px;
-                  box-sizing:border-box;
-                }
-                .box {
-                  max-width:320px;
-                  line-height:1.45;
-                }
-                .title {
-                  font-size:22px;
-                  font-weight:900;
-                  margin-bottom:10px;
-                }
-                .text {
-                  opacity:.8;
-                  font-size:15px;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="box">
-                <div class="title">⏳ Przygotowuję kalendarz...</div>
-                <div class="text">Za chwilę otworzy się Google Calendar.</div>
-              </div>
-            </body>
-          </html>
-        `);
-        calendarWin.document.close();
-      } catch (e) {}
-    }
-  } catch (e) {
-    calendarWin = null;
-  }
-
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "⏳ Kalendarz...";
+    btn.textContent = "📅 Otwieram...";
     btn.style.opacity = "0.65";
   }
 
-  try {
-    const res = await apiClubGet("googleCalendarLinkForEvent", {
-      grupy: grupaZalogowanego || "",
-      grupa: grupaZalogowanego || "",
-      numer: numerZalogowanego || "",
-      treningId: id,
-      t: Date.now()
-    });
+  const opened = window.open(url, "_blank");
 
-    if (!res || res.success !== true || !res.url) {
-      if (calendarWin && !calendarWin.closed) {
-        calendarWin.close();
-      }
+  if (!opened) {
+    window.location.href = url;
+  }
 
-      alert("❌ " + (res?.error || "Nie udało się przygotować linku do kalendarza."));
-      return;
-    }
-
-    if (calendarWin && !calendarWin.closed) {
-      calendarWin.location.href = res.url;
-      return;
-    }
-
-    // Fallback, gdy przeglądarka zablokowała pustą kartę.
-    const opened = window.open(res.url, "_blank");
-
-    if (!opened) {
-      window.location.href = res.url;
-    }
-
-  } catch (e) {
-    if (calendarWin && !calendarWin.closed) {
-      calendarWin.close();
-    }
-
-    alert("❌ Błąd połączenia: " + String(e?.message || e));
-
-  } finally {
+  setTimeout(() => {
     if (btn) {
       btn.disabled = false;
       btn.textContent = oldText || "📅 Kalendarz";
       btn.style.opacity = "";
     }
+  }, 1000);
+}
+
+
+function playerBuildGoogleCalendarUrl_(ev) {
+  const startYmd = playerCalendarParseDateToYmd_(ev.data);
+  const endYmd = playerCalendarParseDateToYmd_(ev.dataKoniec || ev.data);
+
+  const startTime = playerCalendarNormalizeTime_(ev.godzStart);
+  const endTime = playerCalendarNormalizeTime_(ev.godzKoniec);
+
+  if (!startYmd || !endYmd || !startTime || !endTime) {
+    return "";
   }
+
+  const startGoogle = playerCalendarBuildGoogleDateTime_(startYmd, startTime);
+  const endGoogle = playerCalendarBuildGoogleDateTime_(endYmd, endTime);
+
+  const title = [
+    ev.rodzaj || "Wydarzenie klubowe",
+    ev.miejsce ? ev.miejsce : ""
+  ].filter(Boolean).join(" — ");
+
+  const details = [
+    "Wydarzenie dodane z aplikacji ORG HUB.",
+    "",
+    ev.rodzaj ? "Rodzaj: " + ev.rodzaj : "",
+    ev.data ? "Data: " + ev.data : "",
+    ev.dataKoniec && ev.dataKoniec !== ev.data ? "Data końca: " + ev.dataKoniec : "",
+    ev.godzStart && ev.godzKoniec ? "Godzina: " + ev.godzStart + " - " + ev.godzKoniec : "",
+    ev.czas ? "Czas trwania: " + ev.czas : "",
+    ev.miejsce ? "Miejsce: " + ev.miejsce : "",
+    ev.trener ? "Trener: " + ev.trener : "",
+    ev.powolaniaMode ? "Tryb: powołania" : ""
+  ].filter(Boolean).join("\n");
+
+  const params = {
+    action: "TEMPLATE",
+    text: title,
+    dates: startGoogle + "/" + endGoogle,
+    details: details,
+    location: String(ev.miejsce || "").trim(),
+    ctz: "Europe/Warsaw"
+  };
+
+  return "https://calendar.google.com/calendar/render?" + Object.keys(params)
+    .map(k => encodeURIComponent(k) + "=" + encodeURIComponent(params[k]))
+    .join("&");
+}
+
+
+function playerCalendarParseDateToYmd_(value) {
+  const s = String(value || "").trim();
+
+  if (!s) return "";
+
+  const rangeMatch = s.match(/^(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})$/);
+  if (rangeMatch) {
+    return playerCalendarParseDateToYmd_(rangeMatch[1]);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s;
+  }
+
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
+    const parts = s.split(".");
+    return parts[2] + "-" + parts[1] + "-" + parts[0];
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const parts = s.split("/");
+    return parts[2] + "-" + parts[1] + "-" + parts[0];
+  }
+
+  return "";
+}
+
+
+function playerCalendarNormalizeTime_(value) {
+  const s = String(value || "").trim();
+  const m = s.match(/^(\d{1,2})[:.](\d{2})/);
+
+  if (!m) return "";
+
+  return String(m[1]).padStart(2, "0") + ":" + String(m[2]).padStart(2, "0");
+}
+
+
+function playerCalendarBuildGoogleDateTime_(ymd, hhmm) {
+  const d = String(ymd || "").trim();
+  const t = String(hhmm || "").trim();
+
+  const dm = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const tm = t.match(/^(\d{2}):(\d{2})$/);
+
+  if (!dm || !tm) return "";
+
+  return dm[1] + dm[2] + dm[3] + "T" + tm[1] + tm[2] + "00";
 }
   
 // =================== ZAWODNIK: ZAPIS/WYPISANIE ===================
