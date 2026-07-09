@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.91';
+  window.APP_BUILD = 'APP v2.92';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9539,6 +9539,15 @@ function renderTreningi(lista) {
             onclick="toggleZapisani('${t.id}')">
             ${toggleLabel}
           </button>
+
+          <button
+            id="calendar-${t.id}"
+            type="button"
+            style="background:#1f4f8f;color:white;border:none;"
+            onclick="playerAddEventToGoogleCalendar('${t.id}')">
+            📅 Kalendarz
+          </button>
+  
         </div>
 
         <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
@@ -9646,6 +9655,56 @@ async function toggleZapisani(id) {
 
   } catch {
     box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+  }
+}
+
+  async function playerAddEventToGoogleCalendar(treningId) {
+  const id = String(treningId || "").trim();
+
+  if (!id) {
+    alert("Brak identyfikatora wydarzenia.");
+    return;
+  }
+
+  const btn = document.getElementById(`calendar-${id}`);
+  const oldText = btn ? btn.textContent : "";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Kalendarz...";
+    btn.style.opacity = "0.65";
+  }
+
+  try {
+    const res = await apiClubGet("googleCalendarLinkForEvent", {
+      grupy: grupaZalogowanego || "",
+      grupa: grupaZalogowanego || "",
+      numer: numerZalogowanego || "",
+      treningId: id,
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true || !res.url) {
+      alert("❌ " + (res?.error || "Nie udało się przygotować linku do kalendarza."));
+      return;
+    }
+
+    const opened = window.open(res.url, "_blank", "noopener,noreferrer");
+
+    if (!opened) {
+      // Fallback, gdy przeglądarka/PWA zablokuje nowe okno.
+      window.location.href = res.url;
+    }
+
+  } catch (e) {
+    alert("❌ Błąd połączenia: " + String(e?.message || e));
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || "📅 Kalendarz";
+      btn.style.opacity = "";
+    }
   }
 }
   
