@@ -9658,7 +9658,9 @@ async function toggleZapisani(id) {
   }
 }
 
-  async function playerAddEventToGoogleCalendar(treningId) {
+// =================== ZAWODNIK: Link do kalendarza google ===================
+  
+async function playerAddEventToGoogleCalendar(treningId) {
   const id = String(treningId || "").trim();
 
   if (!id) {
@@ -9668,6 +9670,65 @@ async function toggleZapisani(id) {
 
   const btn = document.getElementById(`calendar-${id}`);
   const oldText = btn ? btn.textContent : "";
+
+  let calendarWin = null;
+
+  // Ważne: nową kartę otwieramy NATYCHMIAST po kliknięciu,
+  // zanim zacznie się await / fetch do GAS.
+  try {
+    calendarWin = window.open("", "_blank");
+
+    if (calendarWin) {
+      try {
+        calendarWin.document.write(`
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>ORG HUB — Kalendarz</title>
+              <style>
+                body {
+                  margin:0;
+                  min-height:100vh;
+                  display:flex;
+                  align-items:center;
+                  justify-content:center;
+                  background:#000;
+                  color:#fff;
+                  font-family:Arial,sans-serif;
+                  text-align:center;
+                  padding:20px;
+                  box-sizing:border-box;
+                }
+                .box {
+                  max-width:320px;
+                  line-height:1.45;
+                }
+                .title {
+                  font-size:22px;
+                  font-weight:900;
+                  margin-bottom:10px;
+                }
+                .text {
+                  opacity:.8;
+                  font-size:15px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="box">
+                <div class="title">⏳ Przygotowuję kalendarz...</div>
+                <div class="text">Za chwilę otworzy się Google Calendar.</div>
+              </div>
+            </body>
+          </html>
+        `);
+        calendarWin.document.close();
+      } catch (e) {}
+    }
+  } catch (e) {
+    calendarWin = null;
+  }
 
   if (btn) {
     btn.disabled = true;
@@ -9685,18 +9746,31 @@ async function toggleZapisani(id) {
     });
 
     if (!res || res.success !== true || !res.url) {
+      if (calendarWin && !calendarWin.closed) {
+        calendarWin.close();
+      }
+
       alert("❌ " + (res?.error || "Nie udało się przygotować linku do kalendarza."));
       return;
     }
 
-    const opened = window.open(res.url, "_blank", "noopener,noreferrer");
+    if (calendarWin && !calendarWin.closed) {
+      calendarWin.location.href = res.url;
+      return;
+    }
+
+    // Fallback, gdy przeglądarka zablokowała pustą kartę.
+    const opened = window.open(res.url, "_blank");
 
     if (!opened) {
-      // Fallback, gdy przeglądarka/PWA zablokuje nowe okno.
       window.location.href = res.url;
     }
 
   } catch (e) {
+    if (calendarWin && !calendarWin.closed) {
+      calendarWin.close();
+    }
+
     alert("❌ Błąd połączenia: " + String(e?.message || e));
 
   } finally {
