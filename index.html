@@ -8199,131 +8199,35 @@ function playerSetMedicalAlertVisible_(alertData) {
 
 
 async function playerRefreshMedicalExamAlert_() {
-  const nr = String(window.numerZalogowanego || numerZalogowanego || "").trim();
-
-  if (!nr) {
-    playerSetMedicalAlertVisible_(null);
-    return;
-  }
-
-  try {
-    const res = await apiClubGet("playerMedicalExamAlert", {
-      numer: nr,
-      t: Date.now()
-    });
-
-    if (!res || res.success !== true) {
-      playerSetMedicalAlertVisible_(null);
-      return;
-    }
-
-    playerSetMedicalAlertVisible_(res);
-
-  } catch (e) {
-    console.warn("playerRefreshMedicalExamAlert_ error:", e);
-  }
+  // WYŁĄCZONE:
+  // Badania zawodnika przychodzą teraz w:
+  // - loginRes.medicalExam
+  // - validateSession.medicalExam
+  // - playerBootstrap.medicalExam
+  // Nie robimy osobnego requestu playerMedicalExamAlert.
+  return null;
 }
 
 
-function playerScheduleMedicalExamAlertCheck_(delayMs, force) {
-  if (window.__playerMedicalAlertStartTimer) {
-    clearTimeout(window.__playerMedicalAlertStartTimer);
-    window.__playerMedicalAlertStartTimer = null;
-  }
-
-  window.__playerMedicalAlertStartTimer = setTimeout(() => {
-    if (typeof playerRefreshMedicalExamAlert_ !== "function") return;
-
-    const now = Date.now();
-    const last = Number(window.__playerMedicalAlertLastCheckMs || 0);
-
-    // Bez force nie odpytujemy backendu częściej niż raz na minutę.
-    if (!force && last && now - last < 60 * 1000) {
-      return;
-    }
-
-    window.__playerMedicalAlertLastCheckMs = now;
-    playerRefreshMedicalExamAlert_();
-
-  }, Number(delayMs || 300));
+function playerScheduleMedicalExamAlertCheck_() {
+  // WYŁĄCZONE:
+  // nie odpalamy osobnego requestu do GAS.
+  return false;
 }
 
 
 function playerStartMedicalAlertFromActiveSession_() {
-  if (typeof playerScheduleMedicalExamAlertCheck_ !== "function") {
-    return false;
-  }
-
-  let sess = null;
-
-  try {
-    if (typeof loadAppSession_ === "function") {
-      sess = loadAppSession_();
-    }
-  } catch (e) {
-    sess = null;
-  }
-
-  const role = String(sess?.role || "").trim().toLowerCase();
-
-  if (role !== "zawodnik") {
-    return false;
-  }
-
-  const sessionLogin = String(sess?.loginId || sess?.numer || "").trim();
-  const currentNr = String(window.numerZalogowanego || numerZalogowanego || "").trim();
-
-  if (!currentNr && sessionLogin) {
-    window.numerZalogowanego = sessionLogin;
-    try { numerZalogowanego = sessionLogin; } catch (e) {}
-  }
-
-  const finalNr = String(window.numerZalogowanego || numerZalogowanego || "").trim();
-
-  if (!finalNr) {
-    return false;
-  }
-
-  playerScheduleMedicalExamAlertCheck_(300, true);
-  return true;
+  // WYŁĄCZONE:
+  // medicalExam jest już częścią login / validateSession / playerBootstrap.
+  return false;
 }
-
 
 function playerBootMedicalAlertWatcher_() {
-  if (window.__playerMedicalBootWatcherStarted) return;
-  window.__playerMedicalBootWatcherStarted = true;
-
-  let tries = 0;
-  const maxTries = 20; // około 10 sekund
-
-  const timer = setInterval(() => {
-    tries++;
-
-    const started = playerStartMedicalAlertFromActiveSession_();
-
-    if (started || tries >= maxTries) {
-      clearInterval(timer);
-    }
-  }, 500);
+  // WYŁĄCZONE:
+  // wcześniej focus/DOMContentLoaded mogły robić dodatkowe requesty.
+  return;
 }
 
-
-// Start po załadowaniu aplikacji — działa przy aktywnej sesji/PWA.
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    playerBootMedicalAlertWatcher_();
-  });
-} else {
-  setTimeout(() => {
-    playerBootMedicalAlertWatcher_();
-  }, 0);
-}
-
-// Dodatkowo po powrocie do aplikacji / odblokowaniu PWA.
-window.addEventListener("focus", () => {
-  playerStartMedicalAlertFromActiveSession_();
-});
-  
 
 /* =================== KONIEC SEKTORA 100 =================== */  
 
