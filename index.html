@@ -3648,7 +3648,11 @@ function openPanelFromAppSession_(sess) {
     }
 
     loadClubAd();
-
+    
+    if (typeof playerSetMedicalAlertVisible_ === "function") {
+      playerSetMedicalAlertVisible_(s.medicalExam || null);
+    }
+    
     refreshPlayerMenuPushAlert_().catch(function (e) {
       console.warn("refreshPlayerMenuPushAlert_ error:", e);
     });
@@ -3660,10 +3664,15 @@ function openPanelFromAppSession_(sess) {
     return;
   }
 
-  if (role === "trener") {
-    goToView("trainerPanelView", { replace: true });
-    return;
-  }
+    if (role === "trener") {
+      goToView("trainerPanelView", { replace: true });
+    
+      if (typeof trainerApplyMedicalExamClubFlag_ === "function") {
+        trainerApplyMedicalExamClubFlag_(s.medicalExamClubFlag || null);
+      }
+    
+      return;
+    }
 
   if (role === "admin") {
     goToView("adminPanelView", { replace: true });
@@ -3718,8 +3727,31 @@ async function validateStoredSessionInBackground_(sess) {
       expiresAt: res.expiresAt || s.expiresAt || "",
       validatedAt: new Date().toISOString()
     };
-
+    
+    if (res.medicalExam) {
+      freshSession.medicalExam = res.medicalExam;
+    }
+    
+    if (res.medicalExamClubFlag) {
+      freshSession.medicalExamClubFlag = res.medicalExamClubFlag;
+    }
+    
     saveAppSession_(freshSession);
+    
+    const freshRole = String(res.role || s.role || "").trim();
+    
+    if (freshRole === "zawodnik") {
+      if (typeof playerSetMedicalAlertVisible_ === "function") {
+        playerSetMedicalAlertVisible_(freshSession.medicalExam || null);
+      }
+    }
+    
+    if (freshRole === "trener") {
+      if (typeof trainerApplyMedicalExamClubFlag_ === "function") {
+        trainerApplyMedicalExamClubFlag_(freshSession.medicalExamClubFlag || null);
+      }
+    }
+    
     return true;
   } catch (e) {
     console.warn("validateStoredSessionInBackground_ error", e);
@@ -8228,6 +8260,27 @@ function playerBootMedicalAlertWatcher_() {
   return;
 }
 
+  function trainerApplyMedicalExamClubFlag_(flag) {
+  try {
+    const enabled = flag && flag.enabled === true;
+    const hasAlert = flag && flag.hasAlert === true;
+    const count = Number(flag && flag.alertCount ? flag.alertCount : 0);
+
+    if (typeof trainerSetMedicalAlertBeacon_ === "function") {
+      trainerSetMedicalAlertBeacon_(enabled && hasAlert ? Math.max(count, 1) : 0);
+    }
+
+    window.__trainerMedicalExamClubFlag = flag || null;
+
+  } catch (e) {
+    console.warn("trainerApplyMedicalExamClubFlag_ error:", e);
+
+    if (typeof trainerSetMedicalAlertBeacon_ === "function") {
+      trainerSetMedicalAlertBeacon_(0);
+    }
+  }
+}
+
 
 /* =================== KONIEC SEKTORA 100 =================== */  
 
@@ -10030,7 +10083,6 @@ async function trainerPokazZawodnicy() {
   const groupsKey = String(window.grupyTrenera || "").trim();
   const PLAYERS_CACHE_24H = 24 * 60 * 60 * 1000;
 
-
   if (!groupsKey) {
     box.innerHTML = `
       <div class='card' style='background:#111; text-align:center;'>
@@ -10039,14 +10091,6 @@ async function trainerPokazZawodnicy() {
       </div>
     `;
     return;
-  }
-
-  // Cicho odśwież alerty badań w tle.
-  // Lista ma się otworzyć od razu, bez czekania na ten request.
-  if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
-    setTimeout(() => {
-      trainerRefreshMedicalExamAlerts_();
-    }, 0);
   }
 
   function escapeHtmlLocal_(txt) {
@@ -10058,31 +10102,33 @@ async function trainerPokazZawodnicy() {
   }
 
   function renderTrainerPlayers_(lista) {
-  
-  if (!Array.isArray(lista) || lista.length === 0) {
-    window.__trainerPlayersListCache = [];
-    box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
-    return;
-  }
+    if (!Array.isArray(lista) || lista.length === 0) {
+      window.__trainerPlayersListCache = [];
+      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
+      return;
+    }
 
-  window.__trainerPlayersListCache = lista.map(z => ({
-    nr: String(z.nr || "").trim(),
-    nazwisko: String(z.nazwisko || "").trim(),
-    numerWidoczny: String(
-      z.numerWidoczny ||
-      z.visibleNumber ||
-      z.numerKoszulki ||
-      ""
-    ).trim()
-  }));
-  
-  const medicalAlertsMap = window.__trainerMedicalExamAlertsByNr || {};
+    window.__trainerPlayersListCache = lista.map(z => ({
+      nr: String(z.nr || "").trim(),
+      nazwisko: String(z.nazwisko || "").trim(),
+      numerWidoczny: String(
+        z.numerWidoczny ||
+        z.visibleNumber ||
+        z.numerKoszulki ||
+        ""
+      ).trim(),
+      medicalExam: z.medicalExam || null
+    }));
 
     box.innerHTML = lista.map((z, idx) => {
       const nr = String(z.nr || "").trim();
       const nazwisko = String(z.nazwisko || "").trim();
 
-      const hasMedicalAlert = !!medicalAlertsMap[nr];
+      const med = z.medicalExam || {};
+      const hasMedicalAlert = med.enabled === true && med.showAlert === true;
+      const medicalText = hasMedicalAlert
+        ? String(med.text || "Ważność badań")
+        : "";
 
       const medicalWarningHtml = hasMedicalAlert
         ? `
@@ -10098,7 +10144,7 @@ async function trainerPokazZawodnicy() {
               filter:drop-shadow(0 0 5px rgba(255,0,0,.65));
             "
           >
-            🚨 WAŻNOŚĆ BADAŃ
+            ⚡ ${escapeHtmlLocal_(medicalText)}
           </div>
         `
         : "";
@@ -10140,12 +10186,6 @@ async function trainerPokazZawodnicy() {
         );
       };
     });
-
-    // Jeśli alerty przyszły z backendu chwilę po wyrenderowaniu listy,
-    // ta funkcja dorysuje / zdejmie oznaczenia bez przeładowania listy.
-    if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
-      trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-    }
   }
 
   box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
@@ -10154,7 +10194,7 @@ async function trainerPokazZawodnicy() {
     let renderedFromHook = false;
 
     const lista = await orgCachedApiGet_({
-      scope: "trainerPlayersListV2",
+      scope: "trainerPlayersListV3",
       parts: {
         groups: groupsKey || "all"
       },
