@@ -7108,7 +7108,8 @@ function bindPlayerNotificationsListActions_() {
   });
 }
 
-const ADMIN_NOTIFICATIONS_CACHE_KEY = "orghub.admin.notifications.unread";
+
+const ADMIN_NOTIFICATIONS_CACHE_KEY = "orghub.admin.notifications.count";
 
 
 function getAdminNotificationLoginId_() {
@@ -7116,23 +7117,23 @@ function getAdminNotificationLoginId_() {
 }
 
 
-function readAdminNotificationsUnreadCache_() {
+function readAdminNotificationsCountCache_() {
   try {
     const raw = localStorage.getItem(ADMIN_NOTIFICATIONS_CACHE_KEY);
     if (!raw) return 0;
 
     const parsed = JSON.parse(raw);
-    return Math.max(0, Number(parsed && parsed.unreadCount || 0));
+    return Math.max(0, Number(parsed && parsed.count || 0));
   } catch (e) {
     return 0;
   }
 }
 
 
-function writeAdminNotificationsUnreadCache_(unread) {
+function writeAdminNotificationsCountCache_(count) {
   try {
     localStorage.setItem(ADMIN_NOTIFICATIONS_CACHE_KEY, JSON.stringify({
-      unreadCount: Math.max(0, Number(unread || 0)),
+      count: Math.max(0, Number(count || 0)),
       savedAt: new Date().toISOString()
     }));
   } catch (e) {}
@@ -7149,21 +7150,20 @@ async function fetchAdminNotificationsList_() {
 }
 
 
-async function fetchAdminNotificationsUnreadSummary_() {
+async function deleteAdminNotificationOnServer_(id) {
+  const msgId = String(id || "").trim();
+
+  if (!msgId) {
+    return {
+      success: false,
+      error: "Brak id powiadomienia"
+    };
+  }
+
   const res = await apiClubPost({
-    action: "notificationsUnreadSummary",
-    numer: getAdminNotificationLoginId_()
-  });
-
-  return res || { success: false, unreadCount: 0 };
-}
-
-
-async function markAllAdminNotificationsRead_() {
-  const res = await apiClubPost({
-    action: "notificationsMarkRead",
+    action: "notificationsDelete",
     numer: getAdminNotificationLoginId_(),
-    mode: "all"
+    ids: msgId
   });
 
   return res || { success: false };
@@ -7180,7 +7180,7 @@ function ensureAdminNotificationsButtonStyle_() {
   }
 
   style.textContent = `
-    .admin-notifications-has-unread {
+    .admin-notifications-has-items {
       background: #0f7a2a !important;
       border-color: #19a642 !important;
       color: #ffffff !important;
@@ -7199,18 +7199,18 @@ function ensureAdminNotificationsButtonStyle_() {
 }
 
 
-function setAdminNotificationsButtonState_(unread, checking) {
+function setAdminNotificationsButtonState_(count, checking) {
   const btn = document.getElementById("adminNotificationsBtn");
   if (!btn) return;
 
   ensureAdminNotificationsButtonStyle_();
 
-  const unreadCount = Math.max(0, Number(unread || 0));
+  const itemsCount = Math.max(0, Number(count || 0));
 
-  btn.classList.remove("admin-notifications-has-unread");
+  btn.classList.remove("admin-notifications-has-items");
   btn.classList.remove("admin-notifications-checking");
 
-  // Czyścimy style inline, żeby przy braku wiadomości wrócił oryginalny czerwony full-btn.
+  // Przy pustej skrzynce wracamy do oryginalnego czerwonego full-btn.
   btn.style.background = "";
   btn.style.backgroundColor = "";
   btn.style.borderColor = "";
@@ -7225,42 +7225,54 @@ function setAdminNotificationsButtonState_(unread, checking) {
     return;
   }
 
-  if (unreadCount > 0) {
-    btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
-    btn.classList.add("admin-notifications-has-unread");
+  if (itemsCount > 0) {
+    btn.textContent = `🔔 Powiadomienia (${itemsCount})`;
+    btn.classList.add("admin-notifications-has-items");
     return;
   }
 
-  // Brak nowych wiadomości = zwykły czerwony klawisz z klasy full-btn.
   btn.textContent = "🔔 Powiadomienia";
 }
 
 
 function applyCachedAdminNotificationsBell_() {
-  const cachedUnread = readAdminNotificationsUnreadCache_();
-  setAdminNotificationsButtonState_(cachedUnread, false);
+  const cachedCount = readAdminNotificationsCountCache_();
+  setAdminNotificationsButtonState_(cachedCount, false);
+}
+
+
+function updateAdminNotificationsBellFromItems_(items) {
+  const count = Array.isArray(items) ? items.length : 0;
+
+  writeAdminNotificationsCountCache_(count);
+  setAdminNotificationsButtonState_(count, false);
+
+  return count;
 }
 
 
 async function refreshAdminNotificationsBell_() {
-  const cachedUnread = readAdminNotificationsUnreadCache_();
+  const cachedCount = readAdminNotificationsCountCache_();
 
-  if (cachedUnread > 0) {
-    setAdminNotificationsButtonState_(cachedUnread, false);
+  if (cachedCount > 0) {
+    setAdminNotificationsButtonState_(cachedCount, false);
   } else {
     setAdminNotificationsButtonState_(0, true);
   }
 
   try {
-    const res = await fetchAdminNotificationsUnreadSummary_();
-    const unread = Math.max(0, Number(res && res.unreadCount || 0));
+    const res = await fetchAdminNotificationsList_();
 
-    writeAdminNotificationsUnreadCache_(unread);
-    setAdminNotificationsButtonState_(unread, false);
+    if (!res || res.success !== true) {
+      setAdminNotificationsButtonState_(cachedCount, false);
+      return;
+    }
+
+    updateAdminNotificationsBellFromItems_(res.items || []);
 
   } catch (e) {
     console.warn("refreshAdminNotificationsBell_ error:", e);
-    setAdminNotificationsButtonState_(cachedUnread, false);
+    setAdminNotificationsButtonState_(cachedCount, false);
   }
 }
 
@@ -7269,24 +7281,21 @@ function renderAdminNotificationsList_(items) {
   const box = document.getElementById("adminNotificationsList");
   if (!box) return;
 
-  const rowsAll = Array.isArray(items) ? items : [];
+  const rows = Array.isArray(items) ? items : [];
 
-  // Admin ma widzieć tylko rzeczy do obsłużenia.
-  // Po oznaczeniu jako przeczytane wiadomości znikną z listy.
-  const rows = rowsAll.filter(function(it) {
-    return it && it.isUnread === true;
-  });
+  updateAdminNotificationsBellFromItems_(rows);
 
   if (!rows.length) {
     box.innerHTML = `
       <div style="text-align:center; opacity:.75; padding:14px 8px;">
-        Brak nowych wiadomości.
+        Brak wiadomości.
       </div>
     `;
     return;
   }
 
   box.innerHTML = rows.map(function(it) {
+    const id = escapeHtml_(it.id || "");
     const title = escapeHtml_(it.title || "Powiadomienie");
     const body = escapeHtml_(it.body || "").replace(/\n/g, "<br>");
     const sourceName = escapeHtml_(it.sourceName || it.sourceRole || "ORG HUB");
@@ -7296,17 +7305,17 @@ function renderAdminNotificationsList_(items) {
       <div
         class="admin-notification-card"
         style="
-          border:1px solid #ff2b2b;
+          border:1px solid #19a642;
           border-radius:14px;
           padding:12px;
           margin-bottom:10px;
-          background:rgba(139,0,0,.18);
+          background:rgba(15,122,42,.18);
           opacity:1;
         "
       >
         <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
           <div style="font-weight:900; font-size:15px; line-height:1.25;">
-            ${title} <span style="font-size:11px; color:#ff7b7b;">• nowe</span>
+            ${title}
           </div>
           <div style="font-size:11px; opacity:.7; white-space:nowrap;">
             ${createdAt}
@@ -7317,8 +7326,19 @@ function renderAdminNotificationsList_(items) {
           Od: <b>${sourceName}</b>
         </div>
 
-        <div style="font-size:14px; line-height:1.45;">
+        <div style="font-size:14px; line-height:1.45; margin-bottom:10px;">
           ${body}
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button
+            class="full-btn alt admin-notification-delete-btn"
+            type="button"
+            data-notification-id="${id}"
+            style="margin:0; width:auto; min-width:110px; padding:10px 14px;"
+          >
+            🗑 Usuń
+          </button>
         </div>
       </div>
     `;
@@ -7362,26 +7382,56 @@ async function refreshAdminNotificationsList_() {
 }
 
 
+function bindAdminNotificationsListActions_() {
+  const box = document.getElementById("adminNotificationsList");
+  if (!box || box.dataset.boundDelete === "1") return;
+
+  box.dataset.boundDelete = "1";
+
+  box.addEventListener("click", function(ev) {
+    const btn = ev.target.closest(".admin-notification-delete-btn");
+    if (!btn) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const msgId = String(btn.dataset.notificationId || "").trim();
+    if (!msgId) return;
+
+    const card = btn.closest(".admin-notification-card");
+
+    if (card) {
+      card.style.transition = "opacity .18s ease, transform .18s ease";
+      card.style.opacity = "0";
+      card.style.transform = "scale(.98)";
+      card.style.pointerEvents = "none";
+    }
+
+    deleteAdminNotificationOnServer_(msgId)
+      .then(function(res) {
+        if (!res || res.success !== true) {
+          throw new Error(res && res.error ? res.error : "Nie udało się usunąć powiadomienia");
+        }
+
+        return refreshAdminNotificationsList_();
+      })
+      .catch(function(e) {
+        console.warn("deleteAdminNotification_ error:", e);
+        refreshAdminNotificationsList_();
+      });
+  });
+}
+
+
 window.openAdminNotificationsView_ = async function openAdminNotificationsView_() {
   goToView("adminNotificationsView");
 
-  // 1. Najpierw pokaż aktualne nieprzeczytane.
+  bindAdminNotificationsListActions_();
+
+  // Tylko pobieramy listę.
+  // NIE oznaczamy automatycznie jako przeczytane.
+  // Wiadomość znika dopiero po kliknięciu Usuń.
   await refreshAdminNotificationsList_();
-
-  // 2. Teraz oznacz jako przeczytane.
-  const markRes = await markAllAdminNotificationsRead_();
-
-  if (markRes && markRes.success === true) {
-    writeAdminNotificationsUnreadCache_(0);
-    setAdminNotificationsButtonState_(0, false);
-
-    // 3. Odśwież listę, żeby przeczytane wiadomości zniknęły.
-    await refreshAdminNotificationsList_();
-    return;
-  }
-
-  // Awaryjnie odśwież licznik, jeśli backend nie potwierdził mark-read.
-  await refreshAdminNotificationsBell_();
 };
   
 /* =================== KONIEC SEKTORA 80 =================== */
