@@ -7180,20 +7180,12 @@ function ensureAdminNotificationsButtonStyle_() {
   }
 
   style.textContent = `
-    .admin-notifications-alert {
-      background: #8b0000 !important;
-      border-color: #ff2b2b !important;
-      color: #ffffff !important;
-      font-weight: 900 !important;
-      box-shadow: 0 0 18px rgba(255,43,43,0.35) !important;
-    }
-
-    .admin-notifications-ok {
+    .admin-notifications-has-unread {
       background: #0f7a2a !important;
       border-color: #19a642 !important;
       color: #ffffff !important;
       font-weight: 900 !important;
-      box-shadow: none !important;
+      box-shadow: 0 0 18px rgba(25,166,66,0.35) !important;
     }
 
     .admin-notifications-checking {
@@ -7215,9 +7207,17 @@ function setAdminNotificationsButtonState_(unread, checking) {
 
   const unreadCount = Math.max(0, Number(unread || 0));
 
-  btn.classList.remove("admin-notifications-alert");
-  btn.classList.remove("admin-notifications-ok");
+  btn.classList.remove("admin-notifications-has-unread");
   btn.classList.remove("admin-notifications-checking");
+
+  // Czyścimy style inline, żeby przy braku wiadomości wrócił oryginalny czerwony full-btn.
+  btn.style.background = "";
+  btn.style.backgroundColor = "";
+  btn.style.borderColor = "";
+  btn.style.color = "";
+  btn.style.fontWeight = "";
+  btn.style.boxShadow = "";
+  btn.style.opacity = "";
 
   if (checking === true) {
     btn.textContent = "🔔 Powiadomienia — sprawdzam...";
@@ -7227,12 +7227,12 @@ function setAdminNotificationsButtonState_(unread, checking) {
 
   if (unreadCount > 0) {
     btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
-    btn.classList.add("admin-notifications-alert");
+    btn.classList.add("admin-notifications-has-unread");
     return;
   }
 
+  // Brak nowych wiadomości = zwykły czerwony klawisz z klasy full-btn.
   btn.textContent = "🔔 Powiadomienia";
-  btn.classList.add("admin-notifications-ok");
 }
 
 
