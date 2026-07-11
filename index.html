@@ -1698,20 +1698,20 @@ input[type="number"] {
   <button class="full-btn" onclick="openAdminClubGroupsView()">🧩 Grupy klubu</button>
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button id="adminNotificationsBtn" class="full-btn" onclick="openAdminNotificationsView_()">🔔 Powiadomienia</button>
-  <button class="full-btn" onclick="openManualPushView('admin')">📣 Wyślij powiadomienie</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
   <button class="full-btn" type="button" onclick="adminOpenClubSeasonSettingsView()">⚙️ Ustawienia sezonu / klubu</button>
   <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
   <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
 </div>
 
-  <div id="adminNotificationsView" class="container hidden">
+<div id="adminNotificationsView" class="container hidden">
   <h1>Powiadomienia</h1>
 
   <div id="adminNotificationsList" class="card" style="text-align:left;">
     Ładowanie...
   </div>
 
+  <button class="full-btn" onclick="openManualPushView('admin')">📣 Wyślij powiadomienie</button>
   <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
@@ -3685,17 +3685,21 @@ function openPanelFromAppSession_(sess) {
       return;
     }
 
-  if (role === "admin") {
-    goToView("adminPanelView", { replace: true });
+if (role === "admin") {
+  goToView("adminPanelView", { replace: true });
 
-    if (typeof refreshAdminNotificationsBell_ === "function") {
-      setTimeout(function() {
-        refreshAdminNotificationsBell_();
-      }, 0);
-    }
-
-    return;
+  if (typeof applyCachedAdminNotificationsBell_ === "function") {
+    applyCachedAdminNotificationsBell_();
   }
+
+  if (typeof refreshAdminNotificationsBell_ === "function") {
+    setTimeout(function() {
+      refreshAdminNotificationsBell_();
+    }, 0);
+  }
+
+  return;
+}
 
   goToView("loginView", { replace: true });
 }
@@ -7104,8 +7108,34 @@ function bindPlayerNotificationsListActions_() {
   });
 }
 
-  function getAdminNotificationLoginId_() {
+const ADMIN_NOTIFICATIONS_CACHE_KEY = "orghub.admin.notifications.unread";
+
+
+function getAdminNotificationLoginId_() {
   return "admin";
+}
+
+
+function readAdminNotificationsUnreadCache_() {
+  try {
+    const raw = localStorage.getItem(ADMIN_NOTIFICATIONS_CACHE_KEY);
+    if (!raw) return 0;
+
+    const parsed = JSON.parse(raw);
+    return Math.max(0, Number(parsed && parsed.unreadCount || 0));
+  } catch (e) {
+    return 0;
+  }
+}
+
+
+function writeAdminNotificationsUnreadCache_(unread) {
+  try {
+    localStorage.setItem(ADMIN_NOTIFICATIONS_CACHE_KEY, JSON.stringify({
+      unreadCount: Math.max(0, Number(unread || 0)),
+      savedAt: new Date().toISOString()
+    }));
+  } catch (e) {}
 }
 
 
@@ -7163,12 +7193,21 @@ function ensureAdminNotificationsButtonStyle_() {
       border-color: #19a642 !important;
       color: #ffffff !important;
       font-weight: 900 !important;
+      box-shadow: none !important;
+    }
+
+    .admin-notifications-checking {
+      background: #333 !important;
+      border-color: #666 !important;
+      color: #ffffff !important;
+      font-weight: 900 !important;
+      opacity: .95;
     }
   `;
 }
 
 
-function setAdminNotificationsButtonState_(unread) {
+function setAdminNotificationsButtonState_(unread, checking) {
   const btn = document.getElementById("adminNotificationsBtn");
   if (!btn) return;
 
@@ -7178,6 +7217,13 @@ function setAdminNotificationsButtonState_(unread) {
 
   btn.classList.remove("admin-notifications-alert");
   btn.classList.remove("admin-notifications-ok");
+  btn.classList.remove("admin-notifications-checking");
+
+  if (checking === true) {
+    btn.textContent = "🔔 Powiadomienia — sprawdzam...";
+    btn.classList.add("admin-notifications-checking");
+    return;
+  }
 
   if (unreadCount > 0) {
     btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
@@ -7190,16 +7236,31 @@ function setAdminNotificationsButtonState_(unread) {
 }
 
 
+function applyCachedAdminNotificationsBell_() {
+  const cachedUnread = readAdminNotificationsUnreadCache_();
+  setAdminNotificationsButtonState_(cachedUnread, false);
+}
+
+
 async function refreshAdminNotificationsBell_() {
+  const cachedUnread = readAdminNotificationsUnreadCache_();
+
+  if (cachedUnread > 0) {
+    setAdminNotificationsButtonState_(cachedUnread, false);
+  } else {
+    setAdminNotificationsButtonState_(0, true);
+  }
+
   try {
     const res = await fetchAdminNotificationsUnreadSummary_();
     const unread = Math.max(0, Number(res && res.unreadCount || 0));
 
-    setAdminNotificationsButtonState_(unread);
+    writeAdminNotificationsUnreadCache_(unread);
+    setAdminNotificationsButtonState_(unread, false);
 
   } catch (e) {
     console.warn("refreshAdminNotificationsBell_ error:", e);
-    setAdminNotificationsButtonState_(0);
+    setAdminNotificationsButtonState_(cachedUnread, false);
   }
 }
 
@@ -7208,12 +7269,18 @@ function renderAdminNotificationsList_(items) {
   const box = document.getElementById("adminNotificationsList");
   if (!box) return;
 
-  const rows = Array.isArray(items) ? items : [];
+  const rowsAll = Array.isArray(items) ? items : [];
+
+  // Admin ma widzieć tylko rzeczy do obsłużenia.
+  // Po oznaczeniu jako przeczytane wiadomości znikną z listy.
+  const rows = rowsAll.filter(function(it) {
+    return it && it.isUnread === true;
+  });
 
   if (!rows.length) {
     box.innerHTML = `
       <div style="text-align:center; opacity:.75; padding:14px 8px;">
-        Brak wiadomości.
+        Brak nowych wiadomości.
       </div>
     `;
     return;
@@ -7224,23 +7291,22 @@ function renderAdminNotificationsList_(items) {
     const body = escapeHtml_(it.body || "").replace(/\n/g, "<br>");
     const sourceName = escapeHtml_(it.sourceName || it.sourceRole || "ORG HUB");
     const createdAt = escapeHtml_(formatNotificationDate_(it.createdAt || it.created_at || ""));
-    const unread = !!it.isUnread;
 
     return `
       <div
         class="admin-notification-card"
         style="
-          border:1px solid ${unread ? "#ff2b2b" : "#3a3a3a"};
+          border:1px solid #ff2b2b;
           border-radius:14px;
           padding:12px;
           margin-bottom:10px;
-          background:${unread ? "rgba(139,0,0,.18)" : "rgba(255,255,255,.05)"};
-          opacity:${unread ? "1" : ".88"};
+          background:rgba(139,0,0,.18);
+          opacity:1;
         "
       >
         <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
           <div style="font-weight:900; font-size:15px; line-height:1.25;">
-            ${title}${unread ? ` <span style="font-size:11px; color:#ff7b7b;">• nowe</span>` : ``}
+            ${title} <span style="font-size:11px; color:#ff7b7b;">• nowe</span>
           </div>
           <div style="font-size:11px; opacity:.7; white-space:nowrap;">
             ${createdAt}
@@ -7299,15 +7365,23 @@ async function refreshAdminNotificationsList_() {
 window.openAdminNotificationsView_ = async function openAdminNotificationsView_() {
   goToView("adminNotificationsView");
 
+  // 1. Najpierw pokaż aktualne nieprzeczytane.
   await refreshAdminNotificationsList_();
 
-  markAllAdminNotificationsRead_()
-    .then(function() {
-      return refreshAdminNotificationsBell_();
-    })
-    .catch(function(e) {
-      console.warn("markAllAdminNotificationsRead_ error:", e);
-    });
+  // 2. Teraz oznacz jako przeczytane.
+  const markRes = await markAllAdminNotificationsRead_();
+
+  if (markRes && markRes.success === true) {
+    writeAdminNotificationsUnreadCache_(0);
+    setAdminNotificationsButtonState_(0, false);
+
+    // 3. Odśwież listę, żeby przeczytane wiadomości zniknęły.
+    await refreshAdminNotificationsList_();
+    return;
+  }
+
+  // Awaryjnie odśwież licznik, jeśli backend nie potwierdził mark-read.
+  await refreshAdminNotificationsBell_();
 };
   
 /* =================== KONIEC SEKTORA 80 =================== */
