@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.93';
+  window.APP_BUILD = 'APP v2.94';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9276,62 +9276,232 @@ function powrotDoPlatnosci() {
   
 async function pokazTreningi() {
   goToView("homeView");
+
   const div = document.getElementById("listaTreningow");
+  const cacheEntry = readPlayerEventsCache_();
 
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
-
-  // 1. Pokaż cache natychmiast z zablokowanymi przyciskami
   let hadCache = false;
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        renderTreningi(entry.data);
-        hadCache = true;
 
-        // Zablokuj wszystkie przyciski zapisz/wypisz
-        setTreningiButtonsLocked_(true);
-      }
-    }
-  } catch (e) {}
+  if (cacheEntry && Array.isArray(cacheEntry.data)) {
+    renderTreningi(cacheEntry.data);
+    hadCache = true;
+
+    // Blokujemy tylko na czas sprawdzenia meta / odświeżenia.
+    setTreningiButtonsLocked_(true);
+  }
 
   if (!hadCache && div) {
     div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
   }
 
-  // 2. Zawsze sprawdź GAS w tle
   try {
-    const fresh = await apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego });
+    const oldMeta = readPlayerEventsMeta_();
 
-    let changed = true;
-    try {
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
-      }
-    } catch (e) {}
+    const meta = await apiClubGet("treningiMeta", {
+      t: Date.now()
+    });
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: fresh
-      }));
-    } catch (e) {}
+    if (!meta || meta.success !== true) {
+      // Fallback bezpieczeństwa: jeśli meta nie działa, pobierz pełne treningi.
+      const fresh = await apiClubGet("treningi", {
+        grupa: grupaZalogowanego,
+        numer: numerZalogowanego
+      });
 
-    if (changed) {
+      writePlayerEventsCache_(fresh);
       renderTreningi(fresh);
+      return;
     }
 
+    const oldStaticVersion = String(oldMeta.staticVersion || "");
+    const oldSignupsVersion = String(oldMeta.signupsVersion || "");
+
+    const newStaticVersion = String(meta.staticVersion || "");
+    const newSignupsVersion = String(meta.signupsVersion || "");
+
+    const staticChanged =
+      !hadCache ||
+      !oldStaticVersion ||
+      oldStaticVersion !== newStaticVersion;
+
+    const signupsChanged =
+      !oldSignupsVersion ||
+      oldSignupsVersion !== newSignupsVersion;
+
+    // 1. Zmieniły się dane wydarzeń: data, godzina, miejsce, trener, grupy itd.
+    // Tu musimy pobrać pełne treningi.
+    if (staticChanged) {
+      const fresh = await apiClubGet("treningi", {
+        grupa: grupaZalogowanego,
+        numer: numerZalogowanego
+      });
+
+      let changed = true;
+
+      try {
+        const current = readPlayerEventsCache_();
+        if (current && Array.isArray(current.data)) {
+          changed = JSON.stringify(current.data) !== JSON.stringify(fresh);
+        }
+      } catch (e) {}
+
+      writePlayerEventsCache_(fresh);
+      writePlayerEventsMeta_(meta);
+
+      if (changed || !hadCache) {
+        renderTreningi(fresh);
+      }
+
+      return;
+    }
+
+    // 2. Dane wydarzeń bez zmian, ale zmieniły się zapisy/liczby/status zawodnika.
+    // Pobieramy tylko dynamiczny fragment.
+    if (signupsChanged) {
+      const zapisyRes = await apiClubGet("treningiZapisy", {
+        grupa: grupaZalogowanego,
+        numer: numerZalogowanego,
+        t: Date.now()
+      });
+
+      if (zapisyRes && zapisyRes.success === true && Array.isArray(zapisyRes.items)) {
+        applyPlayerEventsSignupsDelta_(zapisyRes.items);
+
+        writePlayerEventsMeta_(
+          zapisyRes.meta && zapisyRes.meta.success === true
+            ? zapisyRes.meta
+            : meta
+        );
+      }
+
+      return;
+    }
+
+    // 3. Nic się nie zmieniło.
+    // Nie robimy pełnego odświeżania.
+    console.log("[treningi] brak zmian — pomijam pełne odświeżenie");
+
   } catch (e) {
+    console.warn("pokazTreningi smart refresh error:", e);
+
     if (!hadCache && div) {
       div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
+
   } finally {
-    // Odblokuj przyciski po otrzymaniu odpowiedzi z GAS
     setTreningiButtonsLocked_(false);
   }
+}
+  function getPlayerEventsCacheKey_() {
+  return "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".playerevents.numer-" +
+    String(numerZalogowanego || "") +
+    ".default";
+}
+
+function getPlayerEventsMetaKey_() {
+  return "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".playerevents.meta.numer-" +
+    String(numerZalogowanego || "") +
+    ".default";
+}
+
+function readPlayerEventsCache_() {
+  try {
+    const raw = localStorage.getItem(getPlayerEventsCacheKey_());
+    if (!raw) return null;
+
+    const entry = JSON.parse(raw);
+    if (!entry || !Array.isArray(entry.data)) return null;
+
+    return entry;
+  } catch (e) {
+    return null;
+  }
+}
+
+function writePlayerEventsCache_(data) {
+  try {
+    localStorage.setItem(getPlayerEventsCacheKey_(), JSON.stringify({
+      savedAt: new Date().toISOString(),
+      data: Array.isArray(data) ? data : []
+    }));
+  } catch (e) {}
+}
+
+function readPlayerEventsMeta_() {
+  try {
+    const raw = localStorage.getItem(getPlayerEventsMetaKey_());
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function writePlayerEventsMeta_(meta) {
+  try {
+    localStorage.setItem(getPlayerEventsMetaKey_(), JSON.stringify({
+      staticVersion: String(meta?.staticVersion || ""),
+      signupsVersion: String(meta?.signupsVersion || ""),
+      savedAt: new Date().toISOString()
+    }));
+  } catch (e) {}
+}
+
+function applyPlayerEventsSignupsDelta_(items) {
+  if (!Array.isArray(items)) return false;
+
+  const entry = readPlayerEventsCache_();
+  if (!entry || !Array.isArray(entry.data)) return false;
+
+  const byId = {};
+  items.forEach(item => {
+    const id = String(item?.id || item?.eventId || "").trim();
+    if (id) byId[id] = item;
+  });
+
+  let changed = false;
+
+  const nextData = entry.data
+    .map(t => {
+      const id = String(t?.id || "").trim();
+      const delta = byId[id];
+
+      if (!delta) return t;
+
+      changed = true;
+
+      return {
+        ...t,
+        zapisanych: Number(delta.zapisanych ?? t.zapisanych ?? 0),
+        zapisany: delta.zapisany === true,
+        powolaniaMode: delta.powolaniaMode === true,
+        powolany: delta.powolany === true,
+        zaakceptowalPowolanie: delta.zaakceptowalPowolanie === true
+      };
+    })
+    .filter(t => {
+      const id = String(t?.id || "").trim();
+      const delta = byId[id];
+
+      if (!delta) return true;
+
+      if (delta.visibleForPlayer === false) {
+        changed = true;
+        return false;
+      }
+
+      return true;
+    });
+
+  if (!changed) return false;
+
+  writePlayerEventsCache_(nextData);
+  renderTreningi(nextData);
+
+  return true;
 }
 
 function setTreningiButtonsLocked_(locked) {
