@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.95';
+  window.APP_BUILD = 'APP v2.96';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11942,11 +11942,11 @@ function renderTreningiTrainer(lista) {
 
     const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
     const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
-    
+
     const countValue = isPowolanie
       ? Number(t.powolanych || t.zapisanych || 0)
       : Number(t.zapisanych || 0);
-    
+
     const acceptedCount = Number(t.zaakceptowalo || 0);
 
     window.__trainerEventModeById[listId] = {
@@ -11979,26 +11979,31 @@ function renderTreningiTrainer(lista) {
           }
         </p>
 
-          <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-            <button class="btn" onclick="trainerToggleZapisani('${listId}')">
-              ${toggleLabel}
+        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+          <button class="btn" onclick="trainerToggleZapisani('${listId}')">
+            ${toggleLabel}
+          </button>
+
+          ${window.__trainerEventsMode === "archive" ? "" : `
+            <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
+              ✏️ Edytuj
             </button>
-          
-            ${window.__trainerEventsMode === "archive" ? "" : `
-              <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
-                ✏️ Edytuj
-              </button>
-          
-              <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
-                🗑️ Usuń
-              </button>
-            `}
-          </div>
+
+            <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
+              🗑️ Usuń
+            </button>
+          `}
+        </div>
 
         <div id="trainer-zapisani-${listId}" class="hidden"></div>
       </div>
     `;
   }).join("");
+
+  if (window.__trainerEventsMode !== "archive") {
+    trainerSyncPendingEventWithList_(sortedLista);
+    trainerApplyPendingEventCard_();
+  }
 }
 
 async function trainerToggleZapisani(id) {
@@ -12735,72 +12740,432 @@ function applyPowolaniPopup() {
 }
   
 // =================== TRENER: DODANIE WYDARZENIA ===================
+
+let __trainerPendingEventTimer1 = null;
+let __trainerPendingEventTimer2 = null;
+let __trainerPendingEventRefreshTimer = null;
+let __trainerPendingEventRefreshBusy = false;
+
+function trainerPendingEventStorageKey_() {
+  return "orghub.pending.trainer.event." + String(clubId || "").toLowerCase();
+}
+
+function trainerNormalizePendingDate_(value) {
+  const s = String(value || "").trim();
+  if (!s) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/);
+  if (!m) return s;
+
+  const dd = String(m[1]).padStart(2, "0");
+  const mm = String(m[2]).padStart(2, "0");
+  const yyyy = String(m[3]);
+
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function trainerNormalizePendingTime_(value) {
+  const s = String(value || "").trim();
+  const m = s.match(/^(\d{1,2})[:.](\d{1,2})/);
+  if (!m) return s;
+
+  return String(m[1]).padStart(2, "0") + ":" + String(m[2]).padStart(2, "0");
+}
+
+function trainerReadPendingEvent_() {
+  try {
+    const raw = localStorage.getItem(trainerPendingEventStorageKey_());
+    if (!raw) return null;
+
+    const p = JSON.parse(raw);
+    if (!p || typeof p !== "object") return null;
+
+    const createdAtMs = Number(p.createdAtMs || 0);
+    const ageMs = Date.now() - createdAtMs;
+
+    // Bezpiecznik: pending nie może wisieć wiecznie.
+    if (!createdAtMs || ageMs > 5 * 60 * 1000) {
+      trainerClearPendingEvent_();
+      return null;
+    }
+
+    return p;
+
+  } catch (e) {
+    return null;
+  }
+}
+
+function trainerWritePendingEvent_(pending) {
+  try {
+    localStorage.setItem(trainerPendingEventStorageKey_(), JSON.stringify(pending));
+  } catch (e) {}
+}
+
+function trainerClearPendingEvent_() {
+  try {
+    localStorage.removeItem(trainerPendingEventStorageKey_());
+  } catch (e) {}
+
+  window.__trainerPendingEvent = null;
+
+  if (__trainerPendingEventTimer1) {
+    clearTimeout(__trainerPendingEventTimer1);
+    __trainerPendingEventTimer1 = null;
+  }
+
+  if (__trainerPendingEventTimer2) {
+    clearTimeout(__trainerPendingEventTimer2);
+    __trainerPendingEventTimer2 = null;
+  }
+
+  if (__trainerPendingEventRefreshTimer) {
+    clearTimeout(__trainerPendingEventRefreshTimer);
+    __trainerPendingEventRefreshTimer = null;
+  }
+
+  const card = document.getElementById("trainerPendingEventCard");
+  if (card) card.remove();
+}
+
+function trainerSetPendingEvent_(data) {
+  const pending = {
+    id: "pending-" + Date.now(),
+    createdAtMs: Date.now(),
+    phase: 0,
+
+    data: String(data && data.data || "").trim(),
+    dataKoniec: String(data && data.dataKoniec || data && data.data || "").trim(),
+    godzStart: String(data && data.godzStart || "").trim(),
+    godzKoniec: String(data && data.godzKoniec || "").trim(),
+    rodzaj: String(data && data.rodzaj || "").trim(),
+    miejsce: String(data && data.miejsce || "").trim(),
+    trener: String(data && data.trener || "").trim(),
+    grupy: String(data && data.grupy || "").trim(),
+    trybDostepu: String(data && data.trybDostepu || "").trim(),
+    powolani: String(data && data.powolani || "").trim()
+  };
+
+  window.__trainerPendingEvent = pending;
+  trainerWritePendingEvent_(pending);
+
+  return pending;
+}
+
+function trainerGetPendingEvent_() {
+  if (window.__trainerPendingEvent) return window.__trainerPendingEvent;
+
+  const pending = trainerReadPendingEvent_();
+  if (pending) {
+    window.__trainerPendingEvent = pending;
+  }
+
+  return pending;
+}
+
+function trainerPendingEventMatches_(eventItem, pending) {
+  if (!eventItem || !pending) return false;
+
+  const eventDate = trainerNormalizePendingDate_(eventItem.data);
+  const pendingDate = trainerNormalizePendingDate_(pending.data);
+
+  const eventStart = trainerNormalizePendingTime_(eventItem.godzStart);
+  const pendingStart = trainerNormalizePendingTime_(pending.godzStart);
+
+  const eventEnd = trainerNormalizePendingTime_(eventItem.godzKoniec);
+  const pendingEnd = trainerNormalizePendingTime_(pending.godzKoniec);
+
+  const eventRodzaj = String(eventItem.rodzaj || "").trim().toLowerCase();
+  const pendingRodzaj = String(pending.rodzaj || "").trim().toLowerCase();
+
+  return (
+    eventDate === pendingDate &&
+    eventStart === pendingStart &&
+    eventEnd === pendingEnd &&
+    eventRodzaj === pendingRodzaj
+  );
+}
+
+function trainerSyncPendingEventWithList_(lista) {
+  const pending = trainerGetPendingEvent_();
+  if (!pending) return false;
+
+  const found = Array.isArray(lista)
+    ? lista.some(item => trainerPendingEventMatches_(item, pending))
+    : false;
+
+  if (found) {
+    trainerClearPendingEvent_();
+    return true;
+  }
+
+  return false;
+}
+
+function trainerPendingEventMessage_(pending) {
+  const phase = Number(pending && pending.phase || 0);
+
+  if (phase === 0) {
+    return `
+      <div style="font-size:18px; font-weight:900; margin-bottom:8px;">
+        Konfiguruję twoje wydarzenie . . .
+      </div>
+      <div style="font-size:14px; opacity:.8;">
+        za chwilę
+      </div>
+    `;
+  }
+
+  if (phase === 1) {
+    return `
+      <div style="font-size:18px; font-weight:900; margin-bottom:8px;">
+        Przygotowuję listę zawodników . . .
+      </div>
+      <div style="font-size:14px; opacity:.8;">
+        To potrwa jeszcze moment.
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-size:18px; font-weight:900; margin-bottom:8px;">
+      Odświeżam widok wydarzeń . . .
+    </div>
+    <div style="font-size:14px; opacity:.8;">
+      Nowy kafel pojawi się automatycznie.
+    </div>
+  `;
+}
+
+function trainerApplyPendingEventCard_() {
+  if (String(window.__trainerEventsMode || "") === "archive") return;
+
+  const pending = trainerGetPendingEvent_();
+  const targetId = window.__trainerEventsRenderTarget || "trainerCurrentListaWydarzen";
+  const div = document.getElementById(targetId) || document.getElementById("trainerCurrentListaWydarzen");
+
+  if (!div) return;
+
+  const old = document.getElementById("trainerPendingEventCard");
+  if (old) old.remove();
+
+  if (!pending) return;
+
+  const card = document.createElement("div");
+  card.id = "trainerPendingEventCard";
+  card.className = "card";
+  card.style.background = "rgba(255,255,255,.07)";
+  card.style.border = "1px dashed rgba(255,255,255,.35)";
+  card.style.opacity = "0.95";
+  card.style.textAlign = "left";
+  card.style.position = "relative";
+  card.style.overflow = "hidden";
+
+  const dateText = [
+    pending.data,
+    pending.godzStart && pending.godzKoniec
+      ? pending.godzStart + " – " + pending.godzKoniec
+      : ""
+  ].filter(Boolean).join(" | ");
+
+  card.innerHTML = `
+    <div style="
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
+      animation: trainerPendingSweep 1.6s linear infinite;
+      pointer-events:none;
+    "></div>
+
+    <div style="position:relative;">
+      <div style="font-size:13px; opacity:.75; margin-bottom:8px;">
+        ${trainerEscHtml_(dateText)}
+      </div>
+
+      <div style="font-size:20px; font-weight:900; margin-bottom:10px;">
+        ${trainerEscHtml_(pending.rodzaj || "Nowe wydarzenie")}
+      </div>
+
+      ${trainerPendingEventMessage_(pending)}
+    </div>
+  `;
+
+  if (!document.getElementById("trainerPendingEventStyle")) {
+    const style = document.createElement("style");
+    style.id = "trainerPendingEventStyle";
+    style.textContent = `
+      @keyframes trainerPendingSweep {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  div.appendChild(card);
+}
+
+function trainerStartPendingEventMessages_() {
+  if (__trainerPendingEventTimer1) clearTimeout(__trainerPendingEventTimer1);
+  if (__trainerPendingEventTimer2) clearTimeout(__trainerPendingEventTimer2);
+
+  const pending = trainerGetPendingEvent_();
+  if (!pending) return;
+
+  pending.phase = 0;
+  trainerWritePendingEvent_(pending);
+  trainerApplyPendingEventCard_();
+
+  __trainerPendingEventTimer1 = setTimeout(function() {
+    const p = trainerGetPendingEvent_();
+    if (!p) return;
+
+    p.phase = 1;
+    trainerWritePendingEvent_(p);
+    trainerApplyPendingEventCard_();
+  }, 1800);
+
+  __trainerPendingEventTimer2 = setTimeout(function() {
+    const p = trainerGetPendingEvent_();
+    if (!p) return;
+
+    p.phase = 2;
+    trainerWritePendingEvent_(p);
+    trainerApplyPendingEventCard_();
+  }, 4200);
+}
+
+function trainerInvalidateCurrentEventsCache_() {
+  try {
+    Object.keys(localStorage)
+      .filter(k => String(k || "").toLowerCase().includes("trainercurrentevents"))
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+}
+
+function trainerSchedulePendingEventRefresh_(attempt) {
+  const pending = trainerGetPendingEvent_();
+  if (!pending) return;
+
+  const n = Number(attempt || 1);
+
+  if (n > 6) {
+    trainerApplyPendingEventCard_();
+    return;
+  }
+
+  const delays = {
+    1: 4500,
+    2: 7000,
+    3: 10000,
+    4: 14000,
+    5: 18000,
+    6: 24000
+  };
+
+  if (__trainerPendingEventRefreshTimer) {
+    clearTimeout(__trainerPendingEventRefreshTimer);
+    __trainerPendingEventRefreshTimer = null;
+  }
+
+  __trainerPendingEventRefreshTimer = setTimeout(async function() {
+    if (__trainerPendingEventRefreshBusy) return;
+
+    const p = trainerGetPendingEvent_();
+    if (!p) return;
+
+    __trainerPendingEventRefreshBusy = true;
+
+    try {
+      trainerInvalidateCurrentEventsCache_();
+
+      if (typeof trainerShowCurrentEvents_ === "function") {
+        await trainerShowCurrentEvents_();
+      }
+
+    } catch (e) {
+      console.warn("trainer pending event refresh error:", e);
+
+    } finally {
+      __trainerPendingEventRefreshBusy = false;
+    }
+
+    if (trainerGetPendingEvent_()) {
+      trainerSchedulePendingEventRefresh_(n + 1);
+    }
+  }, delays[n] || 10000);
+}  
  
 async function wyslijNoweWydarzenie() {
-    const submitBtn = document.getElementById("btnDodajWydarzenie");
+  const submitBtn = document.getElementById("btnDodajWydarzenie");
 
   if (submitBtn && submitBtn.dataset.busy === "1") {
     return;
   }
+
+  const addStartedAt = Date.now();
+
   const data = document.getElementById("eventData").value;
   let dataKoniec = document.getElementById("eventDataEnd")?.value || "";
   const start = document.getElementById("eventStart").value;
   const end = document.getElementById("eventEnd").value;
   const rodzaj = document.getElementById("eventRodzaj").value;
   const miejsce = document.getElementById("eventMiejsce")?.value || "";
- 
+
   const trener1 = document.getElementById("eventTrener1").value;
   const trener2 = document.getElementById("eventTrener2")?.value || "";
   const trener3 = document.getElementById("eventTrener3")?.value || "";
   const trener4 = document.getElementById("eventTrener4")?.value || "";
- 
+
   const selected = Array.from(selectedGroups || []);
   const hasPowolania = selected.includes("__POWOLANIA__");
   const grupy = hasPowolania
     ? ""
     : selected.filter(v => v && v !== "__POWOLANIA__").join(",");
- 
+
   const liczDoStat = document.getElementById("eventStat").checked;
   const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
- 
+
   const trybDostepu = hasPowolania ? "powolania" : "wszyscy";
   const powolani = normalizePowolaniNumsInput_(document.getElementById("eventPowolaniNums")?.value || "");
- 
+
   const msg = document.getElementById("eventMsg");
- 
+
   if (!dataKoniec) dataKoniec = data;
- 
+
   if (!data || !dataKoniec || !start || !end || !rodzaj) {
-    msg.innerText = "Uzupełnij: daty, godziny i rodzaj wydarzenia.";
+    if (msg) msg.innerText = "Uzupełnij: daty, godziny i rodzaj wydarzenia.";
     return;
   }
- 
+
   if (dataKoniec < data) {
-    msg.innerText = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
+    if (msg) msg.innerText = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
     return;
   }
- 
+
   if (!validHour(start) || !validHour(end)) {
-    msg.innerText = "❌ Godzina w formacie HH:MM.";
+    if (msg) msg.innerText = "❌ Godzina w formacie HH:MM.";
     return;
   }
- 
+
   if (start >= end) {
-    msg.innerText = "❌ Koniec musi być później niż start.";
+    if (msg) msg.innerText = "❌ Koniec musi być później niż start.";
     return;
   }
- 
+
   if (!hasPowolania && !grupy) {
-    msg.innerText = "❌ Wybierz grupę albo Powołania.";
+    if (msg) msg.innerText = "❌ Wybierz grupę albo Powołania.";
     return;
   }
- 
+
   if (trybDostepu === "powolania" && !powolani) {
-    msg.innerText = "❌ Wybierz powołanych zawodników.";
+    if (msg) msg.innerText = "❌ Wybierz powołanych zawodników.";
     return;
   }
- 
-    if (submitBtn) {
+
+  if (submitBtn) {
     submitBtn.dataset.busy = "1";
     submitBtn.disabled = true;
     submitBtn.classList.add("loading");
@@ -12809,12 +13174,25 @@ async function wyslijNoweWydarzenie() {
   }
 
   if (window.__addEventMsgTimer) {
-  clearTimeout(window.__addEventMsgTimer);
-  window.__addEventMsgTimer = null;
-}
-  
-  msg.innerText = "⏳ Dodawanie wydarzenia...";
- 
+    clearTimeout(window.__addEventMsgTimer);
+    window.__addEventMsgTimer = null;
+  }
+
+  if (msg) msg.innerText = "⏳ Dodawanie wydarzenia...";
+
+  const pendingPayload = {
+    data,
+    dataKoniec,
+    godzStart: start,
+    godzKoniec: end,
+    rodzaj,
+    miejsce,
+    trener: [trener1, trener2, trener3, trener4].filter(Boolean).join(", "),
+    grupy,
+    trybDostepu,
+    powolani
+  };
+
   try {
     const r = await apiClubPost({
       action: "dodajWydarzenie",
@@ -12834,52 +13212,64 @@ async function wyslijNoweWydarzenie() {
       trybDostepu,
       powolani
     });
- 
-    const resultMsg = r.message || "Nieznany wynik.";
-    msg.innerText = resultMsg;
-    
-    if (r.success) {
-      window.__addEventMsgTimer = setTimeout(function() {
-        const currentMsg = document.getElementById("eventMsg");
-    
-        if (currentMsg && currentMsg.innerText === resultMsg) {
-          currentMsg.innerText = "";
-        }
-    
-        window.__addEventMsgTimer = null;
-      }, 3000);
-  
-      document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
-        if (i.type !== "checkbox" && i.type !== "hidden") i.value = "";
-        else if (i.type === "checkbox") i.checked = false;
-      });
- 
-      const powolaniEl = document.getElementById("eventPowolaniNums");
-      const endDateEl = document.getElementById("eventDataEnd");
-      const powolaniWrap = document.getElementById("eventPowolaniWrap");
-      const powolaniPreview = document.getElementById("eventPowolaniPreview");
- 
-      if (powolaniEl) powolaniEl.value = "";
-      if (endDateEl) endDateEl.dataset.autofill = "1";
-      if (powolaniWrap) powolaniWrap.style.display = "none";
-      if (powolaniPreview) powolaniPreview.textContent = "Nie wybrano zawodników";
- 
-      resetTrenerSelects_();
-      resetGroups_();
- 
-      // Kasuj cache bieżących wydarzeń i pobierz świeże dane
-      try {
-        const groupsKey = String(window.grupyTrenera || "").trim();
-        Object.keys(localStorage)
-          .filter(k => k.includes("trainerarchiveevents") || k.includes("trainerarchivemonths"))
-          .forEach(k => localStorage.removeItem(k));
-      } catch (e) {}
- 
-      setTimeout(() => trainerPokazWydarzenia(), 800);
+
+    if (!r || r.success === false) {
+      if (msg) msg.innerText = "❌ " + (r?.error || r?.message || "Nie udało się dodać wydarzenia.");
+      return;
     }
- 
+
+    const elapsed = Date.now() - addStartedAt;
+    if (elapsed < 4000) {
+      await waitMs_(4000 - elapsed);
+    }
+
+    trainerSetPendingEvent_(pendingPayload);
+    trainerStartPendingEventMessages_();
+
+    if (msg) {
+      msg.innerText = r.message || "Wydarzenie zapisane. Trwa przygotowanie widoku.";
+    }
+
+    document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
+      if (i.type !== "checkbox" && i.type !== "hidden") i.value = "";
+      else if (i.type === "checkbox") i.checked = false;
+    });
+
+    const powolaniEl = document.getElementById("eventPowolaniNums");
+    const endDateEl = document.getElementById("eventDataEnd");
+    const powolaniWrap = document.getElementById("eventPowolaniWrap");
+    const powolaniPreview = document.getElementById("eventPowolaniPreview");
+
+    if (powolaniEl) powolaniEl.value = "";
+    if (endDateEl) endDateEl.dataset.autofill = "1";
+    if (powolaniWrap) powolaniWrap.style.display = "none";
+    if (powolaniPreview) powolaniPreview.textContent = "Nie wybrano zawodników";
+
+    resetTrenerSelects_();
+    resetGroups_();
+
+    try {
+      Object.keys(localStorage)
+        .filter(k => {
+          const x = String(k || "").toLowerCase();
+          return (
+            x.includes("trainercurrentevents") ||
+            x.includes("trainerarchiveevents") ||
+            x.includes("trainerarchivemonths")
+          );
+        })
+        .forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+
+    trainerInvalidateCurrentEventsCache_();
+
+    await trainerShowCurrentEvents_();
+
+    trainerStartPendingEventMessages_();
+    trainerSchedulePendingEventRefresh_(1);
+
   } catch (err) {
-    msg.innerText = "❌ Błąd połączenia: " + err;
+    if (msg) msg.innerText = "❌ Błąd połączenia: " + err;
 
   } finally {
     if (submitBtn) {
@@ -12890,7 +13280,6 @@ async function wyslijNoweWydarzenie() {
     }
   }
 }
-
 
 function initEventPickers_() {
   const elStart = document.getElementById("eventData");
