@@ -13025,7 +13025,7 @@ function trainerStartPendingEventMessages_() {
     p.phase = 1;
     trainerWritePendingEvent_(p);
     trainerApplyPendingEventCard_();
-  }, 1800);
+  }, 700);
 
   __trainerPendingEventTimer2 = setTimeout(function() {
     const p = trainerGetPendingEvent_();
@@ -13034,7 +13034,7 @@ function trainerStartPendingEventMessages_() {
     p.phase = 2;
     trainerWritePendingEvent_(p);
     trainerApplyPendingEventCard_();
-  }, 4200);
+  }, 1600);
 }
 
 function trainerInvalidateCurrentEventsCache_() {
@@ -13219,8 +13219,8 @@ async function wyslijNoweWydarzenie() {
     }
 
     const elapsed = Date.now() - addStartedAt;
-    if (elapsed < 4000) {
-      await waitMs_(4000 - elapsed);
+    if (elapsed < 2000) {
+      await waitMs_(2000 - elapsed);
     }
 
     trainerSetPendingEvent_(pendingPayload);
