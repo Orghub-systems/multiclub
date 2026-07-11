@@ -13105,8 +13105,6 @@ async function wyslijNoweWydarzenie() {
     return;
   }
 
-  const addStartedAt = Date.now();
-
   const data = document.getElementById("eventData").value;
   let dataKoniec = document.getElementById("eventDataEnd")?.value || "";
   const start = document.getElementById("eventStart").value;
@@ -13193,41 +13191,51 @@ async function wyslijNoweWydarzenie() {
     powolani
   };
 
+  const apiPayload = {
+    action: "dodajWydarzenie",
+    data,
+    dataKoniec,
+    godzStart: start,
+    godzKoniec: end,
+    rodzaj,
+    miejsce,
+    trener1,
+    trener2,
+    trener3,
+    trener4,
+    grupy,
+    liczDoStatystyk: String(liczDoStat),
+    rezerwacjaObiektu,
+    trybDostepu,
+    powolani
+  };
+
   try {
-    const r = await apiClubPost({
-      action: "dodajWydarzenie",
-      data,
-      dataKoniec,
-      godzStart: start,
-      godzKoniec: end,
-      rodzaj,
-      miejsce,
-      trener1,
-      trener2,
-      trener3,
-      trener4,
-      grupy,
-      liczDoStatystyk: String(liczDoStat),
-      rezerwacjaObiektu,
-      trybDostepu,
-      powolani
-    });
+    // Startujemy request od razu, ale NIE czekamy z UI na jego zakończenie.
+    const requestPromise = apiClubPost(apiPayload);
 
-    if (!r || r.success === false) {
-      if (msg) msg.innerText = "❌ " + (r?.error || r?.message || "Nie udało się dodać wydarzenia.");
-      return;
-    }
-
-    const elapsed = Date.now() - addStartedAt;
-    if (elapsed < 1000) {
-      await waitMs_(1000 - elapsed);
-    }
+    // Tylko krótka pauza wizualna przy przycisku.
+    await waitMs_(1000);
 
     trainerSetPendingEvent_(pendingPayload);
     trainerStartPendingEventMessages_();
+    trainerInvalidateCurrentEventsCache_();
 
-    if (msg) {
-      msg.innerText = r.message || "Wydarzenie zapisane. Trwa przygotowanie widoku.";
+    // Nie awaitujemy — ekran ma się pokazać od razu.
+    trainerShowCurrentEvents_();
+
+    const r = await requestPromise;
+
+    if (!r || r.success === false) {
+      trainerClearPendingEvent_();
+
+      goToView("trainerDodajWydarzenieView");
+
+      if (msg) {
+        msg.innerText = "❌ " + (r?.error || r?.message || "Nie udało się dodać wydarzenia.");
+      }
+
+      return;
     }
 
     document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
@@ -13263,13 +13271,17 @@ async function wyslijNoweWydarzenie() {
 
     trainerInvalidateCurrentEventsCache_();
 
-    await trainerShowCurrentEvents_();
-
-    trainerStartPendingEventMessages_();
+    // Backend zapisał wydarzenie — teraz można zacząć próby zamiany pending-kafla na prawdziwy.
     trainerSchedulePendingEventRefresh_(1);
 
   } catch (err) {
-    if (msg) msg.innerText = "❌ Błąd połączenia: " + err;
+    trainerClearPendingEvent_();
+
+    goToView("trainerDodajWydarzenieView");
+
+    if (msg) {
+      msg.innerText = "❌ Błąd połączenia: " + err;
+    }
 
   } finally {
     if (submitBtn) {
