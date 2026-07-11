@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.96';
+  window.APP_BUILD = 'APP v2.97';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -13219,8 +13219,8 @@ async function wyslijNoweWydarzenie() {
     }
 
     const elapsed = Date.now() - addStartedAt;
-    if (elapsed < 2000) {
-      await waitMs_(2000 - elapsed);
+    if (elapsed < 1000) {
+      await waitMs_(1000 - elapsed);
     }
 
     trainerSetPendingEvent_(pendingPayload);
