@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.94';
+  window.APP_BUILD = 'APP v2.95';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1697,11 +1697,22 @@ input[type="number"] {
   <button class="full-btn" onclick="adminPokazTrenerow()">👨‍🏫 Trenerzy</button>
   <button class="full-btn" onclick="openAdminClubGroupsView()">🧩 Grupy klubu</button>
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
-  <button class="full-btn" onclick="openManualPushView('admin')">🔔 Powiadomienia</button>
+  <button id="adminNotificationsBtn" class="full-btn" onclick="openAdminNotificationsView_()">🔔 Powiadomienia</button>
+  <button class="full-btn" onclick="openManualPushView('admin')">📣 Wyślij powiadomienie</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
   <button class="full-btn" type="button" onclick="adminOpenClubSeasonSettingsView()">⚙️ Ustawienia sezonu / klubu</button>
   <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
   <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
+</div>
+
+  <div id="adminNotificationsView" class="container hidden">
+  <h1>Powiadomienia</h1>
+
+  <div id="adminNotificationsList" class="card" style="text-align:left;">
+    Ładowanie...
+  </div>
+
+  <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
 </div>
 
   <!-- ADMIN TRAINERS VIEW
@@ -3676,6 +3687,13 @@ function openPanelFromAppSession_(sess) {
 
   if (role === "admin") {
     goToView("adminPanelView", { replace: true });
+
+    if (typeof refreshAdminNotificationsBell_ === "function") {
+      setTimeout(function() {
+        refreshAdminNotificationsBell_();
+      }, 0);
+    }
+
     return;
   }
 
@@ -7085,6 +7103,212 @@ function bindPlayerNotificationsListActions_() {
     deletePlayerNotification_(btn, msgId);
   });
 }
+
+  function getAdminNotificationLoginId_() {
+  return "admin";
+}
+
+
+async function fetchAdminNotificationsList_() {
+  const res = await apiClubPost({
+    action: "notificationsList",
+    numer: getAdminNotificationLoginId_()
+  });
+
+  return res || { success: false, error: "Brak odpowiedzi", items: [] };
+}
+
+
+async function fetchAdminNotificationsUnreadSummary_() {
+  const res = await apiClubPost({
+    action: "notificationsUnreadSummary",
+    numer: getAdminNotificationLoginId_()
+  });
+
+  return res || { success: false, unreadCount: 0 };
+}
+
+
+async function markAllAdminNotificationsRead_() {
+  const res = await apiClubPost({
+    action: "notificationsMarkRead",
+    numer: getAdminNotificationLoginId_(),
+    mode: "all"
+  });
+
+  return res || { success: false };
+}
+
+
+function ensureAdminNotificationsButtonStyle_() {
+  let style = document.getElementById("adminNotificationsButtonStyle");
+
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "adminNotificationsButtonStyle";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    .admin-notifications-alert {
+      background: #8b0000 !important;
+      border-color: #ff2b2b !important;
+      color: #ffffff !important;
+      font-weight: 900 !important;
+      box-shadow: 0 0 18px rgba(255,43,43,0.35) !important;
+    }
+
+    .admin-notifications-ok {
+      background: #0f7a2a !important;
+      border-color: #19a642 !important;
+      color: #ffffff !important;
+      font-weight: 900 !important;
+    }
+  `;
+}
+
+
+function setAdminNotificationsButtonState_(unread) {
+  const btn = document.getElementById("adminNotificationsBtn");
+  if (!btn) return;
+
+  ensureAdminNotificationsButtonStyle_();
+
+  const unreadCount = Math.max(0, Number(unread || 0));
+
+  btn.classList.remove("admin-notifications-alert");
+  btn.classList.remove("admin-notifications-ok");
+
+  if (unreadCount > 0) {
+    btn.textContent = `🔔 Powiadomienia (${unreadCount})`;
+    btn.classList.add("admin-notifications-alert");
+    return;
+  }
+
+  btn.textContent = "🔔 Powiadomienia";
+  btn.classList.add("admin-notifications-ok");
+}
+
+
+async function refreshAdminNotificationsBell_() {
+  try {
+    const res = await fetchAdminNotificationsUnreadSummary_();
+    const unread = Math.max(0, Number(res && res.unreadCount || 0));
+
+    setAdminNotificationsButtonState_(unread);
+
+  } catch (e) {
+    console.warn("refreshAdminNotificationsBell_ error:", e);
+    setAdminNotificationsButtonState_(0);
+  }
+}
+
+
+function renderAdminNotificationsList_(items) {
+  const box = document.getElementById("adminNotificationsList");
+  if (!box) return;
+
+  const rows = Array.isArray(items) ? items : [];
+
+  if (!rows.length) {
+    box.innerHTML = `
+      <div style="text-align:center; opacity:.75; padding:14px 8px;">
+        Brak wiadomości.
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = rows.map(function(it) {
+    const title = escapeHtml_(it.title || "Powiadomienie");
+    const body = escapeHtml_(it.body || "").replace(/\n/g, "<br>");
+    const sourceName = escapeHtml_(it.sourceName || it.sourceRole || "ORG HUB");
+    const createdAt = escapeHtml_(formatNotificationDate_(it.createdAt || it.created_at || ""));
+    const unread = !!it.isUnread;
+
+    return `
+      <div
+        class="admin-notification-card"
+        style="
+          border:1px solid ${unread ? "#ff2b2b" : "#3a3a3a"};
+          border-radius:14px;
+          padding:12px;
+          margin-bottom:10px;
+          background:${unread ? "rgba(139,0,0,.18)" : "rgba(255,255,255,.05)"};
+          opacity:${unread ? "1" : ".88"};
+        "
+      >
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
+          <div style="font-weight:900; font-size:15px; line-height:1.25;">
+            ${title}${unread ? ` <span style="font-size:11px; color:#ff7b7b;">• nowe</span>` : ``}
+          </div>
+          <div style="font-size:11px; opacity:.7; white-space:nowrap;">
+            ${createdAt}
+          </div>
+        </div>
+
+        <div style="font-size:12px; opacity:.8; margin-bottom:8px;">
+          Od: <b>${sourceName}</b>
+        </div>
+
+        <div style="font-size:14px; line-height:1.45;">
+          ${body}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+
+async function refreshAdminNotificationsList_() {
+  const box = document.getElementById("adminNotificationsList");
+  if (!box) return;
+
+  box.innerHTML = `
+    <div style="text-align:center; opacity:.75; padding:14px 8px;">
+      ⏳ Ładowanie...
+    </div>
+  `;
+
+  try {
+    const res = await fetchAdminNotificationsList_();
+
+    if (!res || res.success !== true) {
+      box.innerHTML = `
+        <div style="text-align:center; color:#ff8b8b; padding:14px 8px;">
+          Nie udało się pobrać powiadomień.
+        </div>
+      `;
+      return;
+    }
+
+    renderAdminNotificationsList_(res.items || []);
+
+  } catch (e) {
+    console.warn("refreshAdminNotificationsList_ error:", e);
+
+    box.innerHTML = `
+      <div style="text-align:center; color:#ff8b8b; padding:14px 8px;">
+        Błąd pobierania powiadomień.
+      </div>
+    `;
+  }
+}
+
+
+window.openAdminNotificationsView_ = async function openAdminNotificationsView_() {
+  goToView("adminNotificationsView");
+
+  await refreshAdminNotificationsList_();
+
+  markAllAdminNotificationsRead_()
+    .then(function() {
+      return refreshAdminNotificationsBell_();
+    })
+    .catch(function(e) {
+      console.warn("markAllAdminNotificationsRead_ error:", e);
+    });
+};
   
 /* =================== KONIEC SEKTORA 80 =================== */
 
