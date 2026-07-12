@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v2.97';
+  window.APP_BUILD = 'APP v2.98';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -17392,15 +17392,18 @@ function renderAdminSystemPrzelewTile_(p) {
   let bg = "#111";
   let badge = `<span style="color:#ccc;font-weight:700;">${status || "—"}</span>`;
 
-  if (status === "MATCH_CANDIDATE") {
+  if (status === "MATCHED_AUTO") {
+    bg = "#15331d";
+    badge = `<span style="color:#7dff9b;font-weight:800;">GOTOWY DO ZATWIERDZENIA</span>`;
+  } else if (status === "MATCH_CANDIDATE") {
     bg = "#3a3111";
-    badge = `<span style="color:#ffd36b;font-weight:700;">MATCH_CANDIDATE</span>`;
+    badge = `<span style="color:#ffd36b;font-weight:700;">DO WERYFIKACJI</span>`;
   } else if (status === "MIXED_REVIEW") {
     bg = "#3a1d11";
-    badge = `<span style="color:#ffb36b;font-weight:700;">MIXED_REVIEW</span>`;
+    badge = `<span style="color:#ffb36b;font-weight:700;">PŁATNOŚĆ MIESZANA</span>`;
   } else if (status === "UNMATCHED") {
     bg = "#3a1414";
-    badge = `<span style="color:#ff7c7c;font-weight:700;">UNMATCHED</span>`;
+    badge = `<span style="color:#ff7c7c;font-weight:700;">NIEROZPOZNANY</span>`;
   }
 
   const sender = escapeHtml_(String(p.sender_name || "—"));
@@ -17409,7 +17412,6 @@ function renderAdminSystemPrzelewTile_(p) {
 
   const kind = String(p.suggested_payment_kind || p.matched_payment_kind || "").trim().toUpperCase();
   const period = String(p.suggested_period || p.matched_period || "").trim();
-
   const rowNo = Number(p.sheet_row || 0);
 
   const suggestedNo = String(p.suggested_player_no || "").trim();
@@ -17419,15 +17421,23 @@ function renderAdminSystemPrzelewTile_(p) {
   const suggestedIsMixed = !!p.suggested_is_mixed;
   const suggestedParts = Array.isArray(p.suggested_parts) ? p.suggested_parts : [];
 
+  const targetSheetRaw = String(p.target_sheet || "").trim();
+  const targetSheet = escapeHtml_(targetSheetRaw);
+  const targetSourceType = String(p.target_source_type || "").trim();
+  const targetHeader = escapeHtml_(String(p.target_header || "").trim());
+  const targetCell = escapeHtml_(String(p.target_cell || "").trim());
+  const targetError = escapeHtml_(String(p.target_error || "").trim());
+  const approvalReady = p.approval_ready === true;
+
   const titleData = encodeURIComponent(titleRaw);
   const suggestedNameData = encodeURIComponent(suggestedNameRaw);
 
   const suggestionHtml =
-    suggestedNo && suggestedName
+    suggestedNo
       ? `<div style="margin-top:10px; padding:8px 10px; border:1px solid #444; border-radius:10px; background:rgba(255,255,255,.04);">
-           <div style="font-size:13px; opacity:.8;">Sugestia systemu</div>
-           <div style="margin-top:4px; font-size:15px; font-weight:700;">#${suggestedNo} — ${suggestedName}</div>
-           <div style="margin-top:2px; font-size:12px; opacity:.75;">Pewność: ${suggestedScore}</div>
+           <div style="font-size:13px; opacity:.8;">Przypisany zawodnik</div>
+           <div style="margin-top:4px; font-size:15px; font-weight:700;">#${escapeHtml_(suggestedNo)}${suggestedName ? ` — ${suggestedName}` : ""}</div>
+           <div style="margin-top:2px; font-size:12px; opacity:.75;">Pewność dopasowania: ${suggestedScore}</div>
          </div>`
       : "";
 
@@ -17439,7 +17449,9 @@ function renderAdminSystemPrzelewTile_(p) {
            ${suggestedParts.map(x => {
              const k = escapeHtml_(String(x.kind || "—"));
              const pr = escapeHtml_(String(x.period || "—"));
-             return `<div>• ${k} / ${pr}</div>`;
+             const sh = escapeHtml_(String(x.target_sheet || "").trim());
+             const err = escapeHtml_(String(x.target_error || "").trim());
+             return `<div>• ${k} / ${pr}${sh ? ` → ${sh}` : ""}${err ? ` — ${err}` : ""}</div>`;
            }).join("")}
          </div>
        </div>`
@@ -17448,50 +17460,54 @@ function renderAdminSystemPrzelewTile_(p) {
          <div style="margin-top:4px; font-size:15px; font-weight:700;">${kind || "—"} / ${period || "—"}</div>
        </div>`;
 
+  const targetHtml = targetSheet
+    ? `<div style="margin-top:10px; padding:9px 10px; border:1px solid ${targetSourceType === "archive" ? "#d5a52e" : "#376f42"}; border-radius:10px; background:rgba(255,255,255,.04);">
+         <div style="font-size:13px; opacity:.8;">Docelowa Kartoteka</div>
+         <div style="margin-top:4px; font-size:15px; font-weight:800; color:${targetSourceType === "archive" ? "#ffd37a" : "#8cff9f"};">${targetSheet}</div>
+         ${targetHeader ? `<div style="margin-top:3px; font-size:12px; opacity:.8;">${targetHeader}${targetCell ? ` • ${targetCell}` : ""}</div>` : ""}
+       </div>`
+    : (targetError
+        ? `<div style="margin-top:10px; padding:9px 10px; border:1px solid #8b0000; border-radius:10px; background:#3a1414; color:#ff9b9b;">${targetError}</div>`
+        : "");
+
   let confirmBtn = "";
   let manualBtn = "";
   let splitBtn = "";
 
-  if (status === "MATCH_CANDIDATE" && kind && period && !suggestedIsMixed) {
-    if (suggestedNo && suggestedNameRaw) {
-      confirmBtn = `
-        <button class="full-btn"
-          style="margin-top:10px; background:#0f7a2a; border-color:#19a642;"
-          onclick="adminConfirmSystemPrzelew(this, ${rowNo}, '${suggestedNo}', '${kind}', '${period}', decodeURIComponent('${suggestedNameData}'), ${amount})">
-          Zatwierdź jako #${suggestedNo} ${suggestedName}
-        </button>
-      `;
-    } else {
-      confirmBtn = `
-        <button class="full-btn"
-          style="margin-top:10px;"
-          onclick="adminConfirmSystemPrzelew(this, ${rowNo}, '', '${kind}', '${period}', '', ${amount})">
-          Zatwierdź płatność
-        </button>
-      `;
-    }
+  if (
+    (status === "MATCHED_AUTO" || status === "MATCH_CANDIDATE") &&
+    suggestedNo && kind && period && !suggestedIsMixed && approvalReady
+  ) {
+    confirmBtn = `
+      <button class="full-btn"
+        style="margin-top:10px; background:#0f7a2a; border-color:#19a642;"
+        onclick="adminConfirmSystemPrzelew(this, ${rowNo}, '${suggestedNo}', '${kind}', '${period}', decodeURIComponent('${suggestedNameData}'), ${amount})">
+        Zatwierdź wpłatę
+      </button>
+    `;
   }
 
-    if (
-      status === "UNMATCHED" ||
-      status === "MATCH_CANDIDATE" ||
-      status === "MIXED_REVIEW"
-    ) {
-      manualBtn = `
-        <button class="full-btn alt"
-          style="margin-top:10px;"
-          onclick="adminOpenManualSystemPrzelew(${rowNo}, decodeURIComponent('${titleData}'), '${suggestedNo}', '${kind}', '${period}')">
-          Przypisz ręcznie
-        </button>
-      `;
-    }
+  if (
+    status === "MATCHED_AUTO" ||
+    status === "UNMATCHED" ||
+    status === "MATCH_CANDIDATE" ||
+    status === "MIXED_REVIEW"
+  ) {
+    manualBtn = `
+      <button class="full-btn alt"
+        style="margin-top:10px;"
+        onclick="adminOpenManualSystemPrzelew(${rowNo}, decodeURIComponent('${titleData}'), '${suggestedNo}', '${kind}', '${period}')">
+        Przypisz ręcznie
+      </button>
+    `;
+  }
 
   if (status === "MIXED_REVIEW" && suggestedNo && suggestedParts.length) {
     splitBtn = `
       <button class="full-btn"
         style="margin-top:10px; background:#b86a00; border-color:#ff9d00;"
         onclick="adminSplitMixedPayment(${rowNo}, '${suggestedNo}')">
-        Rozbij płatność
+        Zatwierdź i rozbij płatność
       </button>
     `;
   }
@@ -17512,18 +17528,16 @@ function renderAdminSystemPrzelewTile_(p) {
           <div style="font-size:18px; font-weight:800; margin-top:4px;">${amount} zł</div>
           <div style="margin-top:6px; font-size:14px; opacity:.95;">${sender}</div>
         </div>
-        <div style="text-align:right;">
-          ${badge}
-        </div>
+        <div style="text-align:right;">${badge}</div>
       </div>
 
       <div style="height:1px; background:#333; margin:12px 0;"></div>
-
       <div style="opacity:.8; font-size:13px;">Tytuł przelewu</div>
       <div style="margin-top:4px; font-size:15px; font-weight:700; word-break:break-word;">${title}</div>
 
       ${suggestionHtml}
       ${accountingHtml}
+      ${targetHtml}
       ${confirmBtn}
       ${manualBtn}
       ${splitBtn}
@@ -17531,7 +17545,7 @@ function renderAdminSystemPrzelewTile_(p) {
     </div>
   `;
 }
-  
+
   // minimalny escape do HTML (żeby nazwiska/rodzaje nie rozwaliły DOM)
 function escapeHtml_(s) {
   
@@ -17641,7 +17655,11 @@ async function adminConfirmSystemPrzelew(btn, row, suggestedPlayerNo, kind, peri
       body.innerHTML = "<div class='card' style='background:#123a1a;'>✅ Brak przelewów do obsługi.</div>";
     }
 
-    adminUpdateSystemPrzelewyCount_(`✅ Zaksięgowałem — ${amountLabel} zł — ${kindLabel} — ${who}`);
+    const targetLabel = String(res?.target_sheet || "").trim();
+    adminUpdateSystemPrzelewyCount_(
+      `✅ Zaksięgowano — ${amountLabel} zł — ${kindLabel} — ${who}` +
+      (targetLabel ? ` — ${targetLabel}` : "")
+    );
 
   } catch (e) {
     if (btnEl) {
@@ -18019,7 +18037,7 @@ function adminSendBankFileToServer(file) {
       html = `
         <div>✅ Odczytuję plik...</div>
         <div>✅ Wysyłam plik do serwera...</div>
-        <div>⏳ Przetwarzam wyciąg i księguję wpłaty... ${seconds}s</div>
+        <div>⏳ Przetwarzam wyciąg i rozpoznaję wpłaty... ${seconds}s</div>
         ${extraText ? `<div style="margin-top:8px; opacity:.8;">${extraText}</div>` : ""}
       `;
     } else if (stage === "done") {
@@ -18116,6 +18134,7 @@ function adminSendBankFileToServer(file) {
         duplicates: response.duplicates || 0,
         autoConfirmed: response.autoConfirmed || 0,
         autoConfirmErrors: response.autoConfirmErrors || 0,
+        readyForApproval: response.readyForApproval || 0,
         matchedAuto: response.matchedAuto || 0,
         matchCandidate: response.matchCandidate || 0,
         mixedReview: response.mixedReview || 0,
@@ -18162,45 +18181,38 @@ function showImportResultPopup(summary) {
 
   const added = Number(summary.added || 0);
   const duplicates = Number(summary.duplicates || 0);
-  const autoConfirmed = Number(summary.autoConfirmed || 0);
-  const autoConfirmErrors = Number(summary.autoConfirmErrors || 0);
   const matchedAuto = Number(summary.matchedAuto || 0);
   const matchCandidate = Number(summary.matchCandidate || 0);
   const mixedReview = Number(summary.mixedReview || 0);
   const unmatched = Number(summary.unmatched || 0);
-  const confirmedItems = Array.isArray(summary.confirmedItems) ? summary.confirmedItems : [];
+  const readyForApproval = Number(
+    summary.readyForApproval || (matchedAuto + matchCandidate)
+  );
 
   const popup = document.getElementById("importResultPopup");
   const text = document.getElementById("importResultText");
 
-    if (text) {
+  if (text) {
     text.style.maxHeight = "70vh";
     text.style.overflowY = "auto";
     text.style.webkitOverflowScrolling = "touch";
     text.style.paddingRight = "6px";
+
+    text.innerHTML = `
+      <div style="text-align:left; line-height:1.55;">
+        <div>Dodano przelewów: <b>${added}</b></div>
+        <div>Duplikaty: <b>${duplicates}</b></div>
+        <div style="margin-top:8px; color:#8cff9f;">Gotowe do zatwierdzenia: <b>${readyForApproval}</b></div>
+        <div>Rozpoznane po kodzie: <b>${matchedAuto}</b></div>
+        <div>Propozycje wymagające weryfikacji: <b>${matchCandidate}</b></div>
+        <div>Płatności mieszane: <b>${mixedReview}</b></div>
+        <div>Nierozpoznane: <b>${unmatched}</b></div>
+        <div style="margin-top:12px; padding:9px 10px; border:1px solid #376f42; border-radius:10px; background:#123a1a;">
+          Podczas importu nie zaksięgowano żadnej wpłaty. Każdą rozpoznaną wpłatę zatwierdza operator.
+        </div>
+      </div>
+    `;
   }
-
-  const detailsHtml = buildImportConfirmedItemsHtml_(confirmedItems);
-
-  const html =
-    `<div style="text-align:left; line-height:1.5;">
-      <div>Dodano: <b>${added}</b></div>
-      <div>Duplikaty: <b>${duplicates}</b></div>
-      <div>Zaksięgowano automatycznie: <b>${autoConfirmed}</b></div>
-      <div>Błędy auto-księgowania: <b>${autoConfirmErrors}</b></div>
-      <div>MATCHED_AUTO: <b>${matchedAuto}</b></div>
-      <div>MATCH_CANDIDATE: <b>${matchCandidate}</b></div>
-      <div>MIXED_REVIEW: <b>${mixedReview}</b></div>
-      <div>UNMATCHED: <b>${unmatched}</b></div>
-    </div>`
-    + (detailsHtml
-      ? `<div style="margin-top:16px; text-align:left;">
-           <div style="font-weight:800; margin-bottom:8px;">Szczegóły auto-księgowania</div>
-           ${detailsHtml}
-         </div>`
-      : "");
-
-  if (text) text.innerHTML = html;
 
   if (popup) {
     popup.classList.remove("hidden");
