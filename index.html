@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.00';
+  window.APP_BUILD = 'APP v3.01';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -9622,27 +9622,99 @@ function powrotDoPlatnosci() {
 
 /* ===================== TRENINGI ======================-- */
   
+async function refreshCurrentPlayerGroupsForEvents_() {
+  const previousGroups = String(grupaZalogowanego || "").trim();
+  const playerId = String(numerZalogowanego || "").trim();
+
+  if (!playerId) {
+    return {
+      refreshed: false,
+      changed: false,
+      previousGroups,
+      currentGroups: previousGroups
+    };
+  }
+
+  try {
+    const info = await apiClubPost({
+      action: "adminPlayerInfo",
+      numer: playerId
+    });
+
+    if (!info || info.success === false) {
+      return {
+        refreshed: false,
+        changed: false,
+        previousGroups,
+        currentGroups: previousGroups
+      };
+    }
+
+    const currentGroups = String(info.grupy || "").trim();
+    const changed = currentGroups !== previousGroups;
+
+    grupaZalogowanego = currentGroups;
+    window.grupaZalogowanego = currentGroups;
+
+    try {
+      const session = loadAppSession_();
+      const samePlayer =
+        session &&
+        String(session.role || "").trim() === "zawodnik" &&
+        String(session.loginId || "").trim() === playerId;
+
+      if (samePlayer && String(session.grupa || "").trim() !== currentGroups) {
+        saveAppSession_({
+          ...session,
+          grupa: currentGroups,
+          validatedAt: new Date().toISOString()
+        });
+      }
+    } catch (e) {}
+
+    return {
+      refreshed: true,
+      changed,
+      previousGroups,
+      currentGroups
+    };
+
+  } catch (e) {
+    console.warn("refreshCurrentPlayerGroupsForEvents_ error:", e);
+
+    return {
+      refreshed: false,
+      changed: false,
+      previousGroups,
+      currentGroups: previousGroups
+    };
+  }
+}
+
 async function pokazTreningi() {
   goToView("homeView");
 
   const div = document.getElementById("listaTreningow");
-  const cacheEntry = readPlayerEventsCache_();
 
-  let hadCache = false;
-
-  if (cacheEntry && Array.isArray(cacheEntry.data)) {
-    renderTreningi(cacheEntry.data);
-    hadCache = true;
-
-    // Blokujemy tylko na czas sprawdzenia meta / odświeżenia.
-    setTreningiButtonsLocked_(true);
-  }
-
-  if (!hadCache && div) {
+  if (div) {
     div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
   }
 
+  let hadCache = false;
+
   try {
+    // Grupa w aktywnej sesji mogła się zmienić już po rejestracji.
+    // Zawsze sprawdzamy aktualną wartość z Panelu administracyjnego.
+    const groupRefresh = await refreshCurrentPlayerGroupsForEvents_();
+
+    const cacheEntry = readPlayerEventsCache_();
+
+    if (cacheEntry && Array.isArray(cacheEntry.data)) {
+      renderTreningi(cacheEntry.data);
+      hadCache = true;
+      setTreningiButtonsLocked_(true);
+    }
+
     const oldMeta = readPlayerEventsMeta_();
 
     const meta = await apiClubGet("treningiMeta", {
@@ -9650,10 +9722,10 @@ async function pokazTreningi() {
     });
 
     if (!meta || meta.success !== true) {
-      // Fallback bezpieczeństwa: jeśli meta nie działa, pobierz pełne treningi.
       const fresh = await apiClubGet("treningi", {
         grupa: grupaZalogowanego,
-        numer: numerZalogowanego
+        numer: numerZalogowanego,
+        t: Date.now()
       });
 
       writePlayerEventsCache_(fresh);
@@ -9668,6 +9740,7 @@ async function pokazTreningi() {
     const newSignupsVersion = String(meta.signupsVersion || "");
 
     const staticChanged =
+      groupRefresh.changed ||
       !hadCache ||
       !oldStaticVersion ||
       oldStaticVersion !== newStaticVersion;
@@ -9676,12 +9749,12 @@ async function pokazTreningi() {
       !oldSignupsVersion ||
       oldSignupsVersion !== newSignupsVersion;
 
-    // 1. Zmieniły się dane wydarzeń: data, godzina, miejsce, trener, grupy itd.
-    // Tu musimy pobrać pełne treningi.
+    // Zmiana grupy zawodnika zawsze wymaga pełnego ponownego filtrowania wydarzeń.
     if (staticChanged) {
       const fresh = await apiClubGet("treningi", {
         grupa: grupaZalogowanego,
-        numer: numerZalogowanego
+        numer: numerZalogowanego,
+        t: Date.now()
       });
 
       let changed = true;
@@ -9696,15 +9769,13 @@ async function pokazTreningi() {
       writePlayerEventsCache_(fresh);
       writePlayerEventsMeta_(meta);
 
-      if (changed || !hadCache) {
+      if (changed || !hadCache || groupRefresh.changed) {
         renderTreningi(fresh);
       }
 
       return;
     }
 
-    // 2. Dane wydarzeń bez zmian, ale zmieniły się zapisy/liczby/status zawodnika.
-    // Pobieramy tylko dynamiczny fragment.
     if (signupsChanged) {
       const zapisyRes = await apiClubGet("treningiZapisy", {
         grupa: grupaZalogowanego,
@@ -9725,8 +9796,6 @@ async function pokazTreningi() {
       return;
     }
 
-    // 3. Nic się nie zmieniło.
-    // Nie robimy pełnego odświeżania.
     console.log("[treningi] brak zmian — pomijam pełne odświeżenie");
 
   } catch (e) {
@@ -9740,20 +9809,33 @@ async function pokazTreningi() {
     setTreningiButtonsLocked_(false);
   }
 }
-  function getPlayerEventsCacheKey_() {
-  return "orghub.cache.v1." +
+
+function getPlayerEventsGroupsKey_() {
+  const groups = String(grupaZalogowanego || "")
+    .split(/[\s,;|\/]+/g)
+    .map(x => String(x || "").trim().toUpperCase())
+    .filter(Boolean)
+    .sort();
+
+  return groups.length ? groups.join("_") : "no_groups";
+}
+
+function getPlayerEventsCacheKey_() {
+  return "orghub.cache.v2." +
     String(clubId || "").toLowerCase() +
     ".playerevents.numer-" +
     String(numerZalogowanego || "") +
-    ".default";
+    ".groups-" +
+    getPlayerEventsGroupsKey_();
 }
 
 function getPlayerEventsMetaKey_() {
-  return "orghub.cache.v1." +
+  return "orghub.cache.v2." +
     String(clubId || "").toLowerCase() +
     ".playerevents.meta.numer-" +
     String(numerZalogowanego || "") +
-    ".default";
+    ".groups-" +
+    getPlayerEventsGroupsKey_();
 }
 
 function readPlayerEventsCache_() {
