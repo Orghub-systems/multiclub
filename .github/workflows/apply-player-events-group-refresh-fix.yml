@@ -1,0 +1,327 @@
+name: Apply player events group refresh fix
+
+on:
+  push:
+    branches:
+      - agent/fix-player-events-after-group-change
+    paths:
+      - .github/workflows/apply-player-events-group-refresh-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/fix-player-events-after-group-change
+          fetch-depth: 0
+
+      - name: Patch player event refresh after group changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old_build = "window.APP_BUILD = 'APP v3.00';"
+          new_build = "window.APP_BUILD = 'APP v3.01';"
+          if text.count(old_build) != 1:
+              raise SystemExit(f"Unexpected build marker count: {text.count(old_build)}")
+          text = text.replace(old_build, new_build, 1)
+
+          new_events_loader = r'''async function refreshCurrentPlayerGroupsForEvents_() {
+            const previousGroups = String(grupaZalogowanego || "").trim();
+            const playerId = String(numerZalogowanego || "").trim();
+
+            if (!playerId) {
+              return {
+                refreshed: false,
+                changed: false,
+                previousGroups,
+                currentGroups: previousGroups
+              };
+            }
+
+            try {
+              const info = await apiClubPost({
+                action: "adminPlayerInfo",
+                numer: playerId
+              });
+
+              if (!info || info.success === false) {
+                return {
+                  refreshed: false,
+                  changed: false,
+                  previousGroups,
+                  currentGroups: previousGroups
+                };
+              }
+
+              const currentGroups = String(info.grupy || "").trim();
+              const changed = currentGroups !== previousGroups;
+
+              grupaZalogowanego = currentGroups;
+              window.grupaZalogowanego = currentGroups;
+
+              try {
+                const session = loadAppSession_();
+                const samePlayer =
+                  session &&
+                  String(session.role || "").trim() === "zawodnik" &&
+                  String(session.loginId || "").trim() === playerId;
+
+                if (samePlayer && String(session.grupa || "").trim() !== currentGroups) {
+                  saveAppSession_({
+                    ...session,
+                    grupa: currentGroups,
+                    validatedAt: new Date().toISOString()
+                  });
+                }
+              } catch (e) {}
+
+              return {
+                refreshed: true,
+                changed,
+                previousGroups,
+                currentGroups
+              };
+
+            } catch (e) {
+              console.warn("refreshCurrentPlayerGroupsForEvents_ error:", e);
+
+              return {
+                refreshed: false,
+                changed: false,
+                previousGroups,
+                currentGroups: previousGroups
+              };
+            }
+          }
+
+          async function pokazTreningi() {
+            goToView("homeView");
+
+            const div = document.getElementById("listaTreningow");
+
+            if (div) {
+              div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
+            }
+
+            let hadCache = false;
+
+            try {
+              // Grupa w aktywnej sesji mogła się zmienić już po rejestracji.
+              // Zawsze sprawdzamy aktualną wartość z Panelu administracyjnego.
+              const groupRefresh = await refreshCurrentPlayerGroupsForEvents_();
+
+              const cacheEntry = readPlayerEventsCache_();
+
+              if (cacheEntry && Array.isArray(cacheEntry.data)) {
+                renderTreningi(cacheEntry.data);
+                hadCache = true;
+                setTreningiButtonsLocked_(true);
+              }
+
+              const oldMeta = readPlayerEventsMeta_();
+
+              const meta = await apiClubGet("treningiMeta", {
+                t: Date.now()
+              });
+
+              if (!meta || meta.success !== true) {
+                const fresh = await apiClubGet("treningi", {
+                  grupa: grupaZalogowanego,
+                  numer: numerZalogowanego,
+                  t: Date.now()
+                });
+
+                writePlayerEventsCache_(fresh);
+                renderTreningi(fresh);
+                return;
+              }
+
+              const oldStaticVersion = String(oldMeta.staticVersion || "");
+              const oldSignupsVersion = String(oldMeta.signupsVersion || "");
+
+              const newStaticVersion = String(meta.staticVersion || "");
+              const newSignupsVersion = String(meta.signupsVersion || "");
+
+              const staticChanged =
+                groupRefresh.changed ||
+                !hadCache ||
+                !oldStaticVersion ||
+                oldStaticVersion !== newStaticVersion;
+
+              const signupsChanged =
+                !oldSignupsVersion ||
+                oldSignupsVersion !== newSignupsVersion;
+
+              // Zmiana grupy zawodnika zawsze wymaga pełnego ponownego filtrowania wydarzeń.
+              if (staticChanged) {
+                const fresh = await apiClubGet("treningi", {
+                  grupa: grupaZalogowanego,
+                  numer: numerZalogowanego,
+                  t: Date.now()
+                });
+
+                let changed = true;
+
+                try {
+                  const current = readPlayerEventsCache_();
+                  if (current && Array.isArray(current.data)) {
+                    changed = JSON.stringify(current.data) !== JSON.stringify(fresh);
+                  }
+                } catch (e) {}
+
+                writePlayerEventsCache_(fresh);
+                writePlayerEventsMeta_(meta);
+
+                if (changed || !hadCache || groupRefresh.changed) {
+                  renderTreningi(fresh);
+                }
+
+                return;
+              }
+
+              if (signupsChanged) {
+                const zapisyRes = await apiClubGet("treningiZapisy", {
+                  grupa: grupaZalogowanego,
+                  numer: numerZalogowanego,
+                  t: Date.now()
+                });
+
+                if (zapisyRes && zapisyRes.success === true && Array.isArray(zapisyRes.items)) {
+                  applyPlayerEventsSignupsDelta_(zapisyRes.items);
+
+                  writePlayerEventsMeta_(
+                    zapisyRes.meta && zapisyRes.meta.success === true
+                      ? zapisyRes.meta
+                      : meta
+                  );
+                }
+
+                return;
+              }
+
+              console.log("[treningi] brak zmian — pomijam pełne odświeżenie");
+
+            } catch (e) {
+              console.warn("pokazTreningi smart refresh error:", e);
+
+              if (!hadCache && div) {
+                div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
+              }
+
+            } finally {
+              setTreningiButtonsLocked_(false);
+            }
+          }
+          '''
+
+          pattern = re.compile(
+              r'async function pokazTreningi\(\) \{.*?\n\}\n\s*function getPlayerEventsCacheKey_\(\) \{',
+              re.S,
+          )
+
+          text, count = pattern.subn(
+              lambda _: new_events_loader + '\nfunction getPlayerEventsCacheKey_() {',
+              text,
+              count=1,
+          )
+
+          if count != 1:
+              raise SystemExit(f"Expected one pokazTreningi block, found {count}")
+
+          old_keys = r'''function getPlayerEventsCacheKey_() {
+            return "orghub.cache.v1." +
+              String(clubId || "").toLowerCase() +
+              ".playerevents.numer-" +
+              String(numerZalogowanego || "") +
+              ".default";
+          }
+
+          function getPlayerEventsMetaKey_() {
+            return "orghub.cache.v1." +
+              String(clubId || "").toLowerCase() +
+              ".playerevents.meta.numer-" +
+              String(numerZalogowanego || "") +
+              ".default";
+          }'''
+
+          new_keys = r'''function getPlayerEventsGroupsKey_() {
+            const groups = String(grupaZalogowanego || "")
+              .split(/[\s,;|\/]+/g)
+              .map(x => String(x || "").trim().toUpperCase())
+              .filter(Boolean)
+              .sort();
+
+            return groups.length ? groups.join("_") : "no_groups";
+          }
+
+          function getPlayerEventsCacheKey_() {
+            return "orghub.cache.v2." +
+              String(clubId || "").toLowerCase() +
+              ".playerevents.numer-" +
+              String(numerZalogowanego || "") +
+              ".groups-" +
+              getPlayerEventsGroupsKey_();
+          }
+
+          function getPlayerEventsMetaKey_() {
+            return "orghub.cache.v2." +
+              String(clubId || "").toLowerCase() +
+              ".playerevents.meta.numer-" +
+              String(numerZalogowanego || "") +
+              ".groups-" +
+              getPlayerEventsGroupsKey_();
+          }'''
+
+          if text.count(old_keys) != 1:
+              raise SystemExit(f"Expected one old event key block, found {text.count(old_keys)}")
+
+          text = text.replace(old_keys, new_keys, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Validate patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path("index.html").read_text(encoding="utf-8")
+
+          assert "window.APP_BUILD = 'APP v3.01';" in text
+          assert text.count("async function pokazTreningi()") == 1
+          assert text.count("async function refreshCurrentPlayerGroupsForEvents_()") == 1
+          assert text.count("function getPlayerEventsGroupsKey_()") == 1
+          assert '"orghub.cache.v2."' in text
+          assert "groupRefresh.changed ||" in text
+          assert 'action: "adminPlayerInfo"' in text
+          assert 'grupa: currentGroups' in text
+          assert ".playerevents.numer-" in text
+          assert ".groups-" in text
+
+          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', text, re.I)
+          Path('/tmp/index-inline-scripts.js').write_text('\n\n'.join(scripts), encoding='utf-8')
+          PY
+
+          node --check /tmp/index-inline-scripts.js
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix player events after group changes"
+          git push origin HEAD:agent/fix-player-events-after-group-change
