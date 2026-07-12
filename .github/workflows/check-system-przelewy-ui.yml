@@ -1,0 +1,46 @@
+name: Check system-przelewy UI syntax
+
+on:
+  push:
+    branches:
+      - agent/system-przelewy-approval
+    paths:
+      - .github/workflows/check-system-przelewy-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/system-przelewy-approval
+          fetch-depth: 0
+
+      - name: Extract inline JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          html = Path('index.html').read_text(encoding='utf-8')
+          blocks = re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>', html, flags=re.I | re.S)
+          if not blocks:
+              raise SystemExit('No inline script blocks found')
+          Path('/tmp/index-inline.js').write_text('\n\n'.join(blocks), encoding='utf-8')
+          print(f'Extracted {len(blocks)} inline script block(s)')
+          PY
+
+      - name: Check JavaScript syntax
+        run: node --check /tmp/index-inline.js
+
+      - name: Remove temporary workflow
+        run: |
+          rm .github/workflows/check-system-przelewy-ui.yml
+          git config user.name "orghub-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/check-system-przelewy-ui.yml
+          git commit -m "Verify bank transfer UI syntax"
+          git push origin HEAD:agent/system-przelewy-approval
