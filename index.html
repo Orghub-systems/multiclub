@@ -11685,6 +11685,9 @@ async function trainerShowCurrentEvents_() {
     div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
   }
 
+  // Pending musi być widoczny od razu, również gdy nie mamy listy w cache.
+  trainerApplyPendingEventCard_();
+  
   // 2. Zawsze sprawdź GAS w tle
   try {
     const fresh = await apiClubGet("treningiTrener", {
@@ -13297,12 +13300,16 @@ async function wyslijNoweWydarzenie() {
     // Startujemy request od razu, ale NIE czekamy z UI na jego zakończenie.
     const requestPromise = apiClubPost(apiPayload);
 
-    // Tylko krótka pauza wizualna przy przycisku.
-    await waitMs_(1000);
+    // Pozwalamy przeglądarce narysować nieaktywny przycisk,
+    // ale nie dokładamy sztucznej sekundy oczekiwania.
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resolve);
+      });
+    });
 
     trainerSetPendingEvent_(pendingPayload);
     trainerStartPendingEventMessages_();
-    trainerInvalidateCurrentEventsCache_();
 
     // Nie awaitujemy — ekran ma się pokazać od razu.
     trainerShowCurrentEvents_();
