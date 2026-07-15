@@ -13082,37 +13082,144 @@ function trainerApplyPendingEventCard_() {
   card.style.position = "relative";
   card.style.overflow = "hidden";
 
-  const dateText = [
-    pending.data,
-    pending.godzStart && pending.godzKoniec
-      ? pending.godzStart + " – " + pending.godzKoniec
-      : ""
-  ].filter(Boolean).join(" | ");
+const dateObj = pending.data
+  ? new Date(pending.data + "T12:00:00")
+  : null;
 
-  card.innerHTML = `
-    
-    ${Number(pending.phase || 0) < 2 ? `
-      <div style="
-        position:absolute;
-        inset:0;
-        background:linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
-        animation: trainerPendingSweep 1.6s linear infinite;
-        pointer-events:none;
-      "></div>
-    ` : ""}
+const dniTygodnia = [
+  "Niedziela",
+  "Poniedziałek",
+  "Wtorek",
+  "Środa",
+  "Czwartek",
+  "Piątek",
+  "Sobota"
+];
 
-    <div style="position:relative;">
-      <div style="font-size:13px; opacity:.75; margin-bottom:8px;">
-        ${trainerEscHtml_(dateText)}
-      </div>
+const dzienTygodnia =
+  dateObj && !isNaN(dateObj.getTime())
+    ? dniTygodnia[dateObj.getDay()]
+    : "";
 
-      <div style="font-size:20px; font-weight:900; margin-bottom:10px;">
-        ${trainerEscHtml_(pending.rodzaj || "Nowe wydarzenie")}
-      </div>
+function pendingTimeToMinutes_(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
 
-      ${trainerPendingEventMessage_(pending)}
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+const startMinutes = pendingTimeToMinutes_(pending.godzStart);
+const endMinutes = pendingTimeToMinutes_(pending.godzKoniec);
+
+let czasTrwania = "";
+
+if (
+  startMinutes !== null &&
+  endMinutes !== null &&
+  endMinutes > startMinutes
+) {
+  const totalMinutes = endMinutes - startMinutes;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  czasTrwania =
+    String(hours) +
+    ":" +
+    String(minutes).padStart(2, "0");
+}
+
+const isPowolania =
+  String(pending.trybDostepu || "").toLowerCase() === "powolania";
+
+const powolaniCount = String(pending.powolani || "")
+  .split(",")
+  .map(v => v.trim())
+  .filter(Boolean)
+  .length;
+
+card.innerHTML = `
+  ${Number(pending.phase || 0) < 2 ? `
+    <div style="
+      position:absolute;
+      inset:0;
+      background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.07),
+        transparent
+      );
+      animation:trainerPendingSweep 1.6s linear infinite;
+      pointer-events:none;
+    "></div>
+  ` : ""}
+
+  <div style="position:relative; text-align:center;">
+    <p>
+      <b>${trainerEscHtml_(pending.rodzaj || "Nowe wydarzenie")}</b>
+      &nbsp;&nbsp;
+      ${trainerEscHtml_(pending.data || "")}
+      ${dzienTygodnia ? ` (${trainerEscHtml_(dzienTygodnia)})` : ""}
+      <br>
+
+      ${
+        pending.dataKoniec &&
+        pending.dataKoniec !== pending.data
+          ? `Do: <b>${trainerEscHtml_(pending.dataKoniec)}</b><br>`
+          : ""
+      }
+
+      Godzina:
+      <b>${trainerEscHtml_(pending.godzStart || "")}</b>
+      –
+      <b>${trainerEscHtml_(pending.godzKoniec || "")}</b>
+      <br>
+
+      ${
+        czasTrwania
+          ? `Czas trwania: <b>${trainerEscHtml_(czasTrwania)}</b><br>`
+          : ""
+      }
+
+      ${
+        pending.miejsce
+          ? `Miejsce: <b>${trainerEscHtml_(pending.miejsce)}</b><br>`
+          : ""
+      }
+
+      Trener:
+      <b>${trainerEscHtml_(pending.trener || "—")}</b>
+      <br>
+
+      ${
+        isPowolania
+          ? `Powołanych: <b>${powolaniCount}</b> &nbsp;&nbsp; Zaakceptowało: <b>0</b><br>`
+          : `Zapisanych: <b>0</b><br>`
+      }
+    </p>
+
+    <div style="
+      display:flex;
+      justify-content:center;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    ">
+      <button class="btn" disabled>
+        ${isPowolania ? "👥 Powołani" : "👥 Zapisani"}
+      </button>
+
+      <button class="btn" disabled>
+        ✏️ Edytuj
+      </button>
+
+      <button class="btn danger" disabled>
+        🗑️ Usuń
+      </button>
     </div>
-  `;
+
+    ${trainerPendingEventMessage_(pending)}
+  </div>
+`;
 
   if (!document.getElementById("trainerPendingEventStyle")) {
     const style = document.createElement("style");
