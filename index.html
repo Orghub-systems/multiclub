@@ -12438,6 +12438,11 @@ function applyAddTrenerzyPopup() {
 function pokazDodajWydarzenie() {
   goToView("trainerDodajWydarzenieView");
 
+  // Każde otwarcie formularza zaczyna się bez komunikatu
+  // pozostawionego po poprzedniej operacji.
+  const msg = document.getElementById("eventMsg");
+  if (msg) msg.textContent = "";
+
   try { initEventPickers_(); } catch (e) { console.warn("initEventPickers_ failed:", e); }
 
   resetTrenerSelects_();
