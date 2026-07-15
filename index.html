@@ -13039,11 +13039,12 @@ function trainerPendingEventMessage_(pending) {
   }
 
   return `
-    <div style="font-size:18px; font-weight:900; margin-bottom:8px;">
-      Odświeżam widok wydarzeń . . .
-    </div>
-    <div style="font-size:14px; opacity:.8;">
-      Nowy kafel pojawi się automatycznie.
+    <div style="
+      font-size:18px;
+      font-weight:900;
+      color:#81c784;
+    ">
+      ✅ Wydarzenie dodane
     </div>
   `;
 }
@@ -13080,13 +13081,16 @@ function trainerApplyPendingEventCard_() {
   ].filter(Boolean).join(" | ");
 
   card.innerHTML = `
-    <div style="
-      position:absolute;
-      inset:0;
-      background:linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
-      animation: trainerPendingSweep 1.6s linear infinite;
-      pointer-events:none;
-    "></div>
+    
+    ${Number(pending.phase || 0) < 2 ? `
+      <div style="
+        position:absolute;
+        inset:0;
+        background:linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
+        animation: trainerPendingSweep 1.6s linear infinite;
+        pointer-events:none;
+      "></div>
+    ` : ""}
 
     <div style="position:relative;">
       <div style="font-size:13px; opacity:.75; margin-bottom:8px;">
@@ -13135,15 +13139,26 @@ function trainerStartPendingEventMessages_() {
     trainerWritePendingEvent_(p);
     trainerApplyPendingEventCard_();
   }, 700);
-
+  
   __trainerPendingEventTimer2 = setTimeout(function() {
     const p = trainerGetPendingEvent_();
     if (!p) return;
-
+  
     p.phase = 2;
     trainerWritePendingEvent_(p);
     trainerApplyPendingEventCard_();
-  }, 1600);
+  
+    // Dla użytkownika operacja jest już zakończona.
+    // Przycisk pozostaje zabezpieczony przed ponownym kliknięciem,
+    // ale nie wygląda już jak aktywny proces.
+    const addBtn = document.getElementById("btnTrainerAddEvent");
+  
+    if (addBtn) {
+      addBtn.classList.remove("loading");
+      addBtn.disabled = true;
+      addBtn.textContent = "✅ Wydarzenie dodane";
+    }
+  }, 1200);
 }
 
 function trainerInvalidateCurrentEventsCache_() {
