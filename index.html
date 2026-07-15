@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.01';
+  window.APP_BUILD = 'APP v3.02';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11638,6 +11638,29 @@ function trainerSetAddEventButtonLoaded_(loaded) {
   const btn = document.getElementById("btnTrainerAddEvent");
   if (!btn) return;
 
+  if (!btn.dataset.originalText) {
+    btn.dataset.originalText = btn.textContent || "Dodaj wydarzenie";
+  }
+
+  const pending = (
+    typeof trainerGetPendingEvent_ === "function"
+      ? trainerGetPendingEvent_()
+      : null
+  );
+
+  // Dopóki trwa dodawanie wydarzenia, przycisk pozostaje widoczny,
+  // ale nie można uruchomić kolejnego dodawania.
+  if (pending) {
+    btn.classList.remove("hidden");
+    btn.classList.add("loading");
+    btn.disabled = true;
+    btn.textContent = "⏳ Dodawanie wydarzenia...";
+    return;
+  }
+
+  btn.classList.remove("loading");
+  btn.textContent = btn.dataset.originalText;
+
   if (loaded) {
     btn.classList.remove("hidden");
     btn.disabled = false;
@@ -13165,8 +13188,6 @@ function trainerSchedulePendingEventRefresh_(attempt) {
     __trainerPendingEventRefreshBusy = true;
 
     try {
-      trainerInvalidateCurrentEventsCache_();
-
       if (typeof trainerShowCurrentEvents_ === "function") {
         await trainerShowCurrentEvents_();
       }
@@ -13350,16 +13371,16 @@ async function wyslijNoweWydarzenie() {
       Object.keys(localStorage)
         .filter(k => {
           const x = String(k || "").toLowerCase();
+    
+          // Czyścimy tylko archiwum.
+          // Bieżąca lista pozostaje na ekranie podczas dodawania wydarzenia.
           return (
-            x.includes("trainercurrentevents") ||
             x.includes("trainerarchiveevents") ||
             x.includes("trainerarchivemonths")
           );
         })
         .forEach(k => localStorage.removeItem(k));
     } catch (e) {}
-
-    trainerInvalidateCurrentEventsCache_();
 
     // Backend zapisał wydarzenie — teraz można zacząć próby zamiany pending-kafla na prawdziwy.
     trainerSchedulePendingEventRefresh_(1);
