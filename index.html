@@ -411,7 +411,7 @@ input[type="number"] {
   </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.02';
+  window.APP_BUILD = 'APP v3.03';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11716,11 +11716,70 @@ async function trainerShowCurrentEvents_() {
   if (!hadCache && div) {
     div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
   }
-
-  // Pending musi być widoczny od razu, również gdy nie mamy listy w cache.
+  
+  // Pending dodawania musi być widoczny od razu,
+  // również gdy nie mamy listy w cache.
   trainerApplyPendingEventCard_();
   
-  // 2. Zawsze sprawdź GAS w tle
+  /*
+   * Jeżeli trwa fizyczne usuwanie wydarzenia,
+   * pozostawiamy lokalny widok zapisany już bez tego wydarzenia.
+   * Nie pobieramy danych z GAS i nie nadpisujemy cache.
+   */
+  const pendingDeleteKey =
+    "orghub.pendingDelete.v1." +
+    String(clubId || "").toLowerCase();
+  
+  let pendingDeleteActive = false;
+  
+  try {
+    const rawPendingDelete = localStorage.getItem(pendingDeleteKey);
+  
+    if (rawPendingDelete) {
+      const pendingDelete = JSON.parse(rawPendingDelete);
+      const startedAt = Number(pendingDelete?.startedAt || 0);
+  
+      /*
+       * Zabezpieczenie na wypadek zamknięcia aplikacji
+       * przed zakończeniem requestu.
+       * Po 5 minutach znacznik uznajemy za nieaktualny.
+       */
+      if (
+        startedAt > 0 &&
+        Date.now() - startedAt < 5 * 60 * 1000
+      ) {
+        pendingDeleteActive = true;
+      } else {
+        localStorage.removeItem(pendingDeleteKey);
+      }
+    }
+  } catch (e) {
+    try {
+      localStorage.removeItem(pendingDeleteKey);
+    } catch (ignore) {}
+  }
+  
+  if (pendingDeleteActive && hadCache) {
+    /*
+     * Cache został wcześniej zapisany bez usuwanego wydarzenia.
+     * Odblokowujemy pozostałe kafle, bo nie będzie świeżego odczytu GAS.
+     */
+    if (div) {
+      div.querySelectorAll(
+        "button[data-locked-by-cache='1']"
+      ).forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = "";
+        delete btn.dataset.lockedByCache;
+      });
+    }
+  
+    trainerSetAddEventButtonLoaded_(true);
+    return;
+  }
+  
+  // 2. Sprawdź GAS w tle tylko wtedy,
+  // gdy nie trwa optymistyczne usuwanie.
   try {
     const fresh = await apiClubGet("treningiTrener", {
       grupa: groupsKey
@@ -13613,46 +13672,199 @@ function trainerHideDeletePopup() {
  
 async function trainerConfirmDeleteYes() {
   trainerHideDeletePopup();
- 
+
   const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
-  const card = document.querySelector(`[data-event-id='${treningId}']`);
-  if (card) {
-    card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
-  }
- 
+  const groupsKey = String(window.grupyTrenera || "").trim();
+
+  const cacheKey =
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".trainerCurrentEvents.groups-" +
+    (groupsKey || "all");
+
+  const pendingDeleteKey =
+    "orghub.pendingDelete.v1." +
+    String(clubId || "").toLowerCase();
+
+  const card = document.querySelector(
+    `[data-event-id='${treningId}']`
+  );
+
+  let cacheSnapshot = null;
+
+  /*
+   * Natychmiast zapisujemy lokalny stan bez usuwanego wydarzenia.
+   * Dzięki temu ponowne wejście może od razu pokazać poprawny cache.
+   */
   try {
-    const data = await apiClubGet("usunWydarzenie", { treningId });
- 
-    if (data.success) {
-      if (card) {
-        card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
-      }
- 
-      // Kasuj cache wydarzeń i pobierz świeże dane
-      try {
-        const groupsKey = String(window.grupyTrenera || "").trim();
-        orgCacheRemove_("trainerArchiveEvents", {
-          month: window.__trainerArchiveSelectedMonth || "",
-          groups: groupsKey
-        });
-        orgCacheRemove_("trainerArchiveMonths", {
-          month: new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0")
-        });
-      } catch (e) {}
- 
-      setTimeout(() => trainerPokazWydarzenia(), 800);
-    } else {
-      if (card) {
-        card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${data.error || "Błąd"}</div>`;
-      }
+    cacheSnapshot = localStorage.getItem(cacheKey);
+
+    if (cacheSnapshot) {
+      const entry = JSON.parse(cacheSnapshot);
+      const currentLista = Array.isArray(entry?.data)
+        ? entry.data
+        : [];
+
+      const nextLista = currentLista.filter(item => {
+        const itemId = String(
+          item?.id ||
+          item?.eventId ||
+          ""
+        ).trim();
+
+        const itemKey =
+          String(item?.miesiac || "").trim() +
+          "-" +
+          String(item?.czasCol || "").trim();
+
+        return (
+          itemId !== treningId &&
+          itemKey !== treningId
+        );
+      });
+
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          ...entry,
+          savedAt: new Date().toISOString(),
+          data: nextLista
+        })
+      );
     }
+
+    /*
+     * Ten znacznik wykorzystamy w następnym kroku,
+     * aby podczas usuwania trainerShowCurrentEvents_()
+     * nie pobierało jeszcze danych z GAS.
+     */
+    localStorage.setItem(
+      pendingDeleteKey,
+      JSON.stringify({
+        treningId,
+        startedAt: Date.now()
+      })
+    );
+
+  } catch (e) {
+    console.warn(
+      "Nie udało się zaktualizować cache przed usunięciem:",
+      e
+    );
+  }
+
+  if (card) {
+    card.style.pointerEvents = "none";
+    card.style.opacity = "0.65";
+
+    card.innerHTML = `
+      <div style="
+        padding:14px;
+        text-align:center;
+        font-size:17px;
+        font-weight:800;
+      ">
+        ⏳ Usuwam wydarzenie…
+      </div>
+    `;
+  }
+
+  /*
+   * Request rusza od razu, ale nie czekamy z usunięciem kafla.
+   */
+  const requestPromise = apiClubGet("usunWydarzenie", {
+    treningId
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  if (card) {
+    card.remove();
+  }
+
+  try {
+    const data = await requestPromise;
+
+    if (!data || data.success !== true) {
+      throw new Error(
+        data?.error ||
+        data?.message ||
+        "Nie udało się usunąć wydarzenia."
+      );
+    }
+
+    /*
+     * GAS zakończył usuwanie i przebudowę indeksu.
+     * Można już ponownie pobierać dane z backendu.
+     */
+    try {
+      localStorage.removeItem(pendingDeleteKey);
+    } catch (e) {}
+
+    /*
+     * Czyścimy tylko cache archiwum.
+     * Cache bieżącego widoku już zawiera poprawną listę.
+     */
+    try {
+      orgCacheRemove_("trainerArchiveEvents", {
+        month: window.__trainerArchiveSelectedMonth || "",
+        groups: groupsKey
+      });
+
+      orgCacheRemove_("trainerArchiveMonths", {
+        month:
+          new Date().getFullYear() +
+          "-" +
+          String(new Date().getMonth() + 1).padStart(2, "0")
+      });
+    } catch (e) {}
+
+    /*
+     * Po sukcesie niczego nie przeładowujemy.
+     * Ekran pozostaje dokładnie w stanie po usunięciu.
+     */
+
   } catch (err) {
-    if (card) {
-      card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
+    /*
+     * Backend zgłosił błąd — cofamy lokalne usunięcie.
+     */
+    try {
+      localStorage.removeItem(pendingDeleteKey);
+
+      if (cacheSnapshot === null) {
+        localStorage.removeItem(cacheKey);
+      } else {
+        localStorage.setItem(cacheKey, cacheSnapshot);
+      }
+    } catch (e) {}
+
+    if (typeof trainerShowCurrentEvents_ === "function") {
+      await trainerShowCurrentEvents_();
+    }
+
+    const div = document.getElementById(
+      "trainerCurrentListaWydarzen"
+    );
+
+    if (div) {
+      div.insertAdjacentHTML(
+        "beforeend",
+        `
+          <div class="card" style="
+            background:#522;
+            border-color:#a44;
+            text-align:center;
+          ">
+            ❌ ${trainerEscHtml_(
+              err?.message ||
+              String(err)
+            )}
+          </div>
+        `
+      );
     }
   }
 }
-
 
   async function trainerPokazRaportObecnosci() {
   goToView("trainerRaportObecnosciView");
