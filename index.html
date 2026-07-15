@@ -11652,9 +11652,18 @@ function trainerSetAddEventButtonLoaded_(loaded) {
   // ale nie można uruchomić kolejnego dodawania.
   if (pending) {
     btn.classList.remove("hidden");
-    btn.classList.add("loading");
     btn.disabled = true;
-    btn.textContent = "⏳ Dodawanie wydarzenia...";
+  
+    const phase = Number(pending.phase || 0);
+  
+    if (phase >= 2) {
+      btn.classList.remove("loading");
+      btn.textContent = "✅ Wydarzenie dodane";
+    } else {
+      btn.classList.add("loading");
+      btn.textContent = "⏳ Dodawanie wydarzenia...";
+    }
+  
     return;
   }
 
