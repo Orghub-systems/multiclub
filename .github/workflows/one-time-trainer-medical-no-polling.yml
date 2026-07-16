@@ -3,6 +3,7 @@ name: One-time trainer medical no polling fix
 on:
   push:
     branches:
+      - main
       - fix/trainer-medical-no-polling
     paths:
       - .github/workflows/one-time-trainer-medical-no-polling.yml
@@ -16,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/trainer-medical-no-polling
+          ref: ${{ github.ref_name }}
 
       - name: Patch trainer medical flow
         run: |
@@ -350,4 +351,4 @@ function trainerRefreshMedicalExamAlerts_() {
           rm -f .github/workflows/one-time-trainer-medical-no-polling.yml
           git add index.html .github/workflows/one-time-trainer-medical-no-polling.yml
           git commit -m "Disable trainer medical polling [skip ci]"
-          git push origin HEAD:fix/trainer-medical-no-polling
+          git push origin HEAD:${{ github.ref_name }}
