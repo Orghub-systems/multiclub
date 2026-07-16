@@ -5,6 +5,7 @@ const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
 const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE_NAME = "orghub-static-v" + SW_VERSION;
+const MEDICAL_PATCH_VERSION = "1";
 
 const STATIC_ASSETS = [
   "/icon-192.png",
@@ -65,7 +66,36 @@ self.addEventListener("fetch", (e) => {
     if (isAppShell || e.request.mode === "navigate") {
       e.respondWith((async () => {
         try {
-          return await fetch(e.request, { cache: "no-store" });
+          const networkResponse = await fetch(e.request, { cache: "no-store" });
+          const contentType = String(networkResponse.headers.get("Content-Type") || "").toLowerCase();
+          const isHtmlResponse =
+            e.request.mode === "navigate" ||
+            contentType.includes("text/html");
+
+          if (!isHtmlResponse) {
+            return networkResponse;
+          }
+
+          let html = await networkResponse.text();
+          const patchTag =
+            `<script src="/medical-no-polling.js?v=${MEDICAL_PATCH_VERSION}"></script>`;
+
+          if (!html.includes("/medical-no-polling.js")) {
+            html = html.includes("</body>")
+              ? html.replace("</body>", patchTag + "\n</body>")
+              : html + patchTag;
+          }
+
+          const headers = new Headers(networkResponse.headers);
+          headers.set("Content-Type", "text/html; charset=utf-8");
+          headers.delete("Content-Length");
+
+          return new Response(html, {
+            status: networkResponse.status,
+            statusText: networkResponse.statusText,
+            headers
+          });
+
         } catch (err) {
           // Nie oddajemy starego index.html z cache, bo to blokuje aktualizacje.
           return new Response("Brak połączenia z aplikacją. Odśwież stronę po chwili.", {
