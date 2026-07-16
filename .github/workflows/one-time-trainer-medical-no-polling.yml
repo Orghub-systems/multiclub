@@ -1,0 +1,353 @@
+name: One-time trainer medical no polling fix
+
+on:
+  push:
+    branches:
+      - fix/trainer-medical-no-polling
+    paths:
+      - .github/workflows/one-time-trainer-medical-no-polling.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/trainer-medical-no-polling
+
+      - name: Patch trainer medical flow
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          original = text
+
+          old_build = "window.APP_BUILD = 'APP v3.03';"
+          new_build = "window.APP_BUILD = 'APP v3.04';"
+          if text.count(old_build) != 1:
+              raise SystemExit(f'Expected one APP build marker, got {text.count(old_build)}')
+          text = text.replace(old_build, new_build, 1)
+
+          def replace_between(source, start_marker, end_marker, replacement, label):
+              start = source.find(start_marker)
+              if start < 0:
+                  raise SystemExit(f'Missing start marker: {label}')
+              end = source.find(end_marker, start)
+              if end < 0:
+                  raise SystemExit(f'Missing end marker: {label}')
+              return source[:start] + replacement + source[end:]
+
+          feature_replacement = '''async function trainerRefreshMedicalFeatureState_() {
+  let session = null;
+
+  try {
+    if (typeof loadAppSession_ === "function") {
+      session = loadAppSession_();
+    }
+  } catch (e) {
+    session = null;
+  }
+
+  const flag =
+    (session && session.medicalExamClubFlag) ||
+    window.__trainerMedicalExamClubFlag ||
+    null;
+
+  if (flag && typeof flag.enabled !== "undefined") {
+    return flag.enabled === true;
+  }
+
+  // Stan modułu bierzemy z cache funkcji dodatkowych.
+  // Nie wykonujemy osobnego zapytania adminFeaturesList przy każdym zawodniku.
+  return trainerIsMedicalFeatureEnabledFromCache_();
+}
+
+
+'''
+          text = replace_between(
+              text,
+              'async function trainerRefreshMedicalFeatureState_() {',
+              '/**\n * Pokazuje / ukrywa kafel badań',
+              feature_replacement,
+              'trainerRefreshMedicalFeatureState_'
+          )
+
+          load_replacement = '''async function trainerLoadMedicalExamForSelectedPlayer_() {
+  const nr = String(window.__trainerSelectedNr || "").trim();
+  const dateEl = document.getElementById("trainerMedicalExamDate");
+
+  if (!nr) return;
+
+  const cachedPlayer = Array.isArray(window.__trainerPlayersListCache)
+    ? window.__trainerPlayersListCache.find(player =>
+        String(player && player.nr || "").trim() === nr
+      )
+    : null;
+
+  const cachedMedical = cachedPlayer && cachedPlayer.medicalExam
+    ? cachedPlayer.medicalExam
+    : null;
+
+  if (cachedMedical && typeof cachedMedical === "object") {
+    const cachedDate = String(
+      cachedMedical.validUntil ||
+      cachedMedical.validUntilLabel ||
+      cachedMedical.date ||
+      ""
+    ).trim();
+
+    if (dateEl) {
+      dateEl.textContent = cachedDate || "Nie ustawiono";
+    }
+
+    return;
+  }
+
+  // Fallback tylko przy świadomym otwarciu konkretnego zawodnika,
+  // gdy lista nie zawiera jeszcze danych badania.
+  if (dateEl) dateEl.textContent = "⏳ Ładowanie...";
+
+  try {
+    const res = await apiClubGet("trainerPlayerMedicalExam", {
+      numer: nr,
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true) {
+      if (dateEl) dateEl.textContent = "Nie ustawiono";
+      return;
+    }
+
+    const validUntil = String(res.validUntil || "").trim();
+
+    if (dateEl) {
+      dateEl.textContent = validUntil || "Nie ustawiono";
+    }
+
+  } catch (e) {
+    if (dateEl) dateEl.textContent = "Nie ustawiono";
+  }
+}
+
+
+'''
+          text = replace_between(
+              text,
+              'async function trainerLoadMedicalExamForSelectedPlayer_() {',
+              '/**\n * Otwiera popup edycji daty badań.',
+              load_replacement,
+              'trainerLoadMedicalExamForSelectedPlayer_'
+          )
+
+          old_after_save = '''    // Po zapisie odświeżamy alerty, bo data mogła wejść / wypaść z zakresu 10 dni.
+    if (typeof trainerScheduleMedicalExamAlertsCheck_ === "function") {
+      trainerScheduleMedicalExamAlertsCheck_(200, true);
+    }
+'''
+          new_after_save = '''    // Aktualizujemy dane lokalne, bez osobnego odpytywania GAS o alerty.
+    if (Array.isArray(window.__trainerPlayersListCache) && res.medicalExam) {
+      const cachedPlayer = window.__trainerPlayersListCache.find(player =>
+        String(player && player.nr || "").trim() === nr
+      );
+
+      if (cachedPlayer) {
+        cachedPlayer.medicalExam = res.medicalExam;
+      }
+    }
+
+    if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
+      trainerRefreshMedicalExamAlerts_();
+    }
+'''
+          if text.count(old_after_save) != 1:
+              raise SystemExit(f'Expected one post-save polling block, got {text.count(old_after_save)}')
+          text = text.replace(old_after_save, new_after_save, 1)
+
+          boot_replacement = '''function trainerStartMedicalAlertsFromActiveSession_() {
+  let session = null;
+
+  try {
+    if (typeof loadAppSession_ === "function") {
+      session = loadAppSession_();
+    }
+  } catch (e) {
+    session = null;
+  }
+
+  const role = String(session && session.role || "").trim().toLowerCase();
+
+  if (role !== "trener") {
+    return false;
+  }
+
+  const flag =
+    (session && session.medicalExamClubFlag) ||
+    window.__trainerMedicalExamClubFlag ||
+    null;
+
+  if (typeof trainerApplyMedicalExamClubFlag_ === "function") {
+    trainerApplyMedicalExamClubFlag_(flag);
+  }
+
+  return true;
+}
+
+
+function trainerBootMedicalAlertsWatcher_() {
+  if (window.__trainerMedicalBootWatcherStarted) return;
+  window.__trainerMedicalBootWatcherStarted = true;
+
+  // Jednorazowo korzystamy z danych zapisanych w sesji.
+  // Nie uruchamiamy timera, pollingu ani obsługi focus.
+  trainerStartMedicalAlertsFromActiveSession_();
+}
+
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    trainerBootMedicalAlertsWatcher_();
+  }, { once: true });
+} else {
+  trainerBootMedicalAlertsWatcher_();
+}
+  
+'''
+          text = replace_between(
+              text,
+              'function trainerStartMedicalAlertsFromActiveSession_() {',
+              'window.__trainerMedicalExamAlertsByNr =',
+              boot_replacement,
+              'trainer medical boot watcher'
+          )
+
+          local_alerts_replacement = '''function trainerScheduleMedicalExamAlertsCheck_() {
+  // Zachowane dla zgodności ze starszymi wywołaniami.
+  // Alerty są liczone z listy zawodników lub danych sesji, bez requestu do GAS.
+  trainerRefreshMedicalExamAlerts_();
+  return false;
+}
+
+
+function trainerRefreshMedicalExamAlerts_() {
+  const players = Array.isArray(window.__trainerPlayersListCache)
+    ? window.__trainerPlayersListCache
+    : [];
+
+  const alerts = players
+    .map(player => {
+      const medicalExam = player && player.medicalExam
+        ? player.medicalExam
+        : null;
+
+      if (
+        !medicalExam ||
+        medicalExam.enabled !== true ||
+        medicalExam.showAlert !== true
+      ) {
+        return null;
+      }
+
+      return {
+        ...medicalExam,
+        numer: String(player.nr || "").trim()
+      };
+    })
+    .filter(Boolean);
+
+  window.__trainerMedicalExamAlertsByNr =
+    trainerBuildMedicalAlertsMap_(alerts);
+
+  window.__trainerMedicalExamAlertsCount = alerts.length;
+
+  trainerSetMedicalAlertBeacon_(alerts.length);
+
+  if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
+    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+  }
+
+  return {
+    success: true,
+    source: "players-cache",
+    alerts
+  };
+}
+
+
+'''
+          text = replace_between(
+              text,
+              'function trainerScheduleMedicalExamAlertsCheck_(delayMs, force) {',
+              '/**\n * Dorysowuje czerwony napis',
+              local_alerts_replacement,
+              'trainer medical alert polling functions'
+          )
+
+          cache_marker = '''    window.__trainerPlayersListCache = lista.map(z => ({
+      nr: String(z.nr || "").trim(),
+      nazwisko: String(z.nazwisko || "").trim(),
+      numerWidoczny: String(
+        z.numerWidoczny ||
+        z.visibleNumber ||
+        z.numerKoszulki ||
+        ""
+      ).trim(),
+      medicalExam: z.medicalExam || null
+    }));
+'''
+          cache_replacement = cache_marker + '''
+    if (typeof trainerRefreshMedicalExamAlerts_ === "function") {
+      trainerRefreshMedicalExamAlerts_();
+    }
+'''
+          if text.count(cache_marker) != 1:
+              raise SystemExit(f'Expected one trainer players cache block, got {text.count(cache_marker)}')
+          text = text.replace(cache_marker, cache_replacement, 1)
+
+          forbidden = [
+              'apiClubGet("trainerMedicalExamAlerts"',
+              'trainerMedicalExamAlertLastCheckMs',
+              'window.addEventListener("focus", () => {\n  trainerStartMedicalAlertsFromActiveSession_();'
+          ]
+          for needle in forbidden:
+              if needle in text:
+                  raise SystemExit(f'Forbidden polling code remains: {needle}')
+
+          required = [
+              "window.APP_BUILD = 'APP v3.04';",
+              'source: "players-cache"',
+              'Fallback tylko przy świadomym otwarciu konkretnego zawodnika'
+          ]
+          for needle in required:
+              if needle not in text:
+                  raise SystemExit(f'Missing required patch marker: {needle}')
+
+          if text == original:
+              raise SystemExit('No changes made')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          assert 'apiClubGet("trainerMedicalExamAlerts"' not in text
+          assert 'window.APP_BUILD = \'APP v3.04\';' in text
+          assert 'source: "players-cache"' in text
+          print('Trainer medical polling removed successfully.')
+          PY
+
+      - name: Commit patched application and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/one-time-trainer-medical-no-polling.yml
+          git add index.html .github/workflows/one-time-trainer-medical-no-polling.yml
+          git commit -m "Disable trainer medical polling [skip ci]"
+          git push origin HEAD:fix/trainer-medical-no-polling
