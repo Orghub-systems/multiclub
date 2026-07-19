@@ -13536,7 +13536,320 @@ function trainerSchedulePendingEventRefresh_(attempt) {
     }
   }, delays[n] || 10000);
 }  
- 
+
+function trainerCurrentEventsCacheKey_() {
+  const groupsKey = String(window.grupyTrenera || "").trim();
+
+  return (
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".trainerCurrentEvents.groups-" +
+    (groupsKey || "all")
+  );
+}
+
+function trainerPendingAddStorageKey_() {
+  return (
+    "orghub.pendingAdd.v1." +
+    String(clubId || "").toLowerCase()
+  );
+}
+
+function trainerGetPendingAdd_() {
+  const key = trainerPendingAddStorageKey_();
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    const pending = JSON.parse(raw);
+    const startedAt = Number(pending?.startedAt || 0);
+
+    // Zabezpieczenie po zamknięciu aplikacji lub zerwanym requeście.
+    if (
+      !startedAt ||
+      Date.now() - startedAt > 5 * 60 * 1000
+    ) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return pending;
+
+  } catch (e) {
+    try {
+      localStorage.removeItem(key);
+    } catch (ignore) {}
+
+    return null;
+  }
+}
+
+function trainerClearPendingAdd_(localEventId) {
+  const key = trainerPendingAddStorageKey_();
+
+  try {
+    const raw = localStorage.getItem(key);
+
+    if (raw && localEventId) {
+      const pending = JSON.parse(raw);
+
+      if (
+        String(pending?.localEventId || "") !==
+        String(localEventId || "")
+      ) {
+        return;
+      }
+    }
+
+    localStorage.removeItem(key);
+
+  } catch (e) {
+    try {
+      localStorage.removeItem(key);
+    } catch (ignore) {}
+  }
+}
+
+function trainerBuildOptimisticEvent_(payload) {
+  const startDate = String(payload?.data || "").trim();
+  const endDate = String(
+    payload?.dataKoniec ||
+    payload?.data ||
+    ""
+  ).trim();
+
+  const startTime = String(
+    payload?.godzStart || ""
+  ).trim();
+
+  const endTime = String(
+    payload?.godzKoniec || ""
+  ).trim();
+
+  const dateObj = startDate
+    ? new Date(startDate + "T12:00:00")
+    : null;
+
+  const dniTygodnia = [
+    "Niedziela",
+    "Poniedziałek",
+    "Wtorek",
+    "Środa",
+    "Czwartek",
+    "Piątek",
+    "Sobota"
+  ];
+
+  const dzien =
+    dateObj && !isNaN(dateObj.getTime())
+      ? dniTygodnia[dateObj.getDay()]
+      : "";
+
+  function timeToMinutes_(value) {
+    const match = String(value || "").match(
+      /^(\d{1,2}):(\d{2})$/
+    );
+
+    if (!match) return null;
+
+    return (
+      Number(match[1]) * 60 +
+      Number(match[2])
+    );
+  }
+
+  const startMinutes = timeToMinutes_(startTime);
+  const endMinutes = timeToMinutes_(endTime);
+
+  let czas = "";
+
+  if (
+    startMinutes !== null &&
+    endMinutes !== null &&
+    endMinutes > startMinutes
+  ) {
+    const totalMinutes =
+      endMinutes - startMinutes;
+
+    const hours = Math.floor(
+      totalMinutes / 60
+    );
+
+    const minutes =
+      totalMinutes % 60;
+
+    czas =
+      String(hours) +
+      ":" +
+      String(minutes).padStart(2, "0");
+  }
+
+  const isPowolania =
+    String(payload?.trybDostepu || "")
+      .trim()
+      .toLowerCase() === "powolania";
+
+  const powolaniCount = String(
+    payload?.powolani || ""
+  )
+    .split(",")
+    .map(v => v.trim())
+    .filter(Boolean)
+    .length;
+
+  const localEventId =
+    "local-add-" +
+    Date.now() +
+    "-" +
+    Math.random()
+      .toString(36)
+      .slice(2, 8);
+
+  return {
+    __optimisticAdd: true,
+    __localEventId: localEventId,
+
+    id: localEventId,
+
+    data: startDate,
+    dataKoniec: endDate,
+    dzien,
+
+    godzStart: startTime,
+    godzKoniec: endTime,
+    czas,
+
+    rodzaj: String(
+      payload?.rodzaj || ""
+    ).trim(),
+
+    miejsce: String(
+      payload?.miejsce || ""
+    ).trim(),
+
+    trener: String(
+      payload?.trener || ""
+    ).trim(),
+
+    grupy: String(
+      payload?.grupy || ""
+    ).trim(),
+
+    tryb: isPowolania
+      ? "powolania"
+      : "wszyscy",
+
+    powolaniaMode: isPowolania,
+
+    powolanych: isPowolania
+      ? powolaniCount
+      : 0,
+
+    zapisanych: 0,
+    zaakceptowalo: 0
+  };
+}
+
+function trainerAddOptimisticEventToCache_(payload) {
+  const cacheKey =
+    trainerCurrentEventsCacheKey_();
+
+  const pendingAddKey =
+    trainerPendingAddStorageKey_();
+
+  let cacheSnapshot = null;
+  let entry = {};
+
+  try {
+    cacheSnapshot =
+      localStorage.getItem(cacheKey);
+
+    if (cacheSnapshot) {
+      const parsed =
+        JSON.parse(cacheSnapshot);
+
+      if (
+        parsed &&
+        typeof parsed === "object"
+      ) {
+        entry = parsed;
+      }
+    }
+  } catch (e) {
+    cacheSnapshot = null;
+    entry = {};
+  }
+
+  const currentLista =
+    Array.isArray(entry.data)
+      ? entry.data
+      : [];
+
+  const localEvent =
+    trainerBuildOptimisticEvent_(payload);
+
+  const nextLista = [
+    ...currentLista,
+    localEvent
+  ];
+
+  try {
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        ...entry,
+        savedAt: new Date().toISOString(),
+        data: nextLista
+      })
+    );
+
+    localStorage.setItem(
+      pendingAddKey,
+      JSON.stringify({
+        localEventId:
+          localEvent.__localEventId,
+
+        startedAt: Date.now()
+      })
+    );
+
+  } catch (e) {
+    console.warn(
+      "Nie udało się zapisać lokalnego wydarzenia:",
+      e
+    );
+  }
+
+  return {
+    cacheKey,
+    cacheSnapshot,
+    localEvent,
+    nextLista
+  };
+}
+
+function trainerRestoreCacheAfterAddError_(state) {
+  if (!state || !state.cacheKey) return;
+
+  try {
+    if (state.cacheSnapshot === null) {
+      localStorage.removeItem(
+        state.cacheKey
+      );
+    } else {
+      localStorage.setItem(
+        state.cacheKey,
+        state.cacheSnapshot
+      );
+    }
+  } catch (e) {}
+
+  trainerClearPendingAdd_(
+    state?.localEvent?.__localEventId
+  );
+}
+  
 async function wyslijNoweWydarzenie() {
   const submitBtn = document.getElementById("btnDodajWydarzenie");
 
