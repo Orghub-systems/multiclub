@@ -12317,6 +12317,22 @@ function renderTreningiTrainer(lista) {
           }
         </div>
 
+        ${
+          isOptimisticAdd
+            ? `
+              <div style="
+                margin-top:12px;
+                text-align:center;
+                font-size:15px;
+                font-weight:800;
+                opacity:.8;
+              ">
+                Dodaję wydarzenie...
+              </div>
+            `
+            : ""
+        }
+
         <div
           id="trainer-zapisani-${trainerEscHtml_(listId)}"
           class="hidden"
