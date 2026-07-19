@@ -11639,31 +11639,33 @@ function trainerSetAddEventButtonLoaded_(loaded) {
   if (!btn) return;
 
   if (!btn.dataset.originalText) {
-    btn.dataset.originalText = btn.textContent || "Dodaj wydarzenie";
+    btn.dataset.originalText =
+      btn.textContent ||
+      "Dodaj wydarzenie";
   }
 
-  const pending = (
+  const oldPending = (
     typeof trainerGetPendingEvent_ === "function"
       ? trainerGetPendingEvent_()
       : null
   );
 
-  // Dopóki trwa dodawanie wydarzenia, przycisk pozostaje widoczny,
-  // ale nie można uruchomić kolejnego dodawania.
-  if (pending) {
+  const optimisticAddPending = (
+    typeof trainerGetPendingAdd_ === "function"
+      ? trainerGetPendingAdd_()
+      : null
+  );
+
+  /*
+   * Podczas zapisu przycisk pozostaje widoczny,
+   * ale nie pokazuje żadnego komunikatu procesu
+   * i nie pozwala uruchomić drugiego dodawania.
+   */
+  if (oldPending || optimisticAddPending) {
     btn.classList.remove("hidden");
+    btn.classList.remove("loading");
     btn.disabled = true;
-  
-    const phase = Number(pending.phase || 0);
-  
-    if (phase >= 2) {
-      btn.classList.remove("loading");
-      btn.textContent = "✅ Wydarzenie dodane";
-    } else {
-      btn.classList.add("loading");
-      btn.textContent = "⏳ Dodawanie wydarzenia...";
-    }
-  
+    btn.textContent = btn.dataset.originalText;
     return;
   }
 
@@ -11678,7 +11680,6 @@ function trainerSetAddEventButtonLoaded_(loaded) {
     btn.disabled = true;
   }
 }
-
 async function trainerShowCurrentEvents_() {
   window.__trainerEventsMode = "current";
   window.__trainerEventsRenderTarget = "trainerCurrentListaWydarzen";
