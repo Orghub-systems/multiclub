@@ -11759,10 +11759,20 @@ async function trainerShowCurrentEvents_() {
     } catch (ignore) {}
   }
   
-  if (pendingDeleteActive && hadCache) {
+  const pendingAddActive =
+    typeof trainerGetPendingAdd_ === "function" &&
+    !!trainerGetPendingAdd_();
+  
+  if (
+    hadCache &&
+    (
+      pendingDeleteActive ||
+      pendingAddActive
+    )
+  ) {
     /*
-     * Cache został wcześniej zapisany bez usuwanego wydarzenia.
-     * Odblokowujemy pozostałe kafle, bo nie będzie świeżego odczytu GAS.
+     * Podczas optymistycznego dodawania lub usuwania
+     * pozostawiamy lokalny widok i nie pobieramy starej listy z GAS.
      */
     if (div) {
       div.querySelectorAll(
