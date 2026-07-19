@@ -12063,8 +12063,14 @@ function trainerArchiveSummaryHtml_(lista) {
 }
   
 function renderTreningiTrainer(lista) {
-  const targetId = window.__trainerEventsRenderTarget || "trainerListaWydarzen";
-  const div = document.getElementById(targetId) || document.getElementById("trainerListaWydarzen");
+  const targetId =
+    window.__trainerEventsRenderTarget ||
+    "trainerListaWydarzen";
+
+  const div =
+    document.getElementById(targetId) ||
+    document.getElementById("trainerListaWydarzen");
+
   if (!div) return;
 
   if (!Array.isArray(lista) || !lista.length) {
@@ -12072,17 +12078,23 @@ function renderTreningiTrainer(lista) {
     return;
   }
 
-  // Globalna mapa eventów dla popupu edycji
+  // Globalna mapa eventów dla popupu edycji.
   window.__trainerEventsByKey = {};
 
-  // Globalna mapa trybu wydarzenia dla listy zapisanych/powołanych
+  // Globalna mapa trybu wydarzenia dla listy zapisanych/powołanych.
   window.__trainerEventModeById = {};
 
   function toISO_(dataTxt) {
     const s = String(dataTxt || "").trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-    const m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      return s;
+    }
+
+    const m = s.match(
+      /^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/
+    );
+
     if (!m) return "";
 
     const dd = String(m[1]).padStart(2, "0");
@@ -12096,7 +12108,9 @@ function renderTreningiTrainer(lista) {
     const da = toISO_(a.data);
     const db = toISO_(b.data);
 
-    if (da !== db) return da.localeCompare(db);
+    if (da !== db) {
+      return da.localeCompare(db);
+    }
 
     const ha = String(a.godzStart || "00:00");
     const hb = String(b.godzStart || "00:00");
@@ -12104,31 +12118,33 @@ function renderTreningiTrainer(lista) {
     return ha.localeCompare(hb);
   });
 
-    <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-      <button class="btn" onclick="trainerToggleZapisani('${listId}')">
-        ${toggleLabel}
-      </button>
-    
-      ${window.__trainerEventsMode === "archive" ? "" : `
-        <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
-          ✏️ Edytuj
-        </button>
-    
-        <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
-          🗑️ Usuń
-        </button>
-      `}
-    </div>
+  div.innerHTML = sortedLista.map(t => {
+    const isOptimisticAdd = t?.__optimisticAdd === true;
+
+    const key = isOptimisticAdd
+      ? String(
+          t.__localEventId ||
+          t.id ||
+          ""
+        ).trim()
+      : `${t.miesiac}-${t.czasCol}`;
+
+    const eventId = String(t.id || "").trim();
+    const listId = eventId || key;
+    const dataISO = toISO_(t.data);
 
     const isPowolanie = !!(
       t.powolaniaMode ||
       t.powolanieMode ||
       t.trybPowolania ||
-      String(t.tryb || "").toLowerCase().includes("powo")
+      String(t.tryb || "")
+        .toLowerCase()
+        .includes("powo")
     );
 
-    const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
-    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
+    const toggleLabel = isPowolanie
+      ? "👥 Powołani"
+      : "👥 Zapisani";
 
     const countValue = isPowolanie
       ? Number(t.powolanych || t.zapisanych || 0)
@@ -12138,80 +12154,162 @@ function renderTreningiTrainer(lista) {
 
     window.__trainerEventModeById[listId] = {
       isPowolanie,
-      label: isPowolanie ? "powołanych" : "zapisanych"
+      label: isPowolanie
+        ? "powołanych"
+        : "zapisanych"
     };
 
-    window.__trainerEventsByKey[key] = {
-      key,
-      miesiac: t.miesiac,
-      czasCol: t.czasCol,
-      dataISO,
-      start: String(t.godzStart || ""),
-      end: String(t.godzKoniec || ""),
-      rodzaj: String(t.rodzaj || "")
-    };
+    // Lokalnego kafla nie dodajemy jeszcze do mapy edycji,
+    // ponieważ nie ma identyfikatora miesiac-czasCol z GAS.
+    if (!isOptimisticAdd) {
+      window.__trainerEventsByKey[key] = {
+        key,
+        miesiac: t.miesiac,
+        czasCol: t.czasCol,
+        dataISO,
+        dataEndISO: toISO_(t.dataKoniec),
+        start: String(t.godzStart || ""),
+        end: String(t.godzKoniec || ""),
+        rodzaj: String(t.rodzaj || "")
+      };
+    }
 
     return `
-      <div class="card" data-event-id="${key}">
+      <div
+        class="card"
+        data-event-id="${trainerEscHtml_(key)}"
+      >
         <p>
-          <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
-          ${t.dataKoniec && t.dataKoniec !== t.data ? `Do: <b>${t.dataKoniec}</b><br>` : ""}
-          Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
-          ${t.czas ? `Czas trwania: <b>${t.czas}</b><br>` : ""}
-          ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
-          Trener: <b>${t.trener || "—"}</b><br>
-          ${isPowolanie
-            ? `Powołanych: <b>${countValue}</b> &nbsp;&nbsp; Zaakceptowało: <b>${acceptedCount}</b><br>`
-            : `Zapisanych: <b>${countValue}</b><br>`
+          <b>${trainerEscHtml_(t.rodzaj || "")}</b>
+          &nbsp;&nbsp;
+          ${trainerEscHtml_(t.data || "")}
+          (${trainerEscHtml_(t.dzien || "")})
+          <br>
+
+          ${
+            t.dataKoniec &&
+            t.dataKoniec !== t.data
+              ? `Do: <b>${trainerEscHtml_(t.dataKoniec)}</b><br>`
+              : ""
+          }
+
+          Godzina:
+          <b>${trainerEscHtml_(t.godzStart || "")}</b>
+          –
+          <b>${trainerEscHtml_(t.godzKoniec || "")}</b>
+          <br>
+
+          ${
+            t.czas
+              ? `Czas trwania: <b>${trainerEscHtml_(t.czas)}</b><br>`
+              : ""
+          }
+
+          ${
+            t.miejsce
+              ? `Miejsce: <b>${trainerEscHtml_(t.miejsce)}</b><br>`
+              : ""
+          }
+
+          Trener:
+          <b>${trainerEscHtml_(t.trener || "—")}</b>
+          <br>
+
+          ${
+            isPowolanie
+              ? `
+                Powołanych:
+                <b>${countValue}</b>
+                &nbsp;&nbsp;
+                Zaakceptowało:
+                <b>${acceptedCount}</b>
+                <br>
+              `
+              : `
+                Zapisanych:
+                <b>${countValue}</b>
+                <br>
+              `
           }
         </p>
 
-    <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-      ${isOptimisticAdd ? `
-        <button
-          class="btn"
-          type="button"
-          aria-disabled="true"
-          style="pointer-events:none; opacity:.65;"
-        >
-          ${toggleLabel}
-        </button>
-    
-        <button
-          class="btn"
-          type="button"
-          aria-disabled="true"
-          style="pointer-events:none; opacity:.65;"
-        >
-          ✏️ Edytuj
-        </button>
-    
-        <button
-          class="btn danger"
-          type="button"
-          aria-disabled="true"
-          style="pointer-events:none; opacity:.65;"
-        >
-          🗑️ Usuń
-        </button>
-      ` : `
-        <button class="btn" onclick="trainerToggleZapisani('${listId}')">
-          ${toggleLabel}
-        </button>
-    
-        ${window.__trainerEventsMode === "archive" ? "" : `
-          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
-            ✏️ Edytuj
-          </button>
-    
-          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
-            🗑️ Usuń
-          </button>
-        `}
-      `}
-    </div>
+        <div style="
+          display:flex;
+          justify-content:center;
+          gap:8px;
+          flex-wrap:wrap;
+        ">
+          ${
+            isOptimisticAdd
+              ? `
+                <button
+                  class="btn"
+                  type="button"
+                  aria-disabled="true"
+                  style="pointer-events:none; opacity:.65;"
+                >
+                  ${toggleLabel}
+                </button>
 
-        <div id="trainer-zapisani-${listId}" class="hidden"></div>
+                <button
+                  class="btn"
+                  type="button"
+                  aria-disabled="true"
+                  style="pointer-events:none; opacity:.65;"
+                >
+                  ✏️ Edytuj
+                </button>
+
+                <button
+                  class="btn danger"
+                  type="button"
+                  aria-disabled="true"
+                  style="pointer-events:none; opacity:.65;"
+                >
+                  🗑️ Usuń
+                </button>
+              `
+              : `
+                <button
+                  class="btn"
+                  onclick="trainerToggleZapisani('${trainerEscJsArg_(listId)}')"
+                >
+                  ${toggleLabel}
+                </button>
+
+                ${
+                  window.__trainerEventsMode === "archive"
+                    ? ""
+                    : `
+                      <button
+                        class="btn"
+                        onclick="trainerShowEditPopup(
+                          '${trainerEscJsArg_(t.miesiac)}',
+                          ${Number(t.czasCol)}
+                        )"
+                      >
+                        ✏️ Edytuj
+                      </button>
+
+                      <button
+                        class="btn danger"
+                        onclick="trainerShowDeletePopup(
+                          '${trainerEscJsArg_(t.miesiac)}',
+                          ${Number(t.czasCol)}
+                        )"
+                      >
+                        🗑️ Usuń
+                      </button>
+                    `
+                }
+              `
+          }
+        </div>
+
+        <div
+          id="trainer-zapisani-${trainerEscHtml_(listId)}"
+          class="hidden"
+        ></div>
       </div>
     `;
   }).join("");
