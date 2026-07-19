@@ -13862,93 +13862,223 @@ function trainerRestoreCacheAfterAddError_(state) {
 }
   
 async function wyslijNoweWydarzenie() {
-  const submitBtn = document.getElementById("btnDodajWydarzenie");
+  const submitBtn =
+    document.getElementById("btnDodajWydarzenie");
 
-  if (submitBtn && submitBtn.dataset.busy === "1") {
+  if (
+    submitBtn &&
+    submitBtn.dataset.busy === "1"
+  ) {
     return;
   }
 
-  const data = document.getElementById("eventData").value;
-  let dataKoniec = document.getElementById("eventDataEnd")?.value || "";
-  const start = document.getElementById("eventStart").value;
-  const end = document.getElementById("eventEnd").value;
-  const rodzaj = document.getElementById("eventRodzaj").value;
-  const miejsce = document.getElementById("eventMiejsce")?.value || "";
+  const data = String(
+    document.getElementById("eventData")?.value || ""
+  ).trim();
 
-  const trener1 = document.getElementById("eventTrener1").value;
-  const trener2 = document.getElementById("eventTrener2")?.value || "";
-  const trener3 = document.getElementById("eventTrener3")?.value || "";
-  const trener4 = document.getElementById("eventTrener4")?.value || "";
+  let dataKoniec = String(
+    document.getElementById("eventDataEnd")?.value || ""
+  ).trim();
 
-  const selected = Array.from(selectedGroups || []);
-  const hasPowolania = selected.includes("__POWOLANIA__");
+  const start = String(
+    document.getElementById("eventStart")?.value || ""
+  ).trim();
+
+  const end = String(
+    document.getElementById("eventEnd")?.value || ""
+  ).trim();
+
+  const rodzaj = String(
+    document.getElementById("eventRodzaj")?.value || ""
+  ).trim();
+
+  const miejsce = String(
+    document.getElementById("eventMiejsce")?.value || ""
+  ).trim();
+
+  const trener1 = String(
+    document.getElementById("eventTrener1")?.value || ""
+  ).trim();
+
+  const trener2 = String(
+    document.getElementById("eventTrener2")?.value || ""
+  ).trim();
+
+  const trener3 = String(
+    document.getElementById("eventTrener3")?.value || ""
+  ).trim();
+
+  const trener4 = String(
+    document.getElementById("eventTrener4")?.value || ""
+  ).trim();
+
+  const selected =
+    Array.from(selectedGroups || []);
+
+  const hasPowolania =
+    selected.includes("__POWOLANIA__");
+
   const grupy = hasPowolania
     ? ""
-    : selected.filter(v => v && v !== "__POWOLANIA__").join(",");
+    : selected
+        .filter(value => {
+          return (
+            value &&
+            value !== "__POWOLANIA__"
+          );
+        })
+        .join(",");
 
-  const liczDoStat = document.getElementById("eventStat").checked;
-  const rezerwacjaObiektu = document.getElementById("eventRez")?.checked ? 1 : 0;
+  const liczDoStat =
+    document.getElementById("eventStat")?.checked === true;
 
-  const trybDostepu = hasPowolania ? "powolania" : "wszyscy";
-  const powolani = normalizePowolaniNumsInput_(document.getElementById("eventPowolaniNums")?.value || "");
+  const rezerwacjaObiektu =
+    document.getElementById("eventRez")?.checked
+      ? 1
+      : 0;
 
-  const msg = document.getElementById("eventMsg");
+  const trybDostepu =
+    hasPowolania
+      ? "powolania"
+      : "wszyscy";
 
-  if (!dataKoniec) dataKoniec = data;
+  const powolani =
+    normalizePowolaniNumsInput_(
+      document.getElementById(
+        "eventPowolaniNums"
+      )?.value || ""
+    );
 
-  if (!data || !dataKoniec || !start || !end || !rodzaj) {
-    if (msg) msg.innerText = "Uzupełnij: daty, godziny i rodzaj wydarzenia.";
+  const msg =
+    document.getElementById("eventMsg");
+
+  if (!dataKoniec) {
+    dataKoniec = data;
+  }
+
+  /*
+   * Walidacja formularza.
+   */
+  if (
+    !data ||
+    !dataKoniec ||
+    !start ||
+    !end ||
+    !rodzaj
+  ) {
+    if (msg) {
+      msg.textContent =
+        "Uzupełnij: daty, godziny i rodzaj wydarzenia.";
+    }
+
     return;
   }
 
   if (dataKoniec < data) {
-    if (msg) msg.innerText = "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
+    if (msg) {
+      msg.textContent =
+        "❌ Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.";
+    }
+
     return;
   }
 
-  if (!validHour(start) || !validHour(end)) {
-    if (msg) msg.innerText = "❌ Godzina w formacie HH:MM.";
+  if (
+    !validHour(start) ||
+    !validHour(end)
+  ) {
+    if (msg) {
+      msg.textContent =
+        "❌ Godzina w formacie HH:MM.";
+    }
+
     return;
   }
 
   if (start >= end) {
-    if (msg) msg.innerText = "❌ Koniec musi być później niż start.";
+    if (msg) {
+      msg.textContent =
+        "❌ Koniec musi być później niż start.";
+    }
+
     return;
   }
 
-  if (!hasPowolania && !grupy) {
-    if (msg) msg.innerText = "❌ Wybierz grupę albo Powołania.";
+  if (
+    !hasPowolania &&
+    !grupy
+  ) {
+    if (msg) {
+      msg.textContent =
+        "❌ Wybierz grupę albo Powołania.";
+    }
+
     return;
   }
 
-  if (trybDostepu === "powolania" && !powolani) {
-    if (msg) msg.innerText = "❌ Wybierz powołanych zawodników.";
+  if (
+    trybDostepu === "powolania" &&
+    !powolani
+  ) {
+    if (msg) {
+      msg.textContent =
+        "❌ Wybierz powołanych zawodników.";
+    }
+
     return;
   }
 
+  /*
+   * Blokujemy przycisk bez wyświetlania
+   * napisu „Dodawanie...”.
+   */
   if (submitBtn) {
     submitBtn.dataset.busy = "1";
     submitBtn.disabled = true;
-    submitBtn.classList.add("loading");
-    submitBtn.dataset.originalText = submitBtn.textContent || "💾 Dodaj wydarzenie";
-    submitBtn.textContent = "⏳ Dodawanie...";
+    submitBtn.classList.remove("loading");
+
+    if (!submitBtn.dataset.originalText) {
+      submitBtn.dataset.originalText =
+        submitBtn.textContent ||
+        "💾 Dodaj wydarzenie";
+    }
+
+    submitBtn.textContent =
+      submitBtn.dataset.originalText;
   }
 
   if (window.__addEventMsgTimer) {
-    clearTimeout(window.__addEventMsgTimer);
+    clearTimeout(
+      window.__addEventMsgTimer
+    );
+
     window.__addEventMsgTimer = null;
   }
 
-  if (msg) msg.innerText = "⏳ Dodawanie wydarzenia...";
+  /*
+   * Bez komunikatu procesu pod formularzem.
+   */
+  if (msg) {
+    msg.textContent = "";
+  }
 
-  const pendingPayload = {
+  const optimisticPayload = {
     data,
     dataKoniec,
     godzStart: start,
     godzKoniec: end,
     rodzaj,
     miejsce,
-    trener: [trener1, trener2, trener3, trener4].filter(Boolean).join(", "),
+
+    trener: [
+      trener1,
+      trener2,
+      trener3,
+      trener4
+    ]
+      .filter(Boolean)
+      .join(", "),
+
     grupy,
     trybDostepu,
     powolani
@@ -13967,95 +14097,503 @@ async function wyslijNoweWydarzenie() {
     trener3,
     trener4,
     grupy,
-    liczDoStatystyk: String(liczDoStat),
+    liczDoStatystyk:
+      String(liczDoStat),
     rezerwacjaObiektu,
     trybDostepu,
     powolani
   };
 
+  let optimisticState = null;
+
   try {
-    // Startujemy request od razu, ale NIE czekamy z UI na jego zakończenie.
-    const requestPromise = apiClubPost(apiPayload);
-
-    // Pozwalamy przeglądarce narysować nieaktywny przycisk,
-    // ale nie dokładamy sztucznej sekundy oczekiwania.
-    await new Promise(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      });
-    });
-
-    trainerSetPendingEvent_(pendingPayload);
-    trainerStartPendingEventMessages_();
-
-    // Nie awaitujemy — ekran ma się pokazać od razu.
-    trainerShowCurrentEvents_();
-
-    const r = await requestPromise;
-
-    if (!r || r.success === false) {
+    /*
+     * Usuwamy pozostałości starego mechanizmu
+     * komunikatów i kafla pending.
+     */
+    if (
+      typeof trainerClearPendingEvent_ ===
+      "function"
+    ) {
       trainerClearPendingEvent_();
-
-      goToView("trainerDodajWydarzenieView");
-
-      if (msg) {
-        msg.innerText = "❌ " + (r?.error || r?.message || "Nie udało się dodać wydarzenia.");
-      }
-
-      return;
     }
 
-    document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
-      if (i.type !== "checkbox" && i.type !== "hidden") i.value = "";
-      else if (i.type === "checkbox") i.checked = false;
-    });
+    /*
+     * Request do GAS rozpoczyna się natychmiast.
+     */
+    const requestPromise =
+      apiClubPost(apiPayload);
 
-    const powolaniEl = document.getElementById("eventPowolaniNums");
-    const endDateEl = document.getElementById("eventDataEnd");
-    const powolaniWrap = document.getElementById("eventPowolaniWrap");
-    const powolaniPreview = document.getElementById("eventPowolaniPreview");
+    /*
+     * Wydarzenie natychmiast trafia do cache.
+     */
+    optimisticState =
+      trainerAddOptimisticEventToCache_(
+        optimisticPayload
+      );
 
-    if (powolaniEl) powolaniEl.value = "";
-    if (endDateEl) endDateEl.dataset.autofill = "1";
-    if (powolaniWrap) powolaniWrap.style.display = "none";
-    if (powolaniPreview) powolaniPreview.textContent = "Nie wybrano zawodników";
+    /*
+     * Natychmiast pokazujemy bieżące wydarzenia.
+     * Widok zostanie zbudowany z lokalnego cache.
+     */
+    try {
+      const showPromise =
+        trainerShowCurrentEvents_();
+
+      if (
+        showPromise &&
+        typeof showPromise.catch ===
+          "function"
+      ) {
+        showPromise.catch(error => {
+          console.warn(
+            "Błąd wyświetlenia lokalnego wydarzenia:",
+            error
+          );
+        });
+      }
+    } catch (showError) {
+      console.warn(
+        "Błąd uruchomienia widoku wydarzeń:",
+        showError
+      );
+    }
+
+    /*
+     * Ekran jest już gotowy.
+     * GAS nadal pracuje w tle.
+     */
+    const response =
+      await requestPromise;
+
+    if (
+      !response ||
+      response.success === false
+    ) {
+      throw new Error(
+        response?.error ||
+        response?.message ||
+        "Nie udało się dodać wydarzenia."
+      );
+    }
+
+    /*
+     * Zapis zakończył się poprawnie.
+     * Czyścimy formularz bez komunikatów.
+     */
+    document
+      .querySelectorAll(
+        "#trainerDodajWydarzenieView input"
+      )
+      .forEach(input => {
+        if (input.type === "checkbox") {
+          input.checked = false;
+          return;
+        }
+
+        if (input.type !== "hidden") {
+          input.value = "";
+        }
+      });
+
+    /*
+     * Czyszczenie pól obsługiwanych osobno.
+     */
+    const dataEl =
+      document.getElementById(
+        "eventData"
+      );
+
+    const endDateEl =
+      document.getElementById(
+        "eventDataEnd"
+      );
+
+    const rodzajEl =
+      document.getElementById(
+        "eventRodzaj"
+      );
+
+    const miejsceEl =
+      document.getElementById(
+        "eventMiejsce"
+      );
+
+    const powolaniEl =
+      document.getElementById(
+        "eventPowolaniNums"
+      );
+
+    const powolaniWrap =
+      document.getElementById(
+        "eventPowolaniWrap"
+      );
+
+    const powolaniPreview =
+      document.getElementById(
+        "eventPowolaniPreview"
+      );
+
+    const trybEl =
+      document.getElementById(
+        "eventTrybDostepu"
+      );
+
+    if (
+      dataEl &&
+      dataEl._flatpickr
+    ) {
+      dataEl._flatpickr.clear();
+    } else if (dataEl) {
+      dataEl.value = "";
+    }
+
+    if (
+      endDateEl &&
+      endDateEl._flatpickr
+    ) {
+      endDateEl._flatpickr.clear();
+    } else if (endDateEl) {
+      endDateEl.value = "";
+    }
+
+    if (endDateEl) {
+      endDateEl.dataset.autofill = "1";
+    }
+
+    if (rodzajEl) {
+      rodzajEl.value = "";
+    }
+
+    if (miejsceEl) {
+      miejsceEl.value = "";
+    }
+
+    if (powolaniEl) {
+      powolaniEl.value = "";
+    }
+
+    if (powolaniWrap) {
+      powolaniWrap.style.display =
+        "none";
+    }
+
+    if (powolaniPreview) {
+      powolaniPreview.textContent =
+        "Nie wybrano zawodników";
+    }
+
+    if (trybEl) {
+      trybEl.value = "wszyscy";
+    }
+
+    if (msg) {
+      msg.textContent = "";
+    }
 
     resetTrenerSelects_();
     resetGroups_();
+    setAddPowolaniNums_("");
 
     try {
-      Object.keys(localStorage)
-        .filter(k => {
-          const x = String(k || "").toLowerCase();
-    
-          // Czyścimy tylko archiwum.
-          // Bieżąca lista pozostaje na ekranie podczas dodawania wydarzenia.
-          return (
-            x.includes("trainerarchiveevents") ||
-            x.includes("trainerarchivemonths")
-          );
-        })
-        .forEach(k => localStorage.removeItem(k));
+      onEventTrybDostepuChange();
     } catch (e) {}
 
-    // Backend zapisał wydarzenie — teraz można zacząć próby zamiany pending-kafla na prawdziwy.
-    trainerSchedulePendingEventRefresh_(1);
+    /*
+     * Czyścimy wyłącznie cache archiwum.
+     * Bieżący cache zawiera lokalny kafel.
+     */
+    try {
+      Object.keys(localStorage)
+        .filter(key => {
+          const normalized =
+            String(key || "")
+              .toLowerCase();
 
-  } catch (err) {
-    trainerClearPendingEvent_();
+          return (
+            normalized.includes(
+              "trainerarchiveevents"
+            ) ||
+            normalized.includes(
+              "trainerarchivemonths"
+            )
+          );
+        })
+        .forEach(key => {
+          localStorage.removeItem(key);
+        });
+    } catch (e) {}
 
-    goToView("trainerDodajWydarzenieView");
+    const localEventId =
+      optimisticState?.localEvent
+        ?.__localEventId || "";
+
+    const currentCacheKey =
+      optimisticState?.cacheKey ||
+      trainerCurrentEventsCacheKey_();
+
+    const groupsKey =
+      String(
+        window.grupyTrenera || ""
+      ).trim();
+
+    /*
+     * Liczymy, ile identycznych wydarzeń istniało
+     * przed dodaniem. Chroni to przed błędnym
+     * dopasowaniem starego, identycznego wydarzenia.
+     */
+    let previousMatchCount = 0;
+
+    try {
+      if (
+        optimisticState?.cacheSnapshot
+      ) {
+        const previousEntry =
+          JSON.parse(
+            optimisticState.cacheSnapshot
+          );
+
+        const previousItems =
+          Array.isArray(
+            previousEntry?.data
+          )
+            ? previousEntry.data
+            : [];
+
+        previousMatchCount =
+          previousItems.filter(item => {
+            return trainerPendingEventMatches_(
+              item,
+              optimisticPayload
+            );
+          }).length;
+      }
+    } catch (e) {
+      previousMatchCount = 0;
+    }
+
+    /*
+     * Cicha zamiana lokalnego kafla
+     * na prawdziwe dane zwrócone przez GAS.
+     *
+     * Nie blokuje widoku i nie pokazuje
+     * żadnych komunikatów.
+     */
+    void (async function reconcileAddedEvent_() {
+      const delays = [
+        0,
+        1500,
+        3000,
+        5000,
+        8000
+      ];
+
+      let lastError = null;
+
+      for (
+        let attempt = 0;
+        attempt < delays.length;
+        attempt++
+      ) {
+        const delay =
+          delays[attempt];
+
+        if (delay > 0) {
+          await new Promise(resolve => {
+            setTimeout(resolve, delay);
+          });
+        }
+
+        try {
+          const fresh =
+            await apiClubGet(
+              "treningiTrener",
+              {
+                grupa: groupsKey,
+                _ts: Date.now()
+              }
+            );
+
+          if (
+            fresh &&
+            fresh.success === false
+          ) {
+            throw new Error(
+              fresh.error ||
+              "Błąd pobierania wydarzeń."
+            );
+          }
+
+          if (!Array.isArray(fresh)) {
+            throw new Error(
+              "Backend nie zwrócił listy wydarzeń."
+            );
+          }
+
+          const freshMatchCount =
+            fresh.filter(item => {
+              return trainerPendingEventMatches_(
+                item,
+                optimisticPayload
+              );
+            }).length;
+
+          /*
+           * Nowe wydarzenie musi zwiększyć liczbę
+           * pasujących wydarzeń względem starego cache.
+           */
+          if (
+            freshMatchCount <=
+            previousMatchCount
+          ) {
+            lastError =
+              new Error(
+                "Nowe wydarzenie nie jest jeszcze dostępne na liście."
+              );
+
+            continue;
+          }
+
+          /*
+           * Zachowujemy dodatkowe pola wpisu cache,
+           * jeśli były wcześniej używane.
+           */
+          let currentEntry = {};
+
+          try {
+            const rawCurrent =
+              localStorage.getItem(
+                currentCacheKey
+              );
+
+            if (rawCurrent) {
+              const parsedCurrent =
+                JSON.parse(rawCurrent);
+
+              if (
+                parsedCurrent &&
+                typeof parsedCurrent ===
+                  "object"
+              ) {
+                currentEntry =
+                  parsedCurrent;
+              }
+            }
+          } catch (e) {
+            currentEntry = {};
+          }
+
+          try {
+            localStorage.setItem(
+              currentCacheKey,
+              JSON.stringify({
+                ...currentEntry,
+                savedAt:
+                  new Date().toISOString(),
+                data: fresh
+              })
+            );
+          } catch (e) {}
+
+          /*
+           * Prawdziwe wydarzenie jest już dostępne.
+           */
+          trainerClearPendingAdd_(
+            localEventId
+          );
+
+          /*
+           * Podmieniamy listę bez przeładowywania ekranu.
+           */
+          if (
+            String(
+              window.__trainerEventsMode ||
+              ""
+            ) === "current"
+          ) {
+            renderTreningiTrainer(
+              fresh
+            );
+          }
+
+          trainerSetAddEventButtonLoaded_(
+            true
+          );
+
+          return;
+
+        } catch (refreshError) {
+          lastError =
+            refreshError;
+        }
+      }
+
+      /*
+       * Zapis w GAS zakończył się sukcesem,
+       * ale nie udało się pobrać finalnej listy.
+       *
+       * Zostawiamy lokalny kafel. Przy następnym
+       * wejściu aplikacja pobierze listę ponownie.
+       */
+      console.warn(
+        "Nie udało się cicho zsynchronizować nowego wydarzenia:",
+        lastError
+      );
+
+      trainerClearPendingAdd_(
+        localEventId
+      );
+
+      trainerSetAddEventButtonLoaded_(
+        true
+      );
+    })();
+
+  } catch (error) {
+    /*
+     * Rzeczywisty błąd zapisu w GAS.
+     * Cofamy lokalnie dodany kafel i cache.
+     */
+    trainerRestoreCacheAfterAddError_(
+      optimisticState
+    );
+
+    if (
+      typeof trainerClearPendingEvent_ ===
+      "function"
+    ) {
+      trainerClearPendingEvent_();
+    }
+
+    goToView(
+      "trainerDodajWydarzenieView"
+    );
 
     if (msg) {
-      msg.innerText = "❌ Błąd połączenia: " + err;
+      msg.textContent =
+        "❌ " +
+        (
+          error?.message ||
+          String(error)
+        );
     }
 
   } finally {
+    /*
+     * Przycisk formularza przywracamy
+     * bez komunikatu sukcesu.
+     */
     if (submitBtn) {
       submitBtn.dataset.busy = "0";
       submitBtn.disabled = false;
-      submitBtn.classList.remove("loading");
-      submitBtn.textContent = submitBtn.dataset.originalText || "💾 Dodaj wydarzenie";
+
+      submitBtn.classList.remove(
+        "loading"
+      );
+
+      submitBtn.textContent =
+        submitBtn.dataset.originalText ||
+        "💾 Dodaj wydarzenie";
     }
   }
 }
