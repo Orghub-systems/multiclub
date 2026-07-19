@@ -11983,7 +11983,7 @@ async function selectTrainerArchiveMonth_(key, label) {
       return;
     }
     
-    renderTreningiTrainer(lista);
+    ;
 
   } catch (e) {
     if (listDiv) {
@@ -12104,11 +12104,21 @@ function renderTreningiTrainer(lista) {
     return ha.localeCompare(hb);
   });
 
-  div.innerHTML = sortedLista.map(t => {
-    const key = `${t.miesiac}-${t.czasCol}`;
-    const eventId = String(t.id || "").trim();
-    const listId = eventId || key;
-    const dataISO = toISO_(t.data);
+    <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+      <button class="btn" onclick="trainerToggleZapisani('${listId}')">
+        ${toggleLabel}
+      </button>
+    
+      ${window.__trainerEventsMode === "archive" ? "" : `
+        <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
+          ✏️ Edytuj
+        </button>
+    
+        <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
+          🗑️ Usuń
+        </button>
+      `}
+    </div>
 
     const isPowolanie = !!(
       t.powolaniaMode ||
@@ -12156,21 +12166,50 @@ function renderTreningiTrainer(lista) {
           }
         </p>
 
-        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button class="btn" onclick="trainerToggleZapisani('${listId}')">
-            ${toggleLabel}
+    <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+      ${isOptimisticAdd ? `
+        <button
+          class="btn"
+          type="button"
+          aria-disabled="true"
+          style="pointer-events:none; opacity:.65;"
+        >
+          ${toggleLabel}
+        </button>
+    
+        <button
+          class="btn"
+          type="button"
+          aria-disabled="true"
+          style="pointer-events:none; opacity:.65;"
+        >
+          ✏️ Edytuj
+        </button>
+    
+        <button
+          class="btn danger"
+          type="button"
+          aria-disabled="true"
+          style="pointer-events:none; opacity:.65;"
+        >
+          🗑️ Usuń
+        </button>
+      ` : `
+        <button class="btn" onclick="trainerToggleZapisani('${listId}')">
+          ${toggleLabel}
+        </button>
+    
+        ${window.__trainerEventsMode === "archive" ? "" : `
+          <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
+            ✏️ Edytuj
           </button>
-
-          ${window.__trainerEventsMode === "archive" ? "" : `
-            <button class="btn" onclick="trainerShowEditPopup('${t.miesiac}', ${t.czasCol})">
-              ✏️ Edytuj
-            </button>
-
-            <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
-              🗑️ Usuń
-            </button>
-          `}
-        </div>
+    
+          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">
+            🗑️ Usuń
+          </button>
+        `}
+      `}
+    </div>
 
         <div id="trainer-zapisani-${listId}" class="hidden"></div>
       </div>
