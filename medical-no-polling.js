@@ -193,3 +193,19 @@
     window.trainerStartMedicalAlertsFromActiveSession_();
   }, 0);
 })();
+
+/* ADMIN: link klubu, kod QR i systemowe udostępnianie */
+(function loadAdminClubSharePatch_() {
+  "use strict";
+
+  if (window.__orgHubClubShareLoaderV1) return;
+  window.__orgHubClubShareLoaderV1 = true;
+
+  const script = document.createElement("script");
+  script.src = "/club-share.js?v=20260721-1";
+  script.async = true;
+  script.onerror = function() {
+    console.error("Nie udało się załadować modułu udostępniania klubu.");
+  };
+  document.head.appendChild(script);
+})();
