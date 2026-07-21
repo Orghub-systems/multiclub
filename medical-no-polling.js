@@ -225,3 +225,198 @@
     };
   }
 })();
+
+/* ADMIN HOTFIX: prawidłowa biblioteka QR + adapter do API QRCode.toCanvas */
+(function installAdminQrBootstrapFix_() {
+  "use strict";
+
+  if (window.__orgHubQrBootstrapFixV1) return;
+  window.__orgHubQrBootstrapFixV1 = true;
+
+  const QR_SOURCES = [
+    "https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js",
+    "https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"
+  ];
+
+  let qrReadyPromise = null;
+
+  function installToCanvasAdapter_() {
+    const QRCodeCtor = window.QRCode;
+
+    if (typeof QRCodeCtor !== "function") return false;
+    if (typeof QRCodeCtor.toCanvas === "function") return true;
+
+    QRCodeCtor.toCanvas = function(targetCanvas, text, options) {
+      return new Promise(function(resolve, reject) {
+        const opts = options || {};
+        const size = Math.max(128, Number(opts.width) || 760);
+        const marginModules = Math.max(0, Number(opts.margin) || 0);
+        const marginPx = Math.min(
+          Math.floor(size * 0.12),
+          Math.round(marginModules * 8)
+        );
+
+        let holder = null;
+
+        function cleanup_() {
+          if (holder && holder.parentNode) holder.remove();
+          holder = null;
+        }
+
+        try {
+          if (!targetCanvas || typeof targetCanvas.getContext !== "function") {
+            throw new Error("Brak docelowego canvas dla kodu QR");
+          }
+
+          holder = document.createElement("div");
+          holder.setAttribute("aria-hidden", "true");
+          holder.style.cssText = [
+            "position:fixed",
+            "left:-10000px",
+            "top:-10000px",
+            "width:" + size + "px",
+            "height:" + size + "px",
+            "overflow:hidden",
+            "opacity:0",
+            "pointer-events:none"
+          ].join(";");
+
+          document.body.appendChild(holder);
+
+          new QRCodeCtor(holder, {
+            text: String(text || ""),
+            width: size,
+            height: size,
+            colorDark:
+              opts.color && opts.color.dark
+                ? String(opts.color.dark)
+                : "#000000",
+            colorLight:
+              opts.color && opts.color.light
+                ? String(opts.color.light)
+                : "#ffffff",
+            correctLevel:
+              QRCodeCtor.CorrectLevel && QRCodeCtor.CorrectLevel.M != null
+                ? QRCodeCtor.CorrectLevel.M
+                : 0
+          });
+
+          window.setTimeout(function() {
+            try {
+              const source =
+                holder.querySelector("canvas") ||
+                holder.querySelector("img");
+
+              if (!source) {
+                throw new Error("Biblioteka QR nie utworzyła obrazu");
+              }
+
+              targetCanvas.width = size;
+              targetCanvas.height = size;
+
+              const ctx = targetCanvas.getContext("2d");
+              if (!ctx) throw new Error("Brak obsługi canvas");
+
+              const light =
+                opts.color && opts.color.light
+                  ? String(opts.color.light)
+                  : "#ffffff";
+
+              ctx.clearRect(0, 0, size, size);
+              ctx.fillStyle = light;
+              ctx.fillRect(0, 0, size, size);
+
+              const drawSize = Math.max(1, size - marginPx * 2);
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(
+                source,
+                marginPx,
+                marginPx,
+                drawSize,
+                drawSize
+              );
+
+              cleanup_();
+              resolve(targetCanvas);
+            } catch (error) {
+              cleanup_();
+              reject(error);
+            }
+          }, 0);
+
+        } catch (error) {
+          cleanup_();
+          reject(error);
+        }
+      });
+    };
+
+    return true;
+  }
+
+  function loadQrSource_(index) {
+    if (installToCanvasAdapter_()) return Promise.resolve(window.QRCode);
+
+    if (index >= QR_SOURCES.length) {
+      return Promise.reject(new Error("Nie udało się załadować biblioteki QR"));
+    }
+
+    return new Promise(function(resolve, reject) {
+      const old = document.querySelector(
+        'script[data-org-hub-qr-bootstrap="' + index + '"]'
+      );
+
+      if (old) old.remove();
+
+      const script = document.createElement("script");
+      script.src = QR_SOURCES[index];
+      script.async = true;
+      script.dataset.orgHubQrBootstrap = String(index);
+
+      script.onload = function() {
+        if (installToCanvasAdapter_()) {
+          resolve(window.QRCode);
+        } else {
+          script.remove();
+          loadQrSource_(index + 1).then(resolve, reject);
+        }
+      };
+
+      script.onerror = function() {
+        script.remove();
+        loadQrSource_(index + 1).then(resolve, reject);
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  function ensureQrSupport_() {
+    if (installToCanvasAdapter_()) {
+      return Promise.resolve(window.QRCode);
+    }
+
+    if (!qrReadyPromise) {
+      qrReadyPromise = loadQrSource_(0).catch(function(error) {
+        qrReadyPromise = null;
+        throw error;
+      });
+    }
+
+    return qrReadyPromise;
+  }
+
+  const previousOpenSettings_ = window.adminOpenClubSeasonSettingsView;
+
+  if (typeof previousOpenSettings_ === "function") {
+    window.adminOpenClubSeasonSettingsView = async function() {
+      try {
+        await ensureQrSupport_();
+      } catch (error) {
+        console.error("ORG HUB QR bootstrap error:", error);
+      }
+
+      return previousOpenSettings_.apply(this, arguments);
+    };
+  }
+})();
