@@ -195,17 +195,33 @@
 })();
 
 /* ADMIN: link klubu, kod QR i systemowe udostępnianie */
-(function loadAdminClubSharePatch_() {
+(function installAdminClubShareLoader_() {
   "use strict";
 
   if (window.__orgHubClubShareLoaderV1) return;
   window.__orgHubClubShareLoaderV1 = true;
 
-  const script = document.createElement("script");
-  script.src = "/club-share.js?v=20260721-1";
-  script.async = true;
-  script.onerror = function() {
-    console.error("Nie udało się załadować modułu udostępniania klubu.");
-  };
-  document.head.appendChild(script);
+  function loadAdminClubShare_() {
+    if (window.__orgHubAdminClubShareV1) return;
+    if (document.querySelector('script[data-org-hub-club-share="1"]')) return;
+
+    const script = document.createElement("script");
+    script.src = "/club-share.js?v=20260721-1";
+    script.async = true;
+    script.dataset.orgHubClubShare = "1";
+    script.onerror = function() {
+      console.error("Nie udało się załadować modułu udostępniania klubu.");
+    };
+    document.head.appendChild(script);
+  }
+
+  const originalOpenSettings_ = window.adminOpenClubSeasonSettingsView;
+
+  if (typeof originalOpenSettings_ === "function") {
+    window.adminOpenClubSeasonSettingsView = function() {
+      const result = originalOpenSettings_.apply(this, arguments);
+      loadAdminClubShare_();
+      return result;
+    };
+  }
 })();
