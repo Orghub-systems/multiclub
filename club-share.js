@@ -22,10 +22,15 @@
   };
 
   function readClubId_() {
+    let savedClubId = "";
+    try {
+      savedClubId = localStorage.getItem("orghub_clubId") || "";
+    } catch (e) {}
+
     const candidates = [
       window.clubId,
       typeof clubId !== "undefined" ? clubId : "",
-      localStorage.getItem("orghub_clubId")
+      savedClubId
     ];
 
     for (const candidate of candidates) {
