@@ -14149,31 +14149,32 @@ async function wyslijNoweWydarzenie() {
       );
 
     /*
-     * Natychmiast pokazujemy bieżące wydarzenia.
-     * Widok zostanie zbudowany z lokalnego cache.
+     * Pokazujemy lokalnie zbudowany kafel bezpośrednio.
+     * Nie czytamy ponownie cache i nie uruchamiamy
+     * żadnego pobierania z GAS.
      */
-    try {
-      const showPromise =
-        trainerShowCurrentEvents_();
-
-      if (
-        showPromise &&
-        typeof showPromise.catch ===
-          "function"
-      ) {
-        showPromise.catch(error => {
-          console.warn(
-            "Błąd wyświetlenia lokalnego wydarzenia:",
-            error
-          );
-        });
-      }
-    } catch (showError) {
-      console.warn(
-        "Błąd uruchomienia widoku wydarzeń:",
-        showError
-      );
-    }
+    window.__trainerEventsMode =
+      "current";
+    
+    window.__trainerEventsRenderTarget =
+      "trainerCurrentListaWydarzen";
+    
+    goToView(
+      "trainerWydarzeniaCurrentView"
+    );
+    
+    renderTreningiTrainer(
+      optimisticState.nextLista
+    );
+    
+    /*
+     * Przycisk „Dodaj wydarzenie” pozostaje widoczny,
+     * ale podczas zapisu nie pozwala uruchomić
+     * drugiego dodawania.
+     */
+    trainerSetAddEventButtonLoaded_(
+      true
+    );
 
     /*
      * Ekran jest już gotowy.
