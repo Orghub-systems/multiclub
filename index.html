@@ -15383,12 +15383,14 @@ async function trainerShowEditPopup(miesiac, col5) {
   const s = document.getElementById("editEventStart");
   const e = document.getElementById("editEventEnd");
   const r = document.getElementById("editEventRodzaj");
+  const repeatEl = document.getElementById("editEventRepeatDays");
 
   if (d) d.value = cached?.dataISO || "";
   if (dEnd) dEnd.value = cached?.dataEndISO || cached?.dataISO || "";
   if (s) s.value = normalizeTimeForInput_(cached?.start);
   if (e) e.value = normalizeTimeForInput_(cached?.end);
   if (r) r.value = cached?.rodzaj || "";
+  if (repeatEl) repeatEl.value = "0";
 
   // 2) reset UI
   resetEditTrenerSelects_();
@@ -15433,6 +15435,24 @@ async function trainerShowEditPopup(miesiac, col5) {
         if (s) s.value = normalizeTimeForInput_(details.godzStart);
         if (e) e.value = normalizeTimeForInput_(details.godzKoniec);
         if (r) r.value = String(details.rodzaj || "");
+
+      const repeatDaysRaw =
+      details.repeatDays ??
+      details.repeat_days ??
+      details.powtarzajCoDni ??
+      details.cyklicznoscDni ??
+      0;
+    
+    const repeatDaysNum = Number(repeatDaysRaw);
+    
+    if (repeatEl) {
+      repeatEl.value =
+        Number.isInteger(repeatDaysNum) &&
+        repeatDaysNum >= 0 &&
+        repeatDaysNum <= 30
+          ? String(repeatDaysNum)
+          : "0";
+    }
   
         const trenerArr = normalizeTrenerzy_(details?.trenerzy);
         const grupyArr  = normalizeGrupy_(details?.grupy);
