@@ -11437,85 +11437,71 @@ function trainerBuildMedicalAlertsMap_(alerts) {
   return map;
 }
 
-
 /**
- * Harmonogram sprawdzania alertów.
- * Używamy po wejściu trenera do panelu i przy wejściu w listę zawodników.
+ * Buduje alerty badań z danych pobranych razem z listą zawodników.
+ * Nie wykonuje osobnego zapytania do GAS.
  */
-function trainerScheduleMedicalExamAlertsCheck_(delayMs, force) {
-  if (window.__trainerMedicalExamAlertStartTimer) {
-    clearTimeout(window.__trainerMedicalExamAlertStartTimer);
-    window.__trainerMedicalExamAlertStartTimer = null;
-  }
+function trainerBuildMedicalAlertsFromPlayersCache_() {
+  const players = Array.isArray(window.__trainerPlayersListCache)
+    ? window.__trainerPlayersListCache
+    : [];
 
-  window.__trainerMedicalExamAlertStartTimer = setTimeout(() => {
-    if (typeof trainerRefreshMedicalExamAlerts_ !== "function") return;
+  const alerts = players
+    .map(player => {
+      const medicalExam =
+        player &&
+        player.medicalExam &&
+        typeof player.medicalExam === "object"
+          ? player.medicalExam
+          : null;
 
-    const now = Date.now();
-    const last = Number(window.__trainerMedicalExamAlertLastCheckMs || 0);
-
-    // Bez force nie odpytujemy backendu częściej niż raz na minutę.
-    if (!force && last && now - last < 60 * 1000) {
-      trainerSetMedicalAlertBeacon_(window.__trainerMedicalExamAlertsCount || 0);
-
-      if (typeof trainerApplyMedicalAlertsToVisiblePlayerTiles_ === "function") {
-        trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+      if (
+        !medicalExam ||
+        medicalExam.enabled !== true ||
+        medicalExam.showAlert !== true
+      ) {
+        return null;
       }
 
-      return;
-    }
+      return {
+        ...medicalExam,
+        numer: String(player.nr || "").trim()
+      };
+    })
+    .filter(Boolean);
 
-    window.__trainerMedicalExamAlertLastCheckMs = now;
-    trainerRefreshMedicalExamAlerts_();
+  window.__trainerMedicalExamAlertsByNr =
+    trainerBuildMedicalAlertsMap_(alerts);
 
-  }, Number(delayMs || 300));
+  window.__trainerMedicalExamAlertsCount = alerts.length;
+
+  trainerSetMedicalAlertBeacon_(alerts.length);
+  trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+
+  return {
+    success: true,
+    source: "players-cache",
+    alerts
+  };
 }
 
 
 /**
- * Pobiera alerty badań z GAS.
- * Backend zwraca zawodników z datą badań w zakresie dzisiaj -> +10 dni.
+ * Zachowana nazwa funkcji dla istniejących wywołań.
+ * Alerty są teraz przeliczane natychmiast z pamięci.
  */
-async function trainerRefreshMedicalExamAlerts_() {
-  const groups = String(window.grupyTrenera || "").trim();
-
-  // Trener bez grup nie widzi zawodników, więc alertów też nie ma.
-  if (!groups) {
-    window.__trainerMedicalExamAlertsByNr = {};
-    window.__trainerMedicalExamAlertsCount = 0;
-    trainerSetMedicalAlertBeacon_(0);
-    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-    return;
-  }
-
-  try {
-    const res = await apiClubGet("trainerMedicalExamAlerts", {
-      grupy: groups,
-      t: Date.now()
-    });
-
-    if (!res || res.success !== true || res.enabled !== true) {
-      window.__trainerMedicalExamAlertsByNr = {};
-      window.__trainerMedicalExamAlertsCount = 0;
-      trainerSetMedicalAlertBeacon_(0);
-      trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-      return;
-    }
-
-    const alerts = Array.isArray(res.alerts) ? res.alerts : [];
-
-    window.__trainerMedicalExamAlertsByNr = trainerBuildMedicalAlertsMap_(alerts);
-    window.__trainerMedicalExamAlertsCount = alerts.length;
-
-    trainerSetMedicalAlertBeacon_(alerts.length);
-    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-
-  } catch (e) {
-    // Nie pokazujemy błędu użytkownikowi. Alert działa w tle.
-    console.warn("trainerRefreshMedicalExamAlerts_ error:", e);
-  }
+function trainerScheduleMedicalExamAlertsCheck_() {
+  trainerBuildMedicalAlertsFromPlayersCache_();
+  return false;
 }
 
+
+/**
+ * Zachowana funkcja asynchroniczna dla zgodności z istniejącym kodem.
+ */
+async function trainerRefreshMedicalExamAlerts_() {
+  return trainerBuildMedicalAlertsFromPlayersCache_();
+}  
 
 /**
  * Dorysowuje czerwony napis "WAŻNOŚĆ BADAŃ" na widocznych kaflach zawodników.
