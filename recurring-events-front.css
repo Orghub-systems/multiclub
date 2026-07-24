@@ -1,0 +1,36 @@
+/* ORG HUB — pola wydarzeń cyklicznych */
+
+#trainerEditPopup .event-repeat-edit-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding-left: 16px;
+  white-space: nowrap;
+
+  font-family: "MS Shell Dlg 2", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+#trainerEditPopup .event-repeat-edit-input {
+  display: block;
+  width: 64px;
+  min-width: 64px;
+  height: 34px;
+
+  margin: 0;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  text-align: center;
+
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #1b1b1b;
+  color: #fff;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
