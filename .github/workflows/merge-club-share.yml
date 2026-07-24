@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0
@@ -57,7 +57,7 @@ jobs:
           )
 
           style_match = re.search(
-              r"  function ensureStyles_\(\) \{.*?style\.textContent = `([\s\S]*?)`;\s*document\.head\.appendChild\(style\);\s*\}",
+              r"  function ensureStyles_\(\) \{[\s\S]*?style\.textContent = `([\s\S]*?)`;\s*document\.head\.appendChild\(style\);\s*\}",
               club,
           )
           if not style_match:
