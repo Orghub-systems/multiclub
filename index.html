@@ -14025,29 +14025,36 @@ const repeatDaysRaw = String(
   )?.value || ""
 ).trim();
 
-let repeatDays = "";
+const repeatDaysNum =
+  repeatDaysRaw === ""
+    ? 0
+    : Number(repeatDaysRaw);
 
-if (repeatDaysRaw) {
-  const repeatDaysNum = Number(repeatDaysRaw);
+if (
+  !Number.isInteger(repeatDaysNum) ||
+  repeatDaysNum < 0 ||
+  repeatDaysNum > 30
+) {
+  const msg =
+    document.getElementById("eventMsg");
 
-  if (
-    !Number.isInteger(repeatDaysNum) ||
-    repeatDaysNum < 1
-  ) {
-    const msg =
-      document.getElementById("eventMsg");
-
-    if (msg) {
-      msg.textContent =
-        "❌ Liczba dni powtarzania musi być liczbą całkowitą większą od zera.";
-    }
-
-    return;
+  if (msg) {
+    msg.textContent =
+      "❌ Wybierz liczbę dni od 0 do 30.";
   }
 
-  repeatDays = repeatDaysNum;
+  return;
 }
 
+/*
+ * Backend otrzymuje pustą wartość dla braku cykliczności.
+ * W interfejsie wartość 0 oznacza „nie powtarzaj”.
+ */
+const repeatDays =
+  repeatDaysNum > 0
+    ? repeatDaysNum
+    : "";
+  
 const msg =
   document.getElementById("eventMsg");
 
