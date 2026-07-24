@@ -5,7 +5,7 @@ const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
 const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE_NAME = "orghub-static-v" + SW_VERSION;
-const MEDICAL_PATCH_VERSION = "3";
+
 const RECURRING_EVENTS_VERSION = "4";
 
 const STATIC_ASSETS = [
@@ -81,11 +81,7 @@ self.addEventListener("fetch", (e) => {
 
         const patchTags = [];
 
-        if (!html.includes("/medical-no-polling.js")) {
-          patchTags.push(
-            `<script src="/medical-no-polling.js?v=${MEDICAL_PATCH_VERSION}"></script>`
-          );
-        }
+
 
         if (!html.includes("/recurring-events-front.js")) {
           patchTags.push(
