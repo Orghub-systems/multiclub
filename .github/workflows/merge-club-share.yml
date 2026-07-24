@@ -1,0 +1,230 @@
+name: Merge club share into index
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+  push:
+    paths:
+      - ".github/workflows/merge-club-share.yml"
+  status:
+  check_run:
+    types: [completed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: merge-club-share-into-index
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge club share into index
+        shell: python
+        env:
+          CSS_B64: "H4sIALOZY2oC/61W0W7TMBR931dcCSG1U50lbdNtmXgYHRLTYAO6CV6dxGmsZXawnTYbQuIjeOCD+BK+BDtrEjda1yLRqE10bV8fn3vuaQAADvbhlfnA6dn780v48+Mn3Jxdza5///pweX56ef4GLt7dvL4JYDqbwez69NP1av7+wZ5eDi+4mL8twmlWhLMUCzIjkaKcwbdqFCDkIiYCKZ4H4OUlSJ7RGMQ8xL2h7w/qr+MN+yerJXdYzCl7XDLOyzqc4zimbL5K1Qx836tujsaB0iJEkUaCpIGCUpLlDRBFSoVwRucsgIwkqk7LcxxRdR+Ac+jXsYQzhSR9IHqjYYsgo8wkpfNU6QFnvA44gIk+nwtedVsD1yXpo/gscAttSWOVBnBHmebEzcsBeK77st9Nb6AALhTXm5hbhxg9wW2xhrw0J6jiqxro0Ml6VQSOaSH1wiNrIY5u54IXLA7gRZIk60ueL+LwqL+2f4pjvgwMJxoZjMxPtcgdmMsZtTWPCiG5zp5zyhQRdbiQGqUkmRZVAIwzUg+gJQlvqUJbJyheRCmKcJbxojPlcQhXetU7Y4bumyGBmaSPA9VzwsUdON5YAsGSDKzjtdEdSt6oNOWZqVmrznqTAKQGS3rO8cR/isxVBDSp5hrXlHbrMLAmbmF/I+IpZgssG4wxlXmGdaeEGY9uT9bFaxRbh+oWsUX6vKxaJVoSXmkBkQVhStq124h4prAqWsS6o9p+tTRuO4wV3q3tR/4T1jHcakaKY6kaZDmv5ZXQksTNVtqYAvBbKkOuFNeiGFowLa1UjxlW5EsP+ZZlPCDKYlJWZdGfTq3ucIkifVZNa8tIiSwbGk0qG9JKjHo6xWIJCEaakn5/N39pLcl4lnHETfUeP01/N7xc0X/cHmZjWWynj4htJxHPjMms6c/WpTee+MPw/zie6cyx3+k53+/vJhSHSkSE4KL9I7WBHmLP9dytqSKe32sl5IUabJzzVVRmRMRu2kSVoiwxmh7qBpvGcHfu5d2g8QURSWYYTmkcE1angH99k7m40oFp8yrzF5tKTegKCQAA"
+          HTML_B64: "H4sIALOZY2oC/51TS07DMBTc9xQPrzHtCjZNJNoiUVEKJVSsncQ0rzFxFNstZcWuF2AB4jrlIpwEp6bpB5BQF5Gc8byZ98Y2AEDzgFI47Vx2+/D5/ALDzlVwu3i97ndP+90zuOgNW0Og1K9ByVU80igzwNgjshidm7AtTBgkrOCB2yLACmRUsJALjwxjqfTiLc+QZcghtWRDnJZVC43W22Iyn5WCPczSlrZakWBKeeTeCEHDEtCznHvEFVZCAEEqczRjELbQuaw86o7r11ZAjJOVrDWliQlpZAuoKoegCRf5hm6fRfjxnuEY8uJpFqFKD4GFM1Cln5yyxdxZqqkc85F01keVt/XaMq50f8lvUNwVLCcVpZBiPWmFahZiFvNHjzTW4Gbi645x2bO23wMbQypjGNy47m2jpjqYxXwltB67GbFswlT1/0fD7SWLbNCmGOvEIyfHjU004ThK9A7sN+vOxd8zrkAzbdRuYGoHddngxG7lUqDm1bQ//fa5F/9OeedWuOX3e/K/AD5sEr+JAwAA"
+          JS_B64: "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"
+          MEDICAL_B64: "H4sIALOZY2oC/81Y3W7bNhS+91MwugikIlO32xhGkGRJVyBLgzrtgBVFwEi0zZUmDZKq66YG9hB7wj3J+CuRkiU7udpFEIs65/A7h9/5oV6/Au/evwG/fbgA//79D5AcYoo4WKISF5AASBCXAqyxXLBKgtIsS1SCN+dTsGKEYDoHr16P0llFC4kZBXC1Ipt7a+Z3a+WW3VnJOyiLxUOagacRAEklEBCS40Im45FawDOQrjEt2Tp/eJADFj7+kgGOZMXpWKkdqAImyrkKmZ1qsBzBcoqEUL89LKDENu4XcNsAuVkhNgOEwfJ8tfIaYDKZgMQbS5wKAGdtwTSr350CWhEyNs9bUGhsIEVZe8NAaKT/2qCdk9cIKnF0zdnyEhYLtNsJHdgagHPFBeutiC1dUfhIUNkY1D7Wuh1fG9xNqA40nGZjp7rtBsM4XJucQSLQuBOHxwqT8twQVJu9I3CDuGjFoWBUSLCy7xQHzjmHmxwL899HpU0hZ+oGC2nMGTF/hmeHieuj/vR5PApQuGSaeDhOLl/CVZ0/qX0XBtYqu4y8+gaXoDkR4GyB4+POWh6qRO8dB3aIGUazx7+QSspAQXvdlY4EPLHrxYh1AByF2/z4EbwJXuTI0gQcTWy69kuKBVubw69la8EweDsyynKuzdt3xukcqoyd0/RpexLudhJZpNUS8VMwVbWLzt2B5ZQrrCBJslwtL4OM3zZE94v5DBOJeHrBGEGQZhFLFBsURZ62btGSJp8xfqW41fDErDeeWl0FYuJx1QCMZG5Aa4j20aJ+wKVF7fPZga+PUR8iVWxUoD5R/llZN+quNHm5nhKsI2fz82Jzq5EpK+PDFC5ZRaXfTeQE0blcuN00priKTZF0Foz2BYJFtzw3sRrUSqMtM1+ERy1KxwDOddMLjYl79hELrLhsi8M9JkiExbRVSjvgDrSYxgAdl70tURWFakGnJj1O/CKreIFOQeKq0E+FrlmJf23dP3X/rfG69lqWMY7nmEJyw3T3JCptkG9ID642ufC4c3Y+afngpK8Z99rWpSY+nUZz9lxTo05VirFPVfm4j8r3IPQ79gV+/xOuWUlxsdnd+M8GdbqAYun3aMaRWMRdcyrVsOWBQbGhRd3+0nbuCztsqKSJp5pxJDUjcB70j9RrHR97A2GFvyTV47XSyMI6PJC8Xj4Uj9pC1BQMlqAxucjr5agRJBUt0UxtVQ7MHZHWZOKnvVa5d8LDI9TYs75zSAcw+JCj2lmm22H1lm95T4kOLZaKJ1dEWS1ZoQo9lfkcySuC9M+Lzduy2SbpntqvSrk2Hx3Vka79ftSONjRFw3ndN1aBQyelLBid96mo3knLNBo9Bman6NTbEa+ToJ6hQN3Msyjo9WThgm8IRvk4er0NnroD/2j/MBfFNMiLcL1vqHO50yvaM9id9WqMekc7TYxAsDuqfoUElx+oxGQHzeMpLhDtnfQamRv4iAYEdRLEb4MD7Iw21hGbODFl7Fou0Td5yahEehKJTjpCDZJbjEAlJFwrDrJkYMjslCONYKib7qhzQ+K5uXyHsZYLLE6CZ8jnpjyIJi6ta9je1tQMaXurnYM8fFHrr7ZTzcyKoO50uEDFF7/7jn0P2bB7u+wBISGP5kRj8lxt+RU1HwL6kDynNXN1GdiRMLtatBaNK1RTcNr3j1yyG7ZG/BIK1JrszY6mw0qOlK9J1grK/3Z06B+/Q1vP+Hqxz1Kqvc/65olm1thFIXXNixn0h/7SYaaFLmcGvoJpO07VsBKV7VSLLgMHWwHhsPR89lseb/d9w6vT19i8x8umUxfqFsz1Cqtk3zeZfiujoIwdrqWc9p8Eth75wOXAQx2+Fuwb/FQZrUjYTeAa4sFLyQtL+ksKoQU3bl35BJL+ZDpuvZgrJ+Bn9WOb6cf/AChp+zmCFgAA"
+        run: |
+          from pathlib import Path
+          import base64
+          import gzip
+          import os
+          import re
+
+          def decode_(name):
+              raw = base64.b64decode(os.environ[name])
+              return gzip.decompress(raw).decode("utf-8")
+
+          index_path = Path("index.html")
+          medical_path = Path("medical-no-polling.js")
+          club_path = Path("club-share.js")
+          workflow_path = Path(".github/workflows/merge-club-share.yml")
+
+          index = index_path.read_text(encoding="utf-8")
+          css_block = decode_("CSS_B64")
+          html_block = decode_("HTML_B64")
+          js_block = decode_("JS_B64")
+          medical_core = decode_("MEDICAL_B64")
+
+          css_start = "/* ===== ADMIN — UDOSTĘPNIANIE KLUBU: CSS START ===== */"
+          css_end = "/* ===== ADMIN — UDOSTĘPNIANIE KLUBU: CSS KONIEC ===== */"
+          js_start = "/* =================== ADMIN — UDOSTĘPNIANIE KLUBU START =================== */"
+          js_end = "/* =================== ADMIN — UDOSTĘPNIANIE KLUBU KONIEC =================== */"
+
+          index = re.sub(
+              re.escape(css_start) + r".*?" + re.escape(css_end) + r"\s*",
+              "",
+              index,
+              flags=re.S,
+          )
+          index = re.sub(
+              re.escape(js_start) + r".*?" + re.escape(js_end) + r"\s*",
+              "",
+              index,
+              flags=re.S,
+          )
+          index = re.sub(
+              r'\s*<!-- ADMIN — UDOSTĘPNIANIE KLUBU -->\s*'
+              r'<section id="orgHubClubShareSection".*?</section>\s*',
+              "\n",
+              index,
+              flags=re.S,
+          )
+
+          style_close = index.find("</style>")
+          if style_close < 0:
+              raise RuntimeError("Brak </style> w index.html")
+
+          index = (
+              index[:style_close]
+              + "\n"
+              + css_block.rstrip()
+              + "\n\n  "
+              + index[style_close:]
+          )
+
+          back_button = """    <button class="full-btn alt" type="button" onclick="appBack()">
+      ⬅ Wróć
+    </button>"""
+          if index.count(back_button) != 1:
+              raise RuntimeError(
+                  "Nie rozpoznano przycisku powrotu w ustawieniach klubu"
+              )
+
+          index = index.replace(
+              back_button,
+              html_block.rstrip() + "\n\n" + back_button,
+              1,
+          )
+
+          old_open = """function adminOpenClubSeasonSettingsView() {
+  goToView("adminClubSeasonSettingsView");
+}"""
+          new_open = """function adminOpenClubSeasonSettingsView() {
+  goToView("adminClubSeasonSettingsView");
+
+  if (typeof window.adminClubShareRefresh_ === "function") {
+    window.adminClubShareRefresh_();
+  }
+}"""
+
+          if old_open not in index:
+              raise RuntimeError(
+                  "Nie rozpoznano adminOpenClubSeasonSettingsView"
+              )
+          index = index.replace(old_open, new_open, 1)
+
+          sector_end = (
+              "/* =================== KONIEC SEKTORA 190 a =================== */"
+          )
+          if index.count(sector_end) != 1:
+              raise RuntimeError("Nie rozpoznano końca sektora 190 a")
+
+          index = index.replace(
+              sector_end,
+              js_block.rstrip() + "\n\n" + sector_end,
+              1,
+          )
+
+          if "window.APP_BUILD = 'APP v3.05';" in index:
+              index = index.replace(
+                  "window.APP_BUILD = 'APP v3.05';",
+                  "window.APP_BUILD = 'APP v3.06';",
+                  1,
+              )
+          elif "window.APP_BUILD = 'APP v3.06';" not in index:
+              raise RuntimeError("Nie rozpoznano APP_BUILD")
+
+          index_path.write_text(index, encoding="utf-8")
+          medical_path.write_text(medical_core, encoding="utf-8")
+
+          if club_path.exists():
+              club_path.unlink()
+
+          if workflow_path.exists():
+              workflow_path.unlink()
+
+      - name: Validate merged frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+
+          index = Path("index.html").read_text(encoding="utf-8")
+          medical = Path("medical-no-polling.js").read_text(encoding="utf-8")
+
+          assert not Path("club-share.js").exists()
+          assert "club-share.js" not in medical
+          assert "installAdminClubShareLoader_" not in medical
+          assert "ADMIN HOTFIX: prawidłowa biblioteka QR" not in medical
+          assert index.count("ADMIN — UDOSTĘPNIANIE KLUBU START") == 1
+          assert index.count("ADMIN — UDOSTĘPNIANIE KLUBU: CSS START") == 1
+          assert index.count('id="orgHubClubShareSection"') == 1
+          assert "window.APP_BUILD = 'APP v3.06';" in index
+
+          scripts = re.findall(
+              r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',
+              index,
+              flags=re.I,
+          )
+
+          for number, script in enumerate(scripts, start=1):
+              if not script.strip():
+                  continue
+
+              with tempfile.NamedTemporaryFile(
+                  "w",
+                  suffix=".js",
+                  encoding="utf-8",
+                  delete=False,
+              ) as handle:
+                  handle.write(script)
+                  filename = handle.name
+
+              subprocess.run(
+                  ["node", "--check", filename],
+                  check=True,
+              )
+
+          subprocess.run(
+              ["node", "--check", "medical-no-polling.js"],
+              check=True,
+          )
+
+          print("Walidacja scalonego frontu zakończona poprawnie.")
+          PY
+
+      - name: Commit merged structure
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "ORG HUB frontend cleanup"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Brak zmian do zapisania."
+            exit 0
+          fi
+
+          git commit -m "Merge club share into admin sector [skip ci]"
+          git push origin HEAD:main
