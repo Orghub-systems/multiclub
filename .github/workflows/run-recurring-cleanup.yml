@@ -1,5 +1,6 @@
 name: Run recurring events cleanup
 
+# Jednorazowe uruchomienie scalania do index.html.
 on:
   push:
     paths:
