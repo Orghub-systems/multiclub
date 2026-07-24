@@ -1,92 +1,61 @@
 name: Finish recurring events frontend
 
 on:
-  push:
-    paths:
-      - ".github/workflows/finish-recurring-events-front.yml"
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
 
 jobs:
   patch-frontend:
+    if: github.event.issue.title == 'ORG HUB: finish recurring events frontend'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout main branch
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Patch recurring events frontend
         shell: python
         run: |
           from pathlib import Path
+          import re
 
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
 
-          old_control = '''        <input
-                  id="eventRepeatDays"
-                  class="event-repeat-input"
-                  type="number"
-                  inputmode="numeric"
-                  min="1"
-                  step="1"
-                  autocomplete="off"
-                >'''
+          control_pattern = re.compile(
+              r'''<input\s+id="eventRepeatDays"\s+class="event-repeat-input"\s+type="number"\s+inputmode="numeric"\s+min="1"\s+step="1"\s+autocomplete="off"\s*>'''
+          )
 
           options = "\n".join(
               f'          <option value="{day}">{day}</option>'
               for day in range(31)
           )
 
-          new_control = f'''        <select
-                  id="eventRepeatDays"
-                  class="event-repeat-input"
-                  aria-label="Liczba dni pomiędzy wydarzeniami"
-                >
-          {options}
-                </select>'''
+          new_control = (
+              '<select\n'
+              '          id="eventRepeatDays"\n'
+              '          class="event-repeat-input"\n'
+              '          aria-label="Liczba dni pomiędzy wydarzeniami"\n'
+              '        >\n'
+              + options + '\n'
+              '        </select>'
+          )
 
-          if text.count(old_control) != 1:
-              raise RuntimeError(
-                  f"Nie znaleziono jednoznacznie pola eventRepeatDays: {text.count(old_control)}"
-              )
+          text, control_count = control_pattern.subn(new_control, text, count=1)
+          if control_count != 1:
+              raise RuntimeError(f"Nie znaleziono pola eventRepeatDays: {control_count}")
 
-          text = text.replace(old_control, new_control, 1)
+          logic_pattern = re.compile(
+              r'''const repeatDaysRaw\s*=\s*String\(\s*document\.getElementById\(\s*"eventRepeatDays"\s*\)\?\.value\s*\|\|\s*""\s*\)\.trim\(\);\s*let repeatDays\s*=\s*"";\s*if\s*\(repeatDaysRaw\)\s*\{.*?repeatDays\s*=\s*repeatDaysNum;\s*\}\s*const msg\s*=\s*document\.getElementById\("eventMsg"\);''',
+              re.S,
+          )
 
-          old_repeat_logic = '''const repeatDaysRaw = String(
-            document.getElementById(
-              "eventRepeatDays"
-            )?.value || ""
-          ).trim();
-
-          let repeatDays = "";
-
-          if (repeatDaysRaw) {
-            const repeatDaysNum = Number(repeatDaysRaw);
-
-            if (
-              !Number.isInteger(repeatDaysNum) ||
-              repeatDaysNum < 1
-            ) {
-              const msg =
-                document.getElementById("eventMsg");
-
-              if (msg) {
-                msg.textContent =
-                  "❌ Liczba dni powtarzania musi być liczbą całkowitą większą od zera.";
-              }
-
-              return;
-            }
-
-            repeatDays = repeatDaysNum;
-          }
-
-          const msg =
-            document.getElementById("eventMsg");'''
-
-          new_repeat_logic = '''const msg =
+          new_logic = '''const msg =
             document.getElementById("eventMsg");
 
           const repeatDays = Number(
@@ -108,37 +77,30 @@ jobs:
             return;
           }'''
 
-          if text.count(old_repeat_logic) != 1:
-              raise RuntimeError(
-                  f"Nie znaleziono jednoznacznie logiki repeatDays: {text.count(old_repeat_logic)}"
-              )
+          text, logic_count = logic_pattern.subn(new_logic, text, count=1)
+          if logic_count != 1:
+              raise RuntimeError(f"Nie znaleziono logiki repeatDays: {logic_count}")
 
-          text = text.replace(old_repeat_logic, new_repeat_logic, 1)
+          cleanup_anchor = '''    /*
+     * Czyszczenie pól obsługiwanych osobno.
+     */'''
 
-          cleanup_anchor = '''          });
+          cleanup_replacement = '''    const repeatDaysEl =
+      document.getElementById(
+        "eventRepeatDays"
+      );
 
-              /*
-               * Czyszczenie pól obsługiwanych osobno.
-               */'''
+    if (repeatDaysEl) {
+      repeatDaysEl.value = "0";
+    }
 
-          cleanup_replacement = '''          });
-
-              const repeatDaysEl =
-                document.getElementById(
-                  "eventRepeatDays"
-                );
-
-              if (repeatDaysEl) {
-                repeatDaysEl.value = "0";
-              }
-
-              /*
-               * Czyszczenie pól obsługiwanych osobno.
-               */'''
+    /*
+     * Czyszczenie pól obsługiwanych osobno.
+     */'''
 
           if text.count(cleanup_anchor) != 1:
               raise RuntimeError(
-                  f"Nie znaleziono jednoznacznie miejsca resetu formularza: {text.count(cleanup_anchor)}"
+                  f"Nie znaleziono miejsca resetu formularza: {text.count(cleanup_anchor)}"
               )
 
           text = text.replace(cleanup_anchor, cleanup_replacement, 1)
@@ -148,7 +110,7 @@ jobs:
 
           if text.count(old_build) != 1:
               raise RuntimeError(
-                  f"Nie znaleziono jednoznacznie wersji APP v3.05: {text.count(old_build)}"
+                  f"Nie znaleziono wersji APP v3.05: {text.count(old_build)}"
               )
 
           text = text.replace(old_build, new_build, 1)
@@ -164,4 +126,4 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add index.html .github/workflows/finish-recurring-events-front.yml
           git commit -m "Finish recurring events frontend [skip ci]"
-          git push
+          git push origin main
