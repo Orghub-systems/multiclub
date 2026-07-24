@@ -10819,7 +10819,7 @@ async function trainerPokazZawodnicy() {
     });
   }
 
-  trainerBuildMedicalAlertsFromPlayersCache_();
+  trainerScheduleMedicalExamAlertsCheck_(0);
 
   box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
 
@@ -11443,67 +11443,74 @@ function trainerBuildMedicalAlertsMap_(alerts) {
  * Buduje alerty badań z danych pobranych razem z listą zawodników.
  * Nie wykonuje osobnego zapytania do GAS.
  */
-function trainerBuildMedicalAlertsFromPlayersCache_() {
-  const players = Array.isArray(window.__trainerPlayersListCache)
-    ? window.__trainerPlayersListCache
-    : [];
 
-  const alerts = players
-    .map(player => {
-      const medicalExam =
-        player &&
-        player.medicalExam &&
-        typeof player.medicalExam === "object"
-          ? player.medicalExam
-          : null;
+  /**
+ * Pobiera alerty badań z dedykowanego endpointu GAS.
+ * Wywoływane przy wejściu trenera i po otwarciu listy zawodników.
+ */
+function trainerScheduleMedicalExamAlertsCheck_(delayMs) {
+  const delay = Math.max(0, Number(delayMs) || 0);
 
-      if (
-        !medicalExam ||
-        medicalExam.enabled !== true ||
-        medicalExam.showAlert !== true
-      ) {
-        return null;
-      }
+  if (window.__trainerMedicalExamAlertsTimer) {
+    clearTimeout(window.__trainerMedicalExamAlertsTimer);
+  }
 
-      return {
-        ...medicalExam,
-        numer: String(player.nr || "").trim()
-      };
-    })
-    .filter(Boolean);
+  window.__trainerMedicalExamAlertsTimer = setTimeout(() => {
+    trainerRefreshMedicalExamAlerts_().catch(error => {
+      console.warn("trainerRefreshMedicalExamAlerts_ error:", error);
+    });
+  }, delay);
 
-  window.__trainerMedicalExamAlertsByNr =
-    trainerBuildMedicalAlertsMap_(alerts);
-
-  window.__trainerMedicalExamAlertsCount = alerts.length;
-
-  trainerSetMedicalAlertBeacon_(alerts.length);
-  trainerApplyMedicalAlertsToVisiblePlayerTiles_();
-
-  return {
-    success: true,
-    source: "players-cache",
-    alerts
-  };
+  return true;
 }
 
 
-/**
- * Zachowana nazwa funkcji dla istniejących wywołań.
- * Alerty są teraz przeliczane natychmiast z pamięci.
- */
-function trainerScheduleMedicalExamAlertsCheck_() {
-  trainerBuildMedicalAlertsFromPlayersCache_();
-  return false;
-}
-
-
-/**
- * Zachowana funkcja asynchroniczna dla zgodności z istniejącym kodem.
- */
 async function trainerRefreshMedicalExamAlerts_() {
-  return trainerBuildMedicalAlertsFromPlayersCache_();
-}  
+  const groups = String(window.grupyTrenera || "").trim();
+
+  try {
+    const res = await apiClubGet("trainerMedicalExamAlerts", {
+      grupy: groups,
+      t: Date.now()
+    });
+
+    if (!res || res.success !== true) {
+      return res || {
+        success: false,
+        error: "Brak odpowiedzi trainerMedicalExamAlerts"
+      };
+    }
+
+    const enabled =
+      res.enabled === true ||
+      res.enabled === 1 ||
+      String(res.enabled || "").trim() === "1" ||
+      String(res.enabled || "").trim().toUpperCase() === "TRUE";
+
+    const alerts =
+      enabled && Array.isArray(res.alerts)
+        ? res.alerts
+        : [];
+
+    window.__trainerMedicalExamAlertsByNr =
+      trainerBuildMedicalAlertsMap_(alerts);
+
+    window.__trainerMedicalExamAlertsCount = alerts.length;
+
+    trainerSetMedicalAlertBeacon_(alerts.length);
+    trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+
+    return res;
+
+  } catch (error) {
+    console.warn("trainerMedicalExamAlerts request error:", error);
+
+    return {
+      success: false,
+      error: String(error && error.message ? error.message : error)
+    };
+  }
+}
 
 /**
  * Dorysowuje czerwony napis "WAŻNOŚĆ BADAŃ" na widocznych kaflach zawodników.
