@@ -13994,15 +13994,44 @@ async function wyslijNoweWydarzenie() {
       ? "powolania"
       : "wszyscy";
 
-  const powolani =
-    normalizePowolaniNumsInput_(
-      document.getElementById(
-        "eventPowolaniNums"
-      )?.value || ""
-    );
+const powolani =
+  normalizePowolaniNumsInput_(
+    document.getElementById(
+      "eventPowolaniNums"
+    )?.value || ""
+  );
 
-  const msg =
-    document.getElementById("eventMsg");
+const repeatDaysRaw = String(
+  document.getElementById(
+    "eventRepeatDays"
+  )?.value || ""
+).trim();
+
+let repeatDays = "";
+
+if (repeatDaysRaw) {
+  const repeatDaysNum = Number(repeatDaysRaw);
+
+  if (
+    !Number.isInteger(repeatDaysNum) ||
+    repeatDaysNum < 1
+  ) {
+    const msg =
+      document.getElementById("eventMsg");
+
+    if (msg) {
+      msg.textContent =
+        "❌ Liczba dni powtarzania musi być liczbą całkowitą większą od zera.";
+    }
+
+    return;
+  }
+
+  repeatDays = repeatDaysNum;
+}
+
+const msg =
+  document.getElementById("eventMsg");
 
   if (!dataKoniec) {
     dataKoniec = data;
@@ -14153,7 +14182,8 @@ async function wyslijNoweWydarzenie() {
       String(liczDoStat),
     rezerwacjaObiektu,
     trybDostepu,
-    powolani
+    powolani,
+    repeatDays
   };
 
   let optimisticState = null;
