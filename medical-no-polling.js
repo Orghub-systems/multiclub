@@ -12,7 +12,7 @@
     },
     {
       key: "recurring-events-front",
-      src: "/recurring-events-front.js?v=20260724-2"
+      src: "/recurring-events-front.js?v=20260724-3"
     }
   ];
 
