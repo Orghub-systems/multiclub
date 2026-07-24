@@ -406,12 +406,15 @@ input[type="number"] {
     filter: grayscale(0.25);
     transition: opacity 0.15s ease, filter 0.15s ease;
 
-    /* Ten sam font co w kaflu „Grupy / Powołania” */
+       /* Jeden font dla wszystkich kafli formularza */
+    #trainerDodajWydarzenieView #btnPickGroups,
     #trainerDodajWydarzenieView .event-repeat-row,
     #trainerDodajWydarzenieView label[for="eventRez"],
     #trainerDodajWydarzenieView label[for="eventStat"] {
-      font-size: 14px;
-      font-weight: 900;
+      font-family: Arial, sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 900 !important;
+      line-height: 1.25 !important;
     }
     
     /* Kafel powtarzania */
@@ -424,7 +427,7 @@ input[type="number"] {
       white-space: nowrap;
     }
     
-    /* Nadpisanie globalnego .login-box input */
+    /* Pole liczby dni */
     #trainerDodajWydarzenieView .event-repeat-input {
       display: block;
       width: 64px;
@@ -442,6 +445,7 @@ input[type="number"] {
       background: #1b1b1b;
       color: #fff;
     
+      font-family: inherit;
       font-size: 14px;
       font-weight: 700;
     }
