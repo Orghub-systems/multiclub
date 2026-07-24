@@ -15609,6 +15609,28 @@ async function trainerSaveEditEvent() {
     const start      = (document.getElementById("editEventStart")?.value || "").trim();
     const end        = (document.getElementById("editEventEnd")?.value || "").trim();
     const rodzaj     = (document.getElementById("editEventRodzaj")?.value || "").trim();
+
+    const repeatDaysRaw = String(
+      document.getElementById("editEventRepeatDays")?.value ?? "0"
+    ).trim();
+    
+    const repeatDays =
+      repeatDaysRaw === ""
+        ? 0
+        : Number(repeatDaysRaw);
+    
+    if (
+      !Number.isInteger(repeatDays) ||
+      repeatDays < 0 ||
+      repeatDays > 30
+    ) {
+      if (msg) {
+        msg.textContent =
+          "❌ Wybierz liczbę dni od 0 do 30.";
+      }
+    
+      return;
+    }
  
     if (!dataISO || !dataEndISO || !start || !end) {
       if (msg) msg.textContent = "❌ Uzupełnij daty i godziny.";
@@ -15662,7 +15684,8 @@ async function trainerSaveEditEvent() {
       liczDoStatystyk: liczDoStat,
       rezerwacjaObiektu,
       trybDostepu,
-      powolani
+      powolani,
+      repeatDays
     });
  
     if (r && (r.success || r.ok)) {
