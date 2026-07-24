@@ -13,6 +13,10 @@
     {
       key: "recurring-events-front",
       src: "/recurring-events-front.js?v=20260724-3"
+    },
+    {
+      key: "recurring-events-history",
+      src: "/recurring-events-history.js?v=20260724-1"
     }
   ];
 
