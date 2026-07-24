@@ -11080,41 +11080,33 @@ function trainerIsMedicalFeatureEnabledFromCache_() {
  * Zwraca true/false dla modułu badań zawodników.
  */
 async function trainerRefreshMedicalFeatureState_() {
-  const cacheKey =
-    "orghub.cache.v1." +
-    String(clubId || "").toLowerCase() +
-    ".adminFeaturesList.default";
+  let session = null;
 
   try {
-    const res = await apiClubGet("adminFeaturesList", { t: Date.now() });
-
-    if (!res || res.success !== true || !Array.isArray(res.features)) {
-      return trainerIsMedicalFeatureEnabledFromCache_();
-    }
-
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: {
-          features: res.features
-        }
-      }));
-    } catch (e) {}
-
-    const f = res.features.find(x => String(x.key || "").trim() === "player_medical_exams");
-
-    return !!(f && (
-      f.enabled === true ||
-      f.enabled === 1 ||
-      String(f.enabled || "").trim() === "1" ||
-      String(f.enabled || "").trim().toUpperCase() === "TRUE"
-    ));
-
+    session =
+      typeof loadAppSession_ === "function"
+        ? loadAppSession_()
+        : null;
   } catch (e) {
-    return trainerIsMedicalFeatureEnabledFromCache_();
+    session = null;
   }
-}
 
+  const flag =
+    (session && session.medicalExamClubFlag) ||
+    window.__trainerMedicalExamClubFlag ||
+    null;
+
+  if (flag && typeof flag.enabled !== "undefined") {
+    return (
+      flag.enabled === true ||
+      flag.enabled === 1 ||
+      String(flag.enabled || "").trim() === "1" ||
+      String(flag.enabled || "").trim().toUpperCase() === "TRUE"
+    );
+  }
+
+  return trainerIsMedicalFeatureEnabledFromCache_();
+}
 
 /**
  * Pokazuje / ukrywa kafel badań na ekranie zawodnika w panelu trenera.
@@ -11141,7 +11133,42 @@ async function trainerLoadMedicalExamForSelectedPlayer_() {
 
   if (!nr) return;
 
-  if (dateEl) dateEl.textContent = "⏳ Ładowanie...";
+  const cachedPlayer =
+    Array.isArray(window.__trainerPlayersListCache)
+      ? window.__trainerPlayersListCache.find(player => {
+          return String(player && player.nr || "").trim() === nr;
+        })
+      : null;
+
+  const medicalExam =
+    cachedPlayer &&
+    cachedPlayer.medicalExam &&
+    typeof cachedPlayer.medicalExam === "object"
+      ? cachedPlayer.medicalExam
+      : null;
+
+  if (medicalExam) {
+    const validUntil = String(
+      medicalExam.validUntil ||
+      medicalExam.validUntilLabel ||
+      medicalExam.date ||
+      ""
+    ).trim();
+
+    if (dateEl) {
+      dateEl.textContent = validUntil || "Nie ustawiono";
+    }
+
+    return;
+  }
+
+  /*
+   * Fallback tylko przy świadomym otwarciu zawodnika,
+   * gdy lista zawodników nie zawiera jeszcze daty badania.
+   */
+  if (dateEl) {
+    dateEl.textContent = "⏳ Ładowanie...";
+  }
 
   try {
     const res = await apiClubGet("trainerPlayerMedicalExam", {
@@ -11161,10 +11188,11 @@ async function trainerLoadMedicalExamForSelectedPlayer_() {
     }
 
   } catch (e) {
-    if (dateEl) dateEl.textContent = "Nie ustawiono";
+    if (dateEl) {
+      dateEl.textContent = "Nie ustawiono";
+    }
   }
 }
-
 
 /**
  * Otwiera popup edycji daty badań.
