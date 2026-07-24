@@ -1,0 +1,1 @@
+Jednorazowe wyzwolenie scalania club-share.js do index.html.
