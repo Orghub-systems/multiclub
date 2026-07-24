@@ -2739,6 +2739,25 @@ input[type="number"] {
     
     <input id="editEventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
 
+    <div class="full-btn alt event-repeat-row event-repeat-edit-row">
+  <span>Powtarzaj co</span>
+
+  <input
+    id="editEventRepeatDays"
+    class="event-repeat-input"
+    type="number"
+    inputmode="numeric"
+    min="0"
+    max="30"
+    step="1"
+    value="0"
+    autocomplete="off"
+  >
+
+  <span>dni</span>
+</div>
+      
+
       <button class="full-btn alt" id="btnEditPickTrenerzy" type="button" onclick="openEditTrenerzyPopup()" style="text-align:left; padding-left:16px;">
         Trenerzy
       </button>
