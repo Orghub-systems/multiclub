@@ -1,30 +1,19 @@
-/* ORG HUB — frontend wydarzeń cyklicznych */
+/* ORG HUB — wydarzenia cykliczne: dodawanie, edycja i pokrętło 0–30 */
 (function installRecurringEventsFront_() {
   "use strict";
 
-  if (window.__orgHubRecurringEventsFrontV3) return;
-  window.__orgHubRecurringEventsFrontV3 = true;
+  if (window.__orgHubRecurringEventsFrontV4) return;
+  window.__orgHubRecurringEventsFrontV4 = true;
 
   const MIN_REPEAT_DAYS = 0;
   const MAX_REPEAT_DAYS = 30;
   const WHEEL_ITEM_HEIGHT = 40;
+  const WHEEL_MODAL_ID = "eventRepeatWheelOverlay";
 
   let activeWheelInput = null;
   let activeWheelButton = null;
   let wheelScrollTimer = null;
   let previousBodyOverflow = "";
-
-  function ensureStylesheet_() {
-    if (document.querySelector('link[data-org-hub-recurring-events-css="1"]')) {
-      return;
-    }
-
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "/recurring-events-front.css?v=20260724-2";
-    link.dataset.orgHubRecurringEventsCss = "1";
-    document.head.appendChild(link);
-  }
 
   function normalizedRepeatDays_(value) {
     const numberValue = Number(value);
@@ -38,6 +27,196 @@
     }
 
     return numberValue;
+  }
+
+  function installStyles_() {
+    if (document.getElementById("orgHubRecurringEventsStyle")) return;
+
+    const style = document.createElement("style");
+    style.id = "orgHubRecurringEventsStyle";
+    style.textContent = `
+      #trainerDodajWydarzenieView .event-repeat-row,
+      #trainerEditPopup .event-repeat-edit-row {
+        position: relative;
+        overflow: visible;
+      }
+
+      #trainerEditPopup .event-repeat-edit-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        padding-left: 16px;
+        white-space: nowrap;
+        font-family: "MS Shell Dlg 2", sans-serif;
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.25;
+      }
+
+      [data-repeat-wheel-hidden="1"] {
+        display: none !important;
+      }
+
+      .event-repeat-wheel-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        min-width: 64px;
+        height: 34px;
+        margin: 0;
+        padding: 0 8px;
+        box-sizing: border-box;
+        border-radius: 8px;
+        border: 1px solid #555;
+        background: #1b1b1b;
+        color: #fff;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .event-repeat-wheel-button::after {
+        content: "↕";
+        margin-left: 5px;
+        font-size: 11px;
+        opacity: .65;
+      }
+
+      .event-repeat-wheel-button:focus-visible {
+        outline: 2px solid rgba(255,255,255,.75);
+        outline-offset: 2px;
+      }
+
+      .event-repeat-wheel-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0,0,0,.42);
+        box-sizing: border-box;
+      }
+
+      .event-repeat-wheel-overlay.hidden {
+        display: none;
+      }
+
+      .event-repeat-wheel-card {
+        width: 132px;
+        padding: 12px 10px 10px;
+        box-sizing: border-box;
+        border: 1px solid #4c4c4c;
+        border-radius: 18px;
+        background: #171717;
+        box-shadow: 0 16px 42px rgba(0,0,0,.65);
+        color: #fff;
+        text-align: center;
+      }
+
+      .event-repeat-wheel-title,
+      .event-repeat-wheel-suffix {
+        font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        opacity: .76;
+      }
+
+      .event-repeat-wheel-title { margin-bottom: 5px; }
+      .event-repeat-wheel-suffix { margin-top: 5px; }
+
+      .event-repeat-wheel-window {
+        position: relative;
+        height: 168px;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #101010;
+      }
+
+      .event-repeat-wheel-list {
+        position: relative;
+        z-index: 2;
+        height: 168px;
+        margin: 0;
+        padding: 64px 0;
+        box-sizing: border-box;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scroll-snap-type: y mandatory;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+
+      .event-repeat-wheel-list::-webkit-scrollbar {
+        display: none;
+      }
+
+      .event-repeat-wheel-option {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 40px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+        font-size: 18px;
+        font-weight: 500;
+        opacity: .38;
+        transform: scale(.88);
+        transition: opacity .12s ease, transform .12s ease, font-size .12s ease;
+        scroll-snap-align: center;
+        cursor: pointer;
+      }
+
+      .event-repeat-wheel-option.selected {
+        font-size: 25px;
+        font-weight: 800;
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .event-repeat-wheel-selection {
+        position: absolute;
+        z-index: 1;
+        left: 8px;
+        right: 8px;
+        top: 64px;
+        height: 40px;
+        border-top: 1px solid rgba(255,255,255,.24);
+        border-bottom: 1px solid rgba(255,255,255,.24);
+        background: rgba(255,255,255,.055);
+        pointer-events: none;
+      }
+
+      .event-repeat-wheel-done {
+        width: 100%;
+        min-height: 34px;
+        margin: 9px 0 0;
+        padding: 7px 10px;
+        border: 1px solid #444;
+        border-radius: 10px;
+        background: #252525;
+        color: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
   function wheelButtonId_(inputId) {
@@ -91,8 +270,7 @@
       button.setAttribute("aria-haspopup", "dialog");
       button.setAttribute("aria-expanded", "false");
       button.addEventListener("click", function() {
-        if (button.disabled) return;
-        openWheel_(input, button);
+        if (!button.disabled) openWheel_(input, button);
       });
 
       input.insertAdjacentElement("afterend", button);
@@ -148,11 +326,11 @@
   }
 
   function ensureWheelOverlay_() {
-    let overlay = document.getElementById("eventRepeatWheelOverlay");
+    let overlay = document.getElementById(WHEEL_MODAL_ID);
     if (overlay) return overlay;
 
     overlay = document.createElement("div");
-    overlay.id = "eventRepeatWheelOverlay";
+    overlay.id = WHEEL_MODAL_ID;
     overlay.className = "event-repeat-wheel-overlay hidden";
     overlay.setAttribute("aria-hidden", "true");
 
@@ -186,29 +364,24 @@
     }
 
     list.addEventListener("scroll", function() {
-      if (wheelScrollTimer) {
-        clearTimeout(wheelScrollTimer);
-      }
+      if (wheelScrollTimer) clearTimeout(wheelScrollTimer);
 
-      updateWheelSelectionFromScroll_();
+      setActiveWheelValue_(wheelValueFromScroll_());
 
       wheelScrollTimer = setTimeout(function() {
-        const value = wheelValueFromScroll_();
-        scrollWheelToValue_(value, true);
+        scrollWheelToValue_(wheelValueFromScroll_(), true);
       }, 90);
     }, { passive: true });
 
-    done.addEventListener("click", closeWheel_);
+    done.addEventListener("click", requestCloseWheel_);
 
     overlay.addEventListener("click", function(event) {
-      if (event.target === overlay) {
-        closeWheel_();
-      }
+      if (event.target === overlay) requestCloseWheel_();
     });
 
     document.addEventListener("keydown", function(event) {
-      if (event.key === "Escape" && !overlay.classList.contains("hidden")) {
-        closeWheel_();
+      if (event.key === "Escape" && isWheelOpen_()) {
+        requestCloseWheel_();
       }
     });
 
@@ -216,11 +389,11 @@
   }
 
   function wheelValueFromScroll_() {
-    const overlay = ensureWheelOverlay_();
-    const list = overlay.querySelector("#eventRepeatWheelList");
+    const list = ensureWheelOverlay_().querySelector("#eventRepeatWheelList");
     if (!list) return 0;
 
     const index = Math.round(list.scrollTop / WHEEL_ITEM_HEIGHT);
+
     return Math.min(
       MAX_REPEAT_DAYS,
       Math.max(MIN_REPEAT_DAYS, index + MIN_REPEAT_DAYS)
@@ -228,14 +401,13 @@
   }
 
   function updateWheelSelectedClasses_(value) {
-    const overlay = ensureWheelOverlay_();
-    const options = overlay.querySelectorAll(".event-repeat-wheel-option");
-
-    options.forEach(function(option) {
-      const selected = Number(option.dataset.value) === Number(value);
-      option.classList.toggle("selected", selected);
-      option.setAttribute("aria-selected", selected ? "true" : "false");
-    });
+    ensureWheelOverlay_()
+      .querySelectorAll(".event-repeat-wheel-option")
+      .forEach(function(option) {
+        const selected = Number(option.dataset.value) === Number(value);
+        option.classList.toggle("selected", selected);
+        option.setAttribute("aria-selected", selected ? "true" : "false");
+      });
   }
 
   function setActiveWheelValue_(value) {
@@ -250,38 +422,92 @@
     updateWheelSelectedClasses_(normalized);
   }
 
-  function updateWheelSelectionFromScroll_() {
-    setActiveWheelValue_(wheelValueFromScroll_());
-  }
-
   function scrollWheelToValue_(value, smooth) {
-    const overlay = ensureWheelOverlay_();
-    const list = overlay.querySelector("#eventRepeatWheelList");
+    const list = ensureWheelOverlay_().querySelector("#eventRepeatWheelList");
     if (!list) return;
 
     const normalized = normalizedRepeatDays_(value);
-    const top = (normalized - MIN_REPEAT_DAYS) * WHEEL_ITEM_HEIGHT;
 
     list.scrollTo({
-      top,
+      top: (normalized - MIN_REPEAT_DAYS) * WHEEL_ITEM_HEIGHT,
       behavior: smooth ? "smooth" : "auto"
     });
 
     setActiveWheelValue_(normalized);
   }
 
+  function isWheelOpen_() {
+    const overlay = document.getElementById(WHEEL_MODAL_ID);
+
+    return !!(
+      overlay &&
+      !overlay.classList.contains("hidden") &&
+      window.getComputedStyle(overlay).display !== "none"
+    );
+  }
+
+  function closeWheelDirect_() {
+    const overlay = document.getElementById(WHEEL_MODAL_ID);
+    if (!overlay || overlay.classList.contains("hidden")) return false;
+
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = previousBodyOverflow;
+
+    if (activeWheelButton) {
+      activeWheelButton.setAttribute("aria-expanded", "false");
+
+      try {
+        activeWheelButton.focus({ preventScroll: true });
+      } catch (error) {
+        activeWheelButton.focus();
+      }
+    }
+
+    activeWheelInput = null;
+    activeWheelButton = null;
+    return true;
+  }
+
+  function pushWheelHistory_() {
+    if (
+      history.state &&
+      String(history.state.modal || "") === WHEEL_MODAL_ID
+    ) {
+      return;
+    }
+
+    if (typeof window.pushPaymentModalHistoryState_ === "function") {
+      window.pushPaymentModalHistoryState_(WHEEL_MODAL_ID);
+      return;
+    }
+
+    try {
+      history.pushState(
+        Object.assign({}, history.state || {}, { modal: WHEEL_MODAL_ID }),
+        "",
+        location.pathname + location.search
+      );
+    } catch (error) {
+      console.warn("Nie udało się dodać historii pokrętła:", error);
+    }
+  }
+
   function openWheel_(input, button) {
+    if (isWheelOpen_()) return;
+
     const overlay = ensureWheelOverlay_();
 
     activeWheelInput = input;
     activeWheelButton = button;
-
     previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     overlay.classList.remove("hidden");
     overlay.setAttribute("aria-hidden", "false");
     button.setAttribute("aria-expanded", "true");
+
+    pushWheelHistory_();
 
     const value = normalizedRepeatDays_(input.value);
 
@@ -292,22 +518,43 @@
     });
   }
 
-  function closeWheel_() {
-    const overlay = document.getElementById("eventRepeatWheelOverlay");
-    if (!overlay || overlay.classList.contains("hidden")) return;
+  function requestCloseWheel_() {
+    if (!isWheelOpen_()) return;
 
-    overlay.classList.add("hidden");
-    overlay.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = previousBodyOverflow;
-
-    if (activeWheelButton) {
-      activeWheelButton.setAttribute("aria-expanded", "false");
-      activeWheelButton.focus({ preventScroll: true });
+    if (
+      history.state &&
+      String(history.state.modal || "") === WHEEL_MODAL_ID
+    ) {
+      try {
+        history.back();
+        return;
+      } catch (error) {}
     }
 
-    activeWheelInput = null;
-    activeWheelButton = null;
+    closeWheelDirect_();
   }
+
+  /*
+   * Ten listener korzysta z tego samego history.state.modal co pozostałe popupy.
+   * Faza capture wykonuje go przed głównym routerem aplikacji. Dzięki temu
+   * sprzętowa cofajka Androida zamyka pokrętło i nie cofa widoku w tle.
+   */
+  window.addEventListener("popstate", function(event) {
+    if (!isWheelOpen_()) return;
+
+    if (
+      event.state &&
+      String(event.state.modal || "") === WHEEL_MODAL_ID
+    ) {
+      return;
+    }
+
+    closeWheelDirect_();
+
+    if (typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+  }, true);
 
   function setWheelDisabled_(inputId, disabled) {
     const button = document.getElementById(wheelButtonId_(inputId));
@@ -337,11 +584,7 @@
       value > MAX_REPEAT_DAYS
     ) {
       const msg = document.getElementById("editEventMsg");
-
-      if (msg) {
-        msg.textContent = "❌ Wybierz liczbę dni od 0 do 30.";
-      }
-
+      if (msg) msg.textContent = "❌ Wybierz liczbę dni od 0 do 30.";
       throw new Error("Nieprawidłowa liczba dni powtarzania.");
     }
 
@@ -350,9 +593,7 @@
 
   function extractRepeatDays_(value, depth) {
     const level = Number(depth || 0);
-    if (level > 4 || value == null) return null;
-
-    if (typeof value !== "object") return null;
+    if (level > 4 || value == null || typeof value !== "object") return null;
 
     const repeatKeys = {
       repeatdays: true,
@@ -387,40 +628,26 @@
     return null;
   }
 
-  function isEventDetailsAction_(action) {
-    const normalized = String(action || "")
+  function normalizeAction_(action) {
+    return String(action || "")
       .trim()
       .replace(/[_-]/g, "")
       .toLowerCase();
-
-    return normalized === "wydarzeniedetails";
-  }
-
-  function isEditEventAction_(action) {
-    const normalized = String(action || "")
-      .trim()
-      .replace(/[_-]/g, "")
-      .toLowerCase();
-
-    return normalized === "edytujwydarzenie";
   }
 
   function patchAddEventSubmit_() {
     const original = window.wyslijNoweWydarzenie;
 
     if (typeof original !== "function") return false;
-    if (original.__orgHubRecurringEventsFrontV3) return true;
+    if (original.__orgHubRecurringEventsV4) return true;
 
     async function wrappedAddEventSubmit_() {
       const input = ensureAddRepeatControl_();
-      const selectedValue = input
-        ? String(input.value || "0")
-        : "0";
+      const selectedValue = input ? String(input.value || "0") : "0";
 
       /*
-       * Stara funkcja dodawania traktuje pustą wartość jako brak
-       * cykliczności. Dla użytkownika pokazujemy 0, a przed wysłaniem
-       * przekazujemy ten stan jako wartość pustą.
+       * Istniejąca funkcja dodawania traktuje pustą wartość jako brak
+       * cykliczności. Dla użytkownika pokazujemy 0.
        */
       if (input && selectedValue === "0") {
         input.value = "";
@@ -430,24 +657,19 @@
         return await original.apply(this, arguments);
       } finally {
         const currentInput = ensureAddRepeatControl_();
-        const addView = document.getElementById(
-          "trainerDodajWydarzenieView"
-        );
+        const addView = document.getElementById("trainerDodajWydarzenieView");
 
         if (!currentInput) return;
 
-        const formWasSubmitted =
+        const submitted =
           !!addView && addView.classList.contains("hidden");
 
-        currentInput.value = formWasSubmitted
-          ? "0"
-          : selectedValue;
-
+        currentInput.value = submitted ? "0" : selectedValue;
         updateWheelButton_(currentInput);
       }
     }
 
-    wrappedAddEventSubmit_.__orgHubRecurringEventsFrontV3 = true;
+    wrappedAddEventSubmit_.__orgHubRecurringEventsV4 = true;
     window.wyslijNoweWydarzenie = wrappedAddEventSubmit_;
     return true;
   }
@@ -456,33 +678,24 @@
     const original = window.apiClubGet;
 
     if (typeof original !== "function") return false;
-    if (original.__orgHubRecurringEventsFrontV3) return true;
+    if (original.__orgHubRecurringEventsV4) return true;
 
     async function wrappedApiClubGet_(action) {
-      const detailsRequest = isEventDetailsAction_(action);
+      const detailsRequest = normalizeAction_(action) === "wydarzeniedetails";
+
+      if (detailsRequest) setEditRepeatDays_(0);
+
+      const response = await original.apply(this, arguments);
 
       if (detailsRequest) {
-        setEditRepeatDays_(0);
-        setWheelDisabled_("editEventRepeatDays", true);
+        const repeatDays = extractRepeatDays_(response, 0);
+        setEditRepeatDays_(repeatDays === null ? 0 : repeatDays);
       }
 
-      try {
-        const response = await original.apply(this, arguments);
-
-        if (detailsRequest) {
-          const repeatDays = extractRepeatDays_(response, 0);
-          setEditRepeatDays_(repeatDays === null ? 0 : repeatDays);
-        }
-
-        return response;
-      } finally {
-        if (detailsRequest) {
-          setWheelDisabled_("editEventRepeatDays", false);
-        }
-      }
+      return response;
     }
 
-    wrappedApiClubGet_.__orgHubRecurringEventsFrontV3 = true;
+    wrappedApiClubGet_.__orgHubRecurringEventsV4 = true;
     window.apiClubGet = wrappedApiClubGet_;
     return true;
   }
@@ -491,21 +704,18 @@
     const original = window.apiClubPost;
 
     if (typeof original !== "function") return false;
-    if (original.__orgHubRecurringEventsFrontV3) return true;
+    if (original.__orgHubRecurringEventsV4) return true;
 
     async function wrappedApiClubPost_(payload) {
       const args = Array.from(arguments);
       const action = payload && typeof payload === "object"
-        ? payload.action
+        ? normalizeAction_(payload.action)
         : "";
 
-      const detailsRequest = isEventDetailsAction_(action);
-      const editRequest = isEditEventAction_(action);
+      const detailsRequest = action === "wydarzeniedetails";
+      const editRequest = action === "edytujwydarzenie";
 
-      if (detailsRequest) {
-        setEditRepeatDays_(0);
-        setWheelDisabled_("editEventRepeatDays", true);
-      }
+      if (detailsRequest) setEditRepeatDays_(0);
 
       if (editRequest) {
         args[0] = Object.assign({}, payload, {
@@ -513,49 +723,54 @@
         });
       }
 
-      try {
-        const response = await original.apply(this, args);
+      const response = await original.apply(this, args);
 
-        if (detailsRequest) {
-          const repeatDays = extractRepeatDays_(response, 0);
-          setEditRepeatDays_(repeatDays === null ? 0 : repeatDays);
-        }
-
-        if (
-          editRequest &&
-          response &&
-          response.success !== false
-        ) {
-          setEditRepeatDays_(0);
-        }
-
-        return response;
-      } finally {
-        if (detailsRequest) {
-          setWheelDisabled_("editEventRepeatDays", false);
-        }
+      if (detailsRequest) {
+        const repeatDays = extractRepeatDays_(response, 0);
+        setEditRepeatDays_(repeatDays === null ? 0 : repeatDays);
       }
+
+      if (editRequest && response && response.success !== false) {
+        setEditRepeatDays_(0);
+      }
+
+      return response;
     }
 
-    wrappedApiClubPost_.__orgHubRecurringEventsFrontV3 = true;
+    wrappedApiClubPost_.__orgHubRecurringEventsV4 = true;
     window.apiClubPost = wrappedApiClubPost_;
+    return true;
+  }
+
+  function patchEditLoadingState_() {
+    const original = window.setTrainerEditPopupLoadingState_;
+
+    if (typeof original !== "function") return false;
+    if (original.__orgHubRecurringEventsV4) return true;
+
+    window.setTrainerEditPopupLoadingState_ = function(isLoading) {
+      const result = original.apply(this, arguments);
+      setWheelDisabled_("editEventRepeatDays", !!isLoading);
+      return result;
+    };
+
+    window.setTrainerEditPopupLoadingState_.__orgHubRecurringEventsV4 = true;
     return true;
   }
 
   function observeEditPopup_() {
     const popup = document.getElementById("trainerEditPopup");
-    if (!popup || popup.__orgHubRecurringEventsObserverV3) return;
+    if (!popup || popup.__orgHubRecurringEventsObserverV4) return;
 
-    popup.__orgHubRecurringEventsObserverV3 = true;
+    popup.__orgHubRecurringEventsObserverV4 = true;
 
     const observer = new MutationObserver(function() {
-      const computed = window.getComputedStyle(popup);
       const hidden =
-        computed.display === "none" ||
+        window.getComputedStyle(popup).display === "none" ||
         popup.classList.contains("hidden");
 
       if (hidden) {
-        closeWheel_();
+        if (isWheelOpen_()) closeWheelDirect_();
         setEditRepeatDays_(0);
       }
     });
@@ -570,7 +785,8 @@
     const ready = [
       patchAddEventSubmit_(),
       patchApiClubGet_(),
-      patchApiClubPost_()
+      patchApiClubPost_(),
+      patchEditLoadingState_()
     ].every(Boolean);
 
     if (!ready) {
@@ -578,8 +794,8 @@
     }
   }
 
-  function initializeRecurringEventsFront_() {
-    ensureStylesheet_();
+  function initialize_() {
+    installStyles_();
     ensureAddRepeatControl_();
     ensureEditRepeatControl_();
     ensureWheelOverlay_();
@@ -588,12 +804,8 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener(
-      "DOMContentLoaded",
-      initializeRecurringEventsFront_,
-      { once: true }
-    );
+    document.addEventListener("DOMContentLoaded", initialize_, { once: true });
   } else {
-    initializeRecurringEventsFront_();
+    initialize_();
   }
 })();

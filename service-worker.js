@@ -5,7 +5,8 @@ const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
 
 const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE_NAME = "orghub-static-v" + SW_VERSION;
-const MEDICAL_PATCH_VERSION = "1";
+const MEDICAL_PATCH_VERSION = "2";
+const RECURRING_EVENTS_VERSION = "4";
 
 const STATIC_ASSETS = [
   "/icon-192.png",
@@ -61,51 +62,65 @@ self.addEventListener("fetch", (e) => {
       url.pathname.endsWith(".svg")
     );
 
-    // HTML / JS / CSS -> zawsze z sieci, bez cache.
-    // To jest kluczowe: index.html zawiera APP_BUILD i nie może zostać stary.
-    if (isAppShell || e.request.mode === "navigate") {
-      e.respondWith((async () => {
-        try {
-          const networkResponse = await fetch(e.request, { cache: "no-store" });
-          const contentType = String(networkResponse.headers.get("Content-Type") || "").toLowerCase();
-          const isHtmlResponse =
-            e.request.mode === "navigate" ||
-            contentType.includes("text/html");
+  // HTML / JS / CSS -> zawsze z sieci, bez cache.
+  // To jest kluczowe: index.html zawiera APP_BUILD i nie może zostać stary.
+  if (isAppShell || e.request.mode === "navigate") {
+    e.respondWith((async () => {
+      try {
+        const networkResponse = await fetch(e.request, { cache: "no-store" });
+        const contentType = String(networkResponse.headers.get("Content-Type") || "").toLowerCase();
+        const isHtmlResponse =
+          e.request.mode === "navigate" ||
+          contentType.includes("text/html");
 
-          if (!isHtmlResponse) {
-            return networkResponse;
-          }
-
-          let html = await networkResponse.text();
-          const patchTag =
-            `<script src="/medical-no-polling.js?v=${MEDICAL_PATCH_VERSION}"></script>`;
-
-          if (!html.includes("/medical-no-polling.js")) {
-            html = html.includes("</body>")
-              ? html.replace("</body>", patchTag + "\n</body>")
-              : html + patchTag;
-          }
-
-          const headers = new Headers(networkResponse.headers);
-          headers.set("Content-Type", "text/html; charset=utf-8");
-          headers.delete("Content-Length");
-
-          return new Response(html, {
-            status: networkResponse.status,
-            statusText: networkResponse.statusText,
-            headers
-          });
-
-        } catch (err) {
-          // Nie oddajemy starego index.html z cache, bo to blokuje aktualizacje.
-          return new Response("Brak połączenia z aplikacją. Odśwież stronę po chwili.", {
-            status: 503,
-            headers: { "Content-Type": "text/plain; charset=utf-8" }
-          });
+        if (!isHtmlResponse) {
+          return networkResponse;
         }
-      })());
-      return;
-    }
+
+        let html = await networkResponse.text();
+
+        const patchTags = [];
+
+        if (!html.includes("/medical-no-polling.js")) {
+          patchTags.push(
+            `<script src="/medical-no-polling.js?v=${MEDICAL_PATCH_VERSION}"></script>`
+          );
+        }
+
+        if (!html.includes("/recurring-events-front.js")) {
+          patchTags.push(
+            `<script src="/recurring-events-front.js?v=${RECURRING_EVENTS_VERSION}"></script>`
+          );
+        }
+
+        if (patchTags.length) {
+          const patchHtml = patchTags.join("\n");
+
+          html = html.includes("</body>")
+            ? html.replace("</body>", patchHtml + "\n</body>")
+            : html + patchHtml;
+        }
+
+        const headers = new Headers(networkResponse.headers);
+        headers.set("Content-Type", "text/html; charset=utf-8");
+        headers.delete("Content-Length");
+
+        return new Response(html, {
+          status: networkResponse.status,
+          statusText: networkResponse.statusText,
+          headers
+        });
+
+      } catch (err) {
+        // Nie oddajemy starego index.html z cache, bo to blokuje aktualizacje.
+        return new Response("Brak połączenia z aplikacją. Odśwież stronę po chwili.", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8" }
+        });
+      }
+    })());
+    return;
+  }
 
   // obrazki / ikony -> cache first
   if (isImageAsset) {
