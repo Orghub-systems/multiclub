@@ -12308,6 +12308,20 @@ function renderTreningiTrainer(lista) {
           <b>${trainerEscHtml_(t.trener || "—")}</b>
           <br>
 
+          Grupy:
+            <b>${
+              isPowolanie
+                ? "Powołania"
+                : trainerEscHtml_(
+                    String(t.grupy || "")
+                      .split(/[,;]+/)
+                      .map(grupa => getClubGroupLabel_(grupa.trim()))
+                      .filter(Boolean)
+                      .join(", ") || "—"
+                  )
+            }</b>
+            <br>
+
           ${
             isPowolanie
               ? `
