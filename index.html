@@ -502,7 +502,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.06';
+  window.APP_BUILD = 'APP v3.07';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -12205,6 +12205,15 @@ function renderTreningiTrainer(lista) {
   div.innerHTML = sortedLista.map(t => {
     const isOptimisticAdd = t?.__optimisticAdd === true;
 
+    const optimisticMessageUntil =
+    Number(
+      t?.__optimisticMessageUntil || 0
+    );
+  
+  const showOptimisticAddMessage =
+    isOptimisticAdd &&
+    optimisticMessageUntil > Date.now();
+
     const key = isOptimisticAdd
       ? String(
           t.__localEventId ||
@@ -12391,7 +12400,7 @@ function renderTreningiTrainer(lista) {
         </div>
 
         ${
-          isOptimisticAdd
+          showOptimisticAddMessage
             ? `
               <div style="
                 margin-top:12px;
@@ -13808,8 +13817,16 @@ function trainerBuildOptimisticEvent_(payload) {
 
   return {
     __optimisticAdd: true,
+  
+    /*
+     * Komunikat jest wyłącznie efektem wizualnym
+     * i zawsze kończy się po dwóch sekundach.
+     */
+    __optimisticMessageUntil:
+      Date.now() + 2000,
+  
     __localEventId: localEventId,
-
+  
     id: localEventId,
 
     data: startDate,
@@ -14285,7 +14302,75 @@ const msg =
     trainerSetAddEventButtonLoaded_(
       true
     );
-
+    
+    /*
+     * Dokładnie po dwóch sekundach przerysowujemy
+     * lokalny cache. Timestamp komunikatu jest już
+     * wtedy nieaktualny, więc napis znika.
+     *
+     * Nie pobieramy danych z GAS i nie czekamy
+     * na zakończenie requestu.
+     */
+    const localEventIdForMessage =
+      String(
+        optimisticState?.localEvent
+          ?.__localEventId || ""
+      );
+    
+    window.setTimeout(() => {
+      try {
+        const pending =
+          typeof trainerGetPendingAdd_ ===
+            "function"
+            ? trainerGetPendingAdd_()
+            : null;
+    
+        /*
+         * Backend mógł już zakończyć pracę albo
+         * użytkownik mógł opuścić ten ekran.
+         */
+        if (
+          !pending ||
+          String(
+            pending.localEventId || ""
+          ) !== localEventIdForMessage ||
+          String(
+            window.__trainerEventsMode || ""
+          ) !== "current"
+        ) {
+          return;
+        }
+    
+        const raw =
+          localStorage.getItem(
+            optimisticState.cacheKey
+          );
+    
+        if (!raw) return;
+    
+        const entry =
+          JSON.parse(raw);
+    
+        if (!Array.isArray(entry?.data)) {
+          return;
+        }
+    
+        /*
+         * Render wyłącznie z lokalnych danych.
+         * Bez połączenia z GAS.
+         */
+        renderTreningiTrainer(
+          entry.data
+        );
+    
+      } catch (e) {
+        console.warn(
+          "Nie udało się zakończyć komunikatu dodawania:",
+          e
+        );
+      }
+    }, 2050);
+    
     /*
      * Ekran jest już gotowy.
      * GAS nadal pracuje w tle.
