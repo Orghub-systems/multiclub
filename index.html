@@ -450,8 +450,310 @@ input[type="number"] {
       font-size: 14px;
       font-weight: 700;
     }
-
-  
+    
+      /* ===== TRAINER LINEUP EDITOR: CSS START ===== */
+    #trainerLineupEditorView {
+      margin-top: 0;
+      min-height: 100dvh;
+      padding: 0 12px 110px 12px;
+      box-sizing: border-box;
+    }
+    
+    .trainer-lineup-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr) 46px;
+      align-items: center;
+      gap: 8px;
+      margin: 0 -12px 12px -12px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.94);
+      border-bottom: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(8px);
+    }
+    
+    .trainer-lineup-topbar h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    
+    .trainer-lineup-back {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 22px;
+    }
+    
+    .trainer-lineup-event-meta {
+      max-width: 520px;
+      margin: 0 auto 12px auto;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      line-height: 1.35;
+    }
+    
+    .trainer-lineup-sport-picker {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      width: min(520px, 100%);
+      margin: 0 auto 12px auto;
+    }
+    
+    .trainer-lineup-sport-btn {
+      min-height: 48px;
+      background: #171717;
+      border: 1px solid #444;
+    }
+    
+    .trainer-lineup-sport-btn.active {
+      background: var(--color-accent-red);
+      border-color: var(--color-accent-red-border);
+      box-shadow: 0 0 0 2px rgba(255,43,43,.18);
+    }
+    
+    .trainer-lineup-status {
+      width: min(520px, 100%);
+      margin: 0 auto 10px auto;
+      min-height: 20px;
+      font-size: 13px;
+      line-height: 1.4;
+      opacity: .86;
+    }
+    
+    .trainer-lineup-status.loading { color: #ffd36b; }
+    .trainer-lineup-status.error { color: #ff8f8f; font-weight: 800; }
+    .trainer-lineup-status.success { color: #8fe3a8; font-weight: 800; }
+    
+    .trainer-lineup-board-wrap {
+      width: min(520px, 100%);
+      margin: 0 auto;
+    }
+    
+    .trainer-lineup-board {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.2);
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,.1), transparent 55%),
+        linear-gradient(180deg, #26333d, #10151a);
+      box-shadow: 0 16px 40px rgba(0,0,0,.34);
+    }
+    
+    .trainer-lineup-board[data-sport="football"] {
+      background: linear-gradient(180deg, #1d6531, #0d3519);
+    }
+    
+    .trainer-lineup-board[data-sport="volleyball"] {
+      background: linear-gradient(180deg, #bd7c38, #70431e);
+    }
+    
+    .trainer-lineup-board[data-sport="basketball"] {
+      background: linear-gradient(180deg, #a96c33, #5e3518);
+    }
+    
+    .trainer-lineup-board-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    
+    .trainer-lineup-board.image-loaded .trainer-lineup-board-image {
+      opacity: 1;
+    }
+    
+    .trainer-lineup-slot {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: clamp(62px, 19vw, 94px);
+      min-height: 42px;
+      padding: 4px 5px;
+      border-radius: 10px;
+      border: 1px dashed rgba(255,255,255,.68);
+      background: rgba(0,0,0,.68);
+      color: #fff;
+      box-shadow: 0 5px 14px rgba(0,0,0,.34);
+      z-index: 3;
+    }
+    
+    .trainer-lineup-slot.filled {
+      border-style: solid;
+      background: rgba(125,0,0,.9);
+      border-color: rgba(255,255,255,.88);
+    }
+    
+    .trainer-lineup-slot-code {
+      display: block;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 900;
+      opacity: .76;
+    }
+    
+    .trainer-lineup-slot-name {
+      display: block;
+      margin-top: 3px;
+      font-size: clamp(9px, 2.7vw, 12px);
+      line-height: 1.05;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+    
+    .trainer-lineup-role-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      color: #000;
+      border: 2px solid #000;
+      font-size: 12px;
+      font-weight: 1000;
+    }
+    
+    .trainer-lineup-reserves-card {
+      width: min(520px, 100%);
+      margin: 12px auto 0 auto;
+      padding: 12px;
+      box-sizing: border-box;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+    }
+    
+    .trainer-lineup-reserves-card h3 {
+      margin: 0 0 10px 0;
+    }
+    
+    .trainer-lineup-reserve-slots {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    
+    .trainer-lineup-reserve-slot {
+      position: relative;
+      min-height: 48px;
+      padding: 6px 8px;
+      border: 1px dashed rgba(255,255,255,.48);
+      background: #171717;
+    }
+    
+    .trainer-lineup-reserve-slot.filled {
+      border-style: solid;
+      background: #4f1414;
+    }
+    
+    .trainer-lineup-unassigned-summary {
+      margin-top: 10px;
+      font-size: 13px;
+      opacity: .78;
+    }
+    
+    .trainer-lineup-actions {
+      width: min(520px, 100%);
+      margin: 14px auto 0 auto;
+    }
+    
+    #trainerLineupPlayerModal .modal-card {
+      width: min(520px, 100%);
+      max-height: 88dvh;
+      overflow: auto;
+      box-sizing: border-box;
+    }
+    
+    .trainer-lineup-current-player {
+      margin: 8px 0 10px 0;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      line-height: 1.4;
+    }
+    
+    .trainer-lineup-role-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .trainer-lineup-role-btn.active {
+      background: var(--color-accent-red);
+      border-color: var(--color-accent-red-border);
+    }
+    
+    .trainer-lineup-player-search {
+      width: 100%;
+      box-sizing: border-box;
+      margin: 4px 0 10px 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      background: #171717;
+      color: #fff;
+    }
+    
+    .trainer-lineup-player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 44dvh;
+      overflow-y: auto;
+    }
+    
+    .trainer-lineup-player-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 46px;
+      text-align: left;
+      background: #1b1b1b;
+      border: 1px solid #444;
+    }
+    
+    .trainer-lineup-player-meta {
+      flex: 0 0 auto;
+      font-size: 11px;
+      opacity: .65;
+      text-align: right;
+    }
+    
+    .trainer-lineup-empty-list {
+      padding: 18px 10px;
+      opacity: .7;
+    }
+    
+    @media (max-width: 390px) {
+      .trainer-lineup-slot {
+        width: 61px;
+        min-height: 38px;
+        padding: 3px;
+      }
+    
+      .trainer-lineup-slot-name {
+        font-size: 9px;
+      }
+    }
+    /* ===== TRAINER LINEUP EDITOR: CSS END ===== */
 
     /* ===== ADMIN — UDOSTĘPNIANIE KLUBU: CSS START ===== */
 #orgHubClubShareSection {
@@ -502,7 +804,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.07';
+  window.APP_BUILD = 'APP v3.08';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1613,6 +1915,172 @@ input[type="number"] {
   </button>
 </div>
 
+
+<!-- TRAINER LINEUP EDITOR VIEW -->
+<div id="trainerLineupEditorView" class="container hidden">
+  <div class="trainer-lineup-topbar">
+    <button
+      type="button"
+      class="trainer-lineup-back"
+      onclick="trainerCloseLineupEditor_()"
+      aria-label="Wróć do wydarzeń"
+    >
+      ←
+    </button>
+
+    <h1>Lineup</h1>
+    <div></div>
+  </div>
+
+  <div id="trainerLineupEventMeta" class="trainer-lineup-event-meta"></div>
+
+  <div class="trainer-lineup-sport-picker">
+    <button
+      type="button"
+      class="trainer-lineup-sport-btn"
+      data-lineup-sport="hockey"
+      onclick="trainerLineupSetSport_('hockey')"
+    >
+      🏒 Hokej
+    </button>
+
+    <button
+      type="button"
+      class="trainer-lineup-sport-btn"
+      data-lineup-sport="football"
+      onclick="trainerLineupSetSport_('football')"
+    >
+      ⚽ Piłka nożna
+    </button>
+
+    <button
+      type="button"
+      class="trainer-lineup-sport-btn"
+      data-lineup-sport="volleyball"
+      onclick="trainerLineupSetSport_('volleyball')"
+    >
+      🏐 Siatkówka
+    </button>
+
+    <button
+      type="button"
+      class="trainer-lineup-sport-btn"
+      data-lineup-sport="basketball"
+      onclick="trainerLineupSetSport_('basketball')"
+    >
+      🏀 Koszykówka
+    </button>
+  </div>
+
+  <div id="trainerLineupStatus" class="trainer-lineup-status"></div>
+
+  <div class="trainer-lineup-board-wrap">
+    <div id="trainerLineupBoard" class="trainer-lineup-board" data-sport="hockey">
+      <img
+        id="trainerLineupBackground"
+        class="trainer-lineup-board-image"
+        src=""
+        alt=""
+      >
+      <div id="trainerLineupSlots"></div>
+    </div>
+  </div>
+
+  <div class="trainer-lineup-reserves-card">
+    <h3>Rezerwowi</h3>
+    <div id="trainerLineupReserveSlots" class="trainer-lineup-reserve-slots"></div>
+    <div id="trainerLineupUnassignedSummary" class="trainer-lineup-unassigned-summary"></div>
+  </div>
+
+  <div class="trainer-lineup-actions">
+    <button
+      id="btnTrainerLineupLocalSave"
+      type="button"
+      class="full-btn"
+      onclick="trainerSaveLineupDraftLocal_()"
+    >
+      💾 Zapisz szkic
+    </button>
+
+    <button
+      type="button"
+      class="full-btn alt"
+      onclick="trainerCloseLineupEditor_()"
+    >
+      ⬅ Wróć do wydarzeń
+    </button>
+  </div>
+</div>
+
+<!-- TRAINER LINEUP PLAYER PICKER -->
+<div
+  id="trainerLineupPlayerModal"
+  class="modal hidden"
+  onclick="trainerLineupBackdropClick_(event)"
+>
+  <div class="modal-card">
+    <h2 id="trainerLineupPlayerModalTitle" style="margin-top:0;">Wybierz zawodnika</h2>
+
+    <div id="trainerLineupCurrentPlayer" class="trainer-lineup-current-player"></div>
+
+    <div id="trainerLineupRoleActions" class="trainer-lineup-role-actions hidden">
+      <button
+        type="button"
+        class="trainer-lineup-role-btn"
+        data-lineup-role="C"
+        onclick="trainerSetLineupRole_('C')"
+      >
+        Kapitan C
+      </button>
+
+      <button
+        type="button"
+        class="trainer-lineup-role-btn"
+        data-lineup-role="A"
+        onclick="trainerSetLineupRole_('A')"
+      >
+        Asystent A
+      </button>
+
+      <button
+        type="button"
+        class="trainer-lineup-role-btn"
+        data-lineup-role=""
+        onclick="trainerSetLineupRole_('')"
+      >
+        Bez roli
+      </button>
+    </div>
+
+    <input
+      id="trainerLineupPlayerSearch"
+      class="trainer-lineup-player-search"
+      type="search"
+      placeholder="Szukaj zawodnika"
+      oninput="trainerFilterLineupPlayers_()"
+    >
+
+    <div id="trainerLineupPlayerList" class="trainer-lineup-player-list"></div>
+
+    <button
+      id="btnTrainerLineupRemovePlayer"
+      type="button"
+      class="full-btn danger hidden"
+      onclick="trainerRemoveLineupPlayer_()"
+    >
+      Usuń zawodnika z pozycji
+    </button>
+
+    <button
+      type="button"
+      class="full-btn alt"
+      onclick="trainerCloseLineupPlayerModal_()"
+    >
+      Zamknij
+    </button>
+  </div>
+</div>
+  
 <!-- TRAINER ARCHIVE EVENTS VIEW
      Wybór miesiąca archiwalnych wydarzeń -->
 
@@ -11776,8 +12244,15 @@ async function trainerShowCurrentEvents_() {
 
         // Zablokuj przyciski edycji i usunięcia do czasu świeżych danych
         div.querySelectorAll("button").forEach(btn => {
-          const txt = String(btn.textContent || "").trim();
-          if (txt.includes("Edytuj") || txt.includes("Usuń") || txt.includes("Dodaj")) {
+        const txt = String(btn.textContent || "").trim();
+        const txtLower = txt.toLowerCase();
+    
+        if (
+          txt.includes("Edytuj") ||
+          txt.includes("Usuń") ||
+          txt.includes("Dodaj") ||
+          txtLower.includes("lineup")
+        ) {
             btn.disabled = true;
             btn.style.opacity = "0.45";
             btn.dataset.lockedByCache = "1";
@@ -12168,6 +12643,9 @@ function renderTreningiTrainer(lista) {
   // Globalna mapa trybu wydarzenia dla listy zapisanych/powołanych.
   window.__trainerEventModeById = {};
 
+  // Dane wydarzeń wykorzystywane przez edytor lineupu.
+  window.__trainerLineupEventById = {};  
+
   function toISO_(dataTxt) {
     const s = String(dataTxt || "").trim();
 
@@ -12264,6 +12742,20 @@ function renderTreningiTrainer(lista) {
         start: String(t.godzStart || ""),
         end: String(t.godzKoniec || ""),
         rodzaj: String(t.rodzaj || "")
+      };
+
+      window.__trainerLineupEventById[listId] = {
+        id: listId,
+        key,
+        miesiac: String(t.miesiac || ""),
+        czasCol: Number(t.czasCol || 0),
+        rodzaj: String(t.rodzaj || ""),
+        data: String(t.data || ""),
+        dzien: String(t.dzien || ""),
+        godzStart: String(t.godzStart || ""),
+        godzKoniec: String(t.godzKoniec || ""),
+        miejsce: String(t.miejsce || ""),
+        isPowolanie
       };
     }
 
@@ -12388,6 +12880,20 @@ function renderTreningiTrainer(lista) {
                   window.__trainerEventsMode === "archive"
                     ? ""
                     : `
+
+                      <button
+                        class="btn"
+                        type="button"
+                        data-lineup-event-id="${trainerEscHtml_(listId)}"
+                        onclick="trainerOpenLineupEditor_('${trainerEscJsArg_(listId)}')"
+                      >
+                        ${
+                          trainerHasLocalLineupDraft_(listId)
+                            ? "🧩 Edytuj lineup"
+                            : "🧩 Utwórz lineup"
+                        }
+                      </button>
+                      
                       <button
                         class="btn"
                         onclick="trainerShowEditPopup(
@@ -12521,6 +13027,715 @@ async function trainerToggleZapisani(id) {
   }
 }
 
+const TRAINER_LINEUP_TEMPLATES_ = Object.freeze({
+  hockey: {
+    label: "Hokej",
+    image: "assets/lineups/hockey.webp",
+    slots: [
+      { id: "1LN", label: "1. lewy napastnik", x: 18, y: 13 },
+      { id: "1SN", label: "1. środkowy napastnik", x: 50, y: 10 },
+      { id: "1PN", label: "1. prawy napastnik", x: 82, y: 13 },
+      { id: "1LO", label: "1. lewy obrońca", x: 34, y: 25 },
+      { id: "1PO", label: "1. prawy obrońca", x: 66, y: 25 },
+
+      { id: "2LN", label: "2. lewy napastnik", x: 18, y: 37 },
+      { id: "2SN", label: "2. środkowy napastnik", x: 50, y: 34 },
+      { id: "2PN", label: "2. prawy napastnik", x: 82, y: 37 },
+      { id: "2LO", label: "2. lewy obrońca", x: 34, y: 49 },
+      { id: "2PO", label: "2. prawy obrońca", x: 66, y: 49 },
+
+      { id: "3LN", label: "3. lewy napastnik", x: 18, y: 61 },
+      { id: "3SN", label: "3. środkowy napastnik", x: 50, y: 58 },
+      { id: "3PN", label: "3. prawy napastnik", x: 82, y: 61 },
+      { id: "3LO", label: "3. lewy obrońca", x: 34, y: 73 },
+      { id: "3PO", label: "3. prawy obrońca", x: 66, y: 73 },
+
+      { id: "BR1", label: "Pierwszy bramkarz", x: 38, y: 90 },
+      { id: "BR2", label: "Drugi bramkarz", x: 62, y: 90 }
+    ]
+  },
+
+  football: {
+    label: "Piłka nożna 4-4-2",
+    image: "assets/lineups/football.webp",
+    slots: [
+      { id: "LN", label: "Lewy napastnik", x: 35, y: 15 },
+      { id: "PN", label: "Prawy napastnik", x: 65, y: 15 },
+      { id: "LP", label: "Lewy pomocnik", x: 14, y: 42 },
+      { id: "SP1", label: "Środkowy pomocnik 1", x: 38, y: 42 },
+      { id: "SP2", label: "Środkowy pomocnik 2", x: 62, y: 42 },
+      { id: "PP", label: "Prawy pomocnik", x: 86, y: 42 },
+      { id: "LO", label: "Lewy obrońca", x: 14, y: 68 },
+      { id: "SO1", label: "Środkowy obrońca 1", x: 38, y: 68 },
+      { id: "SO2", label: "Środkowy obrońca 2", x: 62, y: 68 },
+      { id: "PO", label: "Prawy obrońca", x: 86, y: 68 },
+      { id: "BR", label: "Bramkarz", x: 50, y: 90 }
+    ]
+  },
+
+  volleyball: {
+    label: "Siatkówka",
+    image: "assets/lineups/volleyball.webp",
+    slots: [
+      { id: "P4", label: "Pozycja 4", x: 22, y: 25 },
+      { id: "P3", label: "Pozycja 3", x: 50, y: 25 },
+      { id: "P2", label: "Pozycja 2", x: 78, y: 25 },
+      { id: "P5", label: "Pozycja 5", x: 22, y: 68 },
+      { id: "P6", label: "Pozycja 6", x: 50, y: 68 },
+      { id: "P1", label: "Pozycja 1", x: 78, y: 68 },
+      { id: "LIB", label: "Libero", x: 50, y: 88 }
+    ]
+  },
+
+  basketball: {
+    label: "Koszykówka",
+    image: "assets/lineups/basketball.webp",
+    slots: [
+      { id: "C", label: "Center", x: 50, y: 18 },
+      { id: "PF", label: "Power forward", x: 24, y: 35 },
+      { id: "SF", label: "Small forward", x: 76, y: 35 },
+      { id: "SG", label: "Shooting guard", x: 28, y: 68 },
+      { id: "PG", label: "Point guard", x: 72, y: 82 }
+    ]
+  }
+});
+
+window.__trainerLineupState = null;
+window.__trainerLineupReturnScrollY = 0;
+
+function trainerLineupDraftKey_(eventId) {
+  return [
+    "orghub.lineup.frontDraft.v1",
+    String(clubId || "").toLowerCase(),
+    String(eventId || "")
+  ].join(".");
+}
+
+function trainerHasLocalLineupDraft_(eventId) {
+  try {
+    return !!localStorage.getItem(trainerLineupDraftKey_(eventId));
+  } catch (e) {
+    return false;
+  }
+}
+
+function trainerLineupReadDraft_(eventId) {
+  try {
+    const raw = localStorage.getItem(trainerLineupDraftKey_(eventId));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function trainerLineupNormalizeAssignments_(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = {};
+
+  Object.keys(source).forEach(slotId => {
+    const item = source[slotId];
+    const playerId = String(item?.playerId || "").trim();
+    const role = ["C", "A"].includes(String(item?.role || "").trim())
+      ? String(item.role).trim()
+      : "";
+
+    if (playerId) {
+      result[String(slotId)] = { playerId, role };
+    }
+  });
+
+  return result;
+}
+
+function trainerLineupNormalizePlayers_(lista) {
+  const result = [];
+  const seen = new Set();
+
+  (Array.isArray(lista) ? lista : []).forEach((item, index) => {
+    const name = String(item?.nazwisko || item?.name || "").trim();
+    const number = String(
+      item?.numer ??
+      item?.nr ??
+      item?.number ??
+      ""
+    ).trim();
+
+    if (!name) return;
+
+    const id = number || `name-${name.toLowerCase()}-${index}`;
+    if (seen.has(id)) return;
+    seen.add(id);
+
+    result.push({
+      id,
+      number,
+      name,
+      accepted:
+        typeof item?.accepted === "boolean"
+          ? item.accepted
+          : null
+    });
+  });
+
+  return result.sort((a, b) =>
+    a.name.localeCompare(b.name, "pl", { sensitivity: "base" })
+  );
+}
+
+function trainerLineupPlayerById_(playerId) {
+  const state = window.__trainerLineupState;
+  if (!state) return null;
+
+  return state.players.find(
+    player => String(player.id) === String(playerId)
+  ) || null;
+}
+
+function trainerLineupReserveCount_() {
+  const state = window.__trainerLineupState;
+  if (!state) return 6;
+
+  const template = TRAINER_LINEUP_TEMPLATES_[state.sport];
+  const fixedCount = Array.isArray(template?.slots)
+    ? template.slots.length
+    : 0;
+
+  const minimumNeeded = Math.max(
+    6,
+    state.players.length - fixedCount + 3
+  );
+
+  const assignedReserveMax = Object.keys(state.assignments || {})
+    .map(slotId => {
+      const match = String(slotId).match(/^R(\d+)$/);
+      return match ? Number(match[1]) : 0;
+    })
+    .reduce((max, value) => Math.max(max, value), 0);
+
+  return Math.min(
+    20,
+    Math.max(minimumNeeded, assignedReserveMax)
+  );
+}
+
+function trainerLineupAllSlots_() {
+  const state = window.__trainerLineupState;
+  if (!state) return [];
+
+  const template = TRAINER_LINEUP_TEMPLATES_[state.sport];
+  const fixed = Array.isArray(template?.slots)
+    ? template.slots
+    : [];
+
+  const reserves = Array.from(
+    { length: trainerLineupReserveCount_() },
+    (_, index) => ({
+      id: `R${index + 1}`,
+      label: `Rezerwowy ${index + 1}`,
+      reserve: true
+    })
+  );
+
+  return [...fixed, ...reserves];
+}
+
+function trainerLineupResolveSlot_(slotId) {
+  return trainerLineupAllSlots_().find(
+    slot => String(slot.id) === String(slotId)
+  ) || null;
+}
+
+async function trainerOpenLineupEditor_(eventId) {
+  const id = String(eventId || "").trim();
+  const event = window.__trainerLineupEventById?.[id];
+
+  if (!event) {
+    alert("Nie udało się odnaleźć danych wydarzenia. Odśwież listę i spróbuj ponownie.");
+    return;
+  }
+
+  window.__trainerLineupReturnScrollY = window.scrollY || 0;
+
+  const draft = trainerLineupReadDraft_(id);
+  const draftSport = TRAINER_LINEUP_TEMPLATES_[draft?.sport]
+    ? draft.sport
+    : "hockey";
+
+  const draftPlayers = trainerLineupNormalizePlayers_(
+    Array.isArray(draft?.playersSnapshot)
+      ? draft.playersSnapshot
+      : []
+  );
+
+  window.__trainerLineupState = {
+    eventId: id,
+    event,
+    sport: draftSport,
+    players: draftPlayers,
+    assignments: trainerLineupNormalizeAssignments_(draft?.assignments),
+    activeSlotId: "",
+    loading: true,
+    error: "",
+    message: draft ? "Wczytano lokalny szkic lineupu." : ""
+  };
+
+  const meta = document.getElementById("trainerLineupEventMeta");
+  if (meta) {
+    meta.innerHTML = `
+      <b>${trainerEscHtml_(event.rodzaj || "Wydarzenie")}</b><br>
+      ${trainerEscHtml_(event.data || "")}
+      ${event.godzStart ? `, ${trainerEscHtml_(event.godzStart)}` : ""}
+    `;
+  }
+
+  goToView("trainerLineupEditorView");
+  trainerRenderLineupEditor_();
+
+  try {
+    const lista = await apiClubGet("zapisani", {
+      treningId: id
+    });
+
+    if (!Array.isArray(lista)) {
+      throw new Error("Nieprawidłowa odpowiedź listy zawodników");
+    }
+
+    const state = window.__trainerLineupState;
+    if (!state || state.eventId !== id) return;
+
+    state.players = trainerLineupNormalizePlayers_(lista);
+
+    const validPlayerIds = new Set(
+      state.players.map(player => String(player.id))
+    );
+
+    Object.keys(state.assignments).forEach(slotId => {
+      const playerId = String(
+        state.assignments[slotId]?.playerId || ""
+      );
+
+      if (!validPlayerIds.has(playerId)) {
+        delete state.assignments[slotId];
+      }
+    });
+
+    state.loading = false;
+    state.error = "";
+    trainerRenderLineupEditor_();
+
+  } catch (e) {
+    const state = window.__trainerLineupState;
+    if (!state || state.eventId !== id) return;
+
+    state.loading = false;
+    state.error = "Nie udało się pobrać zawodników wydarzenia.";
+    trainerRenderLineupEditor_();
+  }
+}
+
+function trainerCloseLineupEditor_() {
+  trainerCloseLineupPlayerModal_();
+  goToView("trainerWydarzeniaCurrentView");
+
+  const scrollY = Number(window.__trainerLineupReturnScrollY || 0);
+  setTimeout(() => window.scrollTo(0, scrollY), 0);
+}
+
+function trainerLineupSetSport_(sport) {
+  const state = window.__trainerLineupState;
+  if (!state || !TRAINER_LINEUP_TEMPLATES_[sport]) return;
+  if (state.sport === sport) return;
+
+  if (
+    Object.keys(state.assignments || {}).length > 0 &&
+    !confirm("Zmiana dyscypliny wyczyści obecne ustawienie zawodników. Kontynuować?")
+  ) {
+    return;
+  }
+
+  state.sport = sport;
+  state.assignments = {};
+  state.activeSlotId = "";
+  state.message = "";
+
+  trainerRenderLineupEditor_();
+}
+
+function trainerLineupSlotHtml_(slot, reserve = false) {
+  const state = window.__trainerLineupState;
+  const assignment = state?.assignments?.[slot.id] || null;
+  const player = assignment
+    ? trainerLineupPlayerById_(assignment.playerId)
+    : null;
+
+  const role = String(assignment?.role || "");
+  const filled = !!player;
+
+  const content = `
+    <span class="trainer-lineup-slot-code">${trainerEscHtml_(slot.id)}</span>
+    <span class="trainer-lineup-slot-name">
+      ${filled ? trainerEscHtml_(player.name) : "Kliknij"}
+    </span>
+    ${role ? `<span class="trainer-lineup-role-badge">${trainerEscHtml_(role)}</span>` : ""}
+  `;
+
+  if (reserve) {
+    return `
+      <button
+        type="button"
+        class="trainer-lineup-reserve-slot ${filled ? "filled" : ""}"
+        onclick="trainerOpenLineupSlot_('${trainerEscJsArg_(slot.id)}')"
+      >
+        ${content}
+      </button>
+    `;
+  }
+
+  return `
+    <button
+      type="button"
+      class="trainer-lineup-slot ${filled ? "filled" : ""}"
+      style="left:${Number(slot.x)}%; top:${Number(slot.y)}%;"
+      onclick="trainerOpenLineupSlot_('${trainerEscJsArg_(slot.id)}')"
+    >
+      ${content}
+    </button>
+  `;
+}
+
+function trainerRenderLineupEditor_() {
+  const state = window.__trainerLineupState;
+  if (!state) return;
+
+  const template = TRAINER_LINEUP_TEMPLATES_[state.sport];
+  if (!template) return;
+
+  document
+    .querySelectorAll("[data-lineup-sport]")
+    .forEach(button => {
+      button.classList.toggle(
+        "active",
+        button.dataset.lineupSport === state.sport
+      );
+    });
+
+  const board = document.getElementById("trainerLineupBoard");
+  const image = document.getElementById("trainerLineupBackground");
+
+  if (board && image) {
+    board.dataset.sport = state.sport;
+    board.classList.remove("image-loaded");
+
+    image.onload = () => board.classList.add("image-loaded");
+    image.onerror = () => board.classList.remove("image-loaded");
+    image.src = template.image;
+    image.alt = `Plansza: ${template.label}`;
+  }
+
+  const slotsBox = document.getElementById("trainerLineupSlots");
+  if (slotsBox) {
+    slotsBox.innerHTML = template.slots
+      .map(slot => trainerLineupSlotHtml_(slot, false))
+      .join("");
+  }
+
+  const reserveSlots = trainerLineupAllSlots_()
+    .filter(slot => slot.reserve);
+
+  const reserveBox = document.getElementById("trainerLineupReserveSlots");
+  if (reserveBox) {
+    reserveBox.innerHTML = reserveSlots
+      .map(slot => trainerLineupSlotHtml_(slot, true))
+      .join("");
+  }
+
+  const assignedPlayerIds = new Set(
+    Object.values(state.assignments || {})
+      .map(item => String(item?.playerId || ""))
+      .filter(Boolean)
+  );
+
+  const total = state.players.length;
+  const assigned = state.players.filter(player =>
+    assignedPlayerIds.has(String(player.id))
+  ).length;
+  const unassigned = Math.max(0, total - assigned);
+
+  const status = document.getElementById("trainerLineupStatus");
+  if (status) {
+    if (state.loading) {
+      status.textContent = "Ładowanie zawodników wydarzenia...";
+      status.className = "trainer-lineup-status loading";
+    } else if (state.error) {
+      status.textContent = state.error;
+      status.className = "trainer-lineup-status error";
+    } else if (state.message) {
+      status.textContent = state.message;
+      status.className = "trainer-lineup-status success";
+    } else {
+      status.textContent = `Zawodników: ${total} · ustawionych: ${assigned} · bez pozycji: ${unassigned}`;
+      status.className = "trainer-lineup-status";
+    }
+  }
+
+  const summary = document.getElementById("trainerLineupUnassignedSummary");
+  if (summary) {
+    summary.textContent = unassigned
+      ? `${unassigned} zawodników pozostaje na liście roboczej.`
+      : "Wszyscy zawodnicy mają przypisane miejsce.";
+  }
+
+  const saveButton = document.getElementById("btnTrainerLineupLocalSave");
+  if (saveButton) {
+    saveButton.disabled = state.loading || !!state.error || total === 0;
+  }
+}
+
+function trainerOpenLineupSlot_(slotId) {
+  const state = window.__trainerLineupState;
+  const slot = trainerLineupResolveSlot_(slotId);
+  if (!state || !slot || state.loading || state.error) return;
+
+  state.activeSlotId = String(slot.id);
+
+  const title = document.getElementById("trainerLineupPlayerModalTitle");
+  if (title) {
+    title.textContent = `${slot.id} — ${slot.label}`;
+  }
+
+  const search = document.getElementById("trainerLineupPlayerSearch");
+  if (search) search.value = "";
+
+  trainerRenderLineupPlayerModal_();
+
+  const modal = document.getElementById("trainerLineupPlayerModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function trainerRenderLineupPlayerModal_() {
+  const state = window.__trainerLineupState;
+  if (!state || !state.activeSlotId) return;
+
+  const assignment = state.assignments[state.activeSlotId] || null;
+  const currentPlayer = assignment
+    ? trainerLineupPlayerById_(assignment.playerId)
+    : null;
+
+  const currentBox = document.getElementById("trainerLineupCurrentPlayer");
+  if (currentBox) {
+    currentBox.innerHTML = currentPlayer
+      ? `Aktualnie: <b>${trainerEscHtml_(currentPlayer.name)}</b>${currentPlayer.number ? ` (#${trainerEscHtml_(currentPlayer.number)})` : ""}`
+      : "Pozycja jest pusta.";
+  }
+
+  const roleBox = document.getElementById("trainerLineupRoleActions");
+  const removeButton = document.getElementById("btnTrainerLineupRemovePlayer");
+
+  if (roleBox) {
+    roleBox.classList.toggle("hidden", !currentPlayer);
+
+    roleBox
+      .querySelectorAll("[data-lineup-role]")
+      .forEach(button => {
+        button.classList.toggle(
+          "active",
+          String(button.dataset.lineupRole || "") ===
+            String(assignment?.role || "")
+        );
+      });
+  }
+
+  if (removeButton) {
+    removeButton.classList.toggle("hidden", !currentPlayer);
+  }
+
+  const query = String(
+    document.getElementById("trainerLineupPlayerSearch")?.value || ""
+  ).trim().toLowerCase();
+
+  const usedByOtherSlots = new Set(
+    Object.entries(state.assignments || {})
+      .filter(([slotId]) => slotId !== state.activeSlotId)
+      .map(([, item]) => String(item?.playerId || ""))
+      .filter(Boolean)
+  );
+
+  const available = state.players.filter(player => {
+    if (usedByOtherSlots.has(String(player.id))) return false;
+    if (currentPlayer && String(player.id) === String(currentPlayer.id)) return false;
+
+    if (!query) return true;
+
+    return [player.name, player.number]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+
+  const list = document.getElementById("trainerLineupPlayerList");
+  if (!list) return;
+
+  if (!available.length) {
+    list.innerHTML = `
+      <div class="trainer-lineup-empty-list">
+        Brak dostępnych zawodników.
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = available.map(player => `
+    <button
+      type="button"
+      class="trainer-lineup-player-option"
+      onclick="trainerChooseLineupPlayer_('${trainerEscJsArg_(player.id)}')"
+    >
+      <span>${trainerEscHtml_(player.name)}</span>
+      <span class="trainer-lineup-player-meta">
+        ${player.number ? `#${trainerEscHtml_(player.number)}` : ""}
+        ${player.accepted === false ? " · brak akceptacji" : ""}
+      </span>
+    </button>
+  `).join("");
+}
+
+function trainerFilterLineupPlayers_() {
+  trainerRenderLineupPlayerModal_();
+}
+
+function trainerChooseLineupPlayer_(playerId) {
+  const state = window.__trainerLineupState;
+  if (!state || !state.activeSlotId) return;
+
+  const id = String(playerId || "");
+  if (!trainerLineupPlayerById_(id)) return;
+
+  Object.keys(state.assignments).forEach(slotId => {
+    if (
+      slotId !== state.activeSlotId &&
+      String(state.assignments[slotId]?.playerId || "") === id
+    ) {
+      delete state.assignments[slotId];
+    }
+  });
+
+  state.assignments[state.activeSlotId] = {
+    playerId: id,
+    role: ""
+  };
+  state.message = "";
+
+  trainerCloseLineupPlayerModal_();
+  trainerRenderLineupEditor_();
+}
+
+function trainerRemoveLineupPlayer_() {
+  const state = window.__trainerLineupState;
+  if (!state || !state.activeSlotId) return;
+
+  delete state.assignments[state.activeSlotId];
+  state.message = "";
+
+  trainerCloseLineupPlayerModal_();
+  trainerRenderLineupEditor_();
+}
+
+function trainerSetLineupRole_(role) {
+  const state = window.__trainerLineupState;
+  if (!state || !state.activeSlotId) return;
+
+  const assignment = state.assignments[state.activeSlotId];
+  if (!assignment) return;
+
+  const normalizedRole = ["C", "A"].includes(String(role || ""))
+    ? String(role)
+    : "";
+
+  if (normalizedRole === "C") {
+    Object.values(state.assignments).forEach(item => {
+      if (item && item !== assignment && item.role === "C") {
+        item.role = "";
+      }
+    });
+  }
+
+  if (normalizedRole === "A") {
+    const assistants = Object.entries(state.assignments)
+      .filter(([slotId, item]) =>
+        slotId !== state.activeSlotId && item?.role === "A"
+      ).length;
+
+    if (assistants >= 2) {
+      alert("Możesz wybrać maksymalnie dwóch asystentów kapitana.");
+      return;
+    }
+  }
+
+  assignment.role = normalizedRole;
+  state.message = "";
+
+  trainerRenderLineupEditor_();
+  trainerRenderLineupPlayerModal_();
+}
+
+function trainerCloseLineupPlayerModal_() {
+  const modal = document.getElementById("trainerLineupPlayerModal");
+  if (modal) modal.classList.add("hidden");
+
+  const state = window.__trainerLineupState;
+  if (state) state.activeSlotId = "";
+}
+
+function trainerLineupBackdropClick_(event) {
+  if (event?.target?.id === "trainerLineupPlayerModal") {
+    trainerCloseLineupPlayerModal_();
+  }
+}
+
+function trainerSaveLineupDraftLocal_() {
+  const state = window.__trainerLineupState;
+  if (!state || state.loading || state.error) return;
+
+  const payload = {
+    version: 1,
+    eventId: state.eventId,
+    sport: state.sport,
+    assignments: state.assignments,
+    playersSnapshot: state.players.map(player => ({
+      numer: player.number,
+      nazwisko: player.name,
+      accepted: player.accepted
+    })),
+    savedAt: new Date().toISOString()
+  };
+
+  try {
+    localStorage.setItem(
+      trainerLineupDraftKey_(state.eventId),
+      JSON.stringify(payload)
+    );
+
+    state.message = "Szkic zapisany na tym urządzeniu. Zapis do kalendarza podłączymy w następnym etapie.";
+    trainerRenderLineupEditor_();
+
+    document
+      .querySelectorAll("button[data-lineup-event-id]")
+      .forEach(button => {
+        if (button.dataset.lineupEventId === state.eventId) {
+          button.textContent = "🧩 Edytuj lineup";
+        }
+      });
+
+  } catch (e) {
+    state.message = "Nie udało się zapisać lokalnego szkicu.";
+    trainerRenderLineupEditor_();
+  }
+}
+
+  
 /* --- dodawanie wydarzenia --- */
 async function zaladujListeTrenerow() {
   const CACHE_SCOPE = "clubTrainers";
