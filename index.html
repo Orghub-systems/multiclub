@@ -551,6 +551,15 @@ input[type="number"] {
     .trainer-lineup-board[data-sport="football"] {
       background: linear-gradient(180deg, #1d6531, #0d3519);
     }
+
+    .trainer-lineup-board[data-sport="hockey"] {
+      aspect-ratio: 3 / 5;
+    }
+    
+    .trainer-lineup-board[data-sport="hockey"] .trainer-lineup-slot {
+      min-height: 36px;
+      padding: 3px 4px;
+    }
     
     .trainer-lineup-board[data-sport="volleyball"] {
       background: linear-gradient(180deg, #bd7c38, #70431e);
@@ -574,6 +583,37 @@ input[type="number"] {
     .trainer-lineup-board.image-loaded .trainer-lineup-board-image {
       opacity: 1;
     }
+
+    .trainer-lineup-guide {
+      position: absolute;
+      left: 4%;
+      right: 4%;
+      transform: translateY(-50%);
+      z-index: 2;
+    
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    
+      pointer-events: none;
+      color: rgba(255,255,255,.82);
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+    
+    .trainer-lineup-guide::before,
+    .trainer-lineup-guide::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,.52);
+    }
+    
+    .trainer-lineup-guide span {
+      white-space: nowrap;
+    }
     
     .trainer-lineup-slot {
       position: absolute;
@@ -593,6 +633,10 @@ input[type="number"] {
       border-style: solid;
       background: rgba(125,0,0,.9);
       border-color: rgba(255,255,255,.88);
+    }
+
+    .trainer-lineup-slot:active {
+      transform: translate(-50%, -50%) scale(.98);
     }
     
     .trainer-lineup-slot-code {
@@ -804,7 +848,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.08';
+  window.APP_BUILD = 'APP v3.09';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1982,6 +2026,7 @@ input[type="number"] {
         src=""
         alt=""
       >
+      <div id="trainerLineupGuides"></div>
       <div id="trainerLineupSlots"></div>
     </div>
   </div>
@@ -13028,32 +13073,60 @@ async function trainerToggleZapisani(id) {
 }
 
 const TRAINER_LINEUP_TEMPLATES_ = Object.freeze({
-  hockey: {
-    label: "Hokej",
-    image: "assets/lineups/hockey.webp",
-    slots: [
-      { id: "1LN", label: "1. lewy napastnik", x: 18, y: 13 },
-      { id: "1SN", label: "1. środkowy napastnik", x: 50, y: 10 },
-      { id: "1PN", label: "1. prawy napastnik", x: 82, y: 13 },
-      { id: "1LO", label: "1. lewy obrońca", x: 34, y: 25 },
-      { id: "1PO", label: "1. prawy obrońca", x: 66, y: 25 },
+hockey: {
+  label: "Hokej",
+  image: "assets/lineups/hockey.webp",
 
-      { id: "2LN", label: "2. lewy napastnik", x: 18, y: 37 },
-      { id: "2SN", label: "2. środkowy napastnik", x: 50, y: 34 },
-      { id: "2PN", label: "2. prawy napastnik", x: 82, y: 37 },
-      { id: "2LO", label: "2. lewy obrońca", x: 34, y: 49 },
-      { id: "2PO", label: "2. prawy obrońca", x: 66, y: 49 },
+  guides: [
+    { label: "LINE 1", y: 3.5 },
+    { label: "LINE 2", y: 24.5 },
+    { label: "LINE 3", y: 45.5 },
+    { label: "LINE 4", y: 66.5 },
+    { label: "BRAMKARZE", y: 87 }
+  ],
 
-      { id: "3LN", label: "3. lewy napastnik", x: 18, y: 61 },
-      { id: "3SN", label: "3. środkowy napastnik", x: 50, y: 58 },
-      { id: "3PN", label: "3. prawy napastnik", x: 82, y: 61 },
-      { id: "3LO", label: "3. lewy obrońca", x: 34, y: 73 },
-      { id: "3PO", label: "3. prawy obrońca", x: 66, y: 73 },
+  slots: [
+    // LINE 1 — obrońcy
+    { id: "1PO", label: "Prawy obrońca pierwszej piątki", x: 34, y: 9.5 },
+    { id: "1LO", label: "Lewy obrońca pierwszej piątki", x: 66, y: 9.5 },
 
-      { id: "BR1", label: "Pierwszy bramkarz", x: 38, y: 90 },
-      { id: "BR2", label: "Drugi bramkarz", x: 62, y: 90 }
-    ]
-  },
+    // LINE 1 — napastnicy
+    { id: "1PN", label: "Prawy napastnik pierwszej piątki", x: 18, y: 17 },
+    { id: "1SN", label: "Środkowy napastnik pierwszej piątki", x: 50, y: 17 },
+    { id: "1LN", label: "Lewy napastnik pierwszej piątki", x: 82, y: 17 },
+
+    // LINE 2 — obrońcy
+    { id: "2PO", label: "Prawy obrońca drugiej piątki", x: 34, y: 30.5 },
+    { id: "2LO", label: "Lewy obrońca drugiej piątki", x: 66, y: 30.5 },
+
+    // LINE 2 — napastnicy
+    { id: "2PN", label: "Prawy napastnik drugiej piątki", x: 18, y: 38 },
+    { id: "2SN", label: "Środkowy napastnik drugiej piątki", x: 50, y: 38 },
+    { id: "2LN", label: "Lewy napastnik drugiej piątki", x: 82, y: 38 },
+
+    // LINE 3 — obrońcy
+    { id: "3PO", label: "Prawy obrońca trzeciej piątki", x: 34, y: 51.5 },
+    { id: "3LO", label: "Lewy obrońca trzeciej piątki", x: 66, y: 51.5 },
+
+    // LINE 3 — napastnicy
+    { id: "3PN", label: "Prawy napastnik trzeciej piątki", x: 18, y: 59 },
+    { id: "3SN", label: "Środkowy napastnik trzeciej piątki", x: 50, y: 59 },
+    { id: "3LN", label: "Lewy napastnik trzeciej piątki", x: 82, y: 59 },
+
+    // LINE 4 — obrońcy
+    { id: "4PO", label: "Prawy obrońca czwartej piątki", x: 34, y: 72.5 },
+    { id: "4LO", label: "Lewy obrońca czwartej piątki", x: 66, y: 72.5 },
+
+    // LINE 4 — napastnicy
+    { id: "4PN", label: "Prawy napastnik czwartej piątki", x: 18, y: 80 },
+    { id: "4SN", label: "Środkowy napastnik czwartej piątki", x: 50, y: 80 },
+    { id: "4LN", label: "Lewy napastnik czwartej piątki", x: 82, y: 80 },
+
+    // Bramkarze
+    { id: "BR1", label: "Pierwszy bramkarz", x: 34, y: 94 },
+    { id: "BR2", label: "Drugi bramkarz", x: 66, y: 94 }
+  ]
+},
 
   football: {
     label: "Piłka nożna 4-4-2",
@@ -13435,6 +13508,21 @@ function trainerRenderLineupEditor_() {
     image.alt = `Plansza: ${template.label}`;
   }
 
+  const guidesBox = document.getElementById("trainerLineupGuides");
+
+  if (guidesBox) {
+    guidesBox.innerHTML = (template.guides || [])
+      .map(guide => `
+        <div
+          class="trainer-lineup-guide"
+          style="top:${Number(guide.y)}%;"
+        >
+          <span>${trainerEscHtml_(guide.label)}</span>
+        </div>
+      `)
+      .join("");
+  }
+  
   const slotsBox = document.getElementById("trainerLineupSlots");
   if (slotsBox) {
     slotsBox.innerHTML = template.slots
