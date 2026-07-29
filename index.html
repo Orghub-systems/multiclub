@@ -1065,7 +1065,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.13';
+  window.APP_BUILD = 'APP v3.14';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -13936,9 +13936,21 @@ function renderTreningiTrainer(lista) {
     const countValue = isPowolanie
       ? Number(t.powolanych || t.zapisanych || 0)
       : Number(t.zapisanych || 0);
-
-    const acceptedCount = Number(t.zaakceptowalo || 0);
-
+    const acceptedCount =
+      Number(t.zaakceptowalo || 0);
+    
+    /*
+     * Status lineupu pochodzi z odpowiedzi GAS.
+     * Obsługujemy boolean, 1 oraz tekst "TRUE",
+     * choć json_ powinien zwrócić zwykłe true/false.
+     */
+    const hasServerLineup =
+      t?.hasLineup === true ||
+      t?.hasLineup === 1 ||
+      String(t?.hasLineup || "")
+        .trim()
+        .toUpperCase() === "TRUE";
+    
     window.__trainerEventModeById[listId] = {
       isPowolanie,
       label: isPowolanie
@@ -13959,7 +13971,6 @@ function renderTreningiTrainer(lista) {
         end: String(t.godzKoniec || ""),
         rodzaj: String(t.rodzaj || "")
       };
-
       window.__trainerLineupEventById[listId] = {
         id: listId,
         key,
@@ -13971,7 +13982,12 @@ function renderTreningiTrainer(lista) {
         godzStart: String(t.godzStart || ""),
         godzKoniec: String(t.godzKoniec || ""),
         miejsce: String(t.miejsce || ""),
-        isPowolanie
+        isPowolanie,
+      
+        /*
+         * Status lineupu zapisanego w Kalendarzu.
+         */
+        hasLineup: hasServerLineup
       };
     }
 
@@ -14104,7 +14120,7 @@ function renderTreningiTrainer(lista) {
                         onclick="trainerOpenLineupEditor_('${trainerEscJsArg_(listId)}')"
                       >
                         ${
-                          trainerHasLocalLineupDraft_(listId)
+                          hasServerLineup
                             ? "🧩 Edytuj lineup"
                             : "🧩 Utwórz lineup"
                         }
@@ -17107,6 +17123,19 @@ async function trainerSaveLineupDraftLocal_() {
       )}.`;
 
     state.error = "";
+
+      /*
+     * Odpowiedź sukcesu z lineupSave potwierdza,
+     * że lineup istnieje już w Kalendarzu.
+     */
+    const eventState =
+      window.__trainerLineupEventById?.[
+        state.eventId
+      ];
+    
+    if (eventState) {
+      eventState.hasLineup = true;
+    }
 
     document
       .querySelectorAll(
