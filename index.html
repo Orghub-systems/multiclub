@@ -935,6 +935,55 @@ input[type="number"] {
     }
     /* ===== TRAINER LINEUP EDITOR: CSS END ===== */
 
+    /* ===== TRAINER LINEUP SHARE ===== */
+
+.trainer-lineup-share-hint {
+  width: min(520px, 100%);
+  margin: 0 auto 10px auto;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: .78;
+}
+
+.trainer-lineup-share-area {
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+  transition:
+    transform .14s ease,
+    filter .14s ease;
+}
+
+.trainer-lineup-share-area.trainer-lineup-holding {
+  transform: scale(.992);
+  filter: brightness(.82);
+}
+
+.trainer-lineup-share-status {
+  width: min(520px, 100%);
+  min-height: 18px;
+  margin: 8px auto 0 auto;
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: .76;
+}
+
+.trainer-lineup-share-status.preparing {
+  color: #ffd36b;
+}
+
+.trainer-lineup-share-status.ready {
+  color: #8fe3a8;
+}
+
+.trainer-lineup-share-status.error {
+  color: #ff8f8f;
+  font-weight: 800;
+}
+
+    
     /* ===== ADMIN — UDOSTĘPNIANIE KLUBU: CSS START ===== */
 #orgHubClubShareSection {
         border-top: 1px solid rgba(255,255,255,.12);
@@ -984,7 +1033,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.11';
+  window.APP_BUILD = 'APP v3.12';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2235,14 +2284,28 @@ input[type="number"] {
 
   <div id="trainerLineupStatus" class="trainer-lineup-status"></div>
 
+<div class="trainer-lineup-share-hint">
+  Naciśnij i przytrzymaj ekran, aby udostępnić lineup.
+</div>
+
+<div
+  id="trainerLineupShareArea"
+  class="trainer-lineup-share-area"
+  aria-label="Naciśnij i przytrzymaj, aby udostępnić lineup"
+>
   <div class="trainer-lineup-board-wrap">
-    <div id="trainerLineupBoard" class="trainer-lineup-board" data-sport="hockey">
+    <div
+      id="trainerLineupBoard"
+      class="trainer-lineup-board"
+      data-sport="hockey"
+    >
       <img
         id="trainerLineupBackground"
         class="trainer-lineup-board-image"
         src=""
         alt=""
       >
+
       <div id="trainerLineupGuides"></div>
       <div id="trainerLineupSlots"></div>
     </div>
@@ -2250,9 +2313,23 @@ input[type="number"] {
 
   <div class="trainer-lineup-reserves-card">
     <h3>Rezerwowi</h3>
-    <div id="trainerLineupReserveSlots" class="trainer-lineup-reserve-slots"></div>
-    <div id="trainerLineupUnassignedSummary" class="trainer-lineup-unassigned-summary"></div>
+
+    <div
+      id="trainerLineupReserveSlots"
+      class="trainer-lineup-reserve-slots"
+    ></div>
+
+    <div
+      id="trainerLineupUnassignedSummary"
+      class="trainer-lineup-unassigned-summary"
+    ></div>
   </div>
+</div>
+
+<div
+  id="trainerLineupShareStatus"
+  class="trainer-lineup-share-status"
+></div>
 
   <div class="trainer-lineup-actions">
     <button
@@ -14087,6 +14164,1827 @@ slots: [
 window.__trainerLineupState = null;
 window.__trainerLineupReturnScrollY = 0;
 
+  const TRAINER_LINEUP_SHARE_LONG_PRESS_MS_ = 650;
+
+window.__trainerLineupShareState = {
+  file: null,
+  lastSignature: "",
+  pendingSignature: "",
+  prepareTimer: null,
+  buildId: 0,
+  preparing: false,
+  imagePromises: {},
+
+  pressTimer: null,
+  pressReady: false,
+  pressStartedAt: 0,
+  pointerId: null,
+  startX: 0,
+  startY: 0,
+  suppressClickUntil: 0
+};
+
+
+function trainerLineupShareNotify_(
+  message,
+  type
+) {
+  if (typeof showToast_ === "function") {
+    showToast_(
+      message,
+      type || ""
+    );
+
+    return;
+  }
+
+  alert(message);
+}
+
+
+function trainerLineupShareSetStatus_(
+  message,
+  type
+) {
+  const el = document.getElementById(
+    "trainerLineupShareStatus"
+  );
+
+  if (!el) {
+    return;
+  }
+
+  el.textContent = String(
+    message || ""
+  );
+
+  el.className =
+    "trainer-lineup-share-status";
+
+  if (type) {
+    el.classList.add(
+      String(type)
+    );
+  }
+}
+
+
+function trainerLineupShareClubName_() {
+  let savedClubId = "";
+
+  try {
+    savedClubId = String(
+      localStorage.getItem("clubId") || ""
+    ).trim();
+
+  } catch (ignore) {}
+
+  const raw = String(
+    window.clubId ||
+    (
+      typeof clubId !== "undefined"
+        ? clubId
+        : ""
+    ) ||
+    savedClubId ||
+    "ORG HUB"
+  ).trim();
+
+  return raw
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
+
+
+/**
+ * Podpis aktualnego lineupu.
+ *
+ * Dzięki temu obraz jest generowany ponownie
+ * wyłącznie po faktycznej zmianie składu.
+ */
+function trainerLineupShareSignature_() {
+  const state =
+    window.__trainerLineupState;
+
+  if (!state) {
+    return "";
+  }
+
+  const playersById = {};
+
+  (
+    Array.isArray(state.players)
+      ? state.players
+      : []
+  ).forEach(function(player) {
+    playersById[
+      String(player?.id || "")
+    ] = String(
+      player?.name ||
+      player?.nazwisko ||
+      ""
+    ).trim();
+  });
+
+  const assignments =
+    Object.keys(
+      state.assignments || {}
+    )
+      .sort()
+      .map(function(slotId) {
+        const item =
+          state.assignments[slotId] || {};
+
+        const playerId = String(
+          item.playerId || ""
+        ).trim();
+
+        return [
+          slotId,
+          playerId,
+          String(
+            item.role || ""
+          ).trim(),
+          playersById[playerId] || ""
+        ];
+      });
+
+  const event =
+    state.event || {};
+
+  return JSON.stringify({
+    eventId:
+      String(state.eventId || ""),
+
+    sport:
+      String(state.sport || ""),
+
+    rodzaj:
+      String(event.rodzaj || ""),
+
+    data:
+      String(event.data || ""),
+
+    godzStart:
+      String(event.godzStart || ""),
+
+    assignments
+  });
+}
+
+
+/**
+ * Tworzy niezmienną kopię danych używaną
+ * podczas generowania obrazu.
+ */
+function trainerLineupShareSnapshot_() {
+  const state =
+    window.__trainerLineupState;
+
+  if (!state) {
+    return null;
+  }
+
+  return {
+    eventId:
+      String(state.eventId || ""),
+
+    sport:
+      String(
+        state.sport || "hockey"
+      ),
+
+    event: {
+      rodzaj: String(
+        state.event?.rodzaj ||
+        "Wydarzenie"
+      ),
+
+      data: String(
+        state.event?.data || ""
+      ),
+
+      godzStart: String(
+        state.event?.godzStart || ""
+      )
+    },
+
+    assignments: JSON.parse(
+      JSON.stringify(
+        state.assignments || {}
+      )
+    ),
+
+    players: (
+      Array.isArray(state.players)
+        ? state.players
+        : []
+    ).map(function(player) {
+      return {
+        id: String(
+          player?.id || ""
+        ),
+
+        name: String(
+          player?.name ||
+          player?.nazwisko ||
+          ""
+        ).trim()
+      };
+    })
+  };
+}
+
+
+/**
+ * Przygotowanie obrazu z krótkim debounce.
+ *
+ * Podczas szybkiego ustawiania kilku zawodników
+ * obraz zostanie zbudowany dopiero po ostatniej
+ * zmianie, a nie po każdym kliknięciu.
+ */
+function trainerLineupScheduleShareFile_(
+  delayMs
+) {
+  const share =
+    window.__trainerLineupShareState;
+
+  const state =
+    window.__trainerLineupState;
+
+  if (!share) {
+    return;
+  }
+
+  const assignmentsCount =
+    Object.keys(
+      state?.assignments || {}
+    ).length;
+
+  if (
+    !state ||
+    state.loading ||
+    state.error ||
+    assignmentsCount === 0
+  ) {
+    if (share.prepareTimer) {
+      clearTimeout(
+        share.prepareTimer
+      );
+
+      share.prepareTimer = null;
+    }
+
+    share.buildId++;
+    share.file = null;
+    share.lastSignature = "";
+    share.pendingSignature = "";
+    share.preparing = false;
+
+    trainerLineupShareSetStatus_(
+      ""
+    );
+
+    return;
+  }
+
+  const signature =
+    trainerLineupShareSignature_();
+
+  if (
+    share.file &&
+    share.lastSignature === signature
+  ) {
+    trainerLineupShareSetStatus_(
+      "Obraz jest gotowy do udostępnienia.",
+      "ready"
+    );
+
+    return;
+  }
+
+  if (
+    share.pendingSignature === signature &&
+    (
+      share.prepareTimer ||
+      share.preparing
+    )
+  ) {
+    return;
+  }
+
+  if (share.prepareTimer) {
+    clearTimeout(
+      share.prepareTimer
+    );
+  }
+
+  share.file = null;
+  share.lastSignature = "";
+  share.pendingSignature =
+    signature;
+
+  const requestId =
+    ++share.buildId;
+
+  const delay =
+    Number.isFinite(
+      Number(delayMs)
+    )
+      ? Math.max(
+          0,
+          Number(delayMs)
+        )
+      : 180;
+
+  trainerLineupShareSetStatus_(
+    "Przygotowuję obraz lineupu…",
+    "preparing"
+  );
+
+  share.prepareTimer =
+    window.setTimeout(
+      function() {
+        share.prepareTimer = null;
+
+        trainerLineupPrepareShareFile_(
+          signature,
+          requestId
+        );
+      },
+      delay
+    );
+}
+
+
+async function trainerLineupPrepareShareFile_(
+  signature,
+  requestId
+) {
+  const share =
+    window.__trainerLineupShareState;
+
+  if (
+    !share ||
+    requestId !== share.buildId
+  ) {
+    return;
+  }
+
+  const snapshot =
+    trainerLineupShareSnapshot_();
+
+  if (
+    !snapshot ||
+    trainerLineupShareSignature_() !==
+      signature
+  ) {
+    return;
+  }
+
+  share.preparing = true;
+
+  try {
+    const file =
+      await trainerLineupBuildShareFile_(
+        snapshot
+      );
+
+    if (
+      requestId !== share.buildId ||
+      trainerLineupShareSignature_() !==
+        signature
+    ) {
+      return;
+    }
+
+    share.file = file;
+    share.lastSignature =
+      signature;
+
+    share.pendingSignature = "";
+
+    trainerLineupShareSetStatus_(
+      "Obraz jest gotowy do udostępnienia.",
+      "ready"
+    );
+
+  } catch (error) {
+    if (
+      requestId !== share.buildId
+    ) {
+      return;
+    }
+
+    share.file = null;
+    share.lastSignature = "";
+    share.pendingSignature = "";
+
+    console.error(
+      "trainerLineupPrepareShareFile_ error:",
+      error
+    );
+
+    trainerLineupShareSetStatus_(
+      "Nie udało się przygotować obrazu lineupu.",
+      "error"
+    );
+
+  } finally {
+    if (
+      requestId === share.buildId
+    ) {
+      share.preparing = false;
+    }
+  }
+}
+
+
+/**
+ * Obraz planszy jest przechowywany w pamięci,
+ * więc kolejne generowanie nie pobiera go ponownie.
+ */
+function trainerLineupLoadShareImage_(
+  src
+) {
+  const share =
+    window.__trainerLineupShareState;
+
+  const absoluteSrc = new URL(
+    String(src || ""),
+    window.location.href
+  ).href;
+
+  if (
+    share.imagePromises[absoluteSrc]
+  ) {
+    return share.imagePromises[
+      absoluteSrc
+    ];
+  }
+
+  share.imagePromises[absoluteSrc] =
+    new Promise(
+      function(resolve, reject) {
+        const image =
+          new Image();
+
+        image.decoding = "async";
+
+        image.onload = function() {
+          resolve(image);
+        };
+
+        image.onerror = function() {
+          reject(
+            new Error(
+              "Nie udało się wczytać planszy lineupu."
+            )
+          );
+        };
+
+        image.src =
+          absoluteSrc;
+
+        if (
+          image.complete &&
+          image.naturalWidth > 0
+        ) {
+          resolve(image);
+        }
+      }
+    );
+
+  return share.imagePromises[
+    absoluteSrc
+  ];
+}
+
+
+function trainerLineupCanvasToBlob_(
+  canvas
+) {
+  return new Promise(
+    function(resolve, reject) {
+      canvas.toBlob(
+        function(blob) {
+          if (blob) {
+            resolve(blob);
+
+          } else {
+            reject(
+              new Error(
+                "Nie udało się utworzyć obrazu lineupu."
+              )
+            );
+          }
+        },
+        "image/png",
+        1
+      );
+    }
+  );
+}
+
+
+function trainerLineupCanvasRoundRectPath_(
+  ctx,
+  x,
+  y,
+  width,
+  height,
+  radius
+) {
+  const r = Math.min(
+    Number(radius) || 0,
+    width / 2,
+    height / 2
+  );
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(
+    x + width - r,
+    y
+  );
+
+  ctx.quadraticCurveTo(
+    x + width,
+    y,
+    x + width,
+    y + r
+  );
+
+  ctx.lineTo(
+    x + width,
+    y + height - r
+  );
+
+  ctx.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - r,
+    y + height
+  );
+
+  ctx.lineTo(
+    x + r,
+    y + height
+  );
+
+  ctx.quadraticCurveTo(
+    x,
+    y + height,
+    x,
+    y + height - r
+  );
+
+  ctx.lineTo(
+    x,
+    y + r
+  );
+
+  ctx.quadraticCurveTo(
+    x,
+    y,
+    x + r,
+    y
+  );
+
+  ctx.closePath();
+}
+
+
+function trainerLineupDrawCoverImage_(
+  ctx,
+  image,
+  x,
+  y,
+  width,
+  height
+) {
+  const sourceWidth =
+    image.naturalWidth ||
+    image.width;
+
+  const sourceHeight =
+    image.naturalHeight ||
+    image.height;
+
+  const scale = Math.max(
+    width / sourceWidth,
+    height / sourceHeight
+  );
+
+  const cropWidth =
+    width / scale;
+
+  const cropHeight =
+    height / scale;
+
+  const sourceX =
+    (
+      sourceWidth -
+      cropWidth
+    ) / 2;
+
+  const sourceY =
+    (
+      sourceHeight -
+      cropHeight
+    ) / 2;
+
+  ctx.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    cropWidth,
+    cropHeight,
+    x,
+    y,
+    width,
+    height
+  );
+}
+
+
+function trainerLineupFitCanvasText_(
+  ctx,
+  text,
+  maxWidth,
+  initialSize,
+  minSize,
+  fontPrefix,
+  fontFamily
+) {
+  let size =
+    Number(initialSize) || 30;
+
+  const minimum =
+    Number(minSize) || 16;
+
+  while (size > minimum) {
+    ctx.font = [
+      fontPrefix || "900",
+      size + "px",
+      fontFamily ||
+        "Arial, sans-serif"
+    ].join(" ");
+
+    if (
+      ctx.measureText(
+        String(text || "")
+      ).width <= maxWidth
+    ) {
+      return size;
+    }
+
+    size -= 1;
+  }
+
+  return minimum;
+}
+
+
+function trainerLineupSafeFilePart_(
+  value
+) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .replace(
+      /[^a-zA-Z0-9_-]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    )
+    .toLowerCase();
+}
+
+
+/**
+ * Buduje gotową grafikę 1080 × 1920.
+ *
+ * Obraz zawiera:
+ * - nazwę klubu,
+ * - dane wydarzenia,
+ * - planszę i wszystkie piątki,
+ * - bramkarzy,
+ * - role C/A,
+ * - listę rezerwowych.
+ */
+async function trainerLineupBuildShareFile_(
+  snapshot
+) {
+  if (
+    snapshot.sport !== "hockey"
+  ) {
+    throw new Error(
+      "Udostępnianie jest obecnie dostępne dla hokeja."
+    );
+  }
+
+  const template =
+    TRAINER_LINEUP_TEMPLATES_[
+      snapshot.sport
+    ];
+
+  if (!template) {
+    throw new Error(
+      "Brak szablonu lineupu."
+    );
+  }
+
+  if (document.fonts?.ready) {
+    try {
+      await document.fonts.ready;
+    } catch (ignore) {}
+  }
+
+  const backgroundImage =
+    await trainerLineupLoadShareImage_(
+      template.image
+    );
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+  canvas.width = 1080;
+  canvas.height = 1920;
+
+  const ctx =
+    canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error(
+      "Brak obsługi obrazu."
+    );
+  }
+
+  const fontFamily =
+    'Collage, "Arial Narrow", Arial, sans-serif';
+
+  ctx.fillStyle = "#050505";
+
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const clubName =
+    trainerLineupShareClubName_();
+
+  const eventName = String(
+    snapshot.event?.rodzaj ||
+    "Wydarzenie"
+  ).trim();
+
+  const eventDateTime = [
+    String(
+      snapshot.event?.data || ""
+    ).trim(),
+
+    String(
+      snapshot.event?.godzStart ||
+      ""
+    ).trim()
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillStyle =
+    "rgba(255,255,255,.74)";
+
+  ctx.font =
+    "900 30px " +
+    fontFamily;
+
+  ctx.fillText(
+    clubName,
+    540,
+    34
+  );
+
+  ctx.fillStyle = "#ffffff";
+
+  ctx.font =
+    "italic 900 64px " +
+    fontFamily;
+
+  ctx.fillText(
+    "LINEUP",
+    540,
+    88
+  );
+
+  const eventNameSize =
+    trainerLineupFitCanvasText_(
+      ctx,
+      eventName,
+      940,
+      42,
+      26,
+      "italic 900",
+      fontFamily
+    );
+
+  ctx.font =
+    "italic 900 " +
+    eventNameSize +
+    "px " +
+    fontFamily;
+
+  ctx.fillText(
+    eventName,
+    540,
+    148
+  );
+
+  ctx.fillStyle =
+    "rgba(255,255,255,.78)";
+
+  ctx.font =
+    "700 27px Arial, sans-serif";
+
+  ctx.fillText(
+    eventDateTime,
+    540,
+    193
+  );
+
+  const boardX = 40;
+  const boardY = 225;
+  const boardWidth = 1000;
+  const boardHeight = 1375;
+
+  ctx.save();
+
+  trainerLineupCanvasRoundRectPath_(
+    ctx,
+    boardX,
+    boardY,
+    boardWidth,
+    boardHeight,
+    34
+  );
+
+  ctx.clip();
+
+  trainerLineupDrawCoverImage_(
+    ctx,
+    backgroundImage,
+    boardX,
+    boardY,
+    boardWidth,
+    boardHeight
+  );
+
+  ctx.fillStyle =
+    "rgba(0,0,0,.08)";
+
+  ctx.fillRect(
+    boardX,
+    boardY,
+    boardWidth,
+    boardHeight
+  );
+
+  ctx.restore();
+
+  (
+    template.guides || []
+  ).forEach(function(guide) {
+    const guideY =
+      boardY +
+      (
+        Number(guide.y) /
+        100
+      ) *
+      boardHeight;
+
+    const label =
+      String(
+        guide.label || ""
+      );
+
+    ctx.font =
+      "italic 900 25px " +
+      fontFamily;
+
+    const labelWidth =
+      ctx.measureText(
+        label
+      ).width;
+
+    const gap =
+      labelWidth / 2 + 22;
+
+    ctx.strokeStyle =
+      "rgba(220,25,25,.95)";
+
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+
+    ctx.moveTo(
+      boardX + 115,
+      guideY
+    );
+
+    ctx.lineTo(
+      540 - gap,
+      guideY
+    );
+
+    ctx.moveTo(
+      540 + gap,
+      guideY
+    );
+
+    ctx.lineTo(
+      boardX +
+      boardWidth -
+      115,
+      guideY
+    );
+
+    ctx.stroke();
+
+    ctx.fillStyle =
+      "#e11b1b";
+
+    ctx.strokeStyle =
+      "rgba(0,0,0,.96)";
+
+    ctx.lineWidth = 7;
+    ctx.lineJoin = "round";
+
+    ctx.strokeText(
+      label,
+      540,
+      guideY
+    );
+
+    ctx.fillText(
+      label,
+      540,
+      guideY
+    );
+  });
+
+  const playersById = {};
+
+  snapshot.players.forEach(
+    function(player) {
+      playersById[
+        String(player.id)
+      ] = player;
+    }
+  );
+
+  (
+    template.slots || []
+  ).forEach(function(slot) {
+    const assignment =
+      snapshot.assignments?.[
+        slot.id
+      ];
+
+    if (!assignment) {
+      return;
+    }
+
+    const player =
+      playersById[
+        String(
+          assignment.playerId ||
+          ""
+        )
+      ];
+
+    const playerName =
+      String(
+        player?.name || ""
+      ).trim();
+
+    if (!playerName) {
+      return;
+    }
+
+    const centerX =
+      boardX +
+      (
+        Number(slot.x) /
+        100
+      ) *
+      boardWidth;
+
+    const centerY =
+      boardY +
+      (
+        Number(slot.y) /
+        100
+      ) *
+      boardHeight;
+
+    const textSize =
+      trainerLineupFitCanvasText_(
+        ctx,
+        playerName,
+        265,
+        34,
+        20,
+        "italic 900",
+        fontFamily
+      );
+
+    ctx.font =
+      "italic 900 " +
+      textSize +
+      "px " +
+      fontFamily;
+
+    ctx.fillStyle =
+      "#f5f5f5";
+
+    ctx.strokeStyle =
+      "rgba(0,0,0,.98)";
+
+    ctx.lineWidth = 8;
+    ctx.lineJoin = "round";
+    ctx.textAlign = "center";
+
+    ctx.strokeText(
+      playerName,
+      centerX,
+      centerY
+    );
+
+    ctx.fillText(
+      playerName,
+      centerX,
+      centerY
+    );
+
+    const role = String(
+      assignment.role || ""
+    )
+      .trim()
+      .toUpperCase();
+
+    if (
+      role === "C" ||
+      role === "A"
+    ) {
+      const measuredWidth =
+        Math.min(
+          ctx.measureText(
+            playerName
+          ).width,
+          230
+        );
+
+      const badgeX =
+        Math.min(
+          boardX +
+          boardWidth -
+          24,
+
+          centerX +
+          measuredWidth / 2 +
+          22
+        );
+
+      const badgeY =
+        centerY - 27;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        badgeX,
+        badgeY,
+        21,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        "#d71919";
+
+      ctx.fill();
+
+      ctx.strokeStyle =
+        "rgba(255,255,255,.72)";
+
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle =
+        "#ffffff";
+
+      ctx.font =
+        "900 23px Arial, sans-serif";
+
+      ctx.fillText(
+        role,
+        badgeX,
+        badgeY + 1
+      );
+    }
+  });
+
+  trainerLineupCanvasRoundRectPath_(
+    ctx,
+    boardX,
+    boardY,
+    boardWidth,
+    boardHeight,
+    34
+  );
+
+  ctx.strokeStyle =
+    "rgba(255,255,255,.35)";
+
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  const reserveItems =
+    Object.keys(
+      snapshot.assignments || {}
+    )
+      .filter(function(slotId) {
+        return /^R\d+$/.test(
+          String(slotId)
+        );
+      })
+      .sort(function(a, b) {
+        return (
+          Number(
+            a.substring(1)
+          ) -
+          Number(
+            b.substring(1)
+          )
+        );
+      })
+      .map(function(slotId) {
+        const assignment =
+          snapshot.assignments[
+            slotId
+          ] || {};
+
+        const player =
+          playersById[
+            String(
+              assignment.playerId ||
+              ""
+            )
+          ];
+
+        return {
+          slotId,
+
+          name: String(
+            player?.name || ""
+          ).trim(),
+
+          role: String(
+            assignment.role || ""
+          ).trim()
+        };
+      })
+      .filter(function(item) {
+        return !!item.name;
+      });
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#e11b1b";
+
+  ctx.font =
+    "italic 900 31px " +
+    fontFamily;
+
+  ctx.fillText(
+    "REZERWOWI",
+    540,
+    1640
+  );
+
+  if (reserveItems.length) {
+    const columns =
+      reserveItems.length > 12
+        ? 3
+        : 2;
+
+    const rows =
+      Math.ceil(
+        reserveItems.length /
+        columns
+      );
+
+    const areaX = 55;
+    const areaWidth = 970;
+
+    const columnWidth =
+      areaWidth / columns;
+
+    const startY = 1682;
+    const availableHeight = 170;
+
+    const rowHeight =
+      Math.min(
+        34,
+        availableHeight /
+        Math.max(rows, 1)
+      );
+
+    reserveItems.forEach(
+      function(item, index) {
+        const column =
+          index % columns;
+
+        const row =
+          Math.floor(
+            index / columns
+          );
+
+        const centerX =
+          areaX +
+          columnWidth * column +
+          columnWidth / 2;
+
+        const centerY =
+          startY +
+          row * rowHeight;
+
+        const label = [
+          item.slotId,
+          item.name,
+
+          item.role
+            ? "(" + item.role + ")"
+            : ""
+        ]
+          .filter(Boolean)
+          .join("  ");
+
+        const fontSize =
+          trainerLineupFitCanvasText_(
+            ctx,
+            label,
+            columnWidth - 26,
+            Math.min(
+              27,
+              rowHeight * .78
+            ),
+            16,
+            "italic 900",
+            fontFamily
+          );
+
+        ctx.font =
+          "italic 900 " +
+          fontSize +
+          "px " +
+          fontFamily;
+
+        ctx.fillStyle =
+          "#f5f5f5";
+
+        ctx.strokeStyle =
+          "rgba(0,0,0,.95)";
+
+        ctx.lineWidth = 6;
+
+        ctx.strokeText(
+          label,
+          centerX,
+          centerY
+        );
+
+        ctx.fillText(
+          label,
+          centerX,
+          centerY
+        );
+      }
+    );
+
+  } else {
+    ctx.fillStyle =
+      "rgba(255,255,255,.62)";
+
+    ctx.font =
+      "600 25px Arial, sans-serif";
+
+    ctx.fillText(
+      "Brak zawodników rezerwowych",
+      540,
+      1690
+    );
+  }
+
+  ctx.fillStyle =
+    "rgba(255,255,255,.5)";
+
+  ctx.font =
+    "900 22px Arial, sans-serif";
+
+  ctx.fillText(
+    "ORG HUB",
+    540,
+    1888
+  );
+
+  const blob =
+    await trainerLineupCanvasToBlob_(
+      canvas
+    );
+
+  const safeClub =
+    trainerLineupSafeFilePart_(
+      clubName
+    ) || "klub";
+
+  const safeDate =
+    trainerLineupSafeFilePart_(
+      snapshot.event?.data
+    );
+
+  const fileName = [
+    "lineup",
+    safeClub,
+    safeDate
+  ]
+    .filter(Boolean)
+    .join("-") +
+    ".png";
+
+  if (
+    typeof File === "function"
+  ) {
+    return new File(
+      [blob],
+      fileName,
+      {
+        type: "image/png"
+      }
+    );
+  }
+
+  blob.name = fileName;
+  blob.lastModified =
+    Date.now();
+
+  return blob;
+}
+
+
+function trainerLineupDownloadShareFile_(
+  file
+) {
+  const objectUrl =
+    URL.createObjectURL(file);
+
+  const link =
+    document.createElement("a");
+
+  link.href = objectUrl;
+
+  link.download =
+    file.name ||
+    "lineup.png";
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+  link.remove();
+
+  window.setTimeout(
+    function() {
+      URL.revokeObjectURL(
+        objectUrl
+      );
+    },
+    1500
+  );
+}
+
+
+async function trainerLineupSharePrepared_() {
+  const share =
+    window.__trainerLineupShareState;
+
+  const file =
+    share?.file;
+
+  if (!file) {
+    trainerLineupScheduleShareFile_(
+      0
+    );
+
+    trainerLineupShareNotify_(
+      "Obraz jeszcze się przygotowuje. Przytrzymaj ponownie za chwilę.",
+      "error"
+    );
+
+    return;
+  }
+
+  const state =
+    window.__trainerLineupState ||
+    {};
+
+  const event =
+    state.event || {};
+
+  const clubName =
+    trainerLineupShareClubName_();
+
+  try {
+    const canShareFile =
+      typeof navigator.share ===
+        "function" &&
+
+      typeof navigator.canShare ===
+        "function" &&
+
+      navigator.canShare({
+        files: [file]
+      });
+
+    if (canShareFile) {
+      await navigator.share({
+        title:
+          "Lineup — " +
+          clubName,
+
+        text: [
+          String(
+            event.rodzaj ||
+            "Lineup"
+          ),
+
+          String(
+            event.data || ""
+          ),
+
+          String(
+            event.godzStart ||
+            ""
+          )
+        ]
+          .filter(Boolean)
+          .join(" · "),
+
+        files: [file]
+      });
+
+      return;
+    }
+
+    trainerLineupDownloadShareFile_(
+      file
+    );
+
+    trainerLineupShareNotify_(
+      "Obraz lineupu został zapisany."
+    );
+
+  } catch (error) {
+    if (
+      error?.name ===
+      "AbortError"
+    ) {
+      return;
+    }
+
+    console.error(
+      "trainerLineupSharePrepared_ error:",
+      error
+    );
+
+    trainerLineupShareNotify_(
+      "Nie udało się otworzyć udostępniania.",
+      "error"
+    );
+  }
+}
+
+
+function trainerLineupClearSharePress_(
+  area
+) {
+  const share =
+    window.__trainerLineupShareState;
+
+  if (!share) {
+    return;
+  }
+
+  if (share.pressTimer) {
+    clearTimeout(
+      share.pressTimer
+    );
+
+    share.pressTimer = null;
+  }
+
+  share.pressReady = false;
+  share.pressStartedAt = 0;
+  share.pointerId = null;
+
+  if (area) {
+    area.classList.remove(
+      "trainer-lineup-holding"
+    );
+  }
+}
+
+
+/**
+ * Długie przytrzymanie nie blokuje zwykłego
+ * klikania pozycji lineupu.
+ *
+ * Przesunięcie palca o ponad 16 px oznacza
+ * przewijanie i anuluje udostępnianie.
+ */
+function trainerLineupBindShareLongPress_() {
+  const area =
+    document.getElementById(
+      "trainerLineupShareArea"
+    );
+
+  const share =
+    window.__trainerLineupShareState;
+
+  if (
+    !area ||
+    !share ||
+    area.dataset.longPressBound ===
+      "1"
+  ) {
+    return;
+  }
+
+  area.dataset.longPressBound =
+    "1";
+
+  area.addEventListener(
+    "contextmenu",
+    function(event) {
+      event.preventDefault();
+    }
+  );
+
+  /*
+   * Po długim przytrzymaniu zatrzymujemy
+   * syntetyczne kliknięcie, aby nie otworzył
+   * się modal wyboru zawodnika.
+   */
+  area.addEventListener(
+    "click",
+    function(event) {
+      if (
+        Date.now() <
+        share.suppressClickUntil
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      }
+    },
+    true
+  );
+
+  area.addEventListener(
+    "pointerdown",
+    function(event) {
+      if (
+        event.pointerType === "mouse" &&
+        event.button !== 0
+      ) {
+        return;
+      }
+
+      const state =
+        window.__trainerLineupState;
+
+      if (
+        !state ||
+        state.loading ||
+        state.error ||
+        Object.keys(
+          state.assignments || {}
+        ).length === 0
+      ) {
+        return;
+      }
+
+      trainerLineupClearSharePress_(
+        area
+      );
+
+      share.pointerId =
+        event.pointerId;
+
+      share.pressStartedAt =
+        Date.now();
+
+      share.startX =
+        Number(
+          event.clientX || 0
+        );
+
+      share.startY =
+        Number(
+          event.clientY || 0
+        );
+
+      area.classList.add(
+        "trainer-lineup-holding"
+      );
+
+      /*
+       * Awaryjnie rozpoczynamy przygotowanie
+       * obrazu podczas trzymania palca.
+       */
+      if (!share.file) {
+        trainerLineupScheduleShareFile_(
+          0
+        );
+      }
+
+      try {
+        area.setPointerCapture(
+          event.pointerId
+        );
+
+      } catch (ignore) {}
+
+      share.pressTimer =
+        window.setTimeout(
+          function() {
+            share.pressReady = true;
+
+            if (
+              navigator.vibrate
+            ) {
+              navigator.vibrate(
+                35
+              );
+            }
+          },
+          TRAINER_LINEUP_SHARE_LONG_PRESS_MS_
+        );
+    }
+  );
+
+  area.addEventListener(
+    "pointermove",
+    function(event) {
+      if (
+        share.pointerId !==
+        event.pointerId
+      ) {
+        return;
+      }
+
+      const movedX =
+        Math.abs(
+          Number(
+            event.clientX || 0
+          ) -
+          share.startX
+        );
+
+      const movedY =
+        Math.abs(
+          Number(
+            event.clientY || 0
+          ) -
+          share.startY
+        );
+
+      if (
+        movedX > 16 ||
+        movedY > 16
+      ) {
+        trainerLineupClearSharePress_(
+          area
+        );
+      }
+    }
+  );
+
+  area.addEventListener(
+    "pointerup",
+    function(event) {
+      if (
+        share.pointerId !==
+        event.pointerId
+      ) {
+        return;
+      }
+
+      const heldLongEnough =
+        share.pressReady ||
+        (
+          share.pressStartedAt &&
+          Date.now() -
+            share.pressStartedAt >=
+            TRAINER_LINEUP_SHARE_LONG_PRESS_MS_
+        );
+
+      trainerLineupClearSharePress_(
+        area
+      );
+
+      if (!heldLongEnough) {
+        return;
+      }
+
+      share.suppressClickUntil =
+        Date.now() + 750;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      trainerLineupSharePrepared_();
+    }
+  );
+
+  [
+    "pointercancel",
+    "lostpointercapture"
+  ].forEach(function(eventName) {
+    area.addEventListener(
+      eventName,
+      function() {
+        trainerLineupClearSharePress_(
+          area
+        );
+      }
+    );
+  });
+}
+
+
+/**
+ * Zwolnienie pliku PNG i timerów po
+ * zamknięciu widoku lineupu.
+ */
+function trainerLineupResetShare_() {
+  const share =
+    window.__trainerLineupShareState;
+
+  if (!share) {
+    return;
+  }
+
+  if (share.prepareTimer) {
+    clearTimeout(
+      share.prepareTimer
+    );
+  }
+
+  if (share.pressTimer) {
+    clearTimeout(
+      share.pressTimer
+    );
+  }
+
+  share.buildId++;
+  share.file = null;
+  share.lastSignature = "";
+  share.pendingSignature = "";
+  share.prepareTimer = null;
+  share.preparing = false;
+  share.pressTimer = null;
+  share.pressReady = false;
+  share.pressStartedAt = 0;
+  share.pointerId = null;
+  share.suppressClickUntil = 0;
+
+  trainerLineupShareSetStatus_(
+    ""
+  );
+}
+
 function trainerLineupDraftKey_(eventId) {
   return [
     "orghub.lineup.frontDraft.v1",
@@ -14503,6 +16401,8 @@ async function trainerOpenLineupEditor_(eventId) {
 
 function trainerCloseLineupEditor_() {
   trainerCloseLineupPlayerModal_();
+  trainerLineupResetShare_();
+
   goToView("trainerWydarzeniaCurrentView");
 
   const scrollY = Number(window.__trainerLineupReturnScrollY || 0);
@@ -14722,6 +16622,9 @@ function trainerRenderLineupEditor_() {
       !!state.error ||
       total === 0;
   }
+
+  trainerLineupBindShareLongPress_();
+  trainerLineupScheduleShareFile_();
 }
 
 function trainerOpenLineupSlot_(slotId) {
