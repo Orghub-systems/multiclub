@@ -2144,7 +2144,7 @@ input[type="number"] {
       class="full-btn"
       onclick="trainerSaveLineupDraftLocal_()"
     >
-      💾 Zapisz szkic
+      💾 Zapisz lineup
     </button>
 
     <button
@@ -13716,7 +13716,11 @@ function trainerRenderLineupEditor_() {
 
   const saveButton = document.getElementById("btnTrainerLineupLocalSave");
   if (saveButton) {
-    saveButton.disabled = state.loading || !!state.error || total === 0;
+    saveButton.disabled =
+      state.loading ||
+      state.saving ||
+      !!state.error ||
+      total === 0;
   }
 }
 
@@ -13921,42 +13925,146 @@ function trainerLineupBackdropClick_(event) {
   }
 }
 
-function trainerSaveLineupDraftLocal_() {
+async function trainerSaveLineupDraftLocal_() {
   const state = window.__trainerLineupState;
-  if (!state || state.loading || state.error) return;
+
+  if (
+    !state ||
+    state.loading ||
+    state.error ||
+    state.saving
+  ) {
+    return;
+  }
+
+  const session = loadAppSession_();
+
+  const sessionToken = String(
+    session?.sessionToken || ""
+  ).trim();
+
+  if (!sessionToken) {
+    state.message = "";
+    state.error =
+      "Brak aktywnej sesji. Zaloguj się ponownie.";
+
+    trainerRenderLineupEditor_();
+    return;
+  }
 
   const payload = {
     version: 1,
     eventId: state.eventId,
     sport: state.sport,
-    assignments: state.assignments,
-    playersSnapshot: state.players.map(player => ({
-      numer: player.number,
-      nazwisko: player.name,
-      accepted: player.accepted
-    })),
-    savedAt: new Date().toISOString()
+    assignments: state.assignments
   };
 
-  try {
-    localStorage.setItem(
-      trainerLineupDraftKey_(state.eventId),
-      JSON.stringify(payload)
-    );
+  const saveButton = document.getElementById(
+    "btnTrainerLineupLocalSave"
+  );
 
-    state.message = "Szkic zapisany na tym urządzeniu. Zapis do kalendarza podłączymy w następnym etapie.";
-    trainerRenderLineupEditor_();
+  state.saving = true;
+  state.message = "Zapisywanie lineupu...";
+  state.error = "";
+
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.textContent = "⏳ Zapisywanie...";
+  }
+
+  trainerRenderLineupEditor_();
+
+  try {
+    const response = await apiClubPost({
+      action: "lineupSave",
+      treningId: state.eventId,
+      lineupJson: JSON.stringify(payload),
+      sessionToken
+    });
+
+    if (
+      !response ||
+      response.success !== true
+    ) {
+      throw new Error(
+        response?.error ||
+        "Nie udało się zapisać lineupu."
+      );
+    }
+
+    /*
+     * Lokalna kopia pozostaje jako awaryjny backup.
+     * Źródłem głównym jest już kalendarz GAS.
+     */
+    const localBackup = {
+      ...payload,
+
+      playersSnapshot:
+        state.players.map(player => ({
+          numer: player.number,
+          nazwisko: player.name,
+          accepted: player.accepted
+        })),
+
+      savedAt: new Date().toISOString(),
+
+      serverSaved: true
+    };
+
+    try {
+      localStorage.setItem(
+        trainerLineupDraftKey_(state.eventId),
+        JSON.stringify(localBackup)
+      );
+    } catch (localError) {
+      console.warn(
+        "Nie udało się zapisać lokalnej kopii lineupu:",
+        localError
+      );
+    }
+
+    state.message =
+      `Lineup zapisany. Pozycje zawodników: ${Number(
+        response.savedCount || 0
+      )}.`;
+
+    state.error = "";
 
     document
-      .querySelectorAll("button[data-lineup-event-id]")
+      .querySelectorAll(
+        "button[data-lineup-event-id]"
+      )
       .forEach(button => {
-        if (button.dataset.lineupEventId === state.eventId) {
+        if (
+          button.dataset.lineupEventId ===
+          state.eventId
+        ) {
           button.textContent = "🧩 Edytuj lineup";
         }
       });
 
-  } catch (e) {
-    state.message = "Nie udało się zapisać lokalnego szkicu.";
+  } catch (error) {
+    console.error(
+      "trainerSaveLineupDraftLocal_ error:",
+      error
+    );
+
+    state.message = "";
+
+    state.error = String(
+      error?.message ||
+      "Nie udało się zapisać lineupu."
+    );
+
+  } finally {
+    state.saving = false;
+
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent =
+        "💾 Zapisz lineup";
+    }
+
     trainerRenderLineupEditor_();
   }
 }
