@@ -13412,47 +13412,79 @@ function trainerLineupResolveSlot_(slotId) {
     slot => String(slot.id) === String(slotId)
   ) || null;
 }
-
 async function trainerOpenLineupEditor_(eventId) {
   const id = String(eventId || "").trim();
-  const event = window.__trainerLineupEventById?.[id];
+
+  const event =
+    window.__trainerLineupEventById?.[id];
 
   if (!event) {
-    alert("Nie udało się odnaleźć danych wydarzenia. Odśwież listę i spróbuj ponownie.");
+    alert(
+      "Nie udało się odnaleźć danych wydarzenia. " +
+      "Odśwież listę i spróbuj ponownie."
+    );
     return;
   }
 
-  window.__trainerLineupReturnScrollY = window.scrollY || 0;
+  window.__trainerLineupReturnScrollY =
+    window.scrollY || 0;
 
-  const draft = trainerLineupReadDraft_(id);
-  const draftSport = TRAINER_LINEUP_TEMPLATES_[draft?.sport]
-    ? draft.sport
-    : "hockey";
+  /*
+   * Lokalny zapis jest tylko awaryjnym fallbackiem,
+   * zanim otrzymamy dane z GAS.
+   */
+  const localDraft =
+    trainerLineupReadDraft_(id);
 
-  const draftPlayers = trainerLineupNormalizePlayers_(
-    Array.isArray(draft?.playersSnapshot)
-      ? draft.playersSnapshot
-      : []
-  );
+  const localSport =
+    TRAINER_LINEUP_TEMPLATES_[localDraft?.sport]
+      ? localDraft.sport
+      : "hockey";
+
+  const localPlayers =
+    trainerLineupNormalizePlayers_(
+      Array.isArray(localDraft?.playersSnapshot)
+        ? localDraft.playersSnapshot
+        : []
+    );
 
   window.__trainerLineupState = {
     eventId: id,
     event,
-    sport: draftSport,
-    players: draftPlayers,
-    assignments: trainerLineupNormalizeAssignments_(draft?.assignments),
+    sport: localSport,
+    players: localPlayers,
+
+    assignments:
+      trainerLineupNormalizeAssignments_(
+        localDraft?.assignments
+      ),
+
     activeSlotId: "",
     loading: true,
+    saving: false,
     error: "",
-    message: draft ? "Wczytano lokalny szkic lineupu." : ""
+    message: ""
   };
 
-  const meta = document.getElementById("trainerLineupEventMeta");
+  const meta = document.getElementById(
+    "trainerLineupEventMeta"
+  );
+
   if (meta) {
     meta.innerHTML = `
-      <b>${trainerEscHtml_(event.rodzaj || "Wydarzenie")}</b><br>
+      <b>${trainerEscHtml_(
+        event.rodzaj || "Wydarzenie"
+      )}</b><br>
+
       ${trainerEscHtml_(event.data || "")}
-      ${event.godzStart ? `, ${trainerEscHtml_(event.godzStart)}` : ""}
+
+      ${
+        event.godzStart
+          ? `, ${trainerEscHtml_(
+              event.godzStart
+            )}`
+          : ""
+      }
     `;
   }
 
@@ -13460,26 +13492,101 @@ async function trainerOpenLineupEditor_(eventId) {
   trainerRenderLineupEditor_();
 
   try {
-    const lista = await apiClubGet("zapisani", {
-      treningId: id
-    });
+    const session = loadAppSession_();
 
-    if (!Array.isArray(lista)) {
-      throw new Error("Nieprawidłowa odpowiedź listy zawodników");
+    const sessionToken = String(
+      session?.sessionToken || ""
+    ).trim();
+
+    if (!sessionToken) {
+      throw new Error(
+        "Brak aktywnej sesji. Zaloguj się ponownie."
+      );
     }
 
-    const state = window.__trainerLineupState;
-    if (!state || state.eventId !== id) return;
+    /*
+     * Pobieramy równolegle:
+     * 1. aktualnych zawodników wydarzenia,
+     * 2. zapisany lineup.
+     */
+    const results = await Promise.all([
+      apiClubGet("zapisani", {
+        treningId: id
+      }),
 
-    state.players = trainerLineupNormalizePlayers_(lista);
+      apiClubGet("lineupGet", {
+        treningId: id,
+        sessionToken
+      })
+    ]);
 
+    const playersResponse = results[0];
+    const lineupResponse = results[1];
+
+    if (!Array.isArray(playersResponse)) {
+      throw new Error(
+        "Nieprawidłowa odpowiedź listy zawodników."
+      );
+    }
+
+    if (
+      !lineupResponse ||
+      lineupResponse.success !== true
+    ) {
+      throw new Error(
+        lineupResponse?.error ||
+        "Nie udało się pobrać lineupu."
+      );
+    }
+
+    const state =
+      window.__trainerLineupState;
+
+    if (
+      !state ||
+      state.eventId !== id
+    ) {
+      return;
+    }
+
+    state.players =
+      trainerLineupNormalizePlayers_(
+        playersResponse
+      );
+
+    state.sport =
+      TRAINER_LINEUP_TEMPLATES_[
+        lineupResponse.sport
+      ]
+        ? lineupResponse.sport
+        : "hockey";
+
+    /*
+     * GAS jest źródłem głównym.
+     * Nawet pusty lineup z GAS zastępuje lokalny szkic.
+     */
+    state.assignments =
+      trainerLineupNormalizeAssignments_(
+        lineupResponse.assignments
+      );
+
+    /*
+     * Dodatkowa ochrona:
+     * usuwamy przypisania zawodników,
+     * których nie ma już w wydarzeniu.
+     */
     const validPlayerIds = new Set(
-      state.players.map(player => String(player.id))
+      state.players.map(player =>
+        String(player.id)
+      )
     );
 
-    Object.keys(state.assignments).forEach(slotId => {
+    Object.keys(
+      state.assignments
+    ).forEach(slotId => {
       const playerId = String(
-        state.assignments[slotId]?.playerId || ""
+        state.assignments[slotId]
+          ?.playerId || ""
       );
 
       if (!validPlayerIds.has(playerId)) {
@@ -13489,14 +13596,88 @@ async function trainerOpenLineupEditor_(eventId) {
 
     state.loading = false;
     state.error = "";
+
+    if (lineupResponse.hasLineup) {
+      state.message =
+        "Wczytano lineup zapisany w kalendarzu.";
+    } else {
+      state.message = "";
+    }
+
+    /*
+     * Aktualizujemy także lokalną kopię awaryjną,
+     * aby odpowiadała zawartości GAS.
+     */
+    try {
+      localStorage.setItem(
+        trainerLineupDraftKey_(id),
+
+        JSON.stringify({
+          version: 1,
+          eventId: id,
+          sport: state.sport,
+          assignments: state.assignments,
+
+          playersSnapshot:
+            state.players.map(player => ({
+              numer: player.number,
+              nazwisko: player.name,
+              accepted: player.accepted
+            })),
+
+          savedAt:
+            new Date().toISOString(),
+
+          serverSaved: true
+        })
+      );
+    } catch (localError) {
+      console.warn(
+        "Nie udało się odświeżyć lokalnej kopii lineupu:",
+        localError
+      );
+    }
+
     trainerRenderLineupEditor_();
 
-  } catch (e) {
-    const state = window.__trainerLineupState;
-    if (!state || state.eventId !== id) return;
+  } catch (error) {
+    const state =
+      window.__trainerLineupState;
+
+    if (
+      !state ||
+      state.eventId !== id
+    ) {
+      return;
+    }
 
     state.loading = false;
-    state.error = "Nie udało się pobrać zawodników wydarzenia.";
+
+    /*
+     * Gdy istnieje lokalny backup, pozostawiamy go
+     * widocznego, ale wyraźnie informujemy,
+     * że nie udało się pobrać danych z GAS.
+     */
+    if (localDraft) {
+      state.error = "";
+
+      state.message =
+        "Nie udało się pobrać lineupu z kalendarza. " +
+        "Wyświetlono lokalną kopię awaryjną.";
+    } else {
+      state.error = String(
+        error?.message ||
+        "Nie udało się pobrać lineupu."
+      );
+
+      state.message = "";
+    }
+
+    console.error(
+      "trainerOpenLineupEditor_ error:",
+      error
+    );
+
     trainerRenderLineupEditor_();
   }
 }
