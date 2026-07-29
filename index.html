@@ -450,6 +450,42 @@ input[type="number"] {
       font-size: 14px;
       font-weight: 700;
     }
+
+    /* ===== PLAYER LINEUP VIEW ===== */
+    
+    #playerLineupView {
+      margin-top: 0;
+      min-height: 100dvh;
+      padding: 0 12px 40px 12px;
+      box-sizing: border-box;
+    }
+    
+    #playerLineupView .trainer-lineup-slot,
+    #playerLineupView .trainer-lineup-reserve-slot {
+      pointer-events: none;
+      cursor: default;
+    }
+    
+    #playerLineupView .trainer-lineup-slot:active {
+      transform: translate(-50%, -50%);
+    }
+    
+    .player-lineup-empty-reserves {
+      padding: 8px 4px;
+      font-size: 13px;
+      opacity: .7;
+    }
+    
+    .player-lineup-loading {
+      width: min(520px, 100%);
+      margin: 20px auto;
+      padding: 18px;
+      box-sizing: border-box;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      line-height: 1.4;
+    }
     
       /* ===== TRAINER LINEUP EDITOR: CSS START ===== */
     #trainerLineupEditorView {
@@ -948,7 +984,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.10';
+  window.APP_BUILD = 'APP v3.11';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1632,6 +1668,87 @@ input[type="number"] {
       <div id="listaTreningow">Ładowanie...</div>
      <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
+
+  <!-- PLAYER LINEUP VIEW -->
+<div id="playerLineupView" class="container hidden">
+
+  <div class="trainer-lineup-topbar">
+    <button
+      type="button"
+      class="trainer-lineup-back"
+      onclick="playerCloseLineup_()"
+      aria-label="Wróć do wydarzeń"
+    >
+      ←
+    </button>
+
+    <h1>Lineup</h1>
+    <div></div>
+  </div>
+
+  <div
+    id="playerLineupEventMeta"
+    class="trainer-lineup-event-meta"
+  ></div>
+
+  <div
+    id="playerLineupStatus"
+    class="trainer-lineup-status"
+  ></div>
+
+  <div
+    id="playerLineupLoading"
+    class="player-lineup-loading"
+  >
+    ⏳ Pobieranie lineupu...
+  </div>
+
+  <div
+    id="playerLineupContent"
+    class="hidden"
+  >
+    <div class="trainer-lineup-board-wrap">
+      <div
+        id="playerLineupBoard"
+        class="trainer-lineup-board"
+        data-sport="hockey"
+      >
+        <img
+          id="playerLineupBackground"
+          class="trainer-lineup-board-image"
+          src=""
+          alt=""
+        >
+
+        <div id="playerLineupGuides"></div>
+        <div id="playerLineupSlots"></div>
+      </div>
+    </div>
+
+    <div
+      id="playerLineupReservesCard"
+      class="trainer-lineup-reserves-card"
+    >
+      <h3>Rezerwowi</h3>
+
+      <div
+        id="playerLineupReserveSlots"
+        class="trainer-lineup-reserve-slots"
+      ></div>
+    </div>
+  </div>
+
+  <div class="trainer-lineup-actions">
+    <button
+      type="button"
+      class="full-btn alt"
+      onclick="playerCloseLineup_()"
+    >
+      ⬅ Wróć do wydarzeń
+    </button>
+  </div>
+
+</div>
 
 <!-- PLAYER STATS VIEW
      Statystyki zawodnika -->
@@ -10897,11 +11014,356 @@ async function playerRefreshLineupAvailability_(
 }
 
 
+window.__playerLineupState = null;
+window.__playerLineupReturnScrollY = 0;
+
+
 /**
- * Tymczasowa ochrona przed kliknięciem przed
- * dodaniem właściwego ekranu w kolejnym etapie.
+ * Zwraca zawodnika przypisanego do danego slotu.
  */
-function playerOpenLineup_(treningId) {
+function playerLineupPlayerForSlot_(
+  slotId
+) {
+  const state =
+    window.__playerLineupState;
+
+  if (!state) {
+    return null;
+  }
+
+  const assignment =
+    state.assignments?.[slotId];
+
+  if (!assignment) {
+    return null;
+  }
+
+  return state.players.find(
+    function(player) {
+      return (
+        String(player.id) ===
+        String(assignment.playerId)
+      );
+    }
+  ) || null;
+}
+
+
+/**
+ * Buduje jedno pole lineupu zawodnika.
+ * Pole jest tylko do odczytu.
+ */
+function playerLineupSlotHtml_(
+  slot,
+  reserve
+) {
+  const state =
+    window.__playerLineupState || {};
+
+  const assignment =
+    state.assignments?.[slot.id] || null;
+
+  const player =
+    playerLineupPlayerForSlot_(
+      slot.id
+    );
+
+  const role = String(
+    assignment?.role || ""
+  )
+    .trim()
+    .toUpperCase();
+
+  const playerName = String(
+    player?.name || ""
+  ).trim();
+
+  const displaySlotCode = String(
+    slot.id || ""
+  ).replace(
+    /^[1-4](?=[A-Z])/,
+    ""
+  );
+
+  if (reserve) {
+    if (!player) {
+      return "";
+    }
+
+    return `
+      <div
+        class="trainer-lineup-reserve-slot filled"
+      >
+        <span class="trainer-lineup-slot-code">
+          ${trainerEscHtml_(slot.id)}
+        </span>
+
+        <span class="trainer-lineup-slot-name">
+          ${trainerEscHtml_(playerName)}
+        </span>
+
+        ${
+          role
+            ? `
+              <span class="trainer-lineup-role-badge">
+                ${trainerEscHtml_(role)}
+              </span>
+            `
+            : ""
+        }
+      </div>
+    `;
+  }
+
+  return `
+    <div
+      class="trainer-lineup-slot ${
+        player ? "filled" : "empty"
+      }"
+      style="
+        left:${Number(slot.x)}%;
+        top:${Number(slot.y)}%;
+      "
+    >
+      ${
+        player
+          ? `
+            <span class="trainer-lineup-slot-player">
+              ${trainerEscHtml_(playerName)}
+            </span>
+
+            ${
+              role
+                ? `
+                  <span class="trainer-lineup-role-badge">
+                    ${trainerEscHtml_(role)}
+                  </span>
+                `
+                : ""
+            }
+          `
+          : `
+            <span class="trainer-lineup-slot-code">
+              ${trainerEscHtml_(
+                displaySlotCode
+              )}
+            </span>
+          `
+      }
+    </div>
+  `;
+}
+
+
+/**
+ * Renderuje pobrany lineup bez wykonywania
+ * dodatkowych zapytań do GAS.
+ */
+function playerRenderLineup_() {
+  const state =
+    window.__playerLineupState;
+
+  if (!state) {
+    return;
+  }
+
+  const template =
+    TRAINER_LINEUP_TEMPLATES_[
+      state.sport
+    ];
+
+  if (!template) {
+    throw new Error(
+      "Brak szablonu lineupu."
+    );
+  }
+
+  const board =
+    document.getElementById(
+      "playerLineupBoard"
+    );
+
+  const image =
+    document.getElementById(
+      "playerLineupBackground"
+    );
+
+  if (board && image) {
+    board.dataset.sport =
+      state.sport;
+
+    board.classList.remove(
+      "image-loaded"
+    );
+
+    image.onload = function() {
+      board.classList.add(
+        "image-loaded"
+      );
+    };
+
+    image.onerror = function() {
+      board.classList.remove(
+        "image-loaded"
+      );
+    };
+
+    image.src = template.image;
+    image.alt =
+      "Plansza: " +
+      String(template.label || "");
+  }
+
+  const guidesBox =
+    document.getElementById(
+      "playerLineupGuides"
+    );
+
+  if (guidesBox) {
+    guidesBox.innerHTML = (
+      template.guides || []
+    )
+      .map(function(guide) {
+        return `
+          <div
+            class="trainer-lineup-guide"
+            style="top:${Number(guide.y)}%;"
+          >
+            <span>
+              ${trainerEscHtml_(
+                guide.label
+              )}
+            </span>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  const slotsBox =
+    document.getElementById(
+      "playerLineupSlots"
+    );
+
+  if (slotsBox) {
+    slotsBox.innerHTML = (
+      template.slots || []
+    )
+      .map(function(slot) {
+        return playerLineupSlotHtml_(
+          slot,
+          false
+        );
+      })
+      .join("");
+  }
+
+  /*
+   * Pokazujemy tylko faktycznie obsadzone
+   * pozycje rezerwowych.
+   */
+  const reserveSlotIds =
+    Object.keys(
+      state.assignments || {}
+    )
+      .filter(function(slotId) {
+        return /^R\d+$/.test(
+          String(slotId)
+        );
+      })
+      .sort(function(a, b) {
+        return (
+          Number(
+            String(a).substring(1)
+          ) -
+          Number(
+            String(b).substring(1)
+          )
+        );
+      });
+
+  const reserveBox =
+    document.getElementById(
+      "playerLineupReserveSlots"
+    );
+
+  const reserveCard =
+    document.getElementById(
+      "playerLineupReservesCard"
+    );
+
+  if (reserveBox) {
+    reserveBox.innerHTML =
+      reserveSlotIds.length
+        ? reserveSlotIds
+            .map(function(slotId) {
+              return playerLineupSlotHtml_(
+                {
+                  id: slotId,
+                  reserve: true
+                },
+                true
+              );
+            })
+            .join("")
+        : `
+            <div class="player-lineup-empty-reserves">
+              Brak zawodników rezerwowych.
+            </div>
+          `;
+  }
+
+  if (reserveCard) {
+    reserveCard.classList.remove(
+      "hidden"
+    );
+  }
+
+  const loading =
+    document.getElementById(
+      "playerLineupLoading"
+    );
+
+  const content =
+    document.getElementById(
+      "playerLineupContent"
+    );
+
+  const status =
+    document.getElementById(
+      "playerLineupStatus"
+    );
+
+  if (loading) {
+    loading.classList.add(
+      "hidden"
+    );
+  }
+
+  if (content) {
+    content.classList.remove(
+      "hidden"
+    );
+  }
+
+  if (status) {
+    status.textContent =
+      "Skład przygotowany przez trenera.";
+
+    status.className =
+      "trainer-lineup-status success";
+  }
+}
+
+
+/**
+ * Otwiera lineup wydarzenia zawodnika.
+ *
+ * Wykonuje dokładnie jedno żądanie do GAS.
+ */
+async function playerOpenLineup_(
+  treningId
+) {
   const id = String(
     treningId || ""
   ).trim();
@@ -10910,10 +11372,233 @@ function playerOpenLineup_(treningId) {
     return;
   }
 
-  window.__playerPendingLineupEventId = id;
+  const event =
+    window.__playerEventsById?.[id];
 
-  alert(
-    "Lineup jest dostępny. Widok składu zostanie dodany w kolejnym kroku."
+  if (!event) {
+    alert(
+      "Nie znaleziono danych wydarzenia."
+    );
+
+    return;
+  }
+
+  const session =
+    loadAppSession_();
+
+  const sessionToken = String(
+    session?.sessionToken || ""
+  ).trim();
+
+  const role = String(
+    session?.role || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (
+    role !== "zawodnik" ||
+    !sessionToken
+  ) {
+    alert(
+      "Sesja wygasła. Zaloguj się ponownie."
+    );
+
+    return;
+  }
+
+  window.__playerLineupReturnScrollY =
+    window.scrollY || 0;
+
+  window.__playerLineupState = {
+    eventId: id,
+    event,
+    sport: "hockey",
+    assignments: {},
+    players: []
+  };
+
+  const meta =
+    document.getElementById(
+      "playerLineupEventMeta"
+    );
+
+  if (meta) {
+    meta.innerHTML = `
+      <b>
+        ${trainerEscHtml_(
+          event.rodzaj || "Wydarzenie"
+        )}
+      </b><br>
+
+      ${trainerEscHtml_(
+        event.data || ""
+      )}
+
+      ${
+        event.godzStart
+          ? `, ${trainerEscHtml_(
+              event.godzStart
+            )}`
+          : ""
+      }
+    `;
+  }
+
+  const loading =
+    document.getElementById(
+      "playerLineupLoading"
+    );
+
+  const content =
+    document.getElementById(
+      "playerLineupContent"
+    );
+
+  const status =
+    document.getElementById(
+      "playerLineupStatus"
+    );
+
+  if (loading) {
+    loading.textContent =
+      "⏳ Pobieranie lineupu...";
+
+    loading.classList.remove(
+      "hidden"
+    );
+  }
+
+  if (content) {
+    content.classList.add(
+      "hidden"
+    );
+  }
+
+  if (status) {
+    status.textContent = "";
+    status.className =
+      "trainer-lineup-status loading";
+  }
+
+  goToView(
+    "playerLineupView"
+  );
+
+  window.scrollTo(0, 0);
+
+  try {
+    const response =
+      await apiClubGet(
+        "lineupPlayerGet",
+        {
+          treningId: id,
+          sessionToken
+        }
+      );
+
+    if (
+      !response ||
+      response.success !== true
+    ) {
+      throw new Error(
+        response?.error ||
+        "Nie udało się pobrać lineupu."
+      );
+    }
+
+    if (
+      response.hasLineup !== true
+    ) {
+      throw new Error(
+        "Trener nie przygotował lineupu."
+      );
+    }
+
+    /*
+     * Zabezpieczenie przed odpowiedzią
+     * starego żądania po zmianie ekranu.
+     */
+    if (
+      !window.__playerLineupState ||
+      window.__playerLineupState.eventId !== id
+    ) {
+      return;
+    }
+
+    window.__playerLineupState.sport =
+      TRAINER_LINEUP_TEMPLATES_[
+        response.sport
+      ]
+        ? response.sport
+        : "hockey";
+
+    window.__playerLineupState.assignments =
+      trainerLineupNormalizeAssignments_(
+        response.assignments
+      );
+
+    window.__playerLineupState.players =
+      trainerLineupNormalizePlayers_(
+        response.playersSnapshot
+      );
+
+    playerRenderLineup_();
+
+  } catch (error) {
+    const message = String(
+      error?.message ||
+      error ||
+      "Nie udało się pobrać lineupu."
+    );
+
+    if (loading) {
+      loading.textContent =
+        "❌ " + message;
+
+      loading.classList.remove(
+        "hidden"
+      );
+    }
+
+    if (content) {
+      content.classList.add(
+        "hidden"
+      );
+    }
+
+    if (status) {
+      status.textContent = message;
+      status.className =
+        "trainer-lineup-status error";
+    }
+  }
+}
+
+
+/**
+ * Wraca do istniejącej listy wydarzeń
+ * bez ponownego pobierania danych.
+ */
+function playerCloseLineup_() {
+  window.__playerLineupState = null;
+
+  goToView(
+    "homeView"
+  );
+
+  const scrollY = Number(
+    window.__playerLineupReturnScrollY || 0
+  );
+
+  setTimeout(
+    function() {
+      window.scrollTo(
+        0,
+        scrollY
+      );
+    },
+    0
   );
 }
   
