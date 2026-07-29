@@ -1030,10 +1030,42 @@ input[type="number"] {
         opacity: .72;
       }
     /* ===== ADMIN — UDOSTĘPNIANIE KLUBU: CSS KONIEC ===== */
+
+    /* ===== AKTUALIZACJA WERSJI APLIKACJI ===== */
+    
+    html.orghub-build-refreshing body {
+      visibility: hidden;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    html.orghub-build-refreshing::before {
+      content: "⏳ Aktualizuję aplikację…";
+    
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+    
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    
+      padding: 24px;
+      box-sizing: border-box;
+    
+      background: #000;
+      color: #fff;
+    
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      text-align: center;
+    }
+    
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.12';
+  window.APP_BUILD = 'APP v3.13';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -1050,11 +1082,35 @@ input[type="number"] {
   }
 
   (async function registerOrgHubServiceWorker_() {
-    const poprzednia = localStorage.getItem(APP_BUILD_KEY);
-    const buildChanged = poprzednia !== window.APP_BUILD;
-
+    const poprzednia =
+      localStorage.getItem(
+        APP_BUILD_KEY
+      );
+    
+    const buildChanged =
+      poprzednia !==
+      window.APP_BUILD;
+    
+    /*
+     * Przy zmianie wersji blokujemy aplikację od razu,
+     * zanim użytkownik zdąży wejść do kolejnego ekranu.
+     */
+    if (buildChanged) {
+      document.documentElement.classList.add(
+        "orghub-build-refreshing"
+      );
+    }
+    
     if (!("serviceWorker" in navigator)) {
-      localStorage.setItem(APP_BUILD_KEY, window.APP_BUILD);
+      localStorage.setItem(
+        APP_BUILD_KEY,
+        window.APP_BUILD
+      );
+    
+      document.documentElement.classList.remove(
+        "orghub-build-refreshing"
+      );
+    
       return;
     }
 
@@ -1072,20 +1128,51 @@ input[type="number"] {
       } catch (e) {
         console.warn("SW update check error:", e);
       }
+if (buildChanged) {
+  await clearAppCachesOnBuildChange_();
 
-      if (buildChanged) {
-        await clearAppCachesOnBuildChange_();
+  localStorage.setItem(
+    APP_BUILD_KEY,
+    window.APP_BUILD
+  );
 
-        localStorage.setItem(APP_BUILD_KEY, window.APP_BUILD);
+  const freshUrl =
+    new URL(
+      window.location.href
+    );
 
-        const freshUrl = new URL(window.location.href);
-        freshUrl.searchParams.set("_build", String(Date.now()));
+  freshUrl.searchParams.set(
+    "_build",
+    String(Date.now())
+  );
 
-        window.location.replace(freshUrl.toString());
-      }
+  window.location.replace(
+    freshUrl.toString()
+  );
 
+  return;
+    }
+    
+    /*
+     * Brak zmiany wersji — aplikacja może działać normalnie.
+     */
+    document.documentElement.classList.remove(
+      "orghub-build-refreshing"
+    );
+    
     } catch (e) {
-      console.error("❌ Błąd SW:", e);
+      console.error(
+        "❌ Błąd SW:",
+        e
+      );
+    
+      /*
+       * Awaria aktualizacji nie może pozostawić
+       * aplikacji z zablokowanym ekranem.
+       */
+      document.documentElement.classList.remove(
+        "orghub-build-refreshing"
+      );
     }
   })();
 </script>
@@ -10664,6 +10751,20 @@ async function pokazTreningi() {
 
   } finally {
     setTreningiButtonsLocked_(false);
+
+    /*
+     * Lista została już ostatecznie wyrenderowana
+     * z cache lub ze świeżych danych.
+     *
+     * Dopiero teraz wykonujemy jedno zbiorcze
+     * sprawdzenie lineupów.
+     */
+    if (
+      String(currentView || "") ===
+      "homeView"
+    ) {
+      playerRefreshCurrentLineupAvailability_();
+    }
   }
 }
 
@@ -10984,30 +11085,42 @@ function renderTreningi(lista) {
       </div>
     `;
   }).join('');
-
-  playerRefreshLineupAvailability_(
-    listaPoFiltrowaniu
-  );
 }
 
+window.__playerLineupAvailabilityRequestId = 0;
+  
 /**
  * Sprawdza jednym żądaniem, dla których wydarzeń
  * zalogowany zawodnik może zobaczyć lineup.
  */
+/**
+ * Sprawdza jednym żądaniem, dla których wydarzeń
+ * zalogowany zawodnik może zobaczyć lineup.
+ *
+ * Starsza odpowiedź nie może zmieniać nowszego
+ * renderu ani ekranu, z którego zawodnik już wyszedł.
+ */
 async function playerRefreshLineupAvailability_(
   events
 ) {
+  const requestId =
+    ++window.__playerLineupAvailabilityRequestId;
+
   const eventList = Array.isArray(events)
     ? events
     : [];
 
-  const eventIds = eventList
-    .map(function(event) {
-      return String(
-        event?.id || ""
-      ).trim();
-    })
-    .filter(Boolean);
+  const eventIds = Array.from(
+    new Set(
+      eventList
+        .map(function(event) {
+          return String(
+            event?.id || ""
+          ).trim();
+        })
+        .filter(Boolean)
+    )
+  );
 
   if (!eventIds.length) {
     return;
@@ -11025,9 +11138,6 @@ async function playerRefreshLineupAvailability_(
     .trim()
     .toLowerCase();
 
-  /*
-   * Funkcja działa wyłącznie w panelu zawodnika.
-   */
   if (
     role !== "zawodnik" ||
     !sessionToken
@@ -11045,6 +11155,46 @@ async function playerRefreshLineupAvailability_(
         sessionToken
       }
     );
+
+    /*
+     * W międzyczasie mogło rozpocząć się
+     * nowsze sprawdzanie dostępności.
+     */
+    if (
+      requestId !==
+      window.__playerLineupAvailabilityRequestId
+    ) {
+      return;
+    }
+
+    /*
+     * Odpowiedź nie może zmieniać niewidocznego
+     * już ekranu wydarzeń.
+     */
+    if (
+      String(currentView || "") !==
+      "homeView"
+    ) {
+      return;
+    }
+
+    /*
+     * Sprawdzamy, czy na ekranie nadal znajduje się
+     * dokładnie ta sama lista wydarzeń.
+     */
+    const currentEventIds = Object.keys(
+      window.__playerEventsById || {}
+    ).sort();
+
+    const requestedEventIds =
+      eventIds.slice().sort();
+
+    if (
+      currentEventIds.join("|") !==
+      requestedEventIds.join("|")
+    ) {
+      return;
+    }
 
     if (
       !response ||
@@ -11069,25 +11219,40 @@ async function playerRefreshLineupAvailability_(
         return;
       }
 
-      const hasAccess =
-        response.availability[eventId] === true;
-
       button.classList.toggle(
         "hidden",
-        !hasAccess
+        response.availability[eventId] !== true
       );
     });
 
   } catch (error) {
-    /*
-     * Brak dostępności lineupu nie może blokować
-     * listy wydarzeń zawodnika.
-     */
+    if (
+      requestId !==
+      window.__playerLineupAvailabilityRequestId
+    ) {
+      return;
+    }
+
     console.warn(
       "playerRefreshLineupAvailability_ error:",
       error
     );
   }
+}
+
+
+/**
+ * Sprawdza lineupy dla aktualnie wyrenderowanej
+ * listy wydarzeń zawodnika.
+ */
+function playerRefreshCurrentLineupAvailability_() {
+  const events = Object.values(
+    window.__playerEventsById || {}
+  );
+
+  return playerRefreshLineupAvailability_(
+    events
+  );
 }
 
 
@@ -11986,8 +12151,18 @@ async function zapiszSie(id) {
         }
       } catch (e) {}
  
-      const lista = await apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego });
+      const lista = await apiClubGet(
+        "treningi",
+        {
+          grupa: grupaZalogowanego,
+          numer: numerZalogowanego
+        }
+      );
+      
       renderTreningi(lista);
+      
+      await playerRefreshCurrentLineupAvailability_();
+      
       return;
     }
  
