@@ -10774,6 +10774,15 @@ function renderTreningi(lista) {
             onclick="playerAddEventToGoogleCalendar('${t.id}')">
             📅 Kalendarz
           </button>
+
+          <button
+            id="player-lineup-${t.id}"
+            type="button"
+            class="hidden"
+            style="background:#1565c0;color:white;border:none;"
+            onclick="playerOpenLineup_('${t.id}')">
+            🏒 Zobacz lineup
+          </button>
   
         </div>
 
@@ -10781,8 +10790,133 @@ function renderTreningi(lista) {
       </div>
     `;
   }).join('');
+
+  playerRefreshLineupAvailability_(
+    listaPoFiltrowaniu
+  );
 }
 
+/**
+ * Sprawdza jednym żądaniem, dla których wydarzeń
+ * zalogowany zawodnik może zobaczyć lineup.
+ */
+async function playerRefreshLineupAvailability_(
+  events
+) {
+  const eventList = Array.isArray(events)
+    ? events
+    : [];
+
+  const eventIds = eventList
+    .map(function(event) {
+      return String(
+        event?.id || ""
+      ).trim();
+    })
+    .filter(Boolean);
+
+  if (!eventIds.length) {
+    return;
+  }
+
+  const session = loadAppSession_();
+
+  const sessionToken = String(
+    session?.sessionToken || ""
+  ).trim();
+
+  const role = String(
+    session?.role || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  /*
+   * Funkcja działa wyłącznie w panelu zawodnika.
+   */
+  if (
+    role !== "zawodnik" ||
+    !sessionToken
+  ) {
+    return;
+  }
+
+  try {
+    const response = await apiClubGet(
+      "lineupPlayerAvailability",
+      {
+        treningIdsJson:
+          JSON.stringify(eventIds),
+
+        sessionToken
+      }
+    );
+
+    if (
+      !response ||
+      response.success !== true ||
+      !response.availability ||
+      typeof response.availability !== "object"
+    ) {
+      console.warn(
+        "Nie udało się sprawdzić dostępności lineupów:",
+        response
+      );
+
+      return;
+    }
+
+    eventIds.forEach(function(eventId) {
+      const button = document.getElementById(
+        `player-lineup-${eventId}`
+      );
+
+      if (!button) {
+        return;
+      }
+
+      const hasAccess =
+        response.availability[eventId] === true;
+
+      button.classList.toggle(
+        "hidden",
+        !hasAccess
+      );
+    });
+
+  } catch (error) {
+    /*
+     * Brak dostępności lineupu nie może blokować
+     * listy wydarzeń zawodnika.
+     */
+    console.warn(
+      "playerRefreshLineupAvailability_ error:",
+      error
+    );
+  }
+}
+
+
+/**
+ * Tymczasowa ochrona przed kliknięciem przed
+ * dodaniem właściwego ekranu w kolejnym etapie.
+ */
+function playerOpenLineup_(treningId) {
+  const id = String(
+    treningId || ""
+  ).trim();
+
+  if (!id) {
+    return;
+  }
+
+  window.__playerPendingLineupEventId = id;
+
+  alert(
+    "Lineup jest dostępny. Widok składu zostanie dodany w kolejnym kroku."
+  );
+}
+  
 function updatePowolanieUiLocal_(id, accepted) {
   const btn = document.getElementById(`btn-${id}`);
   const statusEl = document.getElementById(`powolanie-status-${id}`);
