@@ -1079,7 +1079,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.16';
+  window.APP_BUILD = 'APP v3.17';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -16085,26 +16085,12 @@ function trainerLineupBindShareLongPress_() {
   area.dataset.longPressBound =
     "1";
 
-  area.addEventListener(
-    "contextmenu",
-    function(event) {
-
-    /*
-     * Kliknięcia przycisków lineupu służą do edycji składu.
-     * Mechanizm długiego przytrzymania nie może przejmować
-     * ich zdarzeń wskaźnika.
-     */
-    if (
-      event.target?.closest(
-        "button, input, select, textarea, a"
-      )
-    ) {
-      return;
-    }
-  
-      event.preventDefault();
-    }
-  );
+    area.addEventListener(
+      "contextmenu",
+      function(event) {
+        event.preventDefault();
+      }
+    );
 
   /*
    * Po długim przytrzymaniu zatrzymujemy
@@ -16125,16 +16111,34 @@ function trainerLineupBindShareLongPress_() {
     },
     true
   );
-
-  area.addEventListener(
-    "pointerdown",
-    function(event) {
-      if (
-        event.pointerType === "mouse" &&
-        event.button !== 0
-      ) {
-        return;
-      }
+    
+    area.addEventListener(
+      "pointerdown",
+      function(event) {
+        /*
+         * Sloty i przyciski służą do edycji lineupu.
+         * Długie przytrzymanie nie może przejmować
+         * ich zdarzeń pointerdown/pointerup.
+         */
+        const target = event.target;
+    
+        if (
+          target instanceof Element &&
+          target.closest(
+            ".trainer-lineup-slot, " +
+            ".trainer-lineup-reserve-slot, " +
+            "button, input, select, textarea, a"
+          )
+        ) {
+          return;
+        }
+    
+        if (
+          event.pointerType === "mouse" &&
+          event.button !== 0
+        ) {
+          return;
+        }
 
       const state =
         window.__trainerLineupState;
