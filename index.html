@@ -15262,17 +15262,6 @@ async function trainerLineupBuildShareFile_(
     );
   }
 
-  const template =
-    TRAINER_LINEUP_TEMPLATES_[
-      snapshot.sport
-    ];
-
-  if (!template) {
-    throw new Error(
-      "Brak szablonu lineupu."
-    );
-  }
-
   if (document.fonts?.ready) {
     try {
       await document.fonts.ready;
