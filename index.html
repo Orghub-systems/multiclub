@@ -1079,7 +1079,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.17';
+  window.APP_BUILD = 'APP v3.18';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -15251,11 +15251,14 @@ function trainerLineupSafeFilePart_(
 async function trainerLineupBuildShareFile_(
   snapshot
 ) {
-  if (
-    snapshot.sport !== "hockey"
-  ) {
+  const template =
+    TRAINER_LINEUP_TEMPLATES_[
+      snapshot.sport
+    ];
+
+  if (!template) {
     throw new Error(
-      "Udostępnianie jest obecnie dostępne dla hokeja."
+      "Brak szablonu lineupu."
     );
   }
 
