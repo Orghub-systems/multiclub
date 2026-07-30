@@ -16088,6 +16088,20 @@ function trainerLineupBindShareLongPress_() {
   area.addEventListener(
     "contextmenu",
     function(event) {
+
+    /*
+     * Kliknięcia przycisków lineupu służą do edycji składu.
+     * Mechanizm długiego przytrzymania nie może przejmować
+     * ich zdarzeń wskaźnika.
+     */
+    if (
+      event.target?.closest(
+        "button, input, select, textarea, a"
+      )
+    ) {
+      return;
+    }
+  
       event.preventDefault();
     }
   );
