@@ -746,39 +746,28 @@ input[type="number"] {
     }
     
     .trainer-lineup-slot-player {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    
       width: 100%;
+      max-width: 100%;
     
-      font-family:
-        Collage,
-        "Arial Narrow",
-        Arial,
-        sans-serif;
-    
-      color: #f5f5f5;
-      font-size: clamp(13px, 2vw, 19px);
-      font-weight: 900;
-      font-style: italic;
-      line-height: 1;
-    
-      letter-spacing: -.15px;
-    
-      white-space: nowrap;
-      overflow: visible;
-      overflow-wrap: normal;
-      word-break: normal;
-    
+      font-size: clamp(15px, 2.45vw, 22px);
+      line-height: 1.02;
       text-align: center;
+      white-space: normal;
     
-      -webkit-text-stroke: .25px rgba(0,0,0,.9);
-    
+      color: #fff;
+      font-style: italic;
+      font-weight: 900;
       text-shadow:
-        -1px -1px 0 #000,
-         1px -1px 0 #000,
-        -1px  1px 0 #000,
-         1px  1px 0 #000,
-         0 3px 2px rgba(0,0,0,.95),
-         0 5px 8px rgba(0,0,0,.8);
+        0 2px 0 rgba(0,0,0,.95),
+        0 0 6px rgba(0,0,0,.9),
+        0 0 10px rgba(0,0,0,.75);
+    
+      pointer-events: none;
     }
     
     .trainer-lineup-role-badge {
@@ -929,9 +918,34 @@ input[type="number"] {
         padding: 3px;
       }
     
-      .trainer-lineup-slot-name {
-        font-size: 9px;
-      }
+    .trainer-lineup-slot-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    
+      width: 100%;
+      max-width: 100%;
+    
+      font-size: clamp(14px, 2.2vw, 20px);
+      line-height: 1.04;
+      text-align: center;
+      white-space: normal;
+    
+      color: #fff;
+      font-style: italic;
+      font-weight: 900;
+      text-shadow:
+        0 2px 0 rgba(0,0,0,.95),
+        0 0 6px rgba(0,0,0,.9),
+        0 0 10px rgba(0,0,0,.75);
+    }
+
+    .trainer-lineup-name-line {
+      display: block;
+      width: 100%;
+    }
+      
     }
     /* ===== TRAINER LINEUP EDITOR: CSS END ===== */
 
@@ -1065,7 +1079,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.14';
+  window.APP_BUILD = 'APP v3.15';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11259,6 +11273,72 @@ function playerRefreshCurrentLineupAvailability_() {
 window.__playerLineupState = null;
 window.__playerLineupReturnScrollY = 0;
 
+  function lineupSplitNameTwoLines_(fullName) {
+  const clean = String(fullName || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (!clean) {
+    return {
+      line1: "",
+      line2: ""
+    };
+  }
+
+  const parts = clean.split(" ");
+
+  if (parts.length === 1) {
+    return {
+      line1: parts[0],
+      line2: ""
+    };
+  }
+
+  if (parts.length === 2) {
+    return {
+      line1: parts[0],
+      line2: parts[1]
+    };
+  }
+
+  const mid = Math.ceil(
+    parts.length / 2
+  );
+
+  return {
+    line1: parts
+      .slice(0, mid)
+      .join(" "),
+
+    line2: parts
+      .slice(mid)
+      .join(" ")
+  };
+}
+
+
+function lineupNameTwoLineHtml_(fullName) {
+  const split =
+    lineupSplitNameTwoLines_(
+      fullName
+    );
+
+  return `
+    <span class="trainer-lineup-name-line">
+      ${trainerEscHtml_(split.line1)}
+    </span>
+
+    ${
+      split.line2
+        ? `
+          <span class="trainer-lineup-name-line">
+            ${trainerEscHtml_(split.line2)}
+          </span>
+        `
+        : ""
+    }
+  `;
+}
 
 /**
  * Zwraca zawodnika przypisanego do danego slotu.
@@ -11340,9 +11420,9 @@ function playerLineupSlotHtml_(
           ${trainerEscHtml_(slot.id)}
         </span>
 
-        <span class="trainer-lineup-slot-name">
-          ${trainerEscHtml_(playerName)}
-        </span>
+      <span class="trainer-lineup-slot-name">
+        ${lineupNameTwoLineHtml_(playerName)}
+      </span>
 
         ${
           role
@@ -11370,9 +11450,9 @@ function playerLineupSlotHtml_(
       ${
         player
           ? `
-            <span class="trainer-lineup-slot-player">
-              ${trainerEscHtml_(playerName)}
-            </span>
+        <span class="trainer-lineup-slot-player">
+          ${lineupNameTwoLineHtml_(playerName)}
+        </span>
 
             ${
               role
@@ -15037,6 +15117,104 @@ function trainerLineupFitCanvasText_(
   return minimum;
 }
 
+  function trainerLineupDrawCanvasTwoLineName_(
+  ctx,
+  fullName,
+  centerX,
+  centerY,
+  maxWidth,
+  initialSize,
+  minSize,
+  fontFamily
+) {
+  const split = lineupSplitNameTwoLines_(fullName);
+
+  const line1 = String(split.line1 || "").trim();
+  const line2 = String(split.line2 || "").trim();
+
+  let size = Number(initialSize) || 34;
+  const minimum = Number(minSize) || 18;
+
+  while (size > minimum) {
+    ctx.font =
+      "italic 900 " +
+      size +
+      "px " +
+      fontFamily;
+
+    const width1 = line1
+      ? ctx.measureText(line1).width
+      : 0;
+
+    const width2 = line2
+      ? ctx.measureText(line2).width
+      : 0;
+
+    if (
+      Math.max(width1, width2) <= maxWidth
+    ) {
+      break;
+    }
+
+    size -= 1;
+  }
+
+  const lineGap = Math.max(
+    20,
+    Math.round(size * 0.95)
+  );
+
+  ctx.font =
+    "italic 900 " +
+    size +
+    "px " +
+    fontFamily;
+
+  ctx.fillStyle = "#f5f5f5";
+  ctx.strokeStyle = "rgba(0,0,0,.98)";
+  ctx.lineWidth = 8;
+  ctx.lineJoin = "round";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (line2) {
+    ctx.strokeText(
+      line1,
+      centerX,
+      centerY - lineGap / 2
+    );
+    ctx.fillText(
+      line1,
+      centerX,
+      centerY - lineGap / 2
+    );
+
+    ctx.strokeText(
+      line2,
+      centerX,
+      centerY + lineGap / 2
+    );
+    ctx.fillText(
+      line2,
+      centerX,
+      centerY + lineGap / 2
+    );
+
+  } else {
+    ctx.strokeText(
+      line1,
+      centerX,
+      centerY
+    );
+    ctx.fillText(
+      line1,
+      centerX,
+      centerY
+    );
+  }
+
+  return size;
+}
 
 function trainerLineupSafeFilePart_(
   value
@@ -15390,43 +15568,15 @@ async function trainerLineupBuildShareFile_(
       ) *
       boardHeight;
 
-    const textSize =
-      trainerLineupFitCanvasText_(
-        ctx,
-        playerName,
-        265,
-        34,
-        20,
-        "italic 900",
-        fontFamily
-      );
-
-    ctx.font =
-      "italic 900 " +
-      textSize +
-      "px " +
-      fontFamily;
-
-    ctx.fillStyle =
-      "#f5f5f5";
-
-    ctx.strokeStyle =
-      "rgba(0,0,0,.98)";
-
-    ctx.lineWidth = 8;
-    ctx.lineJoin = "round";
-    ctx.textAlign = "center";
-
-    ctx.strokeText(
+    trainerLineupDrawCanvasTwoLineName_(
+      ctx,
       playerName,
       centerX,
-      centerY
-    );
-
-    ctx.fillText(
-      playerName,
-      centerX,
-      centerY
+      centerY,
+      265,
+      38,
+      22,
+      fontFamily
     );
 
     const role = String(
@@ -16657,10 +16807,10 @@ function trainerLineupSlotHtml_(slot, reserve = false) {
         <span class="trainer-lineup-slot-code">
           ${trainerEscHtml_(slot.id)}
         </span>
-
-        <span class="trainer-lineup-slot-name">
-          ${filled ? trainerEscHtml_(playerLabel) : "Kliknij"}
-        </span>
+        
+      <span class="trainer-lineup-slot-name">
+        ${lineupNameTwoLineHtml_(playerName)}
+      </span>
 
         ${
           role
@@ -16685,9 +16835,9 @@ function trainerLineupSlotHtml_(slot, reserve = false) {
       ${
         filled
           ? `
-            <span class="trainer-lineup-slot-player">
-              ${trainerEscHtml_(playerLabel)}
-            </span>
+          <span class="trainer-lineup-slot-player">
+            ${lineupNameTwoLineHtml_(playerName)}
+          </span>
             ${
               role
                 ? `
