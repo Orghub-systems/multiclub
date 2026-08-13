@@ -10985,6 +10985,24 @@ function renderTreningi(lista) {
     return new Date(y, m - 1, d, hh, mm, 0).getTime();
   }
 
+  function parseEventEndDateTime_(t) {
+  const explicitEndDate = String(t?.dataKoniec || "").trim();
+  const rawDate = String(t?.data || "").trim();
+
+  let endDate = explicitEndDate;
+
+  if (!endDate && rawDate) {
+    const parts = rawDate.split(/\s+-\s+/);
+    endDate = String(parts[1] || parts[0] || "").trim();
+  }
+
+  return parseEventDateTime_({
+    ...t,
+    data: endDate,
+    godzStart: String(t?.godzKoniec || t?.godzStart || "23:59").trim()
+  });
+}
+  
   function isVisibleInApp_(t) {
     if (typeof t?.widocznoscWApce !== "undefined") return !!t.widocznoscWApce;
     if (typeof t?.widocznyWApce !== "undefined") return !!t.widocznyWApce;
@@ -10998,10 +11016,10 @@ function renderTreningi(lista) {
   const listaPoFiltrowaniu = (Array.isArray(lista) ? lista : [])
     .filter(t => {
       if (!isVisibleInApp_(t)) return false;
-
-      const startTs = parseEventDateTime_(t);
-      if (!Number.isFinite(startTs)) return false;
-      if (startTs < terazTs) return false;
+      
+    const endTs = parseEventEndDateTime_(t);
+    if (!Number.isFinite(endTs)) return false;
+    if (endTs < terazTs) return false;
 
       return true;
     })
