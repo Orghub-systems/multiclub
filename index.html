@@ -6815,18 +6815,30 @@ function refreshSetupSubmitState_() {
 
   const datesOk = !!s && !!e && s <= e;
 
-  const months = Array.isArray(setupDraft?.months) ? setupDraft.months : [];
-  const fees = setupDraft?.fees || {};
-  const singleTrainingPrice = String(setupDraft?.singleTrainingPrice ?? "").trim();
+const months = Array.isArray(setupDraft?.months) ? setupDraft.months : [];
+const fees = setupDraft?.fees || {};
+const singleTrainingPrice = String(setupDraft?.singleTrainingPrice ?? "").trim();
+const noSingleTraining = setupDraft?.noSingleTraining === true;
 
-  let paymentsOk = false;
-  if (datesOk && months.length > 0) {
-    paymentsOk = months.every((m) => {
-      const k = monthKey_(m);
-      const v = fees[k];
-      return v !== undefined && v !== null && String(v).trim() !== "";
-    }) && singleTrainingPrice !== "";
-  }
+let paymentsOk = false;
+
+if (datesOk && months.length > 0) {
+  const monthlyFeesOk = months.every((m) => {
+    const k = monthKey_(m);
+    const v = fees[k];
+
+    return (
+      v !== undefined &&
+      v !== null &&
+      String(v).trim() !== ""
+    );
+  });
+
+  const singleTrainingOk =
+    noSingleTraining || singleTrainingPrice !== "";
+
+  paymentsOk = monthlyFeesOk && singleTrainingOk;
+}
 
   const adminPass = String(setupDraft?.adminPass || "").trim();
   const adminEmail = String(setupDraft?.adminEmail || "").trim().toLowerCase();
