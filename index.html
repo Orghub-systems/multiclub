@@ -24162,30 +24162,72 @@ function adminConfirmSystemPrzelewIgnore_() {
     `;
 
     let finished = false;
+    let requestedResult = false;
+    let closingByButton = false;
 
-    const finish = (value) => {
-      if (finished) return;
-      finished = true;
+    const cleanup = () => {
+      window.removeEventListener("popstate", onPopState, true);
       document.removeEventListener("keydown", onKeyDown);
       modal.remove();
+    };
+
+    const finalize = (value) => {
+      if (finished) return;
+      finished = true;
+      cleanup();
       resolve(value);
     };
 
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") finish(false);
+    const onPopState = (event) => {
+      if (finished) return;
+
+      event.stopImmediatePropagation();
+
+      if (closingByButton) {
+        finalize(requestedResult);
+      } else {
+        finalize(false);
+      }
     };
 
+    const closeWithResult = (value) => {
+      if (finished || closingByButton) return;
+
+      requestedResult = value;
+      closingByButton = true;
+
+      history.back();
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeWithResult(false);
+      }
+    };
+
+    window.addEventListener("popstate", onPopState, true);
+    document.addEventListener("keydown", onKeyDown);
+
+    history.pushState(
+      {
+        ...(history.state && typeof history.state === "object" ? history.state : {}),
+        __orghubModal: "systemPrzelewIgnore"
+      },
+      "",
+      location.href
+    );
+
     modal.querySelector('[data-action="confirm"]')
-      .addEventListener("click", () => finish(true));
+      .addEventListener("click", () => closeWithResult(true));
 
     modal.querySelector('[data-action="cancel"]')
-      .addEventListener("click", () => finish(false));
+      .addEventListener("click", () => closeWithResult(false));
 
     modal.addEventListener("click", (event) => {
-      if (event.target === modal) finish(false);
+      if (event.target === modal) closeWithResult(false);
     });
 
-    document.addEventListener("keydown", onKeyDown);
     document.body.appendChild(modal);
   });
 }
