@@ -24131,8 +24131,67 @@ function escapeHtml_(s) {
     .replace(/'/g, "&#39;");
 }
 
+function adminConfirmSystemPrzelewIgnore_() {
+  return new Promise((resolve) => {
+    document.getElementById("adminSystemPrzelewIgnoreModal")?.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "adminSystemPrzelewIgnoreModal";
+    modal.className = "modal";
+
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width:420px;text-align:center;">
+        <div style="font-size:20px;font-weight:900;margin-bottom:10px;">
+          Ignorować ten przelew?
+        </div>
+
+        <div style="opacity:.85;line-height:1.4;margin-bottom:16px;">
+          Przelew zostanie ukryty z listy System przelewy.
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="full-btn green" data-action="confirm">
+            Tak, ukryj przelew
+          </button>
+
+          <button type="button" class="full-btn alt" data-action="cancel">
+            Anuluj
+          </button>
+        </div>
+      </div>
+    `;
+
+    let finished = false;
+
+    const finish = (value) => {
+      if (finished) return;
+      finished = true;
+      document.removeEventListener("keydown", onKeyDown);
+      modal.remove();
+      resolve(value);
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") finish(false);
+    };
+
+    modal.querySelector('[data-action="confirm"]')
+      .addEventListener("click", () => finish(true));
+
+    modal.querySelector('[data-action="cancel"]')
+      .addEventListener("click", () => finish(false));
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) finish(false);
+    });
+
+    document.addEventListener("keydown", onKeyDown);
+    document.body.appendChild(modal);
+  });
+}
+
 async function adminIgnoreSystemPrzelew(row) {
-  const ok = confirm("Oznaczyć ten przelew jako nieważny i ukryć go z listy?");
+  const ok = await adminConfirmSystemPrzelewIgnore_();
   if (!ok) return;
 
   try {
