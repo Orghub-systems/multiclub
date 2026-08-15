@@ -5918,6 +5918,92 @@ function fileToDataUrl_(file) {
   });
 }
 
+function createPwaIconDataUrl_(sourceDataUrl, size, backgroundColor) {
+  return new Promise((resolve, reject) => {
+    const targetSize = Number(size);
+
+    if (targetSize !== 192 && targetSize !== 512) {
+      reject(new Error("Nieprawidłowy rozmiar ikony PWA."));
+      return;
+    }
+
+    const source = String(sourceDataUrl || "").trim();
+
+    if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(source)) {
+      reject(new Error("Nieprawidłowe źródło obrazu PWA."));
+      return;
+    }
+
+    const img = new Image();
+
+    img.onload = function() {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Brak obsługi Canvas."));
+          return;
+        }
+
+        const bg = /^#[0-9a-fA-F]{6}$/.test(String(backgroundColor || ""))
+          ? String(backgroundColor)
+          : "#000000";
+
+        // Pełne, nieprzezroczyste tło wymagane dla poprawnej ikony maskable.
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, targetSize, targetSize);
+
+        const sourceWidth = Number(img.naturalWidth || img.width);
+        const sourceHeight = Number(img.naturalHeight || img.height);
+
+        if (!sourceWidth || !sourceHeight) {
+          reject(new Error("Nie udało się odczytać wymiarów logo."));
+          return;
+        }
+
+        // Logo zajmuje maks. 80% pola.
+        // Zostawiamy bezpieczny margines dla ikon maskable Androida.
+        const maxContentSize = targetSize * 0.80;
+
+        const scale = Math.min(
+          maxContentSize / sourceWidth,
+          maxContentSize / sourceHeight
+        );
+
+        const drawWidth = Math.max(1, Math.round(sourceWidth * scale));
+        const drawHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+        const drawX = Math.round((targetSize - drawWidth) / 2);
+        const drawY = Math.round((targetSize - drawHeight) / 2);
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
+        ctx.drawImage(
+          img,
+          drawX,
+          drawY,
+          drawWidth,
+          drawHeight
+        );
+
+        resolve(canvas.toDataURL("image/png"));
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    img.onerror = function() {
+      reject(new Error("Nie udało się przygotować ikony PWA."));
+    };
+
+    img.src = source;
+  });
+}
+
 /* ---------- Render Panel 1 ---------- */
 function renderConfigUI_() {
   const nameEl = document.getElementById("cfgClubNameLabel");
@@ -6184,6 +6270,23 @@ async function submitClubConfig() {
     return;
   }
 
+let pwaIcon192Data = "";
+let pwaIcon512Data = "";
+
+try {
+  [pwaIcon192Data, pwaIcon512Data] = await Promise.all([
+    createPwaIconDataUrl_(cfgDraft.logoDataUrl, 192, cfgDraft.bgColor),
+    createPwaIconDataUrl_(cfgDraft.logoDataUrl, 512, cfgDraft.bgColor)
+  ]);
+} catch (e) {
+  if (msg) {
+    msg.textContent =
+      "❌ Nie udało się przygotować ikon aplikacji: " +
+      (e?.message || e);
+  }
+  return;
+}
+
   window.__clubConfigSubmitting = true;
 
   if (submitBtn) {
@@ -6198,15 +6301,17 @@ async function submitClubConfig() {
   showBusy("Konfiguruję klub…");
   const progress = startClubConfigProgress_();
 
-  const payload = {
-    action: "createClub",
-    clubName: cfgDraft.clubName,
-    sezonStart: "",
-    sezonEnd: "",
-    bgColor: cfgDraft.bgColor,
-    ownerEmail: cfgDraft.email,
-    logoBase64: cfgDraft.logoDataUrl
-  };
+const payload = {
+  action: "createClub",
+  clubName: cfgDraft.clubName,
+  sezonStart: "",
+  sezonEnd: "",
+  bgColor: cfgDraft.bgColor,
+  ownerEmail: cfgDraft.email,
+  logoBase64: cfgDraft.logoDataUrl,
+  pwaIcon192Data: pwaIcon192Data,
+  pwaIcon512Data: pwaIcon512Data
+};
 
   function applyCreateClubSuccess_(r) {
     if (!r.clubId) {
@@ -26103,6 +26208,26 @@ async function adminSaveClubVisualSettings_() {
     return;
   }
 
+const iconSourceData = String(draft.logoData || "").trim();
+
+let pwaIcon192Data = "";
+let pwaIcon512Data = "";
+
+if (iconSourceData) {
+  try {
+    [pwaIcon192Data, pwaIcon512Data] = await Promise.all([
+      createPwaIconDataUrl_(iconSourceData, 192, bgColor),
+      createPwaIconDataUrl_(iconSourceData, 512, bgColor)
+    ]);
+  } catch (e) {
+    alert(
+      "❌ Nie udało się przygotować ikon aplikacji: " +
+      (e?.message || e)
+    );
+    return;
+  }
+}
+
   const btn = document.getElementById("adminVisualSaveBtn");
 
   if (btn) {
@@ -26112,11 +26237,13 @@ async function adminSaveClubVisualSettings_() {
   }
 
   try {
-    const res = await apiClubPost({
-      action: "adminSaveClubVisualSettings",
-      bgColor: bgColor,
-      logoData: logoData
-    });
+const res = await apiClubPost({
+  action: "adminSaveClubVisualSettings",
+  bgColor: bgColor,
+  logoData: logoData,
+  pwaIcon192Data: pwaIcon192Data,
+  pwaIcon512Data: pwaIcon512Data
+});
 
     if (!res || res.success !== true) {
       alert("❌ " + (res?.error || "Nie udało się zapisać ustawień wizualnych."));
