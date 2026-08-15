@@ -1,7 +1,7 @@
 /* service-worker.js — ORG HUB / Cloudflare version */
 
 const CORE = "https://orghubmulticlub.orghubsystems.workers.dev";
-const PUSH_CORE = "https://broken-wind-9e0b.orghubsystems.workers.dev";
+const PUSH_CORE = CORE;
 
 const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE_NAME = "orghub-static-v" + SW_VERSION;
