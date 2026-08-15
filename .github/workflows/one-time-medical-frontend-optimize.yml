@@ -1,0 +1,619 @@
+name: One-time medical frontend optimization
+
+on:
+  push:
+    branches:
+      - medical-frontend-optimize-20260815
+    paths:
+      - .github/workflows/one-time-medical-frontend-optimize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch medical exam frontend
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          def replace_once(old, new, label):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected 1 occurrence, found {count}")
+              text = text.replace(old, new, 1)
+
+          def replace_n(old, new, expected, label):
+              global text
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{label}: expected {expected} occurrences, found {count}")
+              text = text.replace(old, new)
+
+          # 1. Login / active-session checks must respect the 6h cache.
+          replace_n(
+              'trainerScheduleMedicalExamAlertsCheck_(300, true);',
+              'trainerScheduleMedicalExamAlertsCheck_(300);',
+              2,
+              'cached startup checks',
+          )
+
+          # 2. Normalize the medical date returned by listaZawodnikow and keep it in the player cache.
+          old_player_cache = '''    window.__trainerPlayersListCache = lista.map(z => ({
+              nr: String(z.nr || "").trim(),
+              nazwisko: String(z.nazwisko || "").trim(),
+              numerWidoczny: String(
+                z.numerWidoczny ||
+                z.visibleNumber ||
+                z.numerKoszulki ||
+                ""
+              ).trim(),
+              medicalExam: z.medicalExam || null
+            }));'''
+
+          new_player_cache = '''    window.__trainerPlayersListCache = lista.map(z => {
+              const legacyMedicalExam =
+                z.medicalExam && typeof z.medicalExam === "object"
+                  ? z.medicalExam
+                  : null;
+
+              const hasFlatMedicalDate =
+                Object.prototype.hasOwnProperty.call(z, "medicalExamValidUntil") ||
+                Object.prototype.hasOwnProperty.call(z, "medical_exam_valid_until");
+
+              const flatMedicalDate = String(
+                z.medicalExamValidUntil ??
+                z.medical_exam_valid_until ??
+                ""
+              ).trim();
+
+              const legacyMedicalDate = String(
+                legacyMedicalExam?.validUntil ||
+                legacyMedicalExam?.validUntilLabel ||
+                legacyMedicalExam?.date ||
+                ""
+              ).trim();
+
+              return {
+                nr: String(z.nr || "").trim(),
+                nazwisko: String(z.nazwisko || "").trim(),
+                numerWidoczny: String(
+                  z.numerWidoczny ||
+                  z.visibleNumber ||
+                  z.numerKoszulki ||
+                  ""
+                ).trim(),
+                medicalExamLoaded: hasFlatMedicalDate || !!legacyMedicalExam,
+                medicalExamValidUntil: hasFlatMedicalDate
+                  ? flatMedicalDate
+                  : legacyMedicalDate
+              };
+            });
+
+            trainerRebuildMedicalAlertsFromPlayerCache_();'''
+
+          replace_once(old_player_cache, new_player_cache, 'player medical cache')
+
+          old_tile_alert = '''      const med = z.medicalExam || {};
+              const hasMedicalAlert = med.enabled === true && med.showAlert === true;
+              const medicalText = hasMedicalAlert
+                ? String(med.text || "Ważność badań")
+                : "";'''
+
+          new_tile_alert = '''      const medicalAlert =
+                (window.__trainerMedicalExamAlertsByNr || {})[nr] || null;
+              const hasMedicalAlert = !!medicalAlert;
+              const daysLeft = Number(medicalAlert && medicalAlert.daysLeft);
+              const medicalText =
+                hasMedicalAlert && Number.isFinite(daysLeft) && daysLeft < 0
+                  ? "BADANIA PO TERMINIE"
+                  : hasMedicalAlert && Number.isFinite(daysLeft) && daysLeft === 0
+                    ? "BADANIA DO DZISIAJ"
+                    : hasMedicalAlert
+                      ? "WAŻNOŚĆ BADAŃ"
+                      : "";'''
+
+          replace_once(old_tile_alert, new_tile_alert, 'player tile medical alert')
+
+          replace_once(
+              '  trainerScheduleMedicalExamAlertsCheck_(0);\n\n',
+              '',
+              'list-view extra alert request',
+          )
+
+          # 3. Use medicalExamValidUntil from the player list before falling back to a dedicated GET.
+          old_selected_cache = '''  const medicalExam =
+              cachedPlayer &&
+              cachedPlayer.medicalExam &&
+              typeof cachedPlayer.medicalExam === "object"
+                ? cachedPlayer.medicalExam
+                : null;
+
+            if (medicalExam) {
+              const validUntil = String(
+                medicalExam.validUntil ||
+                medicalExam.validUntilLabel ||
+                medicalExam.date ||
+                ""
+              ).trim();
+
+              if (dateEl) {
+                dateEl.textContent = validUntil || "Nie ustawiono";
+              }
+
+              return;
+            }'''
+
+          new_selected_cache = '''  if (cachedPlayer && cachedPlayer.medicalExamLoaded === true) {
+              const validUntil = String(
+                cachedPlayer.medicalExamValidUntil || ""
+              ).trim();
+
+              if (dateEl) {
+                dateEl.textContent = validUntil || "Nie ustawiono";
+              }
+
+              return;
+            }'''
+
+          replace_once(old_selected_cache, new_selected_cache, 'selected player cache read')
+
+          old_fallback_result = '''    const validUntil = String(res.validUntil || "").trim();
+
+              if (dateEl) {
+                dateEl.textContent = validUntil || "Nie ustawiono";
+              }'''
+
+          new_fallback_result = '''    const validUntil = String(res.validUntil || "").trim();
+
+              if (cachedPlayer) {
+                cachedPlayer.medicalExamLoaded = true;
+                cachedPlayer.medicalExamValidUntil = validUntil;
+                trainerUpdateMedicalAlertForPlayer_(nr, validUntil);
+              }
+
+              if (dateEl) {
+                dateEl.textContent = validUntil || "Nie ustawiono";
+              }'''
+
+          replace_once(old_fallback_result, new_fallback_result, 'fallback medical cache update')
+
+          # 4. A successful save already gives us authoritative state for that player;
+          #    update the local map/beacon instead of immediately issuing another GET.
+          old_after_save = '''    if (dateEl) {
+              dateEl.textContent = validUntil || "Nie ustawiono";
+            }
+
+            if (msg) msg.textContent = "✅ Zapisano.";
+
+            // Po zapisie odświeżamy alerty, bo data mogła wejść / wypaść z zakresu 10 dni.
+            if (typeof trainerScheduleMedicalExamAlertsCheck_ === "function") {
+              trainerScheduleMedicalExamAlertsCheck_(200, true);
+            }'''
+
+          new_after_save = '''    if (dateEl) {
+              dateEl.textContent = validUntil || "Nie ustawiono";
+            }
+
+            const cachedPlayer =
+              Array.isArray(window.__trainerPlayersListCache)
+                ? window.__trainerPlayersListCache.find(player => {
+                    return String(player?.nr || "").trim() === nr;
+                  })
+                : null;
+
+            if (cachedPlayer) {
+              cachedPlayer.medicalExamLoaded = true;
+              cachedPlayer.medicalExamValidUntil = validUntil;
+            }
+
+            trainerUpdateMedicalAlertForPlayer_(nr, validUntil);
+
+            if (msg) msg.textContent = "✅ Zapisano.";'''
+
+          replace_once(old_after_save, new_after_save, 'local update after medical save')
+
+          # 5. Track whether feature state came from the alert endpoint/cache.
+          old_globals = '''window.__trainerMedicalExamAlertsByNr = window.__trainerMedicalExamAlertsByNr || {};
+            window.__trainerMedicalExamAlertsCount = window.__trainerMedicalExamAlertsCount || 0;
+            window.__trainerMedicalBeaconBlinkTimer = window.__trainerMedicalBeaconBlinkTimer || null;'''
+
+          new_globals = '''window.__trainerMedicalExamAlertsByNr = window.__trainerMedicalExamAlertsByNr || {};
+            window.__trainerMedicalExamAlertsCount = window.__trainerMedicalExamAlertsCount || 0;
+            window.__trainerMedicalExamAlertsEnabled =
+              typeof window.__trainerMedicalExamAlertsEnabled === "boolean"
+                ? window.__trainerMedicalExamAlertsEnabled
+                : null;
+            window.__trainerMedicalBeaconBlinkTimer = window.__trainerMedicalBeaconBlinkTimer || null;'''
+
+          replace_once(old_globals, new_globals, 'medical alert global state')
+
+          # 6. Replace the old always-fetch scheduler with 6h TTL cache + local calculations.
+          core_start_marker = '''/**
+           * Buduje alerty badań z danych pobranych razem z listą zawodników.
+           * Nie wykonuje osobnego zapytania do GAS.
+           */'''
+          core_end_marker = '''/**
+           * Dorysowuje czerwony napis "WAŻNOŚĆ BADAŃ" na widocznych kaflach zawodników.'''
+
+          start = text.find(core_start_marker)
+          end = text.find(core_end_marker, start + 1)
+          if start < 0 or end < 0:
+              raise SystemExit('medical scheduler markers not found')
+          if text.find(core_start_marker, start + 1) >= 0:
+              raise SystemExit('medical scheduler start marker is not unique')
+
+          new_core = r'''const TRAINER_MEDICAL_ALERT_TTL_MS = 6 * 60 * 60 * 1000;
+            const TRAINER_MEDICAL_ALERT_HORIZON_DAYS = 10;
+
+            function trainerMedicalExamDaysLeft_(validUntil) {
+              const value = String(validUntil || "").trim();
+              const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+              if (!match) return null;
+
+              const targetUtc = Date.UTC(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3])
+              );
+
+              const now = new Date();
+              const todayUtc = Date.UTC(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate()
+              );
+
+              return Math.round((targetUtc - todayUtc) / 86400000);
+            }
+
+            function trainerMedicalAlertFromDate_(nr, validUntil) {
+              const playerNr = String(nr || "").trim();
+              const date = String(validUntil || "").trim();
+              if (!playerNr || !date) return null;
+
+              const daysLeft = trainerMedicalExamDaysLeft_(date);
+              if (!Number.isFinite(daysLeft)) return null;
+              if (daysLeft > TRAINER_MEDICAL_ALERT_HORIZON_DAYS) return null;
+
+              return {
+                numer: playerNr,
+                validUntil: date,
+                daysLeft
+              };
+            }
+
+            function trainerSetMedicalAlertsState_(enabled, alerts) {
+              const isEnabled = enabled === true;
+              const safeAlerts =
+                isEnabled && Array.isArray(alerts) ? alerts : [];
+
+              window.__trainerMedicalExamAlertsEnabled = isEnabled;
+              window.__trainerMedicalExamAlertsByNr =
+                trainerBuildMedicalAlertsMap_(safeAlerts);
+              window.__trainerMedicalExamAlertsCount = safeAlerts.length;
+
+              trainerSetMedicalAlertBeacon_(safeAlerts.length);
+              trainerApplyMedicalAlertsToVisiblePlayerTiles_();
+            }
+
+            function trainerMedicalAlertsCacheKey_() {
+              let session = null;
+
+              try {
+                session =
+                  typeof loadAppSession_ === "function"
+                    ? loadAppSession_()
+                    : null;
+              } catch (e) {
+                session = null;
+              }
+
+              const clubKey = String(
+                window.clubId ||
+                (typeof clubId !== "undefined" ? clubId : "") ||
+                localStorage.getItem("clubId") ||
+                ""
+              ).trim().toLowerCase();
+
+              const loginKey = String(
+                session?.loginId || session?.login || ""
+              ).trim().toLowerCase();
+
+              const groupsKey = String(
+                window.grupyTrenera || session?.grupa || ""
+              )
+                .split(",")
+                .map(value => value.trim())
+                .filter(Boolean)
+                .sort()
+                .join(",");
+
+              if (!clubKey || !loginKey) return "";
+
+              return (
+                "orghub.medical-alerts.v1." +
+                encodeURIComponent(clubKey) +
+                "." +
+                encodeURIComponent(loginKey) +
+                "." +
+                encodeURIComponent(groupsKey || "no-groups")
+              );
+            }
+
+            function trainerReadMedicalAlertsCache_() {
+              const key = trainerMedicalAlertsCacheKey_();
+              if (!key) return null;
+
+              try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return null;
+
+                const entry = JSON.parse(raw);
+                const savedAt = Number(entry?.savedAt || 0);
+
+                if (
+                  !savedAt ||
+                  Date.now() - savedAt > TRAINER_MEDICAL_ALERT_TTL_MS
+                ) {
+                  localStorage.removeItem(key);
+                  return null;
+                }
+
+                const enabled = entry?.enabled === true;
+                const cachedAlerts = Array.isArray(entry?.alerts)
+                  ? entry.alerts
+                  : [];
+
+                const alerts = enabled
+                  ? cachedAlerts
+                      .map(alert => {
+                        const nr = String(
+                          alert?.numer || alert?.player_id || ""
+                        ).trim();
+                        const validUntil = String(
+                          alert?.validUntil ||
+                          alert?.valid_until ||
+                          ""
+                        ).trim();
+                        return trainerMedicalAlertFromDate_(nr, validUntil);
+                      })
+                      .filter(Boolean)
+                  : [];
+
+                return { savedAt, enabled, alerts };
+              } catch (e) {
+                return null;
+              }
+            }
+
+            function trainerWriteMedicalAlertsCache_(enabled, alerts) {
+              const key = trainerMedicalAlertsCacheKey_();
+              if (!key) return;
+
+              const savedAt = Date.now();
+
+              try {
+                localStorage.setItem(
+                  key,
+                  JSON.stringify({
+                    savedAt,
+                    enabled: enabled === true,
+                    alerts: Array.isArray(alerts) ? alerts : []
+                  })
+                );
+
+                window.__trainerMedicalExamAlertLastCheckMs = savedAt;
+              } catch (e) {}
+            }
+
+            function trainerRebuildMedicalAlertsFromPlayerCache_() {
+              const players = Array.isArray(window.__trainerPlayersListCache)
+                ? window.__trainerPlayersListCache
+                : [];
+
+              const stateKnown =
+                typeof window.__trainerMedicalExamAlertsEnabled === "boolean";
+
+              const enabled = stateKnown
+                ? window.__trainerMedicalExamAlertsEnabled === true
+                : trainerIsMedicalFeatureEnabledFromCache_();
+
+              if (!enabled) {
+                trainerSetMedicalAlertsState_(false, []);
+                return;
+              }
+
+              const alerts = [];
+
+              players.forEach(player => {
+                if (!player || player.medicalExamLoaded !== true) return;
+
+                const alert = trainerMedicalAlertFromDate_(
+                  player.nr,
+                  player.medicalExamValidUntil
+                );
+
+                if (alert) alerts.push(alert);
+              });
+
+              trainerSetMedicalAlertsState_(true, alerts);
+
+              if (stateKnown) {
+                trainerWriteMedicalAlertsCache_(true, alerts);
+              }
+            }
+
+            function trainerUpdateMedicalAlertForPlayer_(nr, validUntil) {
+              const playerNr = String(nr || "").trim();
+              if (!playerNr) return;
+
+              const stateKnown =
+                typeof window.__trainerMedicalExamAlertsEnabled === "boolean";
+
+              const enabled = stateKnown
+                ? window.__trainerMedicalExamAlertsEnabled === true
+                : trainerIsMedicalFeatureEnabledFromCache_();
+
+              const map = {
+                ...(window.__trainerMedicalExamAlertsByNr || {})
+              };
+
+              delete map[playerNr];
+
+              if (enabled) {
+                const alert = trainerMedicalAlertFromDate_(
+                  playerNr,
+                  validUntil
+                );
+                if (alert) map[playerNr] = alert;
+              }
+
+              const alerts = Object.values(map);
+              trainerSetMedicalAlertsState_(enabled, alerts);
+              trainerWriteMedicalAlertsCache_(enabled, alerts);
+            }
+
+            function trainerScheduleMedicalExamAlertsCheck_(delayMs, forceRefresh) {
+              const delay = Math.max(0, Number(delayMs) || 0);
+
+              if (window.__trainerMedicalExamAlertsTimer) {
+                clearTimeout(window.__trainerMedicalExamAlertsTimer);
+              }
+
+              window.__trainerMedicalExamAlertsTimer = setTimeout(() => {
+                trainerRefreshMedicalExamAlerts_(forceRefresh === true).catch(error => {
+                  console.warn("trainerRefreshMedicalExamAlerts_ error:", error);
+                });
+              }, delay);
+
+              return true;
+            }
+
+            async function trainerRefreshMedicalExamAlerts_(forceRefresh) {
+              const now = Date.now();
+
+              if (forceRefresh !== true) {
+                const lastCheck = Number(
+                  window.__trainerMedicalExamAlertLastCheckMs || 0
+                );
+
+                if (
+                  lastCheck > 0 &&
+                  now - lastCheck < TRAINER_MEDICAL_ALERT_TTL_MS
+                ) {
+                  trainerSetMedicalAlertsState_(
+                    window.__trainerMedicalExamAlertsEnabled === true,
+                    Object.values(window.__trainerMedicalExamAlertsByNr || {})
+                  );
+
+                  return { success: true, cached: true };
+                }
+
+                const cached = trainerReadMedicalAlertsCache_();
+
+                if (cached) {
+                  window.__trainerMedicalExamAlertLastCheckMs = cached.savedAt;
+                  trainerSetMedicalAlertsState_(cached.enabled, cached.alerts);
+
+                  return {
+                    success: true,
+                    enabled: cached.enabled,
+                    alerts: cached.alerts,
+                    cached: true
+                  };
+                }
+              }
+
+              const groups = String(window.grupyTrenera || "").trim();
+
+              try {
+                const res = await apiClubGet("trainerMedicalExamAlerts", {
+                  grupy: groups,
+                  t: Date.now()
+                });
+
+                if (!res || res.success !== true) {
+                  return res || {
+                    success: false,
+                    error: "Brak odpowiedzi trainerMedicalExamAlerts"
+                  };
+                }
+
+                const enabled =
+                  res.enabled === true ||
+                  res.enabled === 1 ||
+                  String(res.enabled || "").trim() === "1" ||
+                  String(res.enabled || "").trim().toUpperCase() === "TRUE";
+
+                const alerts =
+                  enabled && Array.isArray(res.alerts) ? res.alerts : [];
+
+                window.__trainerMedicalExamAlertLastCheckMs = Date.now();
+                trainerSetMedicalAlertsState_(enabled, alerts);
+                trainerWriteMedicalAlertsCache_(enabled, alerts);
+
+                return res;
+              } catch (error) {
+                console.warn("trainerMedicalExamAlerts request error:", error);
+
+                return {
+                  success: false,
+                  error: String(error?.message || error)
+                };
+              }
+            }
+
+            '''
+
+          text = text[:start] + new_core + text[end:]
+
+          # Safety checks: old hot-path calls must be gone and new primitives must exist.
+          if 'trainerScheduleMedicalExamAlertsCheck_(200, true)' in text:
+              raise SystemExit('forced refresh after save still present')
+          if 'trainerScheduleMedicalExamAlertsCheck_(300, true)' in text:
+              raise SystemExit('forced startup refresh still present')
+          for needle in (
+              'medicalExamValidUntil',
+              'TRAINER_MEDICAL_ALERT_TTL_MS',
+              'trainerReadMedicalAlertsCache_',
+              'trainerUpdateMedicalAlertForPlayer_',
+          ):
+              if needle not in text:
+                  raise SystemExit(f'missing expected code: {needle}')
+
+          path.write_text(text, encoding="utf-8", newline="\n")
+          PY
+
+      - name: Validate diff
+        shell: bash
+        run: |
+          git diff --check
+          git diff --stat
+          grep -n "TRAINER_MEDICAL_ALERT_TTL_MS" index.html
+          grep -n "medicalExamValidUntil" index.html | head
+          if grep -q "trainerScheduleMedicalExamAlertsCheck_(200, true)" index.html; then
+            echo "Unexpected forced refresh after save"
+            exit 1
+          fi
+
+      - name: Commit optimized frontend and remove helper workflow
+        shell: bash
+        run: |
+          git config user.name "Orghub-systems"
+          git config user.email "orghubsystems@gmail.com"
+          git rm .github/workflows/one-time-medical-frontend-optimize.yml
+          git add index.html
+          git commit -m "Optimize medical exam alerts frontend"
+          git push origin HEAD:medical-frontend-optimize-20260815
