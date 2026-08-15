@@ -64,6 +64,18 @@ self.addEventListener("fetch", (e) => {
 
   // HTML / JS / CSS -> zawsze z sieci, bez cache.
   // To jest kluczowe: index.html zawiera APP_BUILD i nie może zostać stary.
+  // Bare club subdomain navigation: browser handles backend 302 redirect.
+  const isBareClubNavigation =
+    isSameOrigin &&
+    e.request.mode === "navigate" &&
+    url.pathname === "/" &&
+    !url.searchParams.has("clubId") &&
+    url.hostname.endsWith(".orghub.pl") &&
+    !["app.orghub.pl", "ads.orghub.pl", "www.orghub.pl"].includes(url.hostname);
+
+  if (isBareClubNavigation) {
+    return;
+  }
   if (isAppShell || e.request.mode === "navigate") {
     e.respondWith((async () => {
       try {
