@@ -2443,6 +2443,15 @@ if (buildChanged) {
     </button>
 
     <button
+      id="btnTrainerLineupDelete"
+      type="button"
+      class="full-btn danger hidden"
+      onclick="trainerDeleteLineup_()"
+    >
+      🗑 Usuń lineup
+    </button>
+
+    <button
       type="button"
       class="full-btn alt"
       onclick="trainerCloseLineupEditor_()"
@@ -16777,10 +16786,13 @@ async function trainerOpenLineupEditor_(eventId) {
       ),
 
     serverVersion:
+     
       Number.isSafeInteger(localServerVersion) &&
       localServerVersion >= 0
         ? localServerVersion
         : null,
+
+     hasLineup: false,
 
     activeSlotId: "",
     loading: true,
@@ -16891,6 +16903,9 @@ async function trainerOpenLineupEditor_(eventId) {
       serverVersion >= 0
         ? serverVersion
         : 0;
+
+    state.hasLineup =
+      lineupResponse.hasLineup === true;
 
     state.sport =
       TRAINER_LINEUP_TEMPLATES_[
