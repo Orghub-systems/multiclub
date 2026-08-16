@@ -1,0 +1,367 @@
+name: Apply lineup frontend optimization once
+
+on:
+  push:
+    branches:
+      - agent/supabase-lineups
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/supabase-lineups
+          fetch-depth: 0
+
+      - name: Patch index lineup flow
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          def replace_once(source, old, new, label):
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected 1 occurrence, found {count}")
+              return source.replace(old, new, 1)
+
+          # Player event cards: use hasLineup already returned with normal event data.
+          text = replace_once(
+              text,
+              '    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";\n\n    return `',
+              '    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";\n    const hasLineup = playerHasLineupFromEvent_(t);\n\n    return `',
+              "player card hasLineup",
+          )
+
+          text = replace_once(
+              text,
+              '''          <button\n            id="player-lineup-${t.id}"\n            type="button"\n            class="hidden"\n            style="background:#1565c0;color:white;border:none;"\n            onclick="playerOpenLineup_('${t.id}')">\n            🏒 Zobacz lineup\n          </button>''',
+              '''          <button\n            id="player-lineup-${t.id}"\n            type="button"\n            class="${hasLineup ? "" : "hidden"}"\n            style="background:#1565c0;color:white;border:none;"\n            onclick="playerOpenLineup_('${t.id}')">\n            🏒 Zobacz lineup\n          </button>''',
+              "player lineup button visibility",
+          )
+
+          availability_pattern = re.compile(
+              r'window\.__playerLineupAvailabilityRequestId = 0;[\s\S]*?function playerRefreshCurrentLineupAvailability_\(\) \{[\s\S]*?\n\}\n\n\nwindow\.__playerLineupState = null;',
+          )
+          availability_replacement = '''function playerHasLineupFromEvent_(event) {
+            return (
+              event?.hasLineup === true ||
+              event?.hasLineup === 1 ||
+              String(event?.hasLineup || "")
+                .trim()
+                .toUpperCase() === "TRUE"
+            );
+          }
+
+          /**
+           * Status lineupu jest częścią zwykłej odpowiedzi wydarzeń.
+           * Ta funkcja nie wykonuje żadnego dodatkowego requestu.
+           */
+          function playerRefreshLineupAvailability_(events) {
+            (Array.isArray(events) ? events : []).forEach(function(event) {
+              const eventId = String(event?.id || "").trim();
+              if (!eventId) return;
+
+              const button = document.getElementById(`player-lineup-${eventId}`);
+              if (!button) return;
+
+              button.classList.toggle(
+                "hidden",
+                !playerHasLineupFromEvent_(event)
+              );
+            });
+          }
+
+          function playerRefreshCurrentLineupAvailability_() {
+            const events = Object.values(
+              window.__playerEventsById || {}
+            );
+
+            return playerRefreshLineupAvailability_(events);
+          }
+
+
+          window.__playerLineupState = null;'''
+          text, count = availability_pattern.subn(availability_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f"player availability block: expected 1 occurrence, found {count}")
+
+          # Trainer editor: one lineupGet returns both players and lineup.
+          text = replace_once(
+              text,
+              '''  const localPlayers =
+            trainerLineupNormalizePlayers_(
+              Array.isArray(localDraft?.playersSnapshot)
+                ? localDraft.playersSnapshot
+                : []
+            );
+
+          window.__trainerLineupState = {''',
+              '''  const localPlayers =
+            trainerLineupNormalizePlayers_(
+              Array.isArray(localDraft?.playersSnapshot)
+                ? localDraft.playersSnapshot
+                : []
+            );
+
+          const localServerVersion = Number(
+            localDraft?.serverVersion
+          );
+
+          window.__trainerLineupState = {''',
+              "trainer local server version",
+          )
+
+          text = replace_once(
+              text,
+              '''    assignments:
+              trainerLineupNormalizeAssignments_(
+                localDraft?.assignments
+              ),
+
+            activeSlotId: "",''',
+              '''    assignments:
+              trainerLineupNormalizeAssignments_(
+                localDraft?.assignments
+              ),
+
+            serverVersion:
+              Number.isSafeInteger(localServerVersion) &&
+              localServerVersion >= 0
+                ? localServerVersion
+                : null,
+
+            activeSlotId: "",''',
+              "trainer state server version",
+          )
+
+          old_load = '''    /*
+             * Pobieramy równolegle:
+             * 1. aktualnych zawodników wydarzenia,
+             * 2. zapisany lineup.
+             */
+            const results = await Promise.all([
+              apiClubGet("zapisani", {
+                treningId: id
+              }),
+
+              apiClubGet("lineupGet", {
+                treningId: id,
+                sessionToken
+              })
+            ]);
+
+            const playersResponse = results[0];
+            const lineupResponse = results[1];
+
+            if (!Array.isArray(playersResponse)) {
+              throw new Error(
+                "Nieprawidłowa odpowiedź listy zawodników."
+              );
+            }
+
+            if (
+              !lineupResponse ||
+              lineupResponse.success !== true
+            ) {
+              throw new Error(
+                lineupResponse?.error ||
+                "Nie udało się pobrać lineupu."
+              );
+            }
+
+            const state =
+              window.__trainerLineupState;'''
+
+          new_load = '''    /*
+             * Jedno RPC zwraca zapisany lineup i aktualnych
+             * zawodników wydarzenia.
+             */
+            const lineupResponse = await apiClubGet(
+              "lineupGet",
+              {
+                treningId: id,
+                sessionToken
+              }
+            );
+
+            if (
+              !lineupResponse ||
+              lineupResponse.success !== true
+            ) {
+              throw new Error(
+                lineupResponse?.error ||
+                "Nie udało się pobrać lineupu."
+              );
+            }
+
+            const playersResponse = Array.isArray(
+              lineupResponse.players
+            )
+              ? lineupResponse.players
+              : null;
+
+            if (!playersResponse) {
+              throw new Error(
+                "Nieprawidłowa odpowiedź listy zawodników."
+              );
+            }
+
+            const state =
+              window.__trainerLineupState;'''
+          text = replace_once(text, old_load, new_load, "trainer one-call lineup load")
+
+          text = replace_once(
+              text,
+              '''    state.players =
+              trainerLineupNormalizePlayers_(
+                playersResponse
+              );
+
+            state.sport =''',
+              '''    state.players =
+              trainerLineupNormalizePlayers_(
+                playersResponse
+              );
+
+            const serverVersion = Number(
+              lineupResponse.version
+            );
+
+            state.serverVersion =
+              Number.isSafeInteger(serverVersion) &&
+              serverVersion >= 0
+                ? serverVersion
+                : 0;
+
+            state.sport =''',
+              "trainer loaded server version",
+          )
+
+          text = replace_once(
+              text,
+              '''        JSON.stringify({
+                  version: 1,
+                  eventId: id,
+                  sport: state.sport,''',
+              '''        JSON.stringify({
+                  version: 1,
+                  serverVersion: state.serverVersion,
+                  eventId: id,
+                  sport: state.sport,''',
+              "trainer open local backup server version",
+          )
+
+          # Save: send optimistic-lock version without any pre-read.
+          text = replace_once(
+              text,
+              '''  const payload = {
+            version: 1,
+            eventId: state.eventId,
+            sport: state.sport,
+            assignments: state.assignments
+          };''',
+              '''  const expectedVersion =
+            Number.isSafeInteger(Number(state.serverVersion)) &&
+            Number(state.serverVersion) >= 0
+              ? Number(state.serverVersion)
+              : null;
+
+          const payload = {
+            version: 1,
+            eventId: state.eventId,
+            sport: state.sport,
+            assignments: state.assignments
+          };''',
+              "trainer expected version",
+          )
+
+          text = replace_once(
+              text,
+              '''      lineupJson: JSON.stringify(payload),
+              sessionToken
+            });''',
+              '''      lineupJson: JSON.stringify(payload),
+              expectedVersion,
+              sessionToken
+            });''',
+              "trainer save expectedVersion param",
+          )
+
+          text = replace_once(
+              text,
+              '''    /*
+             * Lokalna kopia pozostaje jako awaryjny backup.
+             * Źródłem głównym jest już kalendarz GAS.
+             */
+            const localBackup = {''',
+              '''    const savedServerVersion = Number(
+              response.version
+            );
+
+            if (
+              Number.isSafeInteger(savedServerVersion) &&
+              savedServerVersion >= 0
+            ) {
+              state.serverVersion = savedServerVersion;
+            }
+
+            /*
+             * Lokalna kopia pozostaje jako awaryjny backup.
+             * Źródłem głównym jest serwer.
+             */
+            const localBackup = {''',
+              "trainer save response version",
+          )
+
+          text = replace_once(
+              text,
+              '''    const localBackup = {
+              ...payload,
+
+              playersSnapshot:''',
+              '''    const localBackup = {
+              ...payload,
+              serverVersion: state.serverVersion,
+
+              playersSnapshot:''',
+              "trainer save local backup server version",
+          )
+
+          # Guardrails: the optimized frontend must not call the compatibility availability RPC.
+          if '"lineupPlayerAvailability"' in text:
+              raise SystemExit("lineupPlayerAvailability API call still present")
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Validate index syntax and diff
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('index.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', html, flags=re.I)
+          if not scripts:
+              raise SystemExit('No inline script blocks found')
+          Path('/tmp/multiclub-inline.js').write_text('\n;\n'.join(scripts), encoding='utf-8')
+          PY
+          node --check /tmp/multiclub-inline.js
+          git diff --check
+          git diff --stat
+          git diff -- index.html
+
+      - name: Commit final frontend changes and remove one-shot workflow
+        run: |
+          rm .github/workflows/lineup-frontend-patch-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/lineup-frontend-patch-once.yml
+          git diff --cached --quiet || git commit -m "Optimize lineup frontend data flow"
+          git push origin HEAD:agent/supabase-lineups
