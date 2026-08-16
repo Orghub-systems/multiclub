@@ -32,7 +32,13 @@ jobs:
                   raise SystemExit(f"{label}: expected 1 occurrence, found {count}")
               return source.replace(old, new, 1)
 
-          # Player event cards: use hasLineup already returned with normal event data.
+          def regex_once(source, pattern, replacement, label):
+              result, count = re.subn(pattern, replacement, source, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected 1 occurrence, found {count}")
+              return result
+
+          # Player cards get lineup visibility from the normal events payload.
           text = replace_once(
               text,
               '    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";\n\n    return `',
@@ -42,13 +48,32 @@ jobs:
 
           text = replace_once(
               text,
-              '''          <button\n            id="player-lineup-${t.id}"\n            type="button"\n            class="hidden"\n            style="background:#1565c0;color:white;border:none;"\n            onclick="playerOpenLineup_('${t.id}')">\n            🏒 Zobacz lineup\n          </button>''',
-              '''          <button\n            id="player-lineup-${t.id}"\n            type="button"\n            class="${hasLineup ? "" : "hidden"}"\n            style="background:#1565c0;color:white;border:none;"\n            onclick="playerOpenLineup_('${t.id}')">\n            🏒 Zobacz lineup\n          </button>''',
+              '''          <button
+            id="player-lineup-${t.id}"
+            type="button"
+            class="hidden"
+            style="background:#1565c0;color:white;border:none;"
+            onclick="playerOpenLineup_('${t.id}')">
+            🏒 Zobacz lineup
+          </button>''',
+              '''          <button
+            id="player-lineup-${t.id}"
+            type="button"
+            class="${hasLineup ? "" : "hidden"}"
+            style="background:#1565c0;color:white;border:none;"
+            onclick="playerOpenLineup_('${t.id}')">
+            🏒 Zobacz lineup
+          </button>''',
               "player lineup button visibility",
           )
 
-          availability_pattern = re.compile(
-              r'window\.__playerLineupAvailabilityRequestId = 0;[\s\S]*?function playerRefreshCurrentLineupAvailability_\(\) \{[\s\S]*?\n\}\n\n\nwindow\.__playerLineupState = null;',
+          availability_pattern = (
+              r'window\.__playerLineupAvailabilityRequestId = 0;'
+              r'[\s\S]*?'
+              r'function playerRefreshCurrentLineupAvailability_\(\)\s*\{'
+              r'[\s\S]*?'
+              r'\n\}\s*'
+              r'(?=window\.__playerLineupState = null;)'
           )
           availability_replacement = '''function playerHasLineupFromEvent_(event) {
             return (
@@ -87,100 +112,46 @@ jobs:
             return playerRefreshLineupAvailability_(events);
           }
 
-
-          window.__playerLineupState = null;'''
-          text, count = availability_pattern.subn(availability_replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f"player availability block: expected 1 occurrence, found {count}")
-
-          # Trainer editor: one lineupGet returns both players and lineup.
-          text = replace_once(
+          '''
+          text = regex_once(
               text,
-              '''  const localPlayers =
-            trainerLineupNormalizePlayers_(
-              Array.isArray(localDraft?.playersSnapshot)
-                ? localDraft.playersSnapshot
-                : []
-            );
+              availability_pattern,
+              availability_replacement,
+              "player availability block",
+          )
 
-          window.__trainerLineupState = {''',
-              '''  const localPlayers =
-            trainerLineupNormalizePlayers_(
-              Array.isArray(localDraft?.playersSnapshot)
-                ? localDraft.playersSnapshot
-                : []
-            );
+          # Trainer editor keeps a server revision for optimistic locking.
+          text = regex_once(
+              text,
+              r'(const localPlayers\s*=\s*trainerLineupNormalizePlayers_\(\s*Array\.isArray\(localDraft\?\.playersSnapshot\)\s*\?\s*localDraft\.playersSnapshot\s*:\s*\[\]\s*\);)(\s*window\.__trainerLineupState\s*=\s*\{)',
+              r'''\1
 
           const localServerVersion = Number(
             localDraft?.serverVersion
           );
-
-          window.__trainerLineupState = {''',
+          \2''',
               "trainer local server version",
           )
 
-          text = replace_once(
+          text = regex_once(
               text,
-              '''    assignments:
-              trainerLineupNormalizeAssignments_(
-                localDraft?.assignments
-              ),
-
-            activeSlotId: "",''',
-              '''    assignments:
-              trainerLineupNormalizeAssignments_(
-                localDraft?.assignments
-              ),
+              r'(assignments:\s*trainerLineupNormalizeAssignments_\(\s*localDraft\?\.assignments\s*\),)(\s*activeSlotId:\s*"",)',
+              r'''\1
 
             serverVersion:
               Number.isSafeInteger(localServerVersion) &&
               localServerVersion >= 0
                 ? localServerVersion
                 : null,
-
-            activeSlotId: "",''',
+          \2''',
               "trainer state server version",
           )
 
-          old_load = '''    /*
-             * Pobieramy równolegle:
-             * 1. aktualnych zawodników wydarzenia,
-             * 2. zapisany lineup.
-             */
-            const results = await Promise.all([
-              apiClubGet("zapisani", {
-                treningId: id
-              }),
-
-              apiClubGet("lineupGet", {
-                treningId: id,
-                sessionToken
-              })
-            ]);
-
-            const playersResponse = results[0];
-            const lineupResponse = results[1];
-
-            if (!Array.isArray(playersResponse)) {
-              throw new Error(
-                "Nieprawidłowa odpowiedź listy zawodników."
-              );
-            }
-
-            if (
-              !lineupResponse ||
-              lineupResponse.success !== true
-            ) {
-              throw new Error(
-                lineupResponse?.error ||
-                "Nie udało się pobrać lineupu."
-              );
-            }
-
-            const state =
-              window.__trainerLineupState;'''
-
-          new_load = '''    /*
+          # Replace the old zapisani + lineupGet pair with one lineupGet call.
+          text = regex_once(
+              text,
+              r'''/\*\s*\n\s*\* Pobieramy równolegle:\s*\n\s*\* 1\. aktualnych zawodników wydarzenia,\s*\n\s*\* 2\. zapisany lineup\.\s*\n\s*\*/\s*const results = await Promise\.all\(\[\s*apiClubGet\("zapisani",\s*\{\s*treningId: id\s*\}\),\s*apiClubGet\("lineupGet",\s*\{\s*treningId: id,\s*sessionToken\s*\}\)\s*\]\);\s*const playersResponse = results\[0\];\s*const lineupResponse = results\[1\];\s*if \(!Array\.isArray\(playersResponse\)\) \{\s*throw new Error\(\s*"Nieprawidłowa odpowiedź listy zawodników\."\s*\);\s*\}\s*if \(\s*!lineupResponse \|\|\s*lineupResponse\.success !== true\s*\) \{\s*throw new Error\(\s*lineupResponse\?\.error \|\|\s*"Nie udało się pobrać lineupu\."\s*\);\s*\}''',
+              '''/*
              * Jedno RPC zwraca zapisany lineup i aktualnych
              * zawodników wydarzenia.
              */
@@ -212,24 +183,14 @@ jobs:
               throw new Error(
                 "Nieprawidłowa odpowiedź listy zawodników."
               );
-            }
+            }''',
+              "trainer one-call lineup load",
+          )
 
-            const state =
-              window.__trainerLineupState;'''
-          text = replace_once(text, old_load, new_load, "trainer one-call lineup load")
-
-          text = replace_once(
+          text = regex_once(
               text,
-              '''    state.players =
-              trainerLineupNormalizePlayers_(
-                playersResponse
-              );
-
-            state.sport =''',
-              '''    state.players =
-              trainerLineupNormalizePlayers_(
-                playersResponse
-              );
+              r'(state\.players\s*=\s*trainerLineupNormalizePlayers_\(\s*playersResponse\s*\);)(\s*state\.sport\s*=)',
+              r'''\1
 
             const serverVersion = Number(
               lineupResponse.version
@@ -240,46 +201,29 @@ jobs:
               serverVersion >= 0
                 ? serverVersion
                 : 0;
-
-            state.sport =''',
+          \2''',
               "trainer loaded server version",
           )
 
-          text = replace_once(
+          text = regex_once(
               text,
-              '''        JSON.stringify({
-                  version: 1,
-                  eventId: id,
-                  sport: state.sport,''',
-              '''        JSON.stringify({
-                  version: 1,
-                  serverVersion: state.serverVersion,
-                  eventId: id,
-                  sport: state.sport,''',
+              r'(JSON\.stringify\(\{\s*version:\s*1,)(\s*eventId:\s*id,)',
+              r'''\1
+                  serverVersion: state.serverVersion,\2''',
               "trainer open local backup server version",
           )
 
-          # Save: send optimistic-lock version without any pre-read.
-          text = replace_once(
+          # Save sends the revision with the same request; no pre-read is added.
+          text = regex_once(
               text,
-              '''  const payload = {
-            version: 1,
-            eventId: state.eventId,
-            sport: state.sport,
-            assignments: state.assignments
-          };''',
-              '''  const expectedVersion =
+              r'(\n\s*)(const payload = \{\s*version:\s*1,\s*eventId:\s*state\.eventId,\s*sport:\s*state\.sport,\s*assignments:\s*state\.assignments\s*\};)',
+              r'''\1const expectedVersion =
             Number.isSafeInteger(Number(state.serverVersion)) &&
             Number(state.serverVersion) >= 0
               ? Number(state.serverVersion)
               : null;
 
-          const payload = {
-            version: 1,
-            eventId: state.eventId,
-            sport: state.sport,
-            assignments: state.assignments
-          };''',
+          \2''',
               "trainer expected version",
           )
 
@@ -295,14 +239,10 @@ jobs:
               "trainer save expectedVersion param",
           )
 
-          text = replace_once(
+          text = regex_once(
               text,
-              '''    /*
-             * Lokalna kopia pozostaje jako awaryjny backup.
-             * Źródłem głównym jest już kalendarz GAS.
-             */
-            const localBackup = {''',
-              '''    const savedServerVersion = Number(
+              r'''(/\*\s*\n\s*\* Lokalna kopia pozostaje jako awaryjny backup\.\s*\n\s*\* Źródłem głównym jest już kalendarz GAS\.\s*\n\s*\*/\s*)(const localBackup = \{)''',
+              r'''const savedServerVersion = Number(
               response.version
             );
 
@@ -317,27 +257,39 @@ jobs:
              * Lokalna kopia pozostaje jako awaryjny backup.
              * Źródłem głównym jest serwer.
              */
-            const localBackup = {''',
+            \2''',
               "trainer save response version",
           )
 
-          text = replace_once(
+          text = regex_once(
               text,
-              '''    const localBackup = {
-              ...payload,
-
-              playersSnapshot:''',
-              '''    const localBackup = {
-              ...payload,
-              serverVersion: state.serverVersion,
-
-              playersSnapshot:''',
+              r'(const localBackup = \{\s*\.\.\.payload,)(\s*playersSnapshot:)',
+              r'''\1
+              serverVersion: state.serverVersion,\2''',
               "trainer save local backup server version",
           )
 
-          # Guardrails: the optimized frontend must not call the compatibility availability RPC.
+          # Hard guards for the intended request model.
           if '"lineupPlayerAvailability"' in text:
               raise SystemExit("lineupPlayerAvailability API call still present")
+
+          editor = re.search(
+              r'async function trainerOpenLineupEditor_\(eventId\)[\s\S]*?\n\}\n\nfunction trainerCloseLineupEditor_',
+              text,
+          )
+          if not editor:
+              raise SystemExit("trainer editor function not found after patch")
+          if 'apiClubGet("zapisani"' in editor.group(0):
+              raise SystemExit("trainer editor still performs zapisani request")
+          if editor.group(0).count('apiClubGet("lineupGet"') != 1:
+              raise SystemExit("trainer editor must contain exactly one lineupGet")
+
+          save = re.search(
+              r'async function trainerSaveLineupDraftLocal_\(\)[\s\S]*?\n\}\n\s*/\* --- dodawanie wydarzenia --- \*/',
+              text,
+          )
+          if not save or 'expectedVersion' not in save.group(0):
+              raise SystemExit("save function does not contain optimistic version")
 
           path.write_text(text, encoding="utf-8")
 
@@ -347,9 +299,16 @@ jobs:
           from pathlib import Path
           import re
           html = Path('index.html').read_text(encoding='utf-8')
-          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', html, flags=re.I)
+          scripts = []
+          for match in re.finditer(r'<script([^>]*)>([\s\S]*?)</script>', html, flags=re.I):
+              attrs = match.group(1).lower()
+              if 'src=' in attrs or 'application/ld+json' in attrs or 'application/json' in attrs:
+                  continue
+              body = match.group(2)
+              if body.strip():
+                  scripts.append(body)
           if not scripts:
-              raise SystemExit('No inline script blocks found')
+              raise SystemExit('No inline JavaScript blocks found')
           Path('/tmp/multiclub-inline.js').write_text('\n;\n'.join(scripts), encoding='utf-8')
           PY
           node --check /tmp/multiclub-inline.js
