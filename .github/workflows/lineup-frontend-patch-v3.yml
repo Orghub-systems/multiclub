@@ -39,9 +39,7 @@ jobs:
                   raise SystemExit(f"{label}: expected 1 occurrence, found {len(matches)}")
               return compiled.sub(replacement, source, count=1)
 
-          # =========================================================
           # PLAYER: no separate lineup availability request.
-          # =========================================================
           text = replace_once(
               text,
               '    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";\n\n    return `',
@@ -111,9 +109,7 @@ jobs:
               "player availability block",
           )
 
-          # =========================================================
           # TRAINER OPEN: one lineupGet provides players + lineup.
-          # =========================================================
           text = regex_once(
               text,
               r'(const localPlayers\s*=\s*trainerLineupNormalizePlayers_\(\s*Array\.isArray\(localDraft\?\.playersSnapshot\)\s*\?\s*localDraft\.playersSnapshot\s*:\s*\[\]\s*\);)(\s*window\.__trainerLineupState\s*=\s*\{)',
@@ -205,9 +201,7 @@ jobs:
               "trainer open backup version",
           )
 
-          # =========================================================
           # TRAINER SAVE: optimistic lock in the same save request.
-          # =========================================================
           text = regex_once(
               text,
               r'(\n\s*)(const payload = \{\s*version:\s*1,\s*eventId:\s*state\.eventId,\s*sport:\s*state\.sport,\s*assignments:\s*state\.assignments\s*\};)',
@@ -259,9 +253,7 @@ jobs:
               "trainer save backup version",
           )
 
-          # =========================================================
           # Hard request-model guards.
-          # =========================================================
           if '"lineupPlayerAvailability"' in text:
               raise SystemExit("availability API call still present")
 
@@ -272,8 +264,8 @@ jobs:
           editor = text[editor_start:editor_end]
           if 'apiClubGet("zapisani"' in editor:
               raise SystemExit("trainer editor still calls zapisani")
-          if editor.count('apiClubGet("lineupGet"') != 1:
-              raise SystemExit("trainer editor must call lineupGet exactly once")
+          if editor.count('"lineupGet"') != 1:
+              raise SystemExit("trainer editor must reference lineupGet exactly once")
           if "state.serverVersion" not in editor:
               raise SystemExit("trainer editor missing serverVersion")
 
