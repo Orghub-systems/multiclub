@@ -1079,7 +1079,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.18';
+  window.APP_BUILD = 'APP v3.19';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11178,10 +11178,10 @@ function renderTreningi(lista) {
           Wypisz się
         </button>
       `;
-
-    const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
-
-    return `
+      const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
+      const hasLineup = playerHasLineupFromEvent_(t);
+      
+      return `
       <div class="card">
         <p>
           <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
@@ -11222,7 +11222,7 @@ function renderTreningi(lista) {
           <button
             id="player-lineup-${t.id}"
             type="button"
-            class="hidden"
+            class="${hasLineup ? "" : "hidden"}"
             style="background:#1565c0;color:white;border:none;"
             onclick="playerOpenLineup_('${t.id}')">
             🏒 Zobacz lineup
@@ -11236,177 +11236,45 @@ function renderTreningi(lista) {
   }).join('');
 }
 
-window.__playerLineupAvailabilityRequestId = 0;
-  
-/**
- * Sprawdza jednym żądaniem, dla których wydarzeń
- * zalogowany zawodnik może zobaczyć lineup.
- */
-/**
- * Sprawdza jednym żądaniem, dla których wydarzeń
- * zalogowany zawodnik może zobaczyć lineup.
- *
- * Starsza odpowiedź nie może zmieniać nowszego
- * renderu ani ekranu, z którego zawodnik już wyszedł.
- */
-async function playerRefreshLineupAvailability_(
-  events
-) {
-  const requestId =
-    ++window.__playerLineupAvailabilityRequestId;
-
-  const eventList = Array.isArray(events)
-    ? events
-    : [];
-
-  const eventIds = Array.from(
-    new Set(
-      eventList
-        .map(function(event) {
-          return String(
-            event?.id || ""
-          ).trim();
-        })
-        .filter(Boolean)
-    )
+  function playerHasLineupFromEvent_(event) {
+  return (
+    event?.hasLineup === true ||
+    event?.hasLineup === 1 ||
+    String(event?.hasLineup || "")
+      .trim()
+      .toUpperCase() === "TRUE"
   );
-
-  if (!eventIds.length) {
-    return;
-  }
-
-  const session = loadAppSession_();
-
-  const sessionToken = String(
-    session?.sessionToken || ""
-  ).trim();
-
-  const role = String(
-    session?.role || ""
-  )
-    .trim()
-    .toLowerCase();
-
-  if (
-    role !== "zawodnik" ||
-    !sessionToken
-  ) {
-    return;
-  }
-
-  try {
-    const response = await apiClubGet(
-      "lineupPlayerAvailability",
-      {
-        treningIdsJson:
-          JSON.stringify(eventIds),
-
-        sessionToken
-      }
-    );
-
-    /*
-     * W międzyczasie mogło rozpocząć się
-     * nowsze sprawdzanie dostępności.
-     */
-    if (
-      requestId !==
-      window.__playerLineupAvailabilityRequestId
-    ) {
-      return;
-    }
-
-    /*
-     * Odpowiedź nie może zmieniać niewidocznego
-     * już ekranu wydarzeń.
-     */
-    if (
-      String(currentView || "") !==
-      "homeView"
-    ) {
-      return;
-    }
-
-    /*
-     * Sprawdzamy, czy na ekranie nadal znajduje się
-     * dokładnie ta sama lista wydarzeń.
-     */
-    const currentEventIds = Object.keys(
-      window.__playerEventsById || {}
-    ).sort();
-
-    const requestedEventIds =
-      eventIds.slice().sort();
-
-    if (
-      currentEventIds.join("|") !==
-      requestedEventIds.join("|")
-    ) {
-      return;
-    }
-
-    if (
-      !response ||
-      response.success !== true ||
-      !response.availability ||
-      typeof response.availability !== "object"
-    ) {
-      console.warn(
-        "Nie udało się sprawdzić dostępności lineupów:",
-        response
-      );
-
-      return;
-    }
-
-    eventIds.forEach(function(eventId) {
+}
+  
+  /**
+   * hasLineup przychodzi razem ze zwykłą listą wydarzeń.
+   * Nie wykonujemy tutaj żadnego zapytania do backendu.
+   */
+  function playerRefreshLineupAvailability_(events) {
+    (Array.isArray(events) ? events : []).forEach(function(event) {
+      const eventId = String(event?.id || "").trim();
+      if (!eventId) return;
+  
       const button = document.getElementById(
         `player-lineup-${eventId}`
       );
-
-      if (!button) {
-        return;
-      }
-
+  
+      if (!button) return;
+  
       button.classList.toggle(
         "hidden",
-        response.availability[eventId] !== true
+        !playerHasLineupFromEvent_(event)
       );
     });
-
-  } catch (error) {
-    if (
-      requestId !==
-      window.__playerLineupAvailabilityRequestId
-    ) {
-      return;
-    }
-
-    console.warn(
-      "playerRefreshLineupAvailability_ error:",
-      error
-    );
   }
-}
-
-
-/**
- * Sprawdza lineupy dla aktualnie wyrenderowanej
- * listy wydarzeń zawodnika.
- */
-function playerRefreshCurrentLineupAvailability_() {
-  const events = Object.values(
-    window.__playerEventsById || {}
-  );
-
-  return playerRefreshLineupAvailability_(
-    events
-  );
-}
-
-
-window.__playerLineupState = null;
-window.__playerLineupReturnScrollY = 0;
+  
+  function playerRefreshCurrentLineupAvailability_() {
+    const events = Object.values(
+      window.__playerEventsById || {}
+    );
+  
+    return playerRefreshLineupAvailability_(events);
+  }
 
   function lineupSplitNameTwoLines_(fullName) {
   const clean = String(fullName || "")
@@ -16856,6 +16724,7 @@ function trainerLineupResolveSlot_(slotId) {
     slot => String(slot.id) === String(slotId)
   ) || null;
 }
+    
 async function trainerOpenLineupEditor_(eventId) {
   const id = String(eventId || "").trim();
 
@@ -16892,6 +16761,10 @@ async function trainerOpenLineupEditor_(eventId) {
         : []
     );
 
+  const localServerVersion = Number(
+  localDraft?.serverVersion
+);
+
   window.__trainerLineupState = {
     eventId: id,
     event,
@@ -16902,6 +16775,12 @@ async function trainerOpenLineupEditor_(eventId) {
       trainerLineupNormalizeAssignments_(
         localDraft?.assignments
       ),
+
+    serverVersion:
+      Number.isSafeInteger(localServerVersion) &&
+      localServerVersion >= 0
+        ? localServerVersion
+        : null,
 
     activeSlotId: "",
     loading: true,
@@ -16953,26 +16832,19 @@ async function trainerOpenLineupEditor_(eventId) {
      * 1. aktualnych zawodników wydarzenia,
      * 2. zapisany lineup.
      */
-    const results = await Promise.all([
-      apiClubGet("zapisani", {
-        treningId: id
-      }),
 
-      apiClubGet("lineupGet", {
+    /*
+     * Jedno wywołanie zwraca zapisany lineup
+     * i aktualnych zawodników wydarzenia.
+     */
+    const lineupResponse = await apiClubGet(
+      "lineupGet",
+      {
         treningId: id,
         sessionToken
-      })
-    ]);
-
-    const playersResponse = results[0];
-    const lineupResponse = results[1];
-
-    if (!Array.isArray(playersResponse)) {
-      throw new Error(
-        "Nieprawidłowa odpowiedź listy zawodników."
-      );
-    }
-
+      }
+    );
+    
     if (
       !lineupResponse ||
       lineupResponse.success !== true
@@ -16980,6 +16852,18 @@ async function trainerOpenLineupEditor_(eventId) {
       throw new Error(
         lineupResponse?.error ||
         "Nie udało się pobrać lineupu."
+      );
+    }
+    
+    const playersResponse = Array.isArray(
+      lineupResponse.players
+    )
+      ? lineupResponse.players
+      : null;
+    
+    if (!playersResponse) {
+      throw new Error(
+        "Nieprawidłowa odpowiedź listy zawodników."
       );
     }
 
@@ -16997,6 +16881,16 @@ async function trainerOpenLineupEditor_(eventId) {
       trainerLineupNormalizePlayers_(
         playersResponse
       );
+
+    const serverVersion = Number(
+      lineupResponse.version
+    );
+    
+    state.serverVersion =
+      Number.isSafeInteger(serverVersion) &&
+      serverVersion >= 0
+        ? serverVersion
+        : 0;
 
     state.sport =
       TRAINER_LINEUP_TEMPLATES_[
@@ -17058,6 +16952,7 @@ async function trainerOpenLineupEditor_(eventId) {
 
         JSON.stringify({
           version: 1,
+          serverVersion: state.serverVersion,
           eventId: id,
           sport: state.sport,
           assignments: state.assignments,
@@ -17582,6 +17477,12 @@ async function trainerSaveLineupDraftLocal_() {
     return;
   }
 
+  const expectedVersion =
+  Number.isSafeInteger(Number(state.serverVersion)) &&
+  Number(state.serverVersion) >= 0
+    ? Number(state.serverVersion)
+    : null;
+  
   const payload = {
     version: 1,
     eventId: state.eventId,
@@ -17609,6 +17510,7 @@ async function trainerSaveLineupDraftLocal_() {
       action: "lineupSave",
       treningId: state.eventId,
       lineupJson: JSON.stringify(payload),
+      expectedVersion,
       sessionToken
     });
 
@@ -17622,13 +17524,25 @@ async function trainerSaveLineupDraftLocal_() {
       );
     }
 
+    const savedServerVersion = Number(
+        response.version
+      );
+      
+      if (
+        Number.isSafeInteger(savedServerVersion) &&
+        savedServerVersion >= 0
+      ) {
+        state.serverVersion = savedServerVersion;
+      }
+
     /*
      * Lokalna kopia pozostaje jako awaryjny backup.
      * Źródłem głównym jest już kalendarz GAS.
      */
     const localBackup = {
       ...payload,
-
+      serverVersion: state.serverVersion,
+    
       playersSnapshot:
         state.players.map(player => ({
           numer: player.number,
