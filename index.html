@@ -17260,6 +17260,20 @@ function trainerRenderLineupEditor_() {
       total === 0;
   }
 
+  const deleteButton = document.getElementById("btnTrainerLineupDelete");
+
+  if (deleteButton) {
+    deleteButton.classList.toggle(
+      "hidden",
+      state.hasLineup !== true
+    );
+  
+    deleteButton.disabled =
+      state.loading ||
+      state.saving ||
+      !!state.error;
+  }
+
   trainerLineupBindShareLongPress_();
   trainerLineupScheduleShareFile_();
 }
@@ -17641,6 +17655,124 @@ async function trainerSaveLineupDraftLocal_() {
   }
 }
 
+  async function trainerDeleteLineup_() {
+  const state = window.__trainerLineupState;
+
+  if (
+    !state ||
+    state.loading ||
+    state.saving ||
+    state.error ||
+    state.hasLineup !== true
+  ) {
+    return;
+  }
+
+  if (
+    !confirm(
+      "Usunąć zapisany lineup tego wydarzenia?\n\nTej operacji nie można cofnąć."
+    )
+  ) {
+    return;
+  }
+
+  const session = loadAppSession_();
+
+  const sessionToken = String(
+    session?.sessionToken || ""
+  ).trim();
+
+  if (!sessionToken) {
+    state.message = "";
+    state.error =
+      "Brak aktywnej sesji. Zaloguj się ponownie.";
+
+    trainerRenderLineupEditor_();
+    return;
+  }
+
+  const expectedVersion =
+    Number.isSafeInteger(Number(state.serverVersion)) &&
+    Number(state.serverVersion) >= 0
+      ? Number(state.serverVersion)
+      : null;
+
+  state.saving = true;
+  state.message = "Usuwanie lineupu...";
+  state.error = "";
+
+  trainerRenderLineupEditor_();
+
+  try {
+    const response = await apiClubPost({
+      action: "lineupDelete",
+      treningId: state.eventId,
+      expectedVersion,
+      sessionToken
+    });
+
+    if (
+      !response ||
+      response.success !== true
+    ) {
+      throw new Error(
+        response?.error ||
+        "Nie udało się usunąć lineupu."
+      );
+    }
+
+    state.assignments = {};
+    state.hasLineup = false;
+    state.serverVersion = 0;
+    state.message = "Lineup został usunięty.";
+    state.error = "";
+
+    try {
+      localStorage.removeItem(
+        trainerLineupDraftKey_(state.eventId)
+      );
+    } catch (e) {}
+
+    const eventState =
+      window.__trainerLineupEventById?.[
+        state.eventId
+      ];
+
+    if (eventState) {
+      eventState.hasLineup = false;
+    }
+
+    document
+      .querySelectorAll(
+        "button[data-lineup-event-id]"
+      )
+      .forEach(button => {
+        if (
+          button.dataset.lineupEventId ===
+          state.eventId
+        ) {
+          button.textContent =
+            "🧩 Ustaw lineup";
+        }
+      });
+
+  } catch (error) {
+    console.error(
+      "trainerDeleteLineup_ error:",
+      error
+    );
+
+    state.message = "";
+    state.error = String(
+      error?.message ||
+      "Nie udało się usunąć lineupu."
+    );
+
+  } finally {
+    state.saving = false;
+    trainerRenderLineupEditor_();
+  }
+}
   
 /* --- dodawanie wydarzenia --- */
 async function zaladujListeTrenerow() {
