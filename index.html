@@ -18857,14 +18857,6 @@ function trainerStartPendingEventMessages_() {
   }, 1200);
 }
 
-function trainerInvalidateCurrentEventsCache_() {
-  try {
-    Object.keys(localStorage)
-      .filter(k => String(k || "").toLowerCase().includes("trainercurrentevents"))
-      .forEach(k => localStorage.removeItem(k));
-  } catch (e) {}
-}
-
 function trainerSchedulePendingEventRefresh_(attempt) {
   const pending = trainerGetPendingEvent_();
   if (!pending) return;
