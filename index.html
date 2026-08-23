@@ -18460,11 +18460,6 @@ function trainerClearPendingEvent_() {
   try {
     localStorage.removeItem(trainerPendingEventStorageKey_());
   } catch (e) {}
-
-  window.__trainerPendingEvent = null;
-
-  const card = document.getElementById("trainerPendingEventCard");
-  if (card) card.remove();
 }
 
 function trainerPendingEventMatches_(eventItem, pending) {
