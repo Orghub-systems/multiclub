@@ -18531,22 +18531,6 @@ function trainerPendingEventMatches_(eventItem, pending) {
   );
 }
 
-function trainerSyncPendingEventWithList_(lista) {
-  const pending = trainerGetPendingEvent_();
-  if (!pending) return false;
-
-  const found = Array.isArray(lista)
-    ? lista.some(item => trainerPendingEventMatches_(item, pending))
-    : false;
-
-  if (found) {
-    trainerClearPendingEvent_();
-    return true;
-  }
-
-  return false;
-}
-
 function trainerCurrentEventsCacheKey_() {
   const groupsKey = String(window.grupyTrenera || "").trim();
 
