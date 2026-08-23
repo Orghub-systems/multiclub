@@ -13737,12 +13737,6 @@ function trainerSetAddEventButtonLoaded_(loaded) {
       "Dodaj wydarzenie";
   }
 
-  const oldPending = (
-    typeof trainerGetPendingEvent_ === "function"
-      ? trainerGetPendingEvent_()
-      : null
-  );
-
   const optimisticAddPending = (
     typeof trainerGetPendingAdd_ === "function"
       ? trainerGetPendingAdd_()
@@ -13754,7 +13748,7 @@ function trainerSetAddEventButtonLoaded_(loaded) {
    * ale nie pokazuje żadnego komunikatu procesu
    * i nie pozwala uruchomić drugiego dodawania.
    */
-  if (oldPending || optimisticAddPending) {
+  if (optimisticAddPending) {
     btn.classList.remove("hidden");
     btn.classList.remove("loading");
     btn.disabled = true;
