@@ -18456,30 +18456,6 @@ function trainerNormalizePendingTime_(value) {
   return String(m[1]).padStart(2, "0") + ":" + String(m[2]).padStart(2, "0");
 }
 
-function trainerReadPendingEvent_() {
-  try {
-    const raw = localStorage.getItem(trainerPendingEventStorageKey_());
-    if (!raw) return null;
-
-    const p = JSON.parse(raw);
-    if (!p || typeof p !== "object") return null;
-
-    const createdAtMs = Number(p.createdAtMs || 0);
-    const ageMs = Date.now() - createdAtMs;
-
-    // Bezpiecznik: pending nie może wisieć wiecznie.
-    if (!createdAtMs || ageMs > 5 * 60 * 1000) {
-      trainerClearPendingEvent_();
-      return null;
-    }
-
-    return p;
-
-  } catch (e) {
-    return null;
-  }
-}
-
 function trainerClearPendingEvent_() {
   try {
     localStorage.removeItem(trainerPendingEventStorageKey_());
