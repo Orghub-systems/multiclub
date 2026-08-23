@@ -18548,42 +18548,6 @@ function trainerSyncPendingEventWithList_(lista) {
   return false;
 }
 
-function trainerPendingEventMessage_(pending) {
-  const phase = Number(pending && pending.phase || 0);
-
-  if (phase === 0) {
-    return `
-      <div style="font-size:18px; font-weight:900; margin-bottom:8px;">
-        Konfiguruję twoje wydarzenie . . .
-      </div>
-      <div style="font-size:14px; opacity:.8;">
-        za chwilę
-      </div>
-    `;
-  }
-
-  if (phase === 1) {
-    return `
-      <div style="font-size:18px; font-weight:900; margin-bottom:8px;">
-        Przygotowuję listę zawodników . . .
-      </div>
-      <div style="font-size:14px; opacity:.8;">
-        To potrwa jeszcze moment.
-      </div>
-    `;
-  }
-
-  return `
-    <div style="
-      font-size:18px;
-      font-weight:900;
-      color:#81c784;
-    ">
-      ✅ Wydarzenie dodane
-    </div>
-  `;
-}
-
 function trainerCurrentEventsCacheKey_() {
   const groupsKey = String(window.grupyTrenera || "").trim();
 
