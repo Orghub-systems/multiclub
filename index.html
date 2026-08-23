@@ -19557,7 +19557,8 @@ const msg =
       "trainerCurrentListaWydarzen";
     
     goToView(
-      "trainerWydarzeniaCurrentView"
+      "trainerWydarzeniaCurrentView",
+      { replace: true }
     );
     
     renderTreningiTrainer(
@@ -21186,10 +21187,30 @@ async function trainerSaveEditEvent() {
       } catch (e) {}
  
       try {
-        await trainerPokazWydarzenia();
-        setTimeout(trainerHideEditPopup, 300);
+        const pop =
+          document.getElementById(
+            "trainerEditPopup"
+          );
+      
+        if (pop) {
+          pop.style.display = "none";
+        }
+      
+        editMiesiac = null;
+        editCol5 = null;
+      
+        goToView(
+          "trainerWydarzeniaCurrentView",
+          { replace: true }
+        );
+      
+        await trainerShowCurrentEvents_();
+      
       } catch (refreshErr) {
-        if (msg) msg.textContent = "✅ Zapisano, ale nie udało się odświeżyć listy.";
+        if (msg) {
+          msg.textContent =
+            "✅ Zapisano, ale nie udało się odświeżyć listy.";
+        }
       }
       return;
     } else {
