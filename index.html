@@ -19862,6 +19862,133 @@ const msg =
      * żadnych komunikatów.
      */
     void (async function reconcileAddedEvent_() {
+            const serverEvent =
+        response?.event;
+
+      if (
+        serverEvent &&
+        (
+          serverEvent.id ||
+          serverEvent.treningId
+        )
+      ) {
+        try {
+          const raw =
+            localStorage.getItem(
+              currentCacheKey
+            );
+
+          const entry =
+            raw
+              ? JSON.parse(raw)
+              : {};
+
+          const items =
+            Array.isArray(entry?.data)
+              ? entry.data
+              : [];
+
+          const serverId =
+            String(
+              serverEvent.id ||
+              serverEvent.treningId ||
+              ""
+            );
+
+          let replaced = false;
+          const nextLista = [];
+
+          for (const item of items) {
+            const itemLocalId =
+              String(
+                item?.__localEventId ||
+                ""
+              );
+
+            const itemServerId =
+              String(
+                item?.id ||
+                item?.treningId ||
+                ""
+              );
+
+            if (
+              localEventId &&
+              itemLocalId ===
+                String(localEventId)
+            ) {
+              if (!replaced) {
+                nextLista.push(
+                  serverEvent
+                );
+                replaced = true;
+              }
+
+              continue;
+            }
+
+            if (
+              serverId &&
+              itemServerId === serverId
+            ) {
+              if (!replaced) {
+                nextLista.push(
+                  serverEvent
+                );
+                replaced = true;
+              }
+
+              continue;
+            }
+
+            nextLista.push(item);
+          }
+
+          if (!replaced) {
+            nextLista.push(
+              serverEvent
+            );
+          }
+
+          localStorage.setItem(
+            currentCacheKey,
+            JSON.stringify({
+              ...entry,
+              savedAt:
+                new Date()
+                  .toISOString(),
+              data: nextLista
+            })
+          );
+
+          trainerClearPendingAdd_(
+            localEventId
+          );
+
+          trainerSetAddEventButtonLoaded_(
+            true
+          );
+
+          if (
+            String(
+              window.__trainerEventsMode ||
+              ""
+            ) === "current"
+          ) {
+            renderTreningiTrainer(
+              nextLista
+            );
+          }
+
+        } catch (cacheError) {
+          console.warn(
+            "Nie udało się podmienić lokalnego wydarzenia na odpowiedź API:",
+            cacheError
+          );
+        }
+
+        return;
+      }
       const delays = [
         0,
         1500,
