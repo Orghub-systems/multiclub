@@ -18792,57 +18792,6 @@ card.innerHTML = `
   div.appendChild(card);
 }
 
-function trainerSchedulePendingEventRefresh_(attempt) {
-  const pending = trainerGetPendingEvent_();
-  if (!pending) return;
-
-  const n = Number(attempt || 1);
-
-  if (n > 6) {
-    trainerApplyPendingEventCard_();
-    return;
-  }
-
-  const delays = {
-    1: 4500,
-    2: 7000,
-    3: 10000,
-    4: 14000,
-    5: 18000,
-    6: 24000
-  };
-
-  if (__trainerPendingEventRefreshTimer) {
-    clearTimeout(__trainerPendingEventRefreshTimer);
-    __trainerPendingEventRefreshTimer = null;
-  }
-
-  __trainerPendingEventRefreshTimer = setTimeout(async function() {
-    if (__trainerPendingEventRefreshBusy) return;
-
-    const p = trainerGetPendingEvent_();
-    if (!p) return;
-
-    __trainerPendingEventRefreshBusy = true;
-
-    try {
-      if (typeof trainerShowCurrentEvents_ === "function") {
-        await trainerShowCurrentEvents_();
-      }
-
-    } catch (e) {
-      console.warn("trainer pending event refresh error:", e);
-
-    } finally {
-      __trainerPendingEventRefreshBusy = false;
-    }
-
-    if (trainerGetPendingEvent_()) {
-      trainerSchedulePendingEventRefresh_(n + 1);
-    }
-  }, delays[n] || 10000);
-}  
-
 function trainerCurrentEventsCacheKey_() {
   const groupsKey = String(window.grupyTrenera || "").trim();
 
