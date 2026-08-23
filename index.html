@@ -18496,12 +18496,6 @@ function trainerReadPendingEvent_() {
   }
 }
 
-function trainerWritePendingEvent_(pending) {
-  try {
-    localStorage.setItem(trainerPendingEventStorageKey_(), JSON.stringify(pending));
-  } catch (e) {}
-}
-
 function trainerClearPendingEvent_() {
   try {
     localStorage.removeItem(trainerPendingEventStorageKey_());
