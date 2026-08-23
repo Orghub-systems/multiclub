@@ -13818,10 +13818,6 @@ async function trainerShowCurrentEvents_() {
     div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
   }
   
-  // Pending dodawania musi być widoczny od razu,
-  // również gdy nie mamy listy w cache.
-  trainerApplyPendingEventCard_();
-  
   /*
    * Jeżeli trwa fizyczne usuwanie wydarzenia,
    * pozostawiamy lokalny widok zapisany już bez tego wydarzenia.
@@ -14513,7 +14509,6 @@ function renderTreningiTrainer(lista) {
 
   if (window.__trainerEventsMode !== "archive") {
     trainerSyncPendingEventWithList_(sortedLista);
-    trainerApplyPendingEventCard_();
   }
 }
 
