@@ -18491,17 +18491,6 @@ function trainerClearPendingEvent_() {
   if (card) card.remove();
 }
 
-function trainerGetPendingEvent_() {
-  if (window.__trainerPendingEvent) return window.__trainerPendingEvent;
-
-  const pending = trainerReadPendingEvent_();
-  if (pending) {
-    window.__trainerPendingEvent = pending;
-  }
-
-  return pending;
-}
-
 function trainerPendingEventMatches_(eventItem, pending) {
   if (!eventItem || !pending) return false;
 
