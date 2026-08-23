@@ -18528,30 +18528,6 @@ function trainerClearPendingEvent_() {
   if (card) card.remove();
 }
 
-function trainerSetPendingEvent_(data) {
-  const pending = {
-    id: "pending-" + Date.now(),
-    createdAtMs: Date.now(),
-    phase: 0,
-
-    data: String(data && data.data || "").trim(),
-    dataKoniec: String(data && data.dataKoniec || data && data.data || "").trim(),
-    godzStart: String(data && data.godzStart || "").trim(),
-    godzKoniec: String(data && data.godzKoniec || "").trim(),
-    rodzaj: String(data && data.rodzaj || "").trim(),
-    miejsce: String(data && data.miejsce || "").trim(),
-    trener: String(data && data.trener || "").trim(),
-    grupy: String(data && data.grupy || "").trim(),
-    trybDostepu: String(data && data.trybDostepu || "").trim(),
-    powolani: String(data && data.powolani || "").trim()
-  };
-
-  window.__trainerPendingEvent = pending;
-  trainerWritePendingEvent_(pending);
-
-  return pending;
-}
-
 function trainerGetPendingEvent_() {
   if (window.__trainerPendingEvent) return window.__trainerPendingEvent;
 
