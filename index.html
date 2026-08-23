@@ -18499,21 +18499,6 @@ function trainerClearPendingEvent_() {
 
   window.__trainerPendingEvent = null;
 
-  if (__trainerPendingEventTimer1) {
-    clearTimeout(__trainerPendingEventTimer1);
-    __trainerPendingEventTimer1 = null;
-  }
-
-  if (__trainerPendingEventTimer2) {
-    clearTimeout(__trainerPendingEventTimer2);
-    __trainerPendingEventTimer2 = null;
-  }
-
-  if (__trainerPendingEventRefreshTimer) {
-    clearTimeout(__trainerPendingEventRefreshTimer);
-    __trainerPendingEventRefreshTimer = null;
-  }
-
   const card = document.getElementById("trainerPendingEventCard");
   if (card) card.remove();
 }
