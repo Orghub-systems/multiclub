@@ -18792,47 +18792,6 @@ card.innerHTML = `
   div.appendChild(card);
 }
 
-function trainerStartPendingEventMessages_() {
-  if (__trainerPendingEventTimer1) clearTimeout(__trainerPendingEventTimer1);
-  if (__trainerPendingEventTimer2) clearTimeout(__trainerPendingEventTimer2);
-
-  const pending = trainerGetPendingEvent_();
-  if (!pending) return;
-
-  pending.phase = 0;
-  trainerWritePendingEvent_(pending);
-  trainerApplyPendingEventCard_();
-
-  __trainerPendingEventTimer1 = setTimeout(function() {
-    const p = trainerGetPendingEvent_();
-    if (!p) return;
-
-    p.phase = 1;
-    trainerWritePendingEvent_(p);
-    trainerApplyPendingEventCard_();
-  }, 700);
-  
-  __trainerPendingEventTimer2 = setTimeout(function() {
-    const p = trainerGetPendingEvent_();
-    if (!p) return;
-  
-    p.phase = 2;
-    trainerWritePendingEvent_(p);
-    trainerApplyPendingEventCard_();
-  
-    // Dla użytkownika operacja jest już zakończona.
-    // Przycisk pozostaje zabezpieczony przed ponownym kliknięciem,
-    // ale nie wygląda już jak aktywny proces.
-    const addBtn = document.getElementById("btnTrainerAddEvent");
-  
-    if (addBtn) {
-      addBtn.classList.remove("loading");
-      addBtn.disabled = true;
-      addBtn.textContent = "✅ Wydarzenie dodane";
-    }
-  }, 1200);
-}
-
 function trainerSchedulePendingEventRefresh_(attempt) {
   const pending = trainerGetPendingEvent_();
   if (!pending) return;
