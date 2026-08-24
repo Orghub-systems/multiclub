@@ -9542,11 +9542,22 @@ function startPrefetchForPlayer_() {
   }, 800);
 
   // 3) jeszcze później grzej statystyki
-  window.__prefetch.statystykiTimer = setTimeout(() => {
-    window.__prefetch.statystykiP = apiClubGet("statystyki", {
+window.__prefetch.statystykiTimer = setTimeout(() => {
+  if (window.__prefetch.statystykiP) return;
+
+  window.__prefetch.statystykiP =
+    apiClubGet("statystykiSezony", {
       numer: numerZalogowanego
+    }).catch(error => {
+      console.warn(
+        "statystykiSezony prefetch error",
+        error
+      );
+
+      return null;
     });
-  }, 1800);
+
+}, 1800);
 }
   
 function renderClubAd(ad) {
@@ -12396,7 +12407,6 @@ async function odswiezListeZapisanych(id) {
 
   row.dataset.accepted = accepted ? "1" : "0";
 } 
-
 async function loadStatystykiCached_(numer, hooks = {}) {
   const nr = String(numer || "").trim();
 
@@ -12404,12 +12414,44 @@ async function loadStatystykiCached_(numer, hooks = {}) {
     throw new Error("Brak numeru zawodnika dla statystyk");
   }
 
+  // Jeśli statystyki zostały już pobrane w prefetchu z menu zawodnika,
+  // używamy tego requestu zamiast robić drugi.
+  const prefetched = window.__prefetch?.statystykiP;
+
+  if (prefetched) {
+    try {
+      const payload = await prefetched;
+
+      if (window.__prefetch) {
+        window.__prefetch.statystykiP = null;
+      }
+
+      if (
+        payload &&
+        payload.success !== false &&
+        Array.isArray(payload.seasons)
+      ) {
+        if (typeof hooks.onFresh === "function") {
+          hooks.onFresh(payload);
+        }
+
+        return payload;
+      }
+    } catch (e) {
+      if (window.__prefetch) {
+        window.__prefetch.statystykiP = null;
+      }
+
+      console.warn("player stats prefetch failed", e);
+    }
+  }
+
   return await orgCachedApiGet_({
-    scope: "playerStats",
+    scope: "playerStatsSeasonsV1",
     parts: {
       numer: nr
     },
-    action: "statystyki",
+    action: "statystykiSezony",
     params: {
       numer: nr
     },
@@ -12425,32 +12467,48 @@ async function pokazStatystyki() {
   goToView("statsView");
 
   const div = document.getElementById("listaStatystyk");
-  if (div) div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
+  if (div) {
+    div.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
+  }
+
+  // Jeżeli użytkownik wszedł w statystyki zanim odpalił się timer prefetchu,
+  // anulujemy timer, żeby po chwili nie poleciał drugi zbędny request.
+  if (window.__prefetch?.statystykiTimer) {
+    clearTimeout(window.__prefetch.statystykiTimer);
+    window.__prefetch.statystykiTimer = null;
+  }
 
   try {
-    let renderedByCacheHook = false;
+    let renderedByHook = false;
 
-    const lista = await loadStatystykiCached_(numerZalogowanego, {
-      onCached: (cachedLista) => {
-        renderedByCacheHook = true;
-        renderStatystyki(cachedLista);
-      },
-      onFresh: (freshLista) => {
-        renderedByCacheHook = true;
-        renderStatystyki(freshLista);
+    const payload = await loadStatystykiCached_(
+      numerZalogowanego,
+      {
+        onCached: (cachedPayload) => {
+          renderedByHook = true;
+          renderPlayerStatsBySeason_(cachedPayload);
+        },
+
+        onFresh: (freshPayload) => {
+          renderedByHook = true;
+          renderPlayerStatsBySeason_(freshPayload);
+        }
       }
-    });
+    );
 
-    if (!renderedByCacheHook) {
-      renderStatystyki(lista);
+    if (!renderedByHook) {
+      renderPlayerStatsBySeason_(payload);
     }
 
   } catch (e) {
     console.error("pokazStatystyki error", e);
-    if (div) div.innerHTML = `<p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>`;
+
+    if (div) {
+      div.innerHTML =
+        `<p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>`;
+    }
   }
 }
-  
 function renderStatystyki(lista) {
   const isAdminStats = (currentView === "adminStatsView");
   const div = isAdminStats
