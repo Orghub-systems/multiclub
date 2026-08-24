@@ -1141,10 +1141,29 @@ input[type="number"] {
   font-weight: 800;
 }
 
-.player-stats-calendar-day.is-present
+.player-stats-calendar-day.is-billable
 .player-stats-calendar-day-number {
   border-color: var(--color-accent-green-border);
   background: rgba(15, 122, 42, .28);
+}
+
+.player-stats-calendar-day.is-non-billable
+.player-stats-calendar-day-number {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, .25);
+}
+
+.player-stats-calendar-day.is-mixed
+.player-stats-calendar-day-number {
+  border-color: #fff;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(15, 122, 42, .38) 0%,
+      rgba(15, 122, 42, .38) 50%,
+      rgba(59, 130, 246, .35) 50%,
+      rgba(59, 130, 246, .35) 100%
+    );
 }
 
 .player-stats-calendar-event-count {
@@ -13107,22 +13126,28 @@ function renderPlayerStatsMonthCalendar_(
       ? payload.days
       : [];
 
-  const attendanceByDate = new Map();
+const attendanceByDate = new Map();
 
-  for (const row of days) {
-    const date =
-      String(row?.date || "").trim();
+for (const row of days) {
+  const date =
+    String(row?.date || "").trim();
 
-    if (!date) continue;
+  if (!date) continue;
 
-    attendanceByDate.set(
-      date,
-      Math.max(
-        1,
-        Number(row?.eventCount) || 1
-      )
-    );
-  }
+  attendanceByDate.set(
+    date,
+    {
+      eventCount:
+        Number(row?.eventCount) || 0,
+
+      billableEventCount:
+        Number(row?.billableEventCount) || 0,
+
+      nonBillableEventCount:
+        Number(row?.nonBillableEventCount) || 0
+    }
+  );
+}
 
   const firstDate =
     new Date(
@@ -13178,21 +13203,43 @@ function renderPlayerStatsMonthCalendar_(
       `${String(month).padStart(2, "0")}-` +
       `${String(day).padStart(2, "0")}`;
 
+    const attendance =
+      attendanceByDate.get(dateKey) || {};
+    
     const eventCount =
-      Number(
-        attendanceByDate.get(dateKey)
-      ) || 0;
-
+      Number(attendance.eventCount) || 0;
+    
+    const billableEventCount =
+      Number(attendance.billableEventCount) || 0;
+    
+    const nonBillableEventCount =
+      Number(attendance.nonBillableEventCount) || 0;
+    
     const isPresent =
       dayDataAvailable &&
       eventCount > 0;
+    
+    let attendanceClass = "";
+    
+    if (
+      billableEventCount > 0 &&
+      nonBillableEventCount > 0
+    ) {
+      attendanceClass = "is-mixed";
+    
+    } else if (billableEventCount > 0) {
+      attendanceClass = "is-billable";
+    
+    } else if (nonBillableEventCount > 0) {
+      attendanceClass = "is-non-billable";
+    }
 
     cellsHtml += `
       <div
-        class="
-          player-stats-calendar-day
-          ${isPresent ? "is-present" : ""}
-        "
+      class="
+        player-stats-calendar-day
+        ${isPresent ? attendanceClass : ""}
+      "
       >
         <div
           class="player-stats-calendar-day-number"
