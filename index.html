@@ -12509,6 +12509,154 @@ async function pokazStatystyki() {
     }
   }
 }
+
+function playerStatsEscHtml_(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    ch => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[ch]
+  );
+}
+
+function renderPlayerStatsBySeason_(payload) {
+  const div = document.getElementById("listaStatystyk");
+  if (!div) return;
+
+  window.__playerStatsBySeasonPayload = payload || null;
+
+  const seasons = Array.isArray(payload?.seasons)
+    ? [...payload.seasons]
+    : [];
+
+  if (!seasons.length) {
+    div.innerHTML = "<p>Brak danych</p>";
+    return;
+  }
+
+  seasons.sort((a, b) => {
+    if (!!a?.isCurrent !== !!b?.isCurrent) {
+      return a?.isCurrent ? -1 : 1;
+    }
+
+    return String(b?.startDate || "")
+      .localeCompare(String(a?.startDate || ""));
+  });
+
+  const nowParts = new Intl.DateTimeFormat(
+    "en-US",
+    {
+      timeZone: "Europe/Warsaw",
+      year: "numeric",
+      month: "2-digit"
+    }
+  ).formatToParts(new Date());
+
+  const currentYear =
+    nowParts.find(part => part.type === "year")?.value || "";
+
+  const currentMonth =
+    nowParts.find(part => part.type === "month")?.value || "";
+
+  const currentMonthStart =
+    currentYear && currentMonth
+      ? `${currentYear}-${currentMonth}-01`
+      : "";
+
+  div.innerHTML = seasons.map((season, seasonIndex) => {
+    const months = Array.isArray(season?.months)
+      ? [...season.months].sort((a, b) =>
+          String(a?.monthStart || "")
+            .localeCompare(String(b?.monthStart || ""))
+        )
+      : [];
+
+    const seasonId =
+      playerStatsEscHtml_(season?.seasonId || "");
+
+    const seasonLabel =
+      playerStatsEscHtml_(season?.label || "");
+
+    const total =
+      Number(season?.totalAttendance) || 0;
+
+    const monthsHtml = months.map(month => {
+      const monthName =
+        playerStatsEscHtml_(month?.monthName || "");
+
+      const monthStartRaw =
+        String(month?.monthStart || "").trim();
+
+      const monthStart =
+        playerStatsEscHtml_(monthStartRaw);
+
+      const attendance =
+        Number(month?.attendanceCount) || 0;
+
+      const currentBadge =
+        season?.isCurrent &&
+        monthStartRaw === currentMonthStart
+          ? ` <span style="opacity:.8;font-weight:700;">(teraz)</span>`
+          : "";
+
+      return `
+        <div
+          class="card player-stats-month-card"
+          data-season-id="${seasonId}"
+          data-month-start="${monthStart}"
+          data-month-name="${monthName}"
+          style="text-align:left;"
+        >
+          📅 ${monthName}${currentBadge}
+          — 🏒 <b>${attendance}</b>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <section
+        class="player-stats-season"
+        data-season-id="${seasonId}"
+        style="${seasonIndex > 0 ? "margin-top:32px;" : ""}"
+      >
+        <div style="
+          margin:0 10px 12px 10px;
+          text-align:left;
+          font-size:20px;
+          font-weight:900;
+        ">
+          Sezon ${seasonLabel}
+          ${
+            season?.isCurrent
+              ? `<span style="font-size:13px;opacity:.75;"> — obecny</span>`
+              : ""
+          }
+        </div>
+
+        ${
+          monthsHtml ||
+          `<p>Brak danych miesięcznych</p>`
+        }
+
+        <div
+          class="card"
+          style="
+            background:#222;
+            margin-top:14px;
+            font-weight:800;
+          "
+        >
+          🔥 Łącznie: ${total} treningów w sezonie
+        </div>
+      </section>
+    `;
+  }).join("");
+}
+  
 function renderStatystyki(lista) {
   const isAdminStats = (currentView === "adminStatsView");
   const div = isAdminStats
