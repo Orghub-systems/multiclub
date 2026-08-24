@@ -1075,6 +1075,101 @@ input[type="number"] {
       font-weight: 900;
       text-align: center;
     }
+
+/* ===== PLAYER STATS MONTH CALENDAR ===== */
+
+.player-stats-month-card {
+  cursor: pointer;
+  user-select: none;
+}
+
+.player-stats-month-card:active {
+  transform: scale(.99);
+}
+
+.player-stats-month-card:focus-visible {
+  outline: 2px solid var(--color-accent-red-border);
+  outline-offset: 2px;
+}
+
+#playerStatsMonthView {
+  padding: 0 12px 40px 12px;
+  box-sizing: border-box;
+}
+
+.player-stats-calendar-wrap {
+  width: min(430px, 100%);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.player-stats-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.player-stats-calendar-weekday {
+  padding: 6px 0 8px 0;
+  font-size: 12px;
+  font-weight: 900;
+  opacity: .65;
+}
+
+.player-stats-calendar-day {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-stats-calendar-day-number {
+  width: 36px;
+  height: 36px;
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 50%;
+  border: 2px solid transparent;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+  font-weight: 800;
+}
+
+.player-stats-calendar-day.is-present
+.player-stats-calendar-day-number {
+  border-color: var(--color-accent-green-border);
+  background: rgba(15, 122, 42, .28);
+}
+
+.player-stats-calendar-event-count {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 9px;
+  font-weight: 900;
+  opacity: .8;
+}
+
+.player-stats-calendar-info {
+  margin: 14px 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.06);
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+.player-stats-calendar-legend {
+  margin-top: 14px;
+  font-size: 13px;
+  opacity: .75;
+}
     
 </style>
   
@@ -1908,6 +2003,33 @@ if (buildChanged) {
       <div id="listaStatystyk">Ładowanie...</div>
       <button class="full-btn alt" onclick="appBack()" style="margin-top:10px;"> ⬅ Powrót do menu </button>
     </div>
+
+  <!-- PLAYER STATS MONTH CALENDAR -->
+<div id="playerStatsMonthView" class="container hidden">
+  <h1 id="playerStatsMonthTitle">Statystyki</h1>
+
+  <div
+    id="playerStatsMonthMeta"
+    style="
+      margin:-4px 12px 16px 12px;
+      opacity:.8;
+      font-size:14px;
+      font-weight:700;
+    "
+  ></div>
+
+  <div id="playerStatsMonthCalendar">
+    Ładowanie...
+  </div>
+
+  <button
+    class="full-btn alt"
+    onclick="appBack()"
+    style="margin-top:18px;"
+  >
+    ⬅ Powrót do statystyk
+  </button>
+</div>
 
 <!-- PLAYER SETTINGS VIEW
      Ustawienia zawodnika i obsługa powiadomień push -->
@@ -12609,6 +12731,8 @@ function renderPlayerStatsBySeason_(payload) {
           data-season-id="${seasonId}"
           data-month-start="${monthStart}"
           data-month-name="${monthName}"
+          role="button"
+          tabindex="0"
           style="text-align:left;"
         >
           📅 ${monthName}${currentBadge}
@@ -12655,6 +12779,504 @@ function renderPlayerStatsBySeason_(payload) {
       </section>
     `;
   }).join("");
+
+  const openMonthFromCard = (card) => {
+    if (!card) return;
+
+    openPlayerStatsMonth_(
+      card.dataset.seasonId,
+      card.dataset.monthStart,
+      card.dataset.monthName
+    );
+  };
+
+  div.onclick = (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target
+        : null;
+
+    const card =
+      target?.closest(".player-stats-month-card");
+
+    if (!card || !div.contains(card)) return;
+
+    openMonthFromCard(card);
+  };
+
+  div.onkeydown = (event) => {
+    if (
+      event.key !== "Enter" &&
+      event.key !== " "
+    ) {
+      return;
+    }
+
+    const target =
+      event.target instanceof Element
+        ? event.target
+        : null;
+
+    const card =
+      target?.closest(".player-stats-month-card");
+
+    if (!card || !div.contains(card)) return;
+
+    event.preventDefault();
+
+    openMonthFromCard(card);
+  };
+}
+
+async function loadPlayerStatsMonthDays_(
+  seasonId,
+  monthStart
+) {
+  const nr =
+    String(numerZalogowanego || "").trim();
+
+  const sid =
+    String(seasonId || "").trim();
+
+  const month =
+    String(monthStart || "").trim();
+
+  if (!nr) {
+    throw new Error(
+      "Brak numeru zawodnika."
+    );
+  }
+
+  if (!sid || !month) {
+    throw new Error(
+      "Brak danych miesiąca."
+    );
+  }
+
+  if (!(window.__playerStatsMonthDaysCache instanceof Map)) {
+    window.__playerStatsMonthDaysCache = new Map();
+  }
+
+  const cache = window.__playerStatsMonthDaysCache;
+
+  const cacheKey = [
+    String(clubId || ""),
+    nr,
+    sid,
+    month
+  ].join("|");
+
+  const cached = cache.get(cacheKey);
+
+  // Krótki cache w pamięci — powrót do tego samego
+  // miesiąca nie powoduje kolejnego requestu.
+  if (
+    cached?.payload &&
+    Date.now() - Number(cached.savedAt || 0) < 120000
+  ) {
+    return cached.payload;
+  }
+
+  // Jeżeli request już trwa, używamy tego samego Promise.
+  if (cached?.promise) {
+    return cached.promise;
+  }
+
+  const promise = apiClubGet(
+    "statystykiMiesiacDni",
+    {
+      numer: nr,
+      seasonId: sid,
+      monthStart: month
+    }
+  )
+    .then(payload => {
+      if (
+        !payload ||
+        payload.success === false
+      ) {
+        throw new Error(
+          payload?.error ||
+          "Nie udało się pobrać statystyk miesiąca."
+        );
+      }
+
+      cache.set(
+        cacheKey,
+        {
+          payload,
+          savedAt: Date.now()
+        }
+      );
+
+      return payload;
+    })
+    .catch(error => {
+      cache.delete(cacheKey);
+      throw error;
+    });
+
+  cache.set(
+    cacheKey,
+    {
+      promise,
+      savedAt: 0
+    }
+  );
+
+  return promise;
+}
+
+
+async function openPlayerStatsMonth_(
+  seasonId,
+  monthStart,
+  monthName
+) {
+  const sid =
+    String(seasonId || "").trim();
+
+  const month =
+    String(monthStart || "").trim();
+
+  const name =
+    String(monthName || "").trim();
+
+  if (!sid || !month) return;
+
+  goToView("playerStatsMonthView");
+
+  const title =
+    document.getElementById(
+      "playerStatsMonthTitle"
+    );
+
+  const meta =
+    document.getElementById(
+      "playerStatsMonthMeta"
+    );
+
+  const calendar =
+    document.getElementById(
+      "playerStatsMonthCalendar"
+    );
+
+  if (title) {
+    title.textContent =
+      name || "Statystyki miesiąca";
+  }
+
+  if (meta) {
+    meta.textContent =
+      "Ładowanie...";
+  }
+
+  if (calendar) {
+    calendar.innerHTML =
+      `<p>⏳ Ładowanie kalendarza...</p>`;
+  }
+
+  const requestKey =
+    `${sid}|${month}`;
+
+  window.__playerStatsMonthRequestKey =
+    requestKey;
+
+  try {
+    const payload =
+      await loadPlayerStatsMonthDays_(
+        sid,
+        month
+      );
+
+    // Ochrona przed spóźnioną odpowiedzią,
+    // gdy użytkownik zdążył otworzyć inny miesiąc.
+    if (
+      window.__playerStatsMonthRequestKey !==
+      requestKey
+    ) {
+      return;
+    }
+
+    renderPlayerStatsMonthCalendar_(
+      payload,
+      {
+        monthName: name
+      }
+    );
+
+  } catch (error) {
+    console.error(
+      "openPlayerStatsMonth_ error",
+      error
+    );
+
+    if (
+      window.__playerStatsMonthRequestKey !==
+      requestKey
+    ) {
+      return;
+    }
+
+    if (meta) {
+      meta.textContent = "";
+    }
+
+    if (calendar) {
+      calendar.innerHTML =
+        `<p>❌ Błąd ładowania kalendarza: ${
+          playerStatsEscHtml_(
+            error?.message || error
+          )
+        }</p>`;
+    }
+  }
+}
+
+
+function renderPlayerStatsMonthCalendar_(
+  payload,
+  options = {}
+) {
+  const title =
+    document.getElementById(
+      "playerStatsMonthTitle"
+    );
+
+  const meta =
+    document.getElementById(
+      "playerStatsMonthMeta"
+    );
+
+  const calendar =
+    document.getElementById(
+      "playerStatsMonthCalendar"
+    );
+
+  if (!calendar) return;
+
+  const monthStart =
+    String(payload?.monthStart || "").trim();
+
+  const seasonLabel =
+    String(payload?.seasonLabel || "").trim();
+
+  const monthName =
+    String(options?.monthName || "").trim();
+
+  const attendanceCount =
+    Number(payload?.attendanceCount) || 0;
+
+  const calculatedAttendanceCount =
+    Number(
+      payload?.calculatedAttendanceCount
+    ) || 0;
+
+  const dayDataAvailable =
+    payload?.dayDataAvailable === true;
+
+  const parts =
+    monthStart.split("-").map(Number);
+
+  const year = parts[0];
+  const month = parts[1];
+
+  if (
+    !year ||
+    !month ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new Error(
+      "Nieprawidłowa data miesiąca."
+    );
+  }
+
+  if (title) {
+    title.textContent =
+      monthName || monthStart;
+  }
+
+  if (meta) {
+    meta.textContent =
+      `Sezon ${seasonLabel} • ${attendanceCount} treningów`;
+  }
+
+  const days =
+    Array.isArray(payload?.days)
+      ? payload.days
+      : [];
+
+  const attendanceByDate = new Map();
+
+  for (const row of days) {
+    const date =
+      String(row?.date || "").trim();
+
+    if (!date) continue;
+
+    attendanceByDate.set(
+      date,
+      Math.max(
+        1,
+        Number(row?.eventCount) || 1
+      )
+    );
+  }
+
+  const firstDate =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        1
+      )
+    );
+
+  const daysInMonth =
+    new Date(
+      Date.UTC(
+        year,
+        month,
+        0
+      )
+    ).getUTCDate();
+
+  // JS: niedziela = 0.
+  // W aplikacji tydzień zaczynamy od poniedziałku.
+  const firstWeekday =
+    (firstDate.getUTCDay() + 6) % 7;
+
+  const weekdayNames = [
+    "Pon",
+    "Wt",
+    "Śr",
+    "Czw",
+    "Pt",
+    "Sob",
+    "Nd"
+  ];
+
+  let cellsHtml = "";
+
+  for (
+    let i = 0;
+    i < firstWeekday;
+    i++
+  ) {
+    cellsHtml +=
+      `<div class="player-stats-calendar-day"></div>`;
+  }
+
+  for (
+    let day = 1;
+    day <= daysInMonth;
+    day++
+  ) {
+    const dateKey =
+      `${String(year).padStart(4, "0")}-` +
+      `${String(month).padStart(2, "0")}-` +
+      `${String(day).padStart(2, "0")}`;
+
+    const eventCount =
+      Number(
+        attendanceByDate.get(dateKey)
+      ) || 0;
+
+    const isPresent =
+      dayDataAvailable &&
+      eventCount > 0;
+
+    cellsHtml += `
+      <div
+        class="
+          player-stats-calendar-day
+          ${isPresent ? "is-present" : ""}
+        "
+      >
+        <div
+          class="player-stats-calendar-day-number"
+        >
+          ${day}
+        </div>
+
+        ${
+          isPresent && eventCount > 1
+            ? `
+              <div
+                class="player-stats-calendar-event-count"
+              >
+                ×${eventCount}
+              </div>
+            `
+            : ""
+        }
+      </div>
+    `;
+  }
+
+  const weekdaysHtml =
+    weekdayNames.map(name => `
+      <div
+        class="player-stats-calendar-weekday"
+      >
+        ${name}
+      </div>
+    `).join("");
+
+  const unavailableHtml =
+    !dayDataAvailable
+      ? `
+        <div class="player-stats-calendar-info">
+          Mamy zapisaną miesięczną liczbę
+          treningów (${attendanceCount}),
+          ale dla tego historycznego miesiąca
+          nie ma danych pozwalających wskazać
+          konkretne dni obecności.
+        </div>
+      `
+      : "";
+
+  const consistencyHtml =
+    dayDataAvailable &&
+    calculatedAttendanceCount !==
+      attendanceCount
+      ? `
+        <div class="player-stats-calendar-info">
+          ⚠ Dane dzienne:
+          ${calculatedAttendanceCount},
+          wynik miesięczny:
+          ${attendanceCount}.
+        </div>
+      `
+      : "";
+
+  calendar.innerHTML = `
+    <div class="player-stats-calendar-wrap">
+
+      ${unavailableHtml}
+
+      <div class="player-stats-calendar-grid">
+        ${weekdaysHtml}
+        ${cellsHtml}
+      </div>
+
+      ${
+        dayDataAvailable
+          ? `
+            <div
+              class="player-stats-calendar-legend"
+            >
+              Zielone kółko = obecność
+            </div>
+          `
+          : ""
+      }
+
+      ${consistencyHtml}
+
+    </div>
+  `;
 }
   
 function renderStatystyki(lista) {
