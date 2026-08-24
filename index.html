@@ -2236,11 +2236,13 @@ if (buildChanged) {
 
   <button class="full-btn" style="margin-top:12px;" onclick="trainerOpenMedicalExamPopup_()"> Edytuj datę badań </button>
 </div>
-
-  <div class="card" style="text-align:left; margin-bottom:12px;">
-    <div style="opacity:.75; font-size:13px;">Statystyki</div>
-    <div id="trainerInfoStats" style="margin-top:4px; font-size:18px; font-weight:800;">—</div>
-  </div>
+<button
+  class="full-btn"
+  type="button"
+  onclick="trainerOpenStats_()"
+>
+  Statystyki
+</button>
 
   <p id="trainerZawodnikMsg" style="margin-top:10px;"></p>
 
@@ -12664,8 +12666,26 @@ function playerStatsEscHtml_(value) {
   );
 }
 
-function renderPlayerStatsBySeason_(payload) {
-  const div = document.getElementById("listaStatystyk");
+function renderPlayerStatsBySeason_(
+  payload,
+  options = {}
+) {
+  const targetId =
+    String(
+      options?.targetId ||
+      "listaStatystyk"
+    ).trim();
+
+  const playerNr =
+    String(
+      options?.playerNr ||
+      numerZalogowanego ||
+      ""
+    ).trim();
+
+  const div =
+    document.getElementById(targetId);
+
   if (!div) return;
 
   window.__playerStatsBySeasonPayload = payload || null;
@@ -12805,7 +12825,8 @@ function renderPlayerStatsBySeason_(payload) {
     openPlayerStatsMonth_(
       card.dataset.seasonId,
       card.dataset.monthStart,
-      card.dataset.monthName
+      card.dataset.monthName,
+      playerNr
     );
   };
 
@@ -12849,10 +12870,15 @@ function renderPlayerStatsBySeason_(payload) {
 
 async function loadPlayerStatsMonthDays_(
   seasonId,
-  monthStart
+  monthStart,
+  playerNr = ""
 ) {
-  const nr =
-    String(numerZalogowanego || "").trim();
+const nr =
+  String(
+    playerNr ||
+    numerZalogowanego ||
+    ""
+  ).trim();
 
   const sid =
     String(seasonId || "").trim();
@@ -12946,12 +12972,25 @@ async function loadPlayerStatsMonthDays_(
   return promise;
 }
 
-
 async function openPlayerStatsMonth_(
   seasonId,
   monthStart,
-  monthName
+  monthName,
+  playerNr = ""
 ) {
+
+  const nr =
+  String(
+    playerNr ||
+    numerZalogowanego ||
+    ""
+  ).trim();
+
+if (!nr) {
+  throw new Error(
+    "Brak numeru zawodnika."
+  );
+}
   const sid =
     String(seasonId || "").trim();
 
@@ -12996,7 +13035,7 @@ async function openPlayerStatsMonth_(
   }
 
   const requestKey =
-    `${sid}|${month}`;
+    `${nr}|${sid}|${month}`;
 
   window.__playerStatsMonthRequestKey =
     requestKey;
@@ -13005,7 +13044,8 @@ async function openPlayerStatsMonth_(
     const payload =
       await loadPlayerStatsMonthDays_(
         sid,
-        month
+        month,
+        nr
       );
 
     // Ochrona przed spóźnioną odpowiedzią,
@@ -13698,13 +13738,6 @@ async function trainerOpenZawodnik_(nr, nazwisko) {
 
   } finally {
     setTrainerZawodnikViewBusy_(false);
-
-    // Statystyki odpalamy po załadowaniu danych podstawowych.
-    if (String(window.__trainerSelectedNr || "").trim() === nrSafe) {
-      setTimeout(() => {
-        trainerLoadSelectedPlayerStats_();
-      }, 0);
-    }
 
     // Grupy ładujemy w tle — nie blokują ekranu zawodnika.
     setTimeout(() => {
@@ -14514,33 +14547,87 @@ function trainerApplyMedicalAlertsToVisiblePlayerTiles_() {
   div.innerHTML = rowsHtml + sumHtml;
 }
 
-  async function trainerLoadSelectedPlayerStats_() {
-  const nr = String(window.__trainerSelectedNr || "").trim();
-  const statsEl = document.getElementById("trainerInfoStats");
+async function trainerOpenStats_() {
+  const nr =
+    String(window.__trainerSelectedNr || "").trim();
 
-  if (!nr || !statsEl) return;
+  const nazw =
+    String(
+      window.__trainerSelectedNazwisko || ""
+    ).trim();
 
-  statsEl.innerHTML = "<p>⏳ Ładowanie statystyk...</p>";
+  if (!nr) {
+    alert("❌ Brak wybranego zawodnika.");
+    return;
+  }
+
+  goToView("adminStatsView");
+
+  const title =
+    document.getElementById("adminStatsTitle");
+
+  const body =
+    document.getElementById("adminStatsBody");
+
+  if (title) {
+    title.textContent =
+      `Statystyki — #${nr}` +
+      (nazw ? ` — ${nazw}` : "");
+  }
+
+  if (body) {
+    body.innerHTML = `
+      <div class="card" style="background:#222;">
+        ⏳ Ładowanie...
+      </div>
+    `;
+  }
 
   try {
-    const lista = await apiClubGet("statystyki", { numer: nr });
+    const payload =
+      await apiClubGet(
+        "statystykiSezony",
+        {
+          numer: nr
+        }
+      );
 
-    // Jeśli trener kliknął już innego zawodnika, nie nadpisujemy kafla.
-    if (String(window.__trainerSelectedNr || "").trim() !== nr) return;
+    if (
+      String(
+        window.__trainerSelectedNr || ""
+      ).trim() !== nr
+    ) {
+      return;
+    }
 
-    renderStatystykiInto_("trainerInfoStats", lista);
+    renderPlayerStatsBySeason_(
+      payload,
+      {
+        targetId: "adminStatsBody",
+        playerNr: nr
+      }
+    );
 
   } catch (e) {
-    console.error("trainerLoadSelectedPlayerStats_ error", e);
+    console.error(
+      "trainerOpenStats_ error",
+      e
+    );
 
-    if (String(window.__trainerSelectedNr || "").trim() !== nr) return;
-
-    statsEl.innerHTML = `
-      <p>❌ Błąd ładowania statystyk: ${String(e?.message || e)}</p>
-      <button class="full-btn" type="button" onclick="trainerLoadSelectedPlayerStats_()">
-        Spróbuj ponownie
-      </button>
-    `;
+    if (body) {
+      body.innerHTML = `
+        <div
+          class="card"
+          style="background:#700;"
+        >
+          ❌ Błąd: ${
+            playerStatsEscHtml_(
+              e?.message || e
+            )
+          }
+        </div>
+      `;
+    }
   }
 }
   
@@ -23236,8 +23323,14 @@ async function adminSaveGrupyLocal() {
 // ADMIN: Statystyki zawodnika (reuse ekranu zawodnika)
   
 async function adminOpenStats() {
-  const nr = String(window.__adminSelectedNr || "").trim();
-  const nazw = String(window.__adminSelectedNazw || "").trim();
+  const nr =
+    String(window.__adminSelectedNr || "").trim();
+
+  const nazw =
+    String(
+      window.__adminSelectedNazwisko || ""
+    ).trim();
+
   if (!nr) {
     alert("❌ Brak wybranego zawodnika (nr).");
     return;
@@ -23245,24 +23338,71 @@ async function adminOpenStats() {
 
   goToView("adminStatsView");
 
-  const title = document.getElementById("adminStatsTitle");
-  if (title) title.textContent = `Statystyki — #${nr}${nazw ? " — " + nazw : ""}`;
+  const title =
+    document.getElementById("adminStatsTitle");
 
-  const body = document.getElementById("adminStatsBody");
-  if (body) body.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie...</div>`;
+  const body =
+    document.getElementById("adminStatsBody");
+
+  if (title) {
+    title.textContent =
+      `Statystyki — #${nr}` +
+      (nazw ? ` — ${nazw}` : "");
+  }
+
+  if (body) {
+    body.innerHTML = `
+      <div class="card" style="background:#222;">
+        ⏳ Ładowanie...
+      </div>
+    `;
+  }
 
   try {
-    const lista = await apiClubGet("statystyki", { numer: nr });
+    const payload =
+      await apiClubGet(
+        "statystykiSezony",
+        {
+          numer: nr
+        }
+      );
 
-    // wstawiamy tymczasowy kontener o ID, którego używa renderStatystyki
-    if (body) {
-      body.innerHTML = `<div id="listaStatystyk"></div>`;
-      renderStatystyki(lista);
+    if (
+      String(
+        window.__adminSelectedNr || ""
+      ).trim() !== nr
+    ) {
+      return;
     }
 
+    renderPlayerStatsBySeason_(
+      payload,
+      {
+        targetId: "adminStatsBody",
+        playerNr: nr
+      }
+    );
+
   } catch (e) {
-    if (body) body.innerHTML =
-      `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
+    console.error(
+      "adminOpenStats error",
+      e
+    );
+
+    if (body) {
+      body.innerHTML = `
+        <div
+          class="card"
+          style="background:#700;"
+        >
+          ❌ Błąd: ${
+            playerStatsEscHtml_(
+              e?.message || e
+            )
+          }
+        </div>
+      `;
+    }
   }
 }
   
