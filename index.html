@@ -13220,7 +13220,7 @@ function renderPlayerStatsBySeason_(
   div.innerHTML = seasons.map((season, seasonIndex) => {
     const months = Array.isArray(season?.months)
       ? [...season.months].sort((a, b) =>
-          String(a?.monthStart || "")
+          String(b?.monthStart || "")
             .localeCompare(String(a?.monthStart || ""))
         )
       : [];
