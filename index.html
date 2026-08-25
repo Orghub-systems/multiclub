@@ -1189,11 +1189,215 @@ input[type="number"] {
   font-size: 13px;
   opacity: .75;
 }
+
+/* =========================================================
+   ADMIN EVENTS
+========================================================= */
+
+.admin-events-grid {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+.admin-events-tile {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 10px 0;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: #111;
+  color: #fff;
+  text-align: left;
+}
+
+.admin-events-tile-clickable {
+  cursor: pointer;
+}
+
+.admin-events-tile-title {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.admin-events-tile-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: .75;
+}
+
+.admin-events-status {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-events-status-active {
+  background: rgba(15,122,42,.28);
+  border: 1px solid #19a642;
+}
+
+.admin-events-status-archive {
+  background: rgba(255,255,255,.07);
+  border: 1px solid #555;
+}
+
+.admin-events-status-cancelled {
+  background: rgba(139,0,0,.35);
+  border: 1px solid #ff2b2b;
+}
+
+.admin-event-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-event-actions .full-btn {
+  width: 100%;
+  margin: 0;
+}
+
+.admin-event-field-label {
+  font-size: 13px;
+  opacity: .75;
+  margin: 12px 0 4px 0;
+}
+
+.admin-event-edit-box {
+  width: min(390px, calc(100% - 20px));
+  margin: 0 auto;
+}
+
+.admin-event-edit-section {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+}
+
+.admin-event-section-title {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.admin-event-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+}
+
+.admin-event-check-row input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.admin-event-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-top: 10px;
+  padding: 12px 14px;
+
+  border-radius: 14px;
+  border: 1px solid #333;
+  background: #111;
+}
+
+.admin-event-toggle-row input {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-participants-list {
+  width: min(390px, calc(100% - 20px));
+  margin: 0 auto;
+}
+
+.admin-participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  box-sizing: border-box;
+  width: 100%;
+
+  margin-bottom: 8px;
+  padding: 12px 14px;
+
+  background: #111;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px;
+
+  text-align: left;
+}
+
+.admin-participant-row-editable {
+  cursor: pointer;
+}
+
+.admin-participant-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.admin-participant-number {
+  opacity: .6;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.admin-participant-trash {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+
+  padding: 0;
+  border-radius: 10px;
+
+  background: #5a0000;
+  border: 1px solid #ff2b2b;
+
+  font-size: 18px;
+}
+
+.admin-player-picker-row {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 11px 12px;
+  margin-bottom: 7px;
+
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: #191919;
+  color: #fff;
+
+  font-weight: 800;
+  text-align: left;
+}
     
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.19';
+  window.APP_BUILD = 'APP v3.20';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2863,12 +3067,297 @@ if (buildChanged) {
   <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
   <button class="full-btn" onclick="adminPokazTrenerow()">👨‍🏫 Trenerzy</button>
   <button class="full-btn" onclick="openAdminClubGroupsView()">🧩 Grupy klubu</button>
+  <button class="full-btn"type="button"onclick="adminOpenEventsView_()">📅 Wydarzenia</button>
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button id="adminNotificationsBtn" class="full-btn" onclick="openAdminNotificationsView_()">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
   <button class="full-btn" type="button" onclick="adminOpenClubSeasonSettingsView()">⚙️ Ustawienia klubu / sezonu</button>
   <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
   <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
+</div>
+
+  <!-- =========================================================
+     ADMIN EVENTS
+     Centralne zarządzanie wydarzeniami
+========================================================= -->
+
+<!-- SEZONY -->
+<div id="adminEventsView" class="container hidden">
+  <h1>Wydarzenia</h1>
+
+  <div
+    id="adminEventsSeasonsList"
+    class="admin-events-grid"
+  >
+    Ładowanie...
+  </div>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="appBack()"
+  >
+    ⬅ Powrót
+  </button>
+</div>
+
+
+<!-- MIESIĄCE SEZONU -->
+<div id="adminEventsMonthsView" class="container hidden">
+  <h1 id="adminEventsSeasonTitle">Wydarzenia</h1>
+
+  <div
+    id="adminEventsMonthsList"
+    class="admin-events-grid"
+  ></div>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="appBack()"
+  >
+    ⬅ Powrót
+  </button>
+</div>
+
+
+<!-- WYDARZENIA MIESIĄCA -->
+<div id="adminEventsMonthView" class="container hidden">
+  <h1 id="adminEventsMonthTitle">Wydarzenia</h1>
+
+  <div
+    id="adminEventsMonthList"
+    class="admin-events-grid"
+  ></div>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="appBack()"
+  >
+    ⬅ Powrót
+  </button>
+</div>
+
+
+<!-- EDYCJA WYDARZENIA -->
+<div id="adminEventEditView" class="container hidden">
+  <h1>Edycja wydarzenia</h1>
+
+  <div
+    id="adminEventEditSeasonInfo"
+    style="
+      opacity:.7;
+      font-size:13px;
+      margin-bottom:12px;
+    "
+  ></div>
+
+  <div
+    class="login-box admin-event-edit-box"
+    style="text-align:left;"
+  >
+
+    <div class="admin-event-field-label">
+      Data rozpoczęcia
+    </div>
+    <input id="adminEventEditStartDate" type="date">
+
+    <div class="admin-event-field-label">
+      Godzina rozpoczęcia
+    </div>
+    <input id="adminEventEditStartTime" type="time">
+
+    <div class="admin-event-field-label">
+      Data zakończenia
+    </div>
+    <input id="adminEventEditEndDate" type="date">
+
+    <div class="admin-event-field-label">
+      Godzina zakończenia
+    </div>
+    <input id="adminEventEditEndTime" type="time">
+
+    <div class="admin-event-field-label">
+      Rodzaj wydarzenia
+    </div>
+    <input
+      id="adminEventEditType"
+      type="text"
+      placeholder="Rodzaj wydarzenia"
+    >
+
+    <div class="admin-event-field-label">
+      Miejsce
+    </div>
+    <input
+      id="adminEventEditLocation"
+      type="text"
+      placeholder="Miejsce"
+    >
+
+    <div class="admin-event-field-label">
+      Tryb wydarzenia
+    </div>
+
+    <select
+      id="adminEventEditAccessMode"
+      onchange="adminEventsAccessModeChanged_()"
+    >
+      <option value="groups">Grupy</option>
+      <option value="invitations">Powołania</option>
+    </select>
+
+    <div
+      id="adminEventEditGroupsWrap"
+      class="admin-event-edit-section"
+    >
+      <div class="admin-event-section-title">
+        Grupy
+      </div>
+
+      <div id="adminEventEditGroups"></div>
+    </div>
+
+
+    <div class="admin-event-edit-section">
+      <div class="admin-event-section-title">
+        Trenerzy
+      </div>
+
+      <div id="adminEventEditCoaches"></div>
+    </div>
+
+
+    <label class="admin-event-toggle-row">
+      <span>Widoczne w aplikacji</span>
+      <input
+        id="adminEventEditVisible"
+        type="checkbox"
+      >
+    </label>
+
+    <label class="admin-event-toggle-row">
+      <span>Liczyć do statystyk</span>
+      <input
+        id="adminEventEditStatistics"
+        type="checkbox"
+      >
+    </label>
+
+    <label class="admin-event-toggle-row">
+      <span>Liczyć do płatności</span>
+      <input
+        id="adminEventEditBilling"
+        type="checkbox"
+      >
+    </label>
+
+    <label class="admin-event-toggle-row">
+      <span>Rezerwacja obiektu</span>
+      <input
+        id="adminEventEditReservation"
+        type="checkbox"
+      >
+    </label>
+
+  </div>
+
+  <p
+    id="adminEventEditMsg"
+    style="min-height:20px;"
+  ></p>
+
+  <button
+    id="btnAdminEventSave"
+    class="full-btn"
+    type="button"
+    onclick="adminEventsSaveEvent_()"
+  >
+    💾 Zapisz zmiany
+  </button>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="appBack()"
+  >
+    ⬅ Anuluj
+  </button>
+</div>
+
+
+<!-- LISTA ZAPISANYCH -->
+<div id="adminEventParticipantsView" class="container hidden">
+  <h1>Zapisani</h1>
+
+  <div
+    id="adminEventParticipantsTitle"
+    style="
+      font-weight:900;
+      margin-bottom:14px;
+    "
+  ></div>
+
+  <div
+    id="adminEventParticipantsList"
+    class="admin-participants-list"
+  >
+    Ładowanie...
+  </div>
+
+  <button
+    id="btnAdminEventAddPlayer"
+    class="full-btn"
+    type="button"
+    onclick="adminEventsShowPlayerPicker_()"
+  >
+    Dodaj zawodnika do listy
+  </button>
+
+  <div
+    id="adminEventPlayerPicker"
+    class="card hidden"
+    style="
+      width:min(390px, calc(100% - 20px));
+      margin:14px auto;
+      box-sizing:border-box;
+      text-align:left;
+    "
+  >
+    <div
+      style="
+        font-size:18px;
+        font-weight:900;
+        margin-bottom:10px;
+      "
+    >
+      Wybierz zawodnika
+    </div>
+
+    <div id="adminEventPlayerPickerList"></div>
+
+    <button
+      class="full-btn alt"
+      type="button"
+      onclick="adminEventsHidePlayerPicker_()"
+    >
+      Zamknij
+    </button>
+  </div>
+
+  <p
+    id="adminEventParticipantsMsg"
+    style="min-height:20px;"
+  ></p>
+
+  <button
+    class="full-btn alt"
+    type="button"
+    onclick="appBack()"
+  >
+    ⬅ Powrót
+  </button>
 </div>
 
 <div id="adminNotificationsView" class="container hidden">
@@ -23893,6 +24382,1678 @@ async function adminSaveClubGroupsLocal_() {
 }
 
 /* =================== KONIEC SEKTORA 161 =================== */  
+
+  /* =================== 162 ADMIN / EVENTS  =================== */
+
+/* =========================================================
+   ADMIN EVENTS
+   Sezony -> miesiące -> wydarzenia
+========================================================= */
+
+const ADMIN_EVENTS_API_URL =
+  "https://nejwbrecotgchvarzfbx.supabase.co/functions/v1/admin-event-archive";
+
+const adminEventsState_ = {
+  seasons: [],
+  seasonId: "",
+  monthKey: "",
+  eventId: "",
+  detail: null,
+  participantIds: new Set(),
+  trashMemberId: ""
+};
+
+
+/* =================== API =================== */
+
+async function adminEventsApi_(action, payload = {}) {
+  requireClubId();
+
+  const session = loadAppSession_();
+
+  const sessionToken = String(
+    session?.sessionToken || ""
+  ).trim();
+
+  const role = String(
+    session?.role || ""
+  ).trim().toLowerCase();
+
+  if (
+    role !== "admin" ||
+    !sessionToken
+  ) {
+    throw new Error(
+      "Sesja administratora wygasła. Zaloguj się ponownie."
+    );
+  }
+
+  const coreMode =
+    window.location.hostname ===
+    "orghub-dev.orghubsystems.workers.dev"
+      ? "dev"
+      : "prod";
+
+  const response = await fetch(
+    ADMIN_EVENTS_API_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action,
+        clubId: String(clubId || "").trim(),
+        sessionToken,
+        coreMode,
+        ...payload
+      })
+    }
+  );
+
+  const text = await response.text();
+
+  let data = null;
+
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(
+      "Backend wydarzeń zwrócił nieprawidłową odpowiedź."
+    );
+  }
+
+  if (
+    !response.ok ||
+    !data ||
+    data.success === false
+  ) {
+    throw new Error(
+      data?.error ||
+      "Błąd obsługi wydarzeń."
+    );
+  }
+
+  return data;
+}
+
+
+/* =================== HELPERY =================== */
+
+function adminEventsGetSeason_() {
+  return (
+    adminEventsState_.seasons.find(
+      s => String(s.id) ===
+           String(adminEventsState_.seasonId)
+    ) || null
+  );
+}
+
+
+function adminEventsGetEvent_() {
+  const season =
+    adminEventsGetSeason_();
+
+  if (!season) return null;
+
+  return (
+    (season.events || []).find(
+      e => String(e.id) ===
+           String(adminEventsState_.eventId)
+    ) || null
+  );
+}
+
+
+function adminEventsMonthLabel_(monthKey) {
+  const months = [
+    "Styczeń",
+    "Luty",
+    "Marzec",
+    "Kwiecień",
+    "Maj",
+    "Czerwiec",
+    "Lipiec",
+    "Sierpień",
+    "Wrzesień",
+    "Październik",
+    "Listopad",
+    "Grudzień"
+  ];
+
+  const parts =
+    String(monthKey || "").split("-");
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+
+  if (
+    !year ||
+    month < 1 ||
+    month > 12
+  ) {
+    return String(monthKey || "");
+  }
+
+  return `${months[month - 1]} ${year}`;
+}
+
+
+function adminEventsFormatDateTime_(iso) {
+  if (!iso) return "";
+
+  try {
+    return new Date(iso).toLocaleString(
+      "pl-PL",
+      {
+        timeZone: "Europe/Warsaw",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    );
+  } catch (e) {
+    return String(iso || "");
+  }
+}
+
+
+function adminEventsLocalInputParts_(iso) {
+  const date = new Date(iso);
+
+  if (Number.isNaN(date.getTime())) {
+    return {
+      date: "",
+      time: ""
+    };
+  }
+
+  const pad = n =>
+    String(n).padStart(2, "0");
+
+  return {
+    date:
+      `${date.getFullYear()}-` +
+      `${pad(date.getMonth() + 1)}-` +
+      `${pad(date.getDate())}`,
+
+    time:
+      `${pad(date.getHours())}:` +
+      `${pad(date.getMinutes())}`
+  };
+}
+
+
+function adminEventsInputToIso_(
+  dateValue,
+  timeValue
+) {
+  const date =
+    String(dateValue || "").trim();
+
+  const time =
+    String(timeValue || "").trim();
+
+  if (!date || !time) {
+    throw new Error(
+      "Uzupełnij datę i godzinę wydarzenia."
+    );
+  }
+
+  const value =
+    new Date(`${date}T${time}:00`);
+
+  if (Number.isNaN(value.getTime())) {
+    throw new Error(
+      "Nieprawidłowa data wydarzenia."
+    );
+  }
+
+  return value.toISOString();
+}
+
+
+function adminEventsCanEditCurrent_() {
+  const season =
+    adminEventsGetSeason_();
+
+  const event =
+    adminEventsGetEvent_();
+
+  return !!(
+    season &&
+    season.writable === true &&
+    event &&
+    event.cancelled !== true
+  );
+}
+
+
+function adminEventsUpdateParticipantCount_() {
+  const event =
+    adminEventsGetEvent_();
+
+  if (!event) return;
+
+  event.participantCount =
+    adminEventsState_.participantIds.size;
+}
+
+
+/* =================== OTWARCIE MODUŁU =================== */
+
+async function adminOpenEventsView_() {
+  goToView("adminEventsView");
+
+  const box =
+    document.getElementById(
+      "adminEventsSeasonsList"
+    );
+
+  if (box) {
+    box.innerHTML =
+      `<div class="card">⏳ Ładowanie wydarzeń...</div>`;
+  }
+
+  try {
+    const data =
+      await adminEventsApi_("events");
+
+    adminEventsState_.seasons =
+      Array.isArray(data?.seasons)
+        ? data.seasons
+        : [];
+
+    adminEventsState_.seasonId = "";
+    adminEventsState_.monthKey = "";
+    adminEventsState_.eventId = "";
+
+    adminEventsRenderSeasons_();
+
+  } catch (e) {
+    if (box) {
+      box.innerHTML = `
+        <div class="card">
+          ❌ ${escapeHtml_(e?.message || e)}
+        </div>
+      `;
+    }
+  }
+}
+
+
+/* =================== SEZONY =================== */
+
+function adminEventsRenderSeasons_() {
+  const box =
+    document.getElementById(
+      "adminEventsSeasonsList"
+    );
+
+  if (!box) return;
+
+  const seasons =
+    adminEventsState_.seasons || [];
+
+  if (!seasons.length) {
+    box.innerHTML =
+      `<div class="card">Brak sezonów.</div>`;
+    return;
+  }
+
+  box.innerHTML =
+    seasons.map(season => {
+
+      const active =
+        season.writable === true;
+
+      const eventsCount =
+        Array.isArray(season.events)
+          ? season.events.length
+          : 0;
+
+      return `
+        <div
+          class="
+            admin-events-tile
+            admin-events-tile-clickable
+          "
+          onclick="adminEventsOpenSeason_('${season.id}')"
+        >
+          <div class="admin-events-tile-title">
+            ${escapeHtml_(season.label || "")}
+          </div>
+
+          <div class="admin-events-tile-meta">
+            Wydarzeń: ${eventsCount}
+          </div>
+
+          <div
+            class="
+              admin-events-status
+              ${
+                active
+                  ? "admin-events-status-active"
+                  : "admin-events-status-archive"
+              }
+            "
+          >
+            ${
+              active
+                ? "BIEŻĄCY"
+                : "ARCHIWALNY"
+            }
+          </div>
+        </div>
+      `;
+    }).join("");
+}
+
+
+function adminEventsOpenSeason_(seasonId) {
+  adminEventsState_.seasonId =
+    String(seasonId || "");
+
+  adminEventsState_.monthKey = "";
+  adminEventsState_.eventId = "";
+
+  const season =
+    adminEventsGetSeason_();
+
+  if (!season) return;
+
+  const title =
+    document.getElementById(
+      "adminEventsSeasonTitle"
+    );
+
+  if (title) {
+    title.textContent =
+      `Sezon ${season.label || ""}`;
+  }
+
+  adminEventsRenderMonths_();
+
+  goToView(
+    "adminEventsMonthsView"
+  );
+}
+
+
+/* =================== MIESIĄCE =================== */
+
+function adminEventsRenderMonths_() {
+  const box =
+    document.getElementById(
+      "adminEventsMonthsList"
+    );
+
+  if (!box) return;
+
+  const season =
+    adminEventsGetSeason_();
+
+  if (!season) {
+    box.innerHTML =
+      `<div class="card">Brak sezonu.</div>`;
+    return;
+  }
+
+  const events =
+    Array.isArray(season.events)
+      ? season.events
+      : [];
+
+  const map = new Map();
+
+  events.forEach(event => {
+    const key =
+      String(event.monthKey || "");
+
+    if (!key) return;
+
+    if (!map.has(key)) {
+      map.set(key, []);
+    }
+
+    map.get(key).push(event);
+  });
+
+  const months =
+    Array.from(map.keys())
+      .sort((a, b) =>
+        String(b).localeCompare(String(a))
+      );
+
+  if (!months.length) {
+    box.innerHTML =
+      `<div class="card">Brak wydarzeń.</div>`;
+    return;
+  }
+
+  box.innerHTML =
+    months.map(key => {
+
+      const count =
+        map.get(key)?.length || 0;
+
+      return `
+        <div
+          class="
+            admin-events-tile
+            admin-events-tile-clickable
+          "
+          onclick="adminEventsOpenMonth_('${key}')"
+        >
+          <div class="admin-events-tile-title">
+            ${escapeHtml_(
+              adminEventsMonthLabel_(key)
+            )}
+          </div>
+
+          <div class="admin-events-tile-meta">
+            Wydarzeń: ${count}
+          </div>
+        </div>
+      `;
+    }).join("");
+}
+
+
+function adminEventsOpenMonth_(monthKey) {
+  adminEventsState_.monthKey =
+    String(monthKey || "");
+
+  adminEventsState_.eventId = "";
+
+  const title =
+    document.getElementById(
+      "adminEventsMonthTitle"
+    );
+
+  if (title) {
+    title.textContent =
+      adminEventsMonthLabel_(
+        adminEventsState_.monthKey
+      );
+  }
+
+  adminEventsRenderMonth_();
+
+  goToView(
+    "adminEventsMonthView"
+  );
+}
+
+
+/* =================== WYDARZENIA =================== */
+
+function adminEventsRenderMonth_() {
+  const box =
+    document.getElementById(
+      "adminEventsMonthList"
+    );
+
+  if (!box) return;
+
+  const season =
+    adminEventsGetSeason_();
+
+  if (!season) {
+    box.innerHTML =
+      `<div class="card">Brak sezonu.</div>`;
+    return;
+  }
+
+  const events =
+    (season.events || [])
+      .filter(event =>
+        String(event.monthKey || "") ===
+        String(adminEventsState_.monthKey)
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.startsAt).getTime() -
+          new Date(a.startsAt).getTime()
+      );
+
+  if (!events.length) {
+    box.innerHTML =
+      `<div class="card">Brak wydarzeń.</div>`;
+    return;
+  }
+
+  box.innerHTML =
+    events.map(event => {
+
+      const cancelled =
+        event.cancelled === true;
+
+      const canEdit =
+        season.writable === true &&
+        !cancelled;
+
+      const participants =
+        Number(
+          event.participantCount || 0
+        );
+
+      return `
+        <div class="admin-events-tile">
+
+          <div class="admin-events-tile-title">
+            ${escapeHtml_(event.eventType || "")}
+          </div>
+
+          <div class="admin-events-tile-meta">
+            📅 ${escapeHtml_(
+              adminEventsFormatDateTime_(
+                event.startsAt
+              )
+            )}
+          </div>
+
+          ${
+            event.location
+              ? `
+                <div class="admin-events-tile-meta">
+                  📍 ${escapeHtml_(event.location)}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            event.groups
+              ? `
+                <div class="admin-events-tile-meta">
+                  👥 ${escapeHtml_(event.groups)}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            event.coaches
+              ? `
+                <div class="admin-events-tile-meta">
+                  🏒 ${escapeHtml_(event.coaches)}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            cancelled
+              ? `
+                <div
+                  class="
+                    admin-events-status
+                    admin-events-status-cancelled
+                  "
+                >
+                  ANULOWANE
+                </div>
+              `
+              : ""
+          }
+
+          <div class="admin-event-actions">
+
+            <button
+              class="full-btn alt"
+              type="button"
+              onclick="
+                adminEventsOpenParticipants_(
+                  '${event.id}'
+                )
+              "
+            >
+              Zapisani (${participants})
+            </button>
+
+            ${
+              canEdit
+                ? `
+                  <button
+                    class="full-btn"
+                    type="button"
+                    onclick="
+                      adminEventsOpenEdit_(
+                        '${event.id}'
+                      )
+                    "
+                  >
+                    Edytuj
+                  </button>
+                `
+                : `
+                  <button
+                    class="full-btn alt"
+                    type="button"
+                    disabled
+                  >
+                    Tylko podgląd
+                  </button>
+                `
+            }
+
+          </div>
+        </div>
+      `;
+    }).join("");
+}
+
+
+/* =================== DETAIL =================== */
+
+async function adminEventsLoadDetail_(eventId) {
+  const data =
+    await adminEventsApi_(
+      "detail",
+      {
+        eventId:
+          String(eventId || "")
+      }
+    );
+
+  adminEventsState_.eventId =
+    String(eventId || "");
+
+  adminEventsState_.detail =
+    data || null;
+
+  adminEventsState_.participantIds =
+    new Set(
+      (data?.participants || [])
+        .map(p =>
+          String(p.memberId || "")
+        )
+        .filter(Boolean)
+    );
+
+  adminEventsState_.trashMemberId = "";
+
+  return data;
+}
+
+
+/* =================== EDYCJA WYDARZENIA =================== */
+
+async function adminEventsOpenEdit_(eventId) {
+  try {
+    showBusy(
+      "Ładowanie wydarzenia..."
+    );
+
+    const data =
+      await adminEventsLoadDetail_(
+        eventId
+      );
+
+    if (
+      !data?.event ||
+      data.event.seasonWritable !== true ||
+      data.event.cancelled === true
+    ) {
+      throw new Error(
+        "To wydarzenie jest tylko do odczytu."
+      );
+    }
+
+    adminEventsRenderEdit_();
+
+    goToView(
+      "adminEventEditView"
+    );
+
+  } catch (e) {
+    alert(
+      "❌ " +
+      String(e?.message || e)
+    );
+
+  } finally {
+    hideBusy();
+  }
+}
+
+
+function adminEventsRenderEdit_() {
+  const data =
+    adminEventsState_.detail;
+
+  const event =
+    data?.event;
+
+  if (!event) return;
+
+  const start =
+    adminEventsLocalInputParts_(
+      event.startsAt
+    );
+
+  const end =
+    adminEventsLocalInputParts_(
+      event.endsAt
+    );
+
+  document.getElementById(
+    "adminEventEditStartDate"
+  ).value = start.date;
+
+  document.getElementById(
+    "adminEventEditStartTime"
+  ).value = start.time;
+
+  document.getElementById(
+    "adminEventEditEndDate"
+  ).value = end.date;
+
+  document.getElementById(
+    "adminEventEditEndTime"
+  ).value = end.time;
+
+  document.getElementById(
+    "adminEventEditType"
+  ).value =
+    event.eventType || "";
+
+  document.getElementById(
+    "adminEventEditLocation"
+  ).value =
+    event.location || "";
+
+  document.getElementById(
+    "adminEventEditAccessMode"
+  ).value =
+    event.accessMode || "groups";
+
+  document.getElementById(
+    "adminEventEditVisible"
+  ).checked =
+    event.visibleInApp === true;
+
+  document.getElementById(
+    "adminEventEditStatistics"
+  ).checked =
+    event.countsForStatistics === true;
+
+  document.getElementById(
+    "adminEventEditBilling"
+  ).checked =
+    event.countsForBilling === true;
+
+  document.getElementById(
+    "adminEventEditReservation"
+  ).checked =
+    event.facilityReservation === true;
+
+  const seasonInfo =
+    document.getElementById(
+      "adminEventEditSeasonInfo"
+    );
+
+  if (seasonInfo) {
+    seasonInfo.textContent =
+      `Sezon ${event.seasonLabel || ""}`;
+  }
+
+
+  /* GRUPY */
+
+  const selectedGroups =
+    new Set(
+      data.selectedGroupIds || []
+    );
+
+  const groupsBox =
+    document.getElementById(
+      "adminEventEditGroups"
+    );
+
+  if (groupsBox) {
+    groupsBox.innerHTML =
+      (data.groups || [])
+        .map(group => `
+          <label class="admin-event-check-row">
+            <input
+              type="checkbox"
+              class="admin-event-group-checkbox"
+              value="${group.id}"
+              ${
+                selectedGroups.has(group.id)
+                  ? "checked"
+                  : ""
+              }
+            >
+
+            <span>
+              <b>${escapeHtml_(group.code || "")}</b>
+              ${
+                group.label
+                  ? " — " +
+                    escapeHtml_(group.label)
+                  : ""
+              }
+            </span>
+          </label>
+        `)
+        .join("");
+  }
+
+
+  /* TRENERZY */
+
+  const selectedCoaches =
+    new Set(
+      data.selectedCoachIds || []
+    );
+
+  const coachesBox =
+    document.getElementById(
+      "adminEventEditCoaches"
+    );
+
+  if (coachesBox) {
+    coachesBox.innerHTML =
+      (data.coaches || [])
+        .map(coach => `
+          <label class="admin-event-check-row">
+            <input
+              type="checkbox"
+              class="admin-event-coach-checkbox"
+              value="${coach.memberId}"
+              ${
+                selectedCoaches.has(
+                  coach.memberId
+                )
+                  ? "checked"
+                  : ""
+              }
+            >
+
+            <span>
+              ${escapeHtml_(coach.name || "")}
+            </span>
+          </label>
+        `)
+        .join("");
+  }
+
+  adminEventsAccessModeChanged_();
+
+  const msg =
+    document.getElementById(
+      "adminEventEditMsg"
+    );
+
+  if (msg) msg.textContent = "";
+}
+
+
+function adminEventsAccessModeChanged_() {
+  const mode =
+    String(
+      document.getElementById(
+        "adminEventEditAccessMode"
+      )?.value || "groups"
+    );
+
+  const groupsWrap =
+    document.getElementById(
+      "adminEventEditGroupsWrap"
+    );
+
+  if (!groupsWrap) return;
+
+  if (mode === "groups") {
+    groupsWrap.classList.remove(
+      "hidden"
+    );
+  } else {
+    groupsWrap.classList.add(
+      "hidden"
+    );
+  }
+}
+
+
+async function adminEventsSaveEvent_() {
+  const msg =
+    document.getElementById(
+      "adminEventEditMsg"
+    );
+
+  const btn =
+    document.getElementById(
+      "btnAdminEventSave"
+    );
+
+  if (msg) msg.textContent = "";
+
+  const detail =
+    adminEventsState_.detail;
+
+  if (
+    !detail?.event ||
+    detail.event.seasonWritable !== true
+  ) {
+    if (msg) {
+      msg.textContent =
+        "❌ Zamkniętego sezonu nie można edytować.";
+    }
+    return;
+  }
+
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("loading");
+    }
+
+    const eventType =
+      String(
+        document.getElementById(
+          "adminEventEditType"
+        )?.value || ""
+      ).trim();
+
+    if (!eventType) {
+      throw new Error(
+        "Podaj rodzaj wydarzenia."
+      );
+    }
+
+    const startsAt =
+      adminEventsInputToIso_(
+        document.getElementById(
+          "adminEventEditStartDate"
+        )?.value,
+
+        document.getElementById(
+          "adminEventEditStartTime"
+        )?.value
+      );
+
+    const endsAt =
+      adminEventsInputToIso_(
+        document.getElementById(
+          "adminEventEditEndDate"
+        )?.value,
+
+        document.getElementById(
+          "adminEventEditEndTime"
+        )?.value
+      );
+
+    if (
+      new Date(endsAt).getTime() <=
+      new Date(startsAt).getTime()
+    ) {
+      throw new Error(
+        "Zakończenie wydarzenia musi być późniejsze niż rozpoczęcie."
+      );
+    }
+
+    const accessMode =
+      String(
+        document.getElementById(
+          "adminEventEditAccessMode"
+        )?.value || "groups"
+      );
+
+    let groupIds = [];
+
+    if (accessMode === "groups") {
+      groupIds =
+        Array.from(
+          document.querySelectorAll(
+            ".admin-event-group-checkbox:checked"
+          )
+        ).map(el =>
+          String(el.value)
+        );
+    }
+
+    const coachIds =
+      Array.from(
+        document.querySelectorAll(
+          ".admin-event-coach-checkbox:checked"
+        )
+      ).map(el =>
+        String(el.value)
+      );
+
+    if (coachIds.length > 4) {
+      throw new Error(
+        "Do wydarzenia można przypisać maksymalnie 4 trenerów."
+      );
+    }
+
+    if (msg) {
+      msg.textContent =
+        "⏳ Zapisuję zmiany...";
+    }
+
+    await adminEventsApi_(
+      "saveEvent",
+      {
+        eventId:
+          detail.event.id,
+
+        eventType,
+
+        startsAt,
+        endsAt,
+
+        location:
+          String(
+            document.getElementById(
+              "adminEventEditLocation"
+            )?.value || ""
+          ).trim(),
+
+        accessMode,
+
+        visibleInApp:
+          !!document.getElementById(
+            "adminEventEditVisible"
+          )?.checked,
+
+        countsForStatistics:
+          !!document.getElementById(
+            "adminEventEditStatistics"
+          )?.checked,
+
+        countsForBilling:
+          !!document.getElementById(
+            "adminEventEditBilling"
+          )?.checked,
+
+        facilityReservation:
+          !!document.getElementById(
+            "adminEventEditReservation"
+          )?.checked,
+
+        groupIds,
+        coachIds,
+
+        participantMemberIds:
+          Array.from(
+            adminEventsState_.participantIds
+          )
+      }
+    );
+
+    if (msg) {
+      msg.textContent =
+        "✅ Zapisano.";
+    }
+
+    /*
+     * Odświeżamy centralną listę,
+     * żeby kafel od razu dostał nowe dane.
+     */
+    const refreshed =
+      await adminEventsApi_("events");
+
+    adminEventsState_.seasons =
+      Array.isArray(
+        refreshed?.seasons
+      )
+        ? refreshed.seasons
+        : [];
+
+    adminEventsRenderMonth_();
+
+    setTimeout(() => {
+      appBack();
+    }, 350);
+
+  } catch (e) {
+    if (msg) {
+      msg.textContent =
+        "❌ " +
+        String(e?.message || e);
+    }
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove(
+        "loading"
+      );
+    }
+  }
+}
+
+
+/* =================== ZAPISANI =================== */
+
+async function adminEventsOpenParticipants_(eventId) {
+  try {
+    showBusy(
+      "Ładowanie listy..."
+    );
+
+    await adminEventsLoadDetail_(
+      eventId
+    );
+
+    adminEventsHidePlayerPicker_();
+
+    adminEventsRenderParticipants_();
+
+    goToView(
+      "adminEventParticipantsView"
+    );
+
+  } catch (e) {
+    alert(
+      "❌ " +
+      String(e?.message || e)
+    );
+
+  } finally {
+    hideBusy();
+  }
+}
+
+
+function adminEventsRenderParticipants_() {
+  const data =
+    adminEventsState_.detail;
+
+  const event =
+    data?.event;
+
+  const box =
+    document.getElementById(
+      "adminEventParticipantsList"
+    );
+
+  const title =
+    document.getElementById(
+      "adminEventParticipantsTitle"
+    );
+
+  const addBtn =
+    document.getElementById(
+      "btnAdminEventAddPlayer"
+    );
+
+  if (!event || !box) return;
+
+  if (title) {
+    title.textContent =
+      `${event.eventType || ""} — ` +
+      adminEventsFormatDateTime_(
+        event.startsAt
+      );
+  }
+
+  const editable =
+    event.seasonWritable === true &&
+    event.cancelled !== true;
+
+  if (addBtn) {
+    addBtn.classList.toggle(
+      "hidden",
+      !editable
+    );
+  }
+
+  const allPeople =
+    [
+      ...(data.players || []),
+      ...(data.participants || [])
+    ];
+
+  const peopleMap =
+    new Map();
+
+  allPeople.forEach(person => {
+    const id =
+      String(
+        person.memberId || ""
+      );
+
+    if (!id) return;
+
+    if (!peopleMap.has(id)) {
+      peopleMap.set(
+        id,
+        person
+      );
+    }
+  });
+
+  const participants =
+    Array.from(
+      adminEventsState_.participantIds
+    )
+      .map(id =>
+        peopleMap.get(id)
+      )
+      .filter(Boolean)
+      .sort((a, b) =>
+        String(a.name || "")
+          .localeCompare(
+            String(b.name || ""),
+            "pl"
+          )
+      );
+
+  if (!participants.length) {
+    box.innerHTML =
+      `<div class="card">Brak zapisanych zawodników.</div>`;
+
+    return;
+  }
+
+  box.innerHTML =
+    participants
+      .map(person => {
+
+        const memberId =
+          String(
+            person.memberId || ""
+          );
+
+        const showTrash =
+          editable &&
+          String(
+            adminEventsState_
+              .trashMemberId
+          ) === memberId;
+
+        return `
+          <div
+            class="
+              admin-participant-row
+              ${
+                editable
+                  ? "admin-participant-row-editable"
+                  : ""
+              }
+            "
+            ${
+              editable
+                ? `onclick="
+                    adminEventsToggleTrash_(
+                      '${memberId}'
+                    )
+                  "`
+                : ""
+            }
+          >
+
+            <div class="admin-participant-name">
+              ${escapeHtml_(person.name || "")}
+
+              ${
+                person.number
+                  ? `
+                    <div class="admin-participant-number">
+                      nr ${escapeHtml_(person.number)}
+                    </div>
+                  `
+                  : ""
+              }
+            </div>
+
+            ${
+              showTrash
+                ? `
+                  <button
+                    class="admin-participant-trash"
+                    type="button"
+                    aria-label="Usuń zawodnika"
+                    onclick="
+                      event.stopPropagation();
+                      adminEventsRemovePlayer_(
+                        '${memberId}'
+                      );
+                    "
+                  >
+                    🗑
+                  </button>
+                `
+                : ""
+            }
+
+          </div>
+        `;
+      })
+      .join("");
+}
+
+
+function adminEventsToggleTrash_(memberId) {
+  if (!adminEventsCanEditCurrent_()) {
+    return;
+  }
+
+  const id =
+    String(memberId || "");
+
+  if (
+    adminEventsState_.trashMemberId === id
+  ) {
+    adminEventsState_.trashMemberId = "";
+  } else {
+    adminEventsState_.trashMemberId = id;
+  }
+
+  adminEventsRenderParticipants_();
+}
+
+
+/* =================== ZAPIS LISTY =================== */
+
+async function adminEventsSaveParticipantList_() {
+  const detail =
+    adminEventsState_.detail;
+
+  if (!detail?.event) {
+    throw new Error(
+      "Brak danych wydarzenia."
+    );
+  }
+
+  if (
+    detail.event.seasonWritable !== true ||
+    detail.event.cancelled === true
+  ) {
+    throw new Error(
+      "Tego wydarzenia nie można edytować."
+    );
+  }
+
+  await adminEventsApi_(
+    "saveEvent",
+    {
+      eventId:
+        detail.event.id,
+
+      eventType:
+        detail.event.eventType,
+
+      startsAt:
+        detail.event.startsAt,
+
+      endsAt:
+        detail.event.endsAt,
+
+      location:
+        detail.event.location || "",
+
+      accessMode:
+        detail.event.accessMode || "groups",
+
+      visibleInApp:
+        detail.event.visibleInApp === true,
+
+      countsForStatistics:
+        detail.event.countsForStatistics === true,
+
+      countsForBilling:
+        detail.event.countsForBilling === true,
+
+      facilityReservation:
+        detail.event.facilityReservation === true,
+
+      groupIds:
+        detail.selectedGroupIds || [],
+
+      coachIds:
+        detail.selectedCoachIds || [],
+
+      participantMemberIds:
+        Array.from(
+          adminEventsState_.participantIds
+        )
+    }
+  );
+
+  adminEventsUpdateParticipantCount_();
+  adminEventsRenderMonth_();
+}
+
+
+/* =================== USUWANIE Z LISTY =================== */
+
+async function adminEventsRemovePlayer_(memberId) {
+  if (!adminEventsCanEditCurrent_()) {
+    return;
+  }
+
+  const id =
+    String(memberId || "");
+
+  if (!id) return;
+
+  const msg =
+    document.getElementById(
+      "adminEventParticipantsMsg"
+    );
+
+  const existed =
+    adminEventsState_
+      .participantIds
+      .has(id);
+
+  if (!existed) return;
+
+  adminEventsState_
+    .participantIds
+    .delete(id);
+
+  adminEventsState_.trashMemberId = "";
+
+  adminEventsRenderParticipants_();
+
+  if (msg) {
+    msg.textContent =
+      "⏳ Usuwam zawodnika...";
+  }
+
+  try {
+    await adminEventsSaveParticipantList_();
+
+    if (msg) {
+      msg.textContent =
+        "✅ Zawodnik usunięty z listy.";
+    }
+
+  } catch (e) {
+    /*
+     * rollback UI
+     */
+    adminEventsState_
+      .participantIds
+      .add(id);
+
+    adminEventsRenderParticipants_();
+
+    if (msg) {
+      msg.textContent =
+        "❌ " +
+        String(e?.message || e);
+    }
+  }
+}
+
+
+/* =================== DODAWANIE =================== */
+
+function adminEventsShowPlayerPicker_() {
+  if (!adminEventsCanEditCurrent_()) {
+    return;
+  }
+
+  const picker =
+    document.getElementById(
+      "adminEventPlayerPicker"
+    );
+
+  const list =
+    document.getElementById(
+      "adminEventPlayerPickerList"
+    );
+
+  const data =
+    adminEventsState_.detail;
+
+  if (!picker || !list || !data) {
+    return;
+  }
+
+  const available =
+    (data.players || [])
+      .filter(player =>
+        !adminEventsState_
+          .participantIds
+          .has(
+            String(
+              player.memberId || ""
+            )
+          )
+      )
+      .sort((a, b) =>
+        String(a.name || "")
+          .localeCompare(
+            String(b.name || ""),
+            "pl"
+          )
+      );
+
+  if (!available.length) {
+    list.innerHTML = `
+      <div style="opacity:.7;padding:10px 0;">
+        Wszyscy zawodnicy są już na liście.
+      </div>
+    `;
+  } else {
+    list.innerHTML =
+      available
+        .map(player => `
+          <button
+            class="admin-player-picker-row"
+            type="button"
+            onclick="
+              adminEventsAddPlayer_(
+                '${player.memberId}'
+              )
+            "
+          >
+            ${escapeHtml_(player.name || "")}
+
+            ${
+              player.number
+                ? `
+                  <span
+                    style="
+                      opacity:.55;
+                      font-size:12px;
+                    "
+                  >
+                    — nr ${escapeHtml_(player.number)}
+                  </span>
+                `
+                : ""
+            }
+          </button>
+        `)
+        .join("");
+  }
+
+  picker.classList.remove(
+    "hidden"
+  );
+}
+
+
+function adminEventsHidePlayerPicker_() {
+  const picker =
+    document.getElementById(
+      "adminEventPlayerPicker"
+    );
+
+  if (picker) {
+    picker.classList.add(
+      "hidden"
+    );
+  }
+}
+
+
+async function adminEventsAddPlayer_(memberId) {
+  if (!adminEventsCanEditCurrent_()) {
+    return;
+  }
+
+  const id =
+    String(memberId || "");
+
+  if (
+    !id ||
+    adminEventsState_
+      .participantIds
+      .has(id)
+  ) {
+    return;
+  }
+
+  const msg =
+    document.getElementById(
+      "adminEventParticipantsMsg"
+    );
+
+  adminEventsState_
+    .participantIds
+    .add(id);
+
+  adminEventsRenderParticipants_();
+
+  adminEventsHidePlayerPicker_();
+
+  if (msg) {
+    msg.textContent =
+      "⏳ Dodaję zawodnika...";
+  }
+
+  try {
+    await adminEventsSaveParticipantList_();
+
+    if (msg) {
+      msg.textContent =
+        "✅ Zawodnik dodany do listy.";
+    }
+
+  } catch (e) {
+    /*
+     * rollback UI
+     */
+    adminEventsState_
+      .participantIds
+      .delete(id);
+
+    adminEventsRenderParticipants_();
+
+    if (msg) {
+      msg.textContent =
+        "❌ " +
+        String(e?.message || e);
+    }
+  }
+}
+  
+
+  /* =================== KONIEC SEKTORA 162 =================== */
   
 /* =================== 170 ADMIN / BILLING / PAYMENTS =================== */
 
