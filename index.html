@@ -14921,6 +14921,27 @@ async function trainerShowArchiveEventsMode_() {
   }
 }
 
+function trainerCurrentMonthKey_() {
+  const parts = new Intl.DateTimeFormat(
+    "en-US",
+    {
+      timeZone: "Europe/Warsaw",
+      year: "numeric",
+      month: "2-digit"
+    }
+  ).formatToParts(new Date());
+
+  const year =
+    parts.find(p => p.type === "year")?.value || "";
+
+  const month =
+    parts.find(p => p.type === "month")?.value || "";
+
+  return year && month
+    ? `${year}-${month}`
+    : "";
+}
+  
 async function trainerEnsureArchiveMonthsLoaded_() {
   const now = new Date();
   const cacheMonthKey =
@@ -15022,9 +15043,15 @@ async function selectTrainerArchiveMonth_(key, label) {
     
       // Archiwum jest historyczne, więc cache może być długi.
       // Na razie 31 dni; później możemy zrobić sezonowy albo wersjonowany.
-      maxAgeMs: 31 * 24 * 60 * 60 * 1000,
-    
-      useStale: true
+      maxAgeMs:
+        window.__trainerArchiveSelectedMonth ===
+        trainerCurrentMonthKey_()
+          ? 5 * 60 * 1000
+          : 31 * 24 * 60 * 60 * 1000,
+      
+      useStale:
+        window.__trainerArchiveSelectedMonth !==
+        trainerCurrentMonthKey_()
     });
 
     if (lista && lista.success === false) {
