@@ -14948,7 +14948,7 @@ async function trainerEnsureArchiveMonthsLoaded_() {
     now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
 
   return await orgCachedApiGet_({
-    scope: "trainerArchiveMonths",
+    scope: "trainerArchiveMonthsV2",
     parts: {
       month: cacheMonthKey
     },
@@ -15029,7 +15029,7 @@ async function selectTrainerArchiveMonth_(key, label) {
 
   try {
     const lista = await orgCachedApiGet_({
-      scope: "trainerArchiveEvents",
+      scope: "trainerArchiveEventsV2",
       parts: {
         month: window.__trainerArchiveSelectedMonth,
         groups: window.grupyTrenera || ""
