@@ -1397,7 +1397,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.21';
+  window.APP_BUILD = 'APP v3.23';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -3233,14 +3233,6 @@ if (buildChanged) {
       <span>Widoczne w aplikacji</span>
       <input
         id="adminEventEditVisible"
-        type="checkbox"
-      >
-    </label>
-
-    <label class="admin-event-toggle-row">
-      <span>Liczyć do statystyk</span>
-      <input
-        id="adminEventEditStatistics"
         type="checkbox"
       >
     </label>
@@ -25177,11 +25169,6 @@ function adminEventsRenderEdit_() {
     event.visibleInApp === true;
 
   document.getElementById(
-    "adminEventEditStatistics"
-  ).checked =
-    event.countsForStatistics === true;
-
-  document.getElementById(
     "adminEventEditBilling"
   ).checked =
     event.countsForBilling === true;
@@ -25465,9 +25452,9 @@ async function adminEventsSaveEvent_() {
 
         countsForStatistics:
           !!document.getElementById(
-            "adminEventEditStatistics"
+            "adminEventEditBilling"
           )?.checked,
-
+        
         countsForBilling:
           !!document.getElementById(
             "adminEventEditBilling"
