@@ -32029,13 +32029,17 @@ async function adminToggleFeature_(featureKey, enabled) {
   }
 }
 
-  async function adminOpenDocumentFlow_() {
-  const statusEl =
-    document.getElementById("featureStatus_document_flow");
+async function adminOpenDocumentFlow_() {
+  const body = document.getElementById("adminFeaturesBody");
+  if (!body) return;
 
-  if (statusEl) {
-    statusEl.textContent = "⏳ Ładowanie dokumentów...";
-  }
+  body.innerHTML = `
+    <div class="card">
+      <div style="font-weight:900; font-size:18px;">
+        ⏳ Ładowanie obiegu dokumentów...
+      </div>
+    </div>
+  `;
 
   try {
     const response = await fetch(
@@ -32055,22 +32059,225 @@ async function adminToggleFeature_(featureKey, enabled) {
       );
     }
 
-    console.log("DOCUMENT FLOW ADMIN", data);
-
-    if (statusEl) {
-      statusEl.textContent =
-        "✅ Moduł połączony — dokumentów: " +
-        (Array.isArray(data.documents) ? data.documents.length : 0);
-    }
+    adminRenderDocumentFlowOverview_(data);
 
   } catch (e) {
     console.error(e);
 
-    if (statusEl) {
-      statusEl.textContent =
-        "❌ " + (e?.message || "Błąd modułu dokumentów.");
-    }
+    body.innerHTML = `
+      <button
+        class="full-btn alt"
+        onclick="adminDocumentFlowBack_()"
+      >
+        ← Wróć
+      </button>
+
+      <div class="card">
+        <div style="color:#ff5757; font-weight:900;">
+          ❌ ${String(e?.message || "Błąd modułu dokumentów.")}
+        </div>
+      </div>
+    `;
   }
+}
+
+
+function adminRenderDocumentFlowOverview_(data) {
+  const body = document.getElementById("adminFeaturesBody");
+  if (!body) return;
+
+  const documents =
+    Array.isArray(data?.documents)
+      ? data.documents
+      : [];
+
+  const publications =
+    Array.isArray(data?.publications)
+      ? data.publications
+      : [];
+
+  const documentHtml = documents.length
+    ? documents.map(doc => `
+        <div class="card" style="text-align:left;">
+          <div style="font-size:18px; font-weight:900;">
+            ${escapeHtmlLocal_(doc.title || "Bez nazwy")}
+          </div>
+
+          <div style="opacity:.7; font-size:13px; margin-top:5px;">
+            ${escapeHtmlLocal_(doc.category || "other")}
+          </div>
+
+          ${
+            doc.description
+              ? `
+                <div style="margin-top:8px; line-height:1.4;">
+                  ${escapeHtmlLocal_(doc.description)}
+                </div>
+              `
+              : ""
+          }
+
+          <div style="
+            margin-top:12px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            font-size:13px;
+          ">
+            <span class="badge">
+              Wersji: ${Number(doc.versionsCount || 0)}
+            </span>
+
+            <span class="badge">
+              Ostatnia wersja: ${Number(doc.latestVersionNumber || 0)}
+            </span>
+
+            <span class="badge">
+              Status: ${escapeHtmlLocal_(doc.status || "")}
+            </span>
+          </div>
+        </div>
+      `).join("")
+    : `
+      <div class="card" style="opacity:.7;">
+        Brak dokumentów.
+      </div>
+    `;
+
+
+  const publicationHtml = publications.length
+    ? publications.map(pub => `
+        <div class="card" style="text-align:left;">
+          <div style="font-size:17px; font-weight:900;">
+            ${escapeHtmlLocal_(pub.title || "Bez nazwy")}
+          </div>
+
+          <div style="opacity:.7; font-size:13px; margin-top:5px;">
+            Wersja ${Number(pub.versionNumber || 0)}
+            ${
+              pub.versionLabel
+                ? " — " + escapeHtmlLocal_(pub.versionLabel)
+                : ""
+            }
+          </div>
+
+          <div style="
+            margin-top:12px;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:8px;
+            font-size:13px;
+          ">
+            <div class="card" style="margin:0;">
+              Odbiorcy<br>
+              <strong>${Number(pub.recipientCount || 0)}</strong>
+            </div>
+
+            <div class="card" style="margin:0;">
+              Otwarto<br>
+              <strong>${Number(pub.openedCount || 0)}</strong>
+            </div>
+
+            <div class="card" style="margin:0;">
+              Potwierdzono<br>
+              <strong>${Number(pub.completedCount || 0)}</strong>
+            </div>
+
+            <div class="card" style="margin:0;">
+              Oczekuje<br>
+              <strong>${Number(pub.pendingCount || 0)}</strong>
+            </div>
+          </div>
+
+          <div style="
+            margin-top:10px;
+            font-size:13px;
+            opacity:.75;
+          ">
+            Typ: ${escapeHtmlLocal_(pub.actionType || "")}
+            · Status: ${escapeHtmlLocal_(pub.status || "")}
+          </div>
+        </div>
+      `).join("")
+    : `
+      <div class="card" style="opacity:.7;">
+        Brak publikacji.
+      </div>
+    `;
+
+
+  body.innerHTML = `
+    <button
+      class="full-btn alt"
+      style="margin-top:0;"
+      onclick="adminDocumentFlowBack_()"
+    >
+      ← Opcje dodatkowe
+    </button>
+
+    <div class="card" style="text-align:left;">
+      <div style="font-size:24px; font-weight:900;">
+        Obieg dokumentów
+      </div>
+
+      <div style="opacity:.7; margin-top:6px;">
+        Dokumenty klubowe, publikacje i potwierdzenia.
+      </div>
+
+      <button
+        class="full-btn"
+        style="margin:14px 0 0 0;"
+        disabled
+      >
+        + Dodaj dokument
+      </button>
+    </div>
+
+    <div style="
+      text-align:left;
+      font-size:20px;
+      font-weight:900;
+      margin:22px 10px 8px;
+    ">
+      Dokumenty
+    </div>
+
+    ${documentHtml}
+
+    <div style="
+      text-align:left;
+      font-size:20px;
+      font-weight:900;
+      margin:26px 10px 8px;
+    ">
+      Publikacje
+    </div>
+
+    ${publicationHtml}
+  `;
+}
+
+
+function adminDocumentFlowBack_() {
+  renderAdminFeaturesStatic_();
+
+  const cacheKey =
+    "orghub.cache.v1." +
+    String(clubId || "").toLowerCase() +
+    ".adminFeaturesList.default";
+
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return;
+
+    const entry = JSON.parse(raw);
+    const features =
+      entry?.data?.features;
+
+    if (Array.isArray(features)) {
+      applyAdminFeaturesState_(features);
+    }
+  } catch (e) {}
 }
   
 /* =================== KONIEC SEKTORA 191 =================== */  
