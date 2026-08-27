@@ -3071,6 +3071,7 @@ if (buildChanged) {
   <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
   <button id="adminNotificationsBtn" class="full-btn" onclick="openAdminNotificationsView_()">🔔 Powiadomienia</button>
   <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
+  <button id="adminDocumentsBtn" class="full-btn hidden" type="button"onclick="adminOpenDocumentsView_()">📄 Obsługa dokumentów</button>
   <button class="full-btn" type="button" onclick="adminOpenClubSeasonSettingsView()">⚙️ Ustawienia klubu / sezonu</button>
   <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
   <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
@@ -26038,6 +26039,13 @@ async function adminEventsAddPlayer_(memberId) {
     }
   }
 }
+
+ function adminApplyDocumentFlowFeature_(enabled) {
+  const btn = document.getElementById("adminDocumentsBtn");
+  if (!btn) return;
+
+  btn.classList.toggle("hidden", enabled !== true);
+} 
   
 
   /* =================== KONIEC SEKTORA 162 =================== */
@@ -31932,8 +31940,12 @@ function applyAdminFeaturesState_(features) {
 
     if (checkbox) checkbox.checked = enabled;
     if (textEl) textEl.textContent = enabled ? "Włączone" : "Wyłączone";
+
+    if (key === "document_flow") {
+      adminApplyDocumentFlowFeature_(enabled);
+    }
   }
-}  
+}
 
 async function adminToggleFeature_(featureKey, enabled) {
   const key = String(featureKey || "").trim();
