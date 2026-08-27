@@ -31880,6 +31880,18 @@ function renderAdminFeaturesStatic_() {
 
           <div style="opacity:.75; font-size:13px; margin-top:6px; line-height:1.35;">
             ${feature.description}
+
+            ${feature.key === "document_flow" ? `
+          <button
+            type="button"
+            class="full-btn alt"
+            style="margin:12px 0 0 0; width:auto;"
+            onclick="adminOpenDocumentFlow_()"
+          >
+            Zarządzaj dokumentami
+          </button>
+        ` : ""}
+            
           </div>
         </div>
 
@@ -32014,6 +32026,50 @@ async function adminToggleFeature_(featureKey, enabled) {
 
     if (checkbox) checkbox.checked = !enabled;
     if (textEl) textEl.textContent = !enabled ? "Włączone" : "Wyłączone";
+  }
+}
+
+  async function adminOpenDocumentFlow_() {
+  const statusEl =
+    document.getElementById("featureStatus_document_flow");
+
+  if (statusEl) {
+    statusEl.textContent = "⏳ Ładowanie dokumentów...";
+  }
+
+  try {
+    const response = await fetch(
+      "/api/documents/admin/overview?clubId=" +
+        encodeURIComponent(clubId),
+      {
+        method: "GET",
+        credentials: "include"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data?.success !== true) {
+      throw new Error(
+        data?.error || "Nie udało się pobrać dokumentów."
+      );
+    }
+
+    console.log("DOCUMENT FLOW ADMIN", data);
+
+    if (statusEl) {
+      statusEl.textContent =
+        "✅ Moduł połączony — dokumentów: " +
+        (Array.isArray(data.documents) ? data.documents.length : 0);
+    }
+
+  } catch (e) {
+    console.error(e);
+
+    if (statusEl) {
+      statusEl.textContent =
+        "❌ " + (e?.message || "Błąd modułu dokumentów.");
+    }
   }
 }
   
