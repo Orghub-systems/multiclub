@@ -31857,37 +31857,50 @@ function renderAdminFeaturesStatic_() {
   const body = document.getElementById("adminFeaturesBody");
   if (!body) return;
 
-  body.innerHTML = `
+  const features = [
+    {
+      key: "player_medical_exams",
+      label: "Badania zawodników",
+      description: "Kontrola ważności badań lekarskich zawodników."
+    },
+    {
+      key: "document_flow",
+      label: "Obieg dokumentów",
+      description: "Elektroniczny obieg dokumentów, wersjonowanie i potwierdzenia."
+    }
+  ];
+
+  body.innerHTML = features.map(feature => `
     <div class="card" style="text-align:left; margin-bottom:12px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
         <div style="min-width:0;">
           <div style="font-size:18px; font-weight:900;">
-            Badania zawodników
+            ${feature.label}
           </div>
 
           <div style="opacity:.75; font-size:13px; margin-top:6px; line-height:1.35;">
-            Kontrola ważności badań lekarskich zawodników.
+            ${feature.description}
           </div>
         </div>
 
         <label style="display:flex; align-items:center; gap:8px; font-weight:800; white-space:nowrap;">
           <input
-            id="featureCheck_player_medical_exams"
+            id="featureCheck_${feature.key}"
             type="checkbox"
-            onchange="adminToggleFeature_('player_medical_exams', this.checked)"
+            onchange="adminToggleFeature_('${feature.key}', this.checked)"
             style="width:22px; height:22px;"
           >
-          <span id="featureEnabledText_player_medical_exams">Wyłączone</span>
+          <span id="featureEnabledText_${feature.key}">Wyłączone</span>
         </label>
       </div>
 
       <div
-        id="featureStatus_player_medical_exams"
+        id="featureStatus_${feature.key}"
         style="font-size:13px; opacity:.75; margin-top:10px;"
       ></div>
     </div>
-  `;
-}  
+  `).join("");
+}
 
 function applyAdminFeaturesState_(features) {
   if (!Array.isArray(features)) return;
