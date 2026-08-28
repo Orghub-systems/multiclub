@@ -1,0 +1,399 @@
+name: ORG HUB color wheel one-time patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/orghub-color-wheel-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-color-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch index.html
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          marker = "<!-- ORGHUB COLOR WHEEL START -->"
+          if marker in text:
+              raise SystemExit("Color wheel patch is already present; refusing duplicate injection.")
+
+          if text.count("</body>") != 1:
+              raise SystemExit(f"Expected exactly one </body>, found {text.count('</body>')}")
+
+          injection = r'''
+<!-- ORGHUB COLOR WHEEL START -->
+<script>
+(function () {
+  function orgHubClamp_(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function orgHubHsvToRgb_(h, s, v) {
+    const hue = ((Number(h) % 360) + 360) % 360;
+    const sat = orgHubClamp_(Number(s) || 0, 0, 1);
+    const val = orgHubClamp_(Number(v) || 0, 0, 1);
+    const c = val * sat;
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+    const m = val - c;
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (hue < 60) {
+      r = c; g = x;
+    } else if (hue < 120) {
+      r = x; g = c;
+    } else if (hue < 180) {
+      g = c; b = x;
+    } else if (hue < 240) {
+      g = x; b = c;
+    } else if (hue < 300) {
+      r = x; b = c;
+    } else {
+      r = c; b = x;
+    }
+
+    return {
+      r: Math.round((r + m) * 255),
+      g: Math.round((g + m) * 255),
+      b: Math.round((b + m) * 255)
+    };
+  }
+
+  function orgHubRgbToHsv_(r, g, b) {
+    const rr = orgHubClamp_(Number(r) || 0, 0, 255) / 255;
+    const gg = orgHubClamp_(Number(g) || 0, 0, 255) / 255;
+    const bb = orgHubClamp_(Number(b) || 0, 0, 255) / 255;
+    const max = Math.max(rr, gg, bb);
+    const min = Math.min(rr, gg, bb);
+    const delta = max - min;
+
+    let h = 0;
+    if (delta !== 0) {
+      if (max === rr) {
+        h = 60 * (((gg - bb) / delta) % 6);
+      } else if (max === gg) {
+        h = 60 * (((bb - rr) / delta) + 2);
+      } else {
+        h = 60 * (((rr - gg) / delta) + 4);
+      }
+    }
+    if (h < 0) h += 360;
+
+    return {
+      h,
+      s: max === 0 ? 0 : delta / max,
+      v: max
+    };
+  }
+
+  function orgHubHexToRgb_(hex) {
+    const value = String(hex || "").trim().replace(/^#/, "");
+    if (!/^[0-9a-fA-F]{6}$/.test(value)) {
+      return { r: 0, g: 0, b: 0 };
+    }
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16)
+    };
+  }
+
+  function orgHubRgbToHex_(r, g, b) {
+    return "#" + [r, g, b]
+      .map(value => orgHubClamp_(Math.round(value), 0, 255).toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+  }
+
+  window.createOrgHubColorWheel_ = function createOrgHubColorWheel_(container, initialColor, onChange) {
+    if (!container) return null;
+
+    const cssSize = Math.min(300, Math.max(220, window.innerWidth - 72));
+    const pixelRatio = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    const canvasSize = Math.round(cssSize * pixelRatio);
+    const radius = canvasSize / 2;
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0;">
+        <div style="position:relative;width:${cssSize}px;height:${cssSize}px;max-width:100%;">
+          <canvas
+            class="orghub-color-wheel"
+            width="${canvasSize}"
+            height="${canvasSize}"
+            style="display:block;width:${cssSize}px;height:${cssSize}px;max-width:100%;border-radius:50%;cursor:crosshair;touch-action:none;"
+            aria-label="Koło wyboru koloru"
+          ></canvas>
+          <div
+            class="orghub-color-wheel-indicator"
+            style="position:absolute;width:20px;height:20px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.55);transform:translate(-50%,-50%);pointer-events:none;"
+          ></div>
+        </div>
+
+        <div style="width:min(${cssSize}px,100%);display:flex;align-items:center;gap:12px;">
+          <span style="font-size:13px;opacity:.78;white-space:nowrap;">Jasność</span>
+          <input
+            class="orghub-color-brightness"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            style="flex:1;min-width:0;"
+            aria-label="Jasność koloru"
+          >
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+          <div
+            class="orghub-color-preview"
+            style="width:34px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.45);"
+          ></div>
+          <strong class="orghub-color-code" style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;"></strong>
+        </div>
+      </div>
+    `;
+
+    const canvas = container.querySelector(".orghub-color-wheel");
+    const indicator = container.querySelector(".orghub-color-wheel-indicator");
+    const brightnessInput = container.querySelector(".orghub-color-brightness");
+    const preview = container.querySelector(".orghub-color-preview");
+    const code = container.querySelector(".orghub-color-code");
+    const ctx = canvas && canvas.getContext("2d", { alpha: true });
+
+    if (!canvas || !indicator || !brightnessInput || !preview || !code || !ctx) {
+      return null;
+    }
+
+    const initialRgb = orgHubHexToRgb_(initialColor);
+    const initialHsv = orgHubRgbToHsv_(initialRgb.r, initialRgb.g, initialRgb.b);
+
+    let hue = initialHsv.h;
+    let saturation = initialHsv.s;
+    let brightness = initialHsv.v;
+    let dragging = false;
+
+    function drawWheel_() {
+      const image = ctx.createImageData(canvasSize, canvasSize);
+
+      for (let y = 0; y < canvasSize; y += 1) {
+        for (let x = 0; x < canvasSize; x += 1) {
+          const dx = x + 0.5 - radius;
+          const dy = y + 0.5 - radius;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance > radius) continue;
+
+          let pixelHue = Math.atan2(dy, dx) * 180 / Math.PI;
+          if (pixelHue < 0) pixelHue += 360;
+
+          const pixelSaturation = orgHubClamp_(distance / radius, 0, 1);
+          const rgb = orgHubHsvToRgb_(pixelHue, pixelSaturation, 1);
+          const offset = (y * canvasSize + x) * 4;
+
+          image.data[offset] = rgb.r;
+          image.data[offset + 1] = rgb.g;
+          image.data[offset + 2] = rgb.b;
+          image.data[offset + 3] = 255;
+        }
+      }
+
+      ctx.putImageData(image, 0, 0);
+    }
+
+    function currentHex_() {
+      const rgb = orgHubHsvToRgb_(hue, saturation, brightness);
+      return orgHubRgbToHex_(rgb.r, rgb.g, rgb.b);
+    }
+
+    function updateIndicator_() {
+      const angle = hue * Math.PI / 180;
+      const distance = saturation * (cssSize / 2);
+      const x = cssSize / 2 + Math.cos(angle) * distance;
+      const y = cssSize / 2 + Math.sin(angle) * distance;
+      indicator.style.left = `${x}px`;
+      indicator.style.top = `${y}px`;
+    }
+
+    function updateUi_(emit) {
+      const hex = currentHex_();
+      preview.style.background = hex;
+      code.textContent = hex;
+      updateIndicator_();
+      if (emit && typeof onChange === "function") {
+        onChange(hex);
+      }
+    }
+
+    function selectAt_(event) {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const x = (event.clientX - rect.left) * (canvasSize / rect.width);
+      const y = (event.clientY - rect.top) * (canvasSize / rect.height);
+      const dx = x - radius;
+      const dy = y - radius;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > radius) return;
+
+      hue = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (hue < 0) hue += 360;
+      saturation = orgHubClamp_(distance / radius, 0, 1);
+      updateUi_(true);
+    }
+
+    canvas.addEventListener("pointerdown", event => {
+      dragging = true;
+      try { canvas.setPointerCapture(event.pointerId); } catch (e) {}
+      selectAt_(event);
+    });
+
+    canvas.addEventListener("pointermove", event => {
+      if (!dragging) return;
+      selectAt_(event);
+    });
+
+    function endDrag_(event) {
+      dragging = false;
+      try {
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+      } catch (e) {}
+    }
+
+    canvas.addEventListener("pointerup", endDrag_);
+    canvas.addEventListener("pointercancel", endDrag_);
+
+    brightnessInput.value = String(Math.round(brightness * 100));
+    brightnessInput.addEventListener("input", () => {
+      brightness = orgHubClamp_(Number(brightnessInput.value) / 100, 0, 1);
+      updateUi_(true);
+    });
+
+    drawWheel_();
+    updateUi_(false);
+
+    return {
+      getColor: currentHex_
+    };
+  };
+
+  function orgHubConfigWheelColor_(hex) {
+    if (!/^#[0-9A-F]{6}$/i.test(String(hex || ""))) return;
+
+    try {
+      if (typeof cfgDraft !== "undefined" && cfgDraft) {
+        cfgDraft.bgColor = hex;
+      }
+    } catch (e) {}
+
+    document.body.style.backgroundColor = hex;
+
+    const colEl = document.getElementById("cfgColorLabel");
+    if (colEl) colEl.textContent = "";
+
+    const btn = document.querySelector("#clubConfigView button[onclick*='toggleColorPicker']");
+    if (btn) {
+      btn.textContent = `Kolor tła: ${hex}`;
+      btn.classList.add("alt");
+    }
+  }
+
+  function orgHubMountConfigColorWheel_() {
+    const grid = document.getElementById("cfgColorGrid");
+    if (!grid) return;
+
+    grid.style.gridTemplateColumns = "none";
+    grid.style.gap = "0";
+    grid.style.width = "100%";
+
+    let initial = "#000000";
+    try {
+      if (typeof cfgDraft !== "undefined" && cfgDraft && /^#[0-9A-F]{6}$/i.test(String(cfgDraft.bgColor || ""))) {
+        initial = String(cfgDraft.bgColor).toUpperCase();
+      }
+    } catch (e) {}
+
+    window.createOrgHubColorWheel_(grid, initial, orgHubConfigWheelColor_);
+  }
+
+  const originalRenderConfigUI_ = window.renderConfigUI_;
+  if (typeof originalRenderConfigUI_ === "function") {
+    window.renderConfigUI_ = function (...args) {
+      const result = originalRenderConfigUI_.apply(this, args);
+      orgHubMountConfigColorWheel_();
+      return result;
+    };
+  }
+
+  const originalToggleColorPicker_ = window.toggleColorPicker;
+  if (typeof originalToggleColorPicker_ === "function") {
+    window.toggleColorPicker = function (show) {
+      if (show) orgHubMountConfigColorWheel_();
+      return originalToggleColorPicker_.call(this, show);
+    };
+  }
+
+  function orgHubMountAdminVisualColorWheel_() {
+    const firstPreset = document.querySelector("[data-admin-visual-color]");
+    const paletteHost = firstPreset && firstPreset.parentElement;
+    if (!paletteHost) return;
+
+    paletteHost.innerHTML = '<div id="adminVisualColorWheel" style="width:100%;grid-column:1/-1;"></div>';
+    const wheelHost = document.getElementById("adminVisualColorWheel");
+    if (!wheelHost) return;
+
+    const draft = window.__adminClubVisualSettingsDraft || {};
+    const initial = /^#[0-9A-F]{6}$/i.test(String(draft.bgColor || ""))
+      ? String(draft.bgColor).toUpperCase()
+      : "#000000";
+
+    window.createOrgHubColorWheel_(wheelHost, initial, hex => {
+      if (typeof window.adminVisualPickColor_ === "function") {
+        window.adminVisualPickColor_(hex);
+      }
+    });
+  }
+
+  const originalRenderAdminClubVisualSettings_ = window.renderAdminClubVisualSettings_;
+  if (typeof originalRenderAdminClubVisualSettings_ === "function") {
+    window.renderAdminClubVisualSettings_ = function (...args) {
+      const result = originalRenderAdminClubVisualSettings_.apply(this, args);
+      orgHubMountAdminVisualColorWheel_();
+      return result;
+    };
+  }
+})();
+</script>
+<!-- ORGHUB COLOR WHEEL END -->
+'''
+
+          text = text.replace("</body>", injection + "\n</body>", 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit patched index and remove one-time workflow
+        shell: bash
+        run: |
+          git config user.name "ORG HUB Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git rm .github/workflows/orghub-color-wheel-once.yml
+          git commit -m "Replace fixed color palettes with color wheel"
+          git push origin HEAD:main
