@@ -6358,36 +6358,315 @@ let setupDraft = {
   singleTrainingPrice: "" // na razie placeholder
 };
 
-// paleta
-const COLOR_PRESETS = [
-  "#000000", "#1a1a1a",
-  "#0b1b2b", "#123a5a",
-  "#0b2b5a", "#1a4fa3",
-  "#0b2b2b", "#118a8a",
-  "#0b2b1b", "#1f7a3a",
-  "#2b2b0b", "#7a7a1f",
-  "#2b1b0b", "#a35a1a",
-  "#2b0b1b", "#6a1b3a"
-];
+  function createOrgHubColorWheel_(container, initialColor, onChange) {
+  if (!container) return;
 
-const COLOR_NAMES = {
-  "#000000": "Czarny",
-  "#1a1a1a": "Grafit",
-  "#0b1b2b": "Granat",
-  "#123a5a": "Granat jasny",
-  "#0b2b5a": "Niebieski",
-  "#1a4fa3": "Niebieski jasny",
-  "#0b2b2b": "Turkus",
-  "#118a8a": "Turkus jasny",
-  "#0b2b1b": "Zieleń",
-  "#1f7a3a": "Zieleń jasna",
-  "#2b2b0b": "Oliwka",
-  "#7a7a1f": "Oliwka jasna",
-  "#2b1b0b": "Brąz",
-  "#a35a1a": "Pomarańcz",
-  "#2b0b1b": "Bordo",
-  "#6a1b3a": "Fiolet"
-};
+  const size = Math.min(300, Math.max(220, window.innerWidth - 80));
+
+  container.innerHTML = `
+    <div style="
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+      padding:10px 0;
+    ">
+      <canvas
+        class="orghub-color-wheel"
+        width="${size}"
+        height="${size}"
+        style="
+          width:${size}px;
+          height:${size}px;
+          max-width:100%;
+          border-radius:50%;
+          cursor:crosshair;
+          touch-action:none;
+        "
+      ></canvas>
+
+      <div style="
+        width:min(${size}px,100%);
+        display:flex;
+        align-items:center;
+        gap:12px;
+      ">
+        <span style="font-size:13px;opacity:.75;">Jasność</span>
+
+        <input
+          class="orghub-color-brightness"
+          type="range"
+          min="0"
+          max="100"
+          value="100"
+          style="flex:1;"
+        >
+      </div>
+
+      <div style="
+        display:flex;
+        align-items:center;
+        gap:10px;
+      ">
+        <div
+          class="orghub-color-preview"
+          style="
+            width:34px;
+            height:34px;
+            border-radius:8px;
+            border:1px solid rgba(255,255,255,.4);
+          "
+        ></div>
+
+        <strong class="orghub-color-code"></strong>
+      </div>
+    </div>
+  `;
+
+  const canvas = container.querySelector(".orghub-color-wheel");
+  const brightnessInput =
+    container.querySelector(".orghub-color-brightness");
+  const preview =
+    container.querySelector(".orghub-color-preview");
+  const code =
+    container.querySelector(".orghub-color-code");
+
+  const ctx = canvas.getContext("2d", {
+    willReadFrequently: true
+  });
+
+  const radius = size / 2;
+  let hue = 0;
+  let saturation = 0;
+  let brightness = 1;
+
+  function hsvToRgb(h, s, v) {
+    const c = v * s;
+    const x =
+      c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = v - c;
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (h < 60) {
+      r = c; g = x;
+    } else if (h < 120) {
+      r = x; g = c;
+    } else if (h < 180) {
+      g = c; b = x;
+    } else if (h < 240) {
+      g = x; b = c;
+    } else if (h < 300) {
+      r = x; b = c;
+    } else {
+      r = c; b = x;
+    }
+
+    return {
+      r: Math.round((r + m) * 255),
+      g: Math.round((g + m) * 255),
+      b: Math.round((b + m) * 255)
+    };
+  }
+
+  function rgbToHex(r, g, b) {
+    return "#" +
+      [r, g, b]
+        .map(v => v.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+  }
+
+  function hexToRgb(hex) {
+    const value = String(hex || "")
+      .replace("#", "")
+      .trim();
+
+    if (!/^[0-9a-fA-F]{6}$/.test(value)) {
+      return { r: 0, g: 0, b: 0 };
+    }
+
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16)
+    };
+  }
+
+  function rgbToHsv(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+
+    let h = 0;
+
+    if (d !== 0) {
+      if (max === r) {
+        h = 60 * (((g - b) / d) % 6);
+      } else if (max === g) {
+        h = 60 * (((b - r) / d) + 2);
+      } else {
+        h = 60 * (((r - g) / d) + 4);
+      }
+    }
+
+    if (h < 0) h += 360;
+
+    return {
+      h,
+      s: max === 0 ? 0 : d / max,
+      v: max
+    };
+  }
+
+  function drawWheel() {
+    const image = ctx.createImageData(size, size);
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const dx = x - radius;
+        const dy = y - radius;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > radius) continue;
+
+        let h =
+          Math.atan2(dy, dx) *
+          180 / Math.PI;
+
+        if (h < 0) h += 360;
+
+        const s =
+          Math.min(1, distance / radius);
+
+        const rgb = hsvToRgb(
+          h,
+          s,
+          brightness
+        );
+
+        const i = (y * size + x) * 4;
+
+        image.data[i] = rgb.r;
+        image.data[i + 1] = rgb.g;
+        image.data[i + 2] = rgb.b;
+        image.data[i + 3] = 255;
+      }
+    }
+
+    ctx.putImageData(image, 0, 0);
+  }
+
+  function emitColor() {
+    const rgb =
+      hsvToRgb(
+        hue,
+        saturation,
+        brightness
+      );
+
+    const hex =
+      rgbToHex(rgb.r, rgb.g, rgb.b);
+
+    preview.style.background = hex;
+    code.textContent = hex;
+
+    if (typeof onChange === "function") {
+      onChange(hex);
+    }
+  }
+
+  function selectFromEvent(event) {
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const clientX =
+      event.touches?.[0]?.clientX ??
+      event.clientX;
+
+    const clientY =
+      event.touches?.[0]?.clientY ??
+      event.clientY;
+
+    const x =
+      (clientX - rect.left) *
+      (canvas.width / rect.width);
+
+    const y =
+      (clientY - rect.top) *
+      (canvas.height / rect.height);
+
+    const dx = x - radius;
+    const dy = y - radius;
+
+    const distance =
+      Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > radius) return;
+
+    hue =
+      Math.atan2(dy, dx) *
+      180 / Math.PI;
+
+    if (hue < 0) hue += 360;
+
+    saturation =
+      Math.min(1, distance / radius);
+
+    emitColor();
+  }
+
+  canvas.addEventListener(
+    "pointerdown",
+    selectFromEvent
+  );
+
+  canvas.addEventListener(
+    "pointermove",
+    event => {
+      if (event.buttons) {
+        selectFromEvent(event);
+      }
+    }
+  );
+
+  brightnessInput.addEventListener(
+    "input",
+    () => {
+      brightness =
+        Number(brightnessInput.value) / 100;
+
+      drawWheel();
+      emitColor();
+    }
+  );
+
+  const initialRgb =
+    hexToRgb(initialColor);
+
+  const initialHsv =
+    rgbToHsv(
+      initialRgb.r,
+      initialRgb.g,
+      initialRgb.b
+    );
+
+  hue = initialHsv.h;
+  saturation = initialHsv.s;
+  brightness = initialHsv.v;
+
+  brightnessInput.value =
+    Math.round(brightness * 100);
+
+  drawWheel();
+  emitColor();
+}
 
 /* ---------- Panel 1: Nazwa ---------- */
 function clubNameEditStart() {
@@ -6504,22 +6783,43 @@ function toggleColorPicker(show) {
 }
 
 function setBgColor(color) {
-  cfgDraft.bgColor = color;
-  document.body.style.backgroundColor = color;
+  const picked =
+    String(color || "")
+      .trim()
+      .toUpperCase();
 
-  // Pod przyciskiem ma być zawsze pusto
-  const colEl = document.getElementById("cfgColorLabel");
-  if (colEl) colEl.textContent = "";
-
-  // Tekst NA KLAWISZU ma pokazywać nazwę wybranego koloru
-  const btn = document.querySelector("#clubConfigView button[onclick*='toggleColorPicker']");
-  if (btn) {
-    const name = (COLOR_NAMES && COLOR_NAMES[color]) ? COLOR_NAMES[color] : "Kolor tła";
-    btn.textContent = name;
-    btn.classList.add("alt");
+  if (
+    !/^#[0-9A-F]{6}$/.test(picked)
+  ) {
+    return;
   }
 
-  toggleColorPicker(false);
+  cfgDraft.bgColor =
+    picked;
+
+  document.body.style.backgroundColor =
+    picked;
+
+  const colEl =
+    document.getElementById(
+      "cfgColorLabel"
+    );
+
+  if (colEl) {
+    colEl.textContent = "";
+  }
+
+  const btn =
+    document.querySelector(
+      "#clubConfigView button[onclick*='toggleColorPicker']"
+    );
+
+  if (btn) {
+    btn.textContent =
+      "Kolor tła: " + picked;
+
+    btn.classList.add("alt");
+  }
 }
 
 /* ---------- Panel 1: Logo ---------- */
@@ -6664,20 +6964,6 @@ function renderConfigUI_() {
     }
   }
 
-  // SIATKA KOLORÓW
-  if (grid) {
-    grid.innerHTML = COLOR_PRESETS.map(c => `
-      <div onclick="setBgColor('${c}')" style="
-        width:100%;
-        aspect-ratio:1/1;
-        border-radius:10px;
-        border:1px solid #444;
-        background:${c};
-        cursor:pointer;">
-      </div>
-    `).join("");
-  }
-
   // Nazwa na przycisku
   const cn = document.getElementById("clubNameText");
   if (cn) cn.textContent = cfgDraft.clubName ? cfgDraft.clubName : "Podaj nazwę klubu";
@@ -6685,13 +6971,51 @@ function renderConfigUI_() {
   // Email na przycisku
   const em = document.getElementById("emailText");
   if (em) em.textContent = cfgDraft.email ? cfgDraft.email : "Twój email";
-
+  
   // Kolor na przycisku
-  const btn = document.querySelector("#clubConfigView button[onclick*='toggleColorPicker']");
+  const btn =
+    document.querySelector(
+      "#clubConfigView button[onclick*='toggleColorPicker']"
+    );
+  
   if (btn) {
-    const name = (COLOR_NAMES && COLOR_NAMES[cfgDraft.bgColor]) ? COLOR_NAMES[cfgDraft.bgColor] : "Wybierz kolor tła";
-    btn.textContent = name;
+    const currentColor =
+      String(
+        cfgDraft.bgColor ||
+        ""
+      )
+        .trim()
+        .toUpperCase();
+  
+    btn.textContent =
+      /^#[0-9A-F]{6}$/.test(currentColor)
+        ? "Kolor tła: " + currentColor
+        : "Wybierz kolor tła";
+  
     btn.classList.add("alt");
+  }
+
+  // KOŁO KOLORÓW
+  if (grid) {
+    grid.style.gridTemplateColumns =
+      "none";
+  
+    grid.style.display =
+      "block";
+  
+    grid.style.gap =
+      "0";
+  
+    grid.style.width =
+      "100%";
+  
+    createOrgHubColorWheel_(
+      grid,
+      cfgDraft.bgColor || "#000000",
+      function(color) {
+        setBgColor(color);
+      }
+    );
   }
 }
 
@@ -29191,34 +29515,15 @@ function renderAdminClubVisualSettings_(res) {
     logoChanged: false
   };
 
-  const palette = [
-    "#000000", "#202020", "#1b2838", "#2f4a6b",
-    "#243866", "#405da8", "#193d3b", "#45918e",
-    "#183c27", "#3c8548", "#343817", "#7d8235",
-    "#352516", "#a96535", "#351525", "#712b45"
-  ];
-
-  const colorGridHtml = palette.map(color => {
-    const selected = color.toLowerCase() === bgColor.toLowerCase();
-  
-    return `
-      <button type="button"
-        data-admin-visual-color="${esc(color)}"
-        onclick="adminVisualPickColor_('${esc(color)}')"
-        style="
-          width:100%;
-          aspect-ratio:1/1;
-          border-radius:9px;
-          background:${esc(color)};
-          border:${selected ? "3px solid #ffffff" : "1px solid rgba(255,255,255,.20)"};
-          box-shadow:${selected ? "0 0 0 2px rgba(255,255,255,.25)" : "none"};
-          box-sizing:border-box;
-          padding:0;
-        "
-        title="${esc(color)}">
-      </button>
-    `;
-  }).join("");
+const colorGridHtml = `
+  <div
+    id="adminVisualColorWheel"
+    style="
+      grid-column:1 / -1;
+      width:100%;
+    "
+  ></div>
+`;
 
   body.innerHTML = `
     <div class="card" style="max-width:320px; margin:12px auto; padding:16px;">
@@ -29309,6 +29614,21 @@ function renderAdminClubVisualSettings_(res) {
       </div>
     </div>
   `;
+
+  const adminColorWheel =
+  document.getElementById(
+    "adminVisualColorWheel"
+  );
+
+if (adminColorWheel) {
+  createOrgHubColorWheel_(
+    adminColorWheel,
+    bgColor || "#000000",
+    function(color) {
+      adminVisualPickColor_(color);
+    }
+  );
+}
 }
 
   function adminPickClubLogo_() {
