@@ -17199,7 +17199,7 @@ function renderTreningiTrainer(lista) {
                     : `
 
                       <button
-                        cclass="btn ${isOrgFeatureEnabled_("event_lineups") ? "" : "hidden"}"
+                        class="btn ${isOrgFeatureEnabled_("event_lineups") ? "" : "hidden"}"
                         type="button"
                         data-lineup-event-id="${trainerEscHtml_(listId)}"
                         onclick="trainerOpenLineupEditor_('${trainerEscJsArg_(listId)}')"
