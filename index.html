@@ -1657,10 +1657,63 @@ if (buildChanged) {
 <!-- CLUB CONFIG VIEW
      Pierwszy etap konfiguracji klubu: logo, nazwa, kolor i email -->
     
-    <div id="clubConfigView" class="container hidden">
-      <h1>Konfiguracja klubu</h1>
+<div id="clubConfigView" class="container hidden">
 
-      <div class="card" style="max-width:320px;margin:12px auto;">
+  <h1 id="cfgOrganizationTitle">
+    Konfiguracja klubu
+  </h1>
+
+  <div
+    class="card"
+    style="max-width:320px;margin:12px auto;"
+  >
+
+    <div style="margin-bottom:18px;">
+
+      <div style="
+        font-size:13px;
+        opacity:.75;
+        margin-bottom:8px;
+      ">
+        Rodzaj organizacji
+      </div>
+
+      <div style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+      ">
+
+        <button
+          id="cfgOrgTypeSports"
+          type="button"
+          class="full-btn"
+          style="
+            margin:0;
+            width:100%;
+          "
+          onclick="setCfgOrganizationType_('sports_club')"
+        >
+          🏒 Klub sportowy
+        </button>
+
+        <button
+          id="cfgOrgTypeSchool"
+          type="button"
+          class="full-btn alt"
+          style="
+            margin:0;
+            width:100%;
+          "
+          onclick="setCfgOrganizationType_('school')"
+        >
+          🎓 Szkoła
+        </button>
+
+      </div>
+
+    </div>
+    
         <!-- LOGO -->
         <button class="full-btn" onclick="pickLogo()">Wgraj swoje logo</button>
         <div style="margin-top:8px;">
@@ -5054,6 +5107,462 @@ function loadTheme_() {
   catch { return null; }
 }
 
+  // ======================================================
+// TYP ORGANIZACJI / TERMINOLOGIA ORG HUB
+// ======================================================
+
+const ORGANIZATION_TYPES_ = Object.freeze({
+  SPORTS_CLUB: "sports_club",
+  SCHOOL: "school"
+});
+
+let __organizationType_ =
+  ORGANIZATION_TYPES_.SPORTS_CLUB;
+
+let __organizationTermsObserver_ = null;
+
+const __organizationTextState_ =
+  new WeakMap();
+
+const __organizationAttrState_ =
+  new WeakMap();
+
+
+const SCHOOL_ROLE_RULES_ = Object.freeze([
+  ["zawodnikami", "uczniami"],
+  ["zawodnikach", "uczniach"],
+  ["zawodnikowi", "uczniowi"],
+  ["zawodnikiem", "uczniem"],
+  ["zawodników", "uczniów"],
+  ["zawodnikom", "uczniom"],
+  ["zawodnicy", "uczniowie"],
+  ["zawodnika", "ucznia"],
+  ["zawodniku", "uczniu"],
+  ["zawodnik", "uczeń"],
+
+  ["trenerami", "lektorami"],
+  ["trenerach", "lektorach"],
+  ["trenerowi", "lektorowi"],
+  ["trenerem", "lektorem"],
+  ["trenerów", "lektorów"],
+  ["trenerom", "lektorom"],
+  ["trenerzy", "lektorzy"],
+  ["trenera", "lektora"],
+  ["trenerze", "lektorze"],
+  ["trener", "lektor"]
+]);
+
+
+function normalizeOrganizationType_(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase() === ORGANIZATION_TYPES_.SCHOOL
+      ? ORGANIZATION_TYPES_.SCHOOL
+      : ORGANIZATION_TYPES_.SPORTS_CLUB;
+}
+
+
+function getOrganizationType_() {
+  return normalizeOrganizationType_(
+    __organizationType_
+  );
+}
+
+
+function isSchoolOrganization_() {
+  return (
+    getOrganizationType_() ===
+    ORGANIZATION_TYPES_.SCHOOL
+  );
+}
+
+
+function preserveOrganizationTermCase_(
+  source,
+  replacement
+) {
+  const raw =
+    String(source || "");
+
+  const target =
+    String(replacement || "");
+
+  if (
+    raw &&
+    raw === raw.toUpperCase()
+  ) {
+    return target.toUpperCase();
+  }
+
+  const first =
+    raw.charAt(0);
+
+  if (
+    first &&
+    first === first.toUpperCase() &&
+    first !== first.toLowerCase()
+  ) {
+    return (
+      target.charAt(0).toUpperCase() +
+      target.slice(1)
+    );
+  }
+
+  return target;
+}
+
+
+function replaceOrganizationWord_(
+  text,
+  sourceWord,
+  targetWord
+) {
+  const escaped =
+    String(sourceWord)
+      .replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+  const boundaryChars =
+    "0-9A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż_";
+
+  const re =
+    new RegExp(
+      `(^|[^${boundaryChars}])(${escaped})(?=$|[^${boundaryChars}])`,
+      "giu"
+    );
+
+  return String(text || "")
+    .replace(
+      re,
+      (match, prefix, word) =>
+        prefix +
+        preserveOrganizationTermCase_(
+          word,
+          targetWord
+        )
+    );
+}
+
+
+function translateOrganizationText_(value) {
+  let text =
+    String(value ?? "");
+
+  if (!isSchoolOrganization_()) {
+    return text;
+  }
+
+  for (
+    const [
+      sportsWord,
+      schoolWord
+    ] of SCHOOL_ROLE_RULES_
+  ) {
+    text =
+      replaceOrganizationWord_(
+        text,
+        sportsWord,
+        schoolWord
+      );
+  }
+
+  return text;
+}
+
+
+function shouldSkipOrganizationTerms_(element) {
+  if (!element) return true;
+
+  return !!element.closest(
+    "script,style,textarea,[contenteditable='true'],[data-org-terms-skip='1']"
+  );
+}
+
+
+function applyOrganizationTextNode_(node) {
+  if (
+    !node ||
+    node.nodeType !== Node.TEXT_NODE
+  ) {
+    return;
+  }
+
+  const parent =
+    node.parentElement;
+
+  if (
+    !parent ||
+    shouldSkipOrganizationTerms_(parent)
+  ) {
+    return;
+  }
+
+  const current =
+    String(node.nodeValue || "");
+
+  let state =
+    __organizationTextState_.get(node);
+
+  if (!state) {
+    state = {
+      source: current,
+      rendered: current
+    };
+
+    __organizationTextState_.set(
+      node,
+      state
+    );
+  } else if (
+    current !== state.rendered
+  ) {
+    // tekst został zmieniony przez aplikację,
+    // a nie przez naszą warstwę terminologii
+    state.source = current;
+  }
+
+  const translated =
+    translateOrganizationText_(
+      state.source
+    );
+
+  state.rendered =
+    translated;
+
+  if (current !== translated) {
+    node.nodeValue =
+      translated;
+  }
+}
+
+
+function applyOrganizationAttributes_(element) {
+  if (
+    !element ||
+    element.nodeType !== Node.ELEMENT_NODE
+  ) {
+    return;
+  }
+
+  if (
+    shouldSkipOrganizationTerms_(element)
+  ) {
+    return;
+  }
+
+  const attrs = [
+    "placeholder",
+    "title",
+    "aria-label"
+  ];
+
+  let stateMap =
+    __organizationAttrState_.get(element);
+
+  if (!stateMap) {
+    stateMap = {};
+
+    __organizationAttrState_.set(
+      element,
+      stateMap
+    );
+  }
+
+  for (const attr of attrs) {
+    if (
+      !element.hasAttribute(attr)
+    ) {
+      continue;
+    }
+
+    const current =
+      element.getAttribute(attr) || "";
+
+    let state =
+      stateMap[attr];
+
+    if (!state) {
+      state = {
+        source: current,
+        rendered: current
+      };
+
+      stateMap[attr] =
+        state;
+    } else if (
+      current !== state.rendered
+    ) {
+      state.source =
+        current;
+    }
+
+    const translated =
+      translateOrganizationText_(
+        state.source
+      );
+
+    state.rendered =
+      translated;
+
+    if (
+      current !== translated
+    ) {
+      element.setAttribute(
+        attr,
+        translated
+      );
+    }
+  }
+}
+
+
+function applyOrganizationTermsToTree_(root) {
+  if (!root) return;
+
+  if (
+    root.nodeType === Node.TEXT_NODE
+  ) {
+    applyOrganizationTextNode_(root);
+    return;
+  }
+
+  if (
+    root !== document &&
+    root.nodeType !== Node.ELEMENT_NODE
+  ) {
+    return;
+  }
+
+  if (
+    root.nodeType === Node.ELEMENT_NODE
+  ) {
+    applyOrganizationAttributes_(root);
+  }
+
+  const walker =
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_ELEMENT |
+      NodeFilter.SHOW_TEXT
+    );
+
+  let node =
+    walker.nextNode();
+
+  while (node) {
+    if (
+      node.nodeType === Node.TEXT_NODE
+    ) {
+      applyOrganizationTextNode_(node);
+
+    } else if (
+      node.nodeType === Node.ELEMENT_NODE
+    ) {
+      applyOrganizationAttributes_(node);
+    }
+
+    node =
+      walker.nextNode();
+  }
+}
+
+
+function ensureOrganizationTermsObserver_() {
+  if (
+    __organizationTermsObserver_ ||
+    !document.body
+  ) {
+    return;
+  }
+
+  __organizationTermsObserver_ =
+    new MutationObserver(
+      mutations => {
+        for (
+          const mutation of mutations
+        ) {
+          if (
+            mutation.type ===
+            "characterData"
+          ) {
+            applyOrganizationTextNode_(
+              mutation.target
+            );
+
+            continue;
+          }
+
+          if (
+            mutation.type ===
+            "attributes"
+          ) {
+            applyOrganizationAttributes_(
+              mutation.target
+            );
+
+            continue;
+          }
+
+          for (
+            const node
+            of mutation.addedNodes || []
+          ) {
+            applyOrganizationTermsToTree_(
+              node
+            );
+          }
+        }
+      }
+    );
+
+  __organizationTermsObserver_
+    .observe(
+      document.body,
+      {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: [
+          "placeholder",
+          "title",
+          "aria-label"
+        ]
+      }
+    );
+}
+
+
+function applyOrganizationType_(value) {
+  const nextType =
+    normalizeOrganizationType_(value);
+
+  const changed =
+    nextType !== __organizationType_;
+
+  const observerMissing =
+    !__organizationTermsObserver_;
+
+  __organizationType_ =
+    nextType;
+
+  document.documentElement.dataset.organizationType =
+    nextType;
+
+  ensureOrganizationTermsObserver_();
+
+  if (
+    changed ||
+    observerMissing
+  ) {
+    applyOrganizationTermsToTree_(
+      document.body
+    );
+  }
+}
+
 // Inicjalizacja clubId z URL lub hash  
 function initClubFromUrl_() {
   try {
@@ -5142,6 +5651,13 @@ function refreshClubBadge_() {
 // Zastosowanie motywu i logo klubu  
 function applyTheme_(theme) {
   try {
+
+    applyOrganizationType_(
+    theme?.organizationType ||
+    theme?.organization_type ||
+    "sports_club"
+  );
+    
     if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
 
     const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
@@ -6275,11 +6791,21 @@ async function startApp_() {
     try {
       const boot = await apiClubGet("brandingBoot", {});
 
-      const bootTheme = {
-        bgColor: boot?.bg_color || "",
-        logoUrl: boot?.logo_url || "",
-        clubName: boot?.club_name || ""
-      };
+    const bootTheme = {
+      bgColor:
+        boot?.bg_color || "",
+    
+      logoUrl:
+        boot?.logo_url || "",
+    
+      clubName:
+        boot?.club_name || "",
+    
+      organizationType:
+        boot?.organizationType ||
+        boot?.organization_type ||
+        "sports_club"
+    };
 
       saveTheme_(bootTheme);
       applyTheme_(bootTheme);
@@ -6319,9 +6845,26 @@ async function startApp_() {
       const boot = await apiClubGet("brandingBoot", {});
 
       const freshTheme = {
-        bgColor: boot?.bg_color || localTheme?.bgColor || "",
-        logoUrl: boot?.logo_url || localTheme?.logoUrl || "",
-        clubName: boot?.club_name || localTheme?.clubName || ""
+        bgColor:
+          boot?.bg_color ||
+          localTheme?.bgColor ||
+          "",
+      
+        logoUrl:
+          boot?.logo_url ||
+          localTheme?.logoUrl ||
+          "",
+      
+        clubName:
+          boot?.club_name ||
+          localTheme?.clubName ||
+          "",
+      
+        organizationType:
+          boot?.organizationType ||
+          boot?.organization_type ||
+          localTheme?.organizationType ||
+          "sports_club"
       };
 
       saveTheme_(freshTheme);
@@ -6346,9 +6889,98 @@ let cfgDraft = {
   clubName: "",
   email: "",
   bgColor: "#000000",
-  logoDataUrl: "" // dataURL
+  logoDataUrl: "",
+  organizationType: "sports_club"
 };
 
+function setCfgOrganizationType_(value) {
+  cfgDraft.organizationType =
+    normalizeOrganizationType_(value);
+
+  renderCfgOrganizationType_();
+}
+
+function renderCfgOrganizationType_() {
+  const organizationType =
+    normalizeOrganizationType_(
+      cfgDraft.organizationType
+    );
+
+  cfgDraft.organizationType =
+    organizationType;
+
+  const sportsBtn =
+    document.getElementById(
+      "cfgOrgTypeSports"
+    );
+
+  const schoolBtn =
+    document.getElementById(
+      "cfgOrgTypeSchool"
+    );
+
+  if (sportsBtn) {
+    sportsBtn.classList.toggle(
+      "alt",
+      organizationType !== "sports_club"
+    );
+  }
+
+  if (schoolBtn) {
+    schoolBtn.classList.toggle(
+      "alt",
+      organizationType !== "school"
+    );
+  }
+
+
+  const title =
+    document.getElementById(
+      "cfgOrganizationTitle"
+    );
+
+  if (title) {
+    title.textContent =
+      organizationType === "school"
+        ? "Konfiguracja szkoły"
+        : "Konfiguracja klubu";
+  }
+
+
+  const nameText =
+    document.getElementById(
+      "clubNameText"
+    );
+
+  if (
+    nameText &&
+    !cfgDraft.clubName
+  ) {
+    nameText.textContent =
+      organizationType === "school"
+        ? "Podaj nazwę szkoły"
+        : "Podaj nazwę klubu";
+  }
+
+
+  const nameInput =
+    document.getElementById(
+      "clubNameInput"
+    );
+
+  if (nameInput) {
+    nameInput.placeholder =
+      organizationType === "school"
+        ? "Wpisz nazwę szkoły"
+        : "Wpisz nazwę klubu";
+  }
+
+
+  applyOrganizationType_(
+    organizationType
+  );
+}
+  
 // Panel 2 (uzupełnienie po utworzeniu klubu)
 let setupDraft = {
   sezonStart: "", // YYYY-MM-DD
@@ -6965,8 +7597,21 @@ function renderConfigUI_() {
   }
 
   // Nazwa na przycisku
-  const cn = document.getElementById("clubNameText");
-  if (cn) cn.textContent = cfgDraft.clubName ? cfgDraft.clubName : "Podaj nazwę klubu";
+  const cn =
+    document.getElementById(
+      "clubNameText"
+    );
+  
+  if (cn) {
+    cn.textContent =
+      cfgDraft.clubName
+        ? cfgDraft.clubName
+        : normalizeOrganizationType_(
+            cfgDraft.organizationType
+          ) === "school"
+          ? "Podaj nazwę szkoły"
+          : "Podaj nazwę klubu";
+  }
 
   // Email na przycisku
   const em = document.getElementById("emailText");
@@ -7017,6 +7662,7 @@ function renderConfigUI_() {
       }
     );
   }
+  renderCfgOrganizationType_();
 }
 
 /* ---------- Wejście/Wyjście ---------- */
@@ -7043,10 +7689,29 @@ function goBackFromConfig() {
 /* =================== 71 WYSŁANIE KONFIGURACJI -> CREATECLUB =================== */
 
 function validateCfg_() {
-  if (!cfgDraft.logoDataUrl) return "Wgraj logo.";
-  if (!cfgDraft.clubName) return "Podaj nazwę klubu.";
-  if (!cfgDraft.bgColor) return "Wybierz kolor tła.";
-  if (!cfgDraft.email) return "Podaj email admina.";
+  const organizationType =
+    normalizeOrganizationType_(
+      cfgDraft.organizationType
+    );
+
+  if (!cfgDraft.logoDataUrl) {
+    return "Wgraj logo.";
+  }
+
+  if (!cfgDraft.clubName) {
+    return organizationType === "school"
+      ? "Podaj nazwę szkoły."
+      : "Podaj nazwę klubu.";
+  }
+
+  if (!cfgDraft.bgColor) {
+    return "Wybierz kolor tła.";
+  }
+
+  if (!cfgDraft.email) {
+    return "Podaj email admina.";
+  }
+
   return "";
 }
 
@@ -7262,17 +7927,35 @@ try {
   showBusy("Konfiguruję klub…");
   const progress = startClubConfigProgress_();
 
-const payload = {
-  action: "createClub",
-  clubName: cfgDraft.clubName,
-  sezonStart: "",
-  sezonEnd: "",
-  bgColor: cfgDraft.bgColor,
-  ownerEmail: cfgDraft.email,
-  logoBase64: cfgDraft.logoDataUrl,
-  pwaIcon192Data: pwaIcon192Data,
-  pwaIcon512Data: pwaIcon512Data
-};
+  const payload = {
+    action: "createClub",
+  
+    clubName:
+      cfgDraft.clubName,
+  
+    organizationType:
+      normalizeOrganizationType_(
+        cfgDraft.organizationType
+      ),
+  
+    sezonStart: "",
+    sezonEnd: "",
+  
+    bgColor:
+      cfgDraft.bgColor,
+  
+    ownerEmail:
+      cfgDraft.email,
+  
+    logoBase64:
+      cfgDraft.logoDataUrl,
+  
+    pwaIcon192Data:
+      pwaIcon192Data,
+  
+    pwaIcon512Data:
+      pwaIcon512Data
+  };
 
   function applyCreateClubSuccess_(r) {
     if (!r.clubId) {
