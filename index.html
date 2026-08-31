@@ -5127,8 +5127,180 @@ const __organizationTextState_ =
 const __organizationAttrState_ =
   new WeakMap();
 
-
 const SCHOOL_ROLE_RULES_ = Object.freeze([
+
+  // ======================================================
+  // FRAZY SPECJALNE
+  // Najpierw te przypadki, których nie można poprawnie
+  // przetłumaczyć prostą zamianą pojedynczego słowa.
+  // ======================================================
+
+  // SKŁADKA -> ABONAMENT
+  ["wysokość składki miesięcznej", "wysokość abonamentu miesięcznego"],
+  ["nieprawidłowa składka miesięczna", "nieprawidłowy abonament miesięczny"],
+  ["brak zdefiniowanej składki", "brak zdefiniowanego abonamentu"],
+  ["składka członkowska", "abonament"],
+  ["składka miesięczna", "abonament miesięczny"],
+  ["miesięczna składka", "miesięczny abonament"],
+  ["wysokość składki", "wysokość abonamentu"],
+  ["brak składki", "brak abonamentu"],
+  ["część składki", "część abonamentu"],
+  ["kwota składki", "kwota abonamentu"],
+  ["rodzaj składki", "rodzaj abonamentu"],
+  ["nazwa składki", "nazwa abonamentu"],
+  ["ustawienia składki", "ustawienia abonamentu"],
+  ["w ramach składki", "w ramach abonamentu"],
+
+  // TRENING -> ZAJĘCIA
+  ["pojedynczy trening", "pojedyncze zajęcia"],
+  ["dodatkowy trening", "dodatkowe zajęcia"],
+  ["każdy trening", "każde zajęcia"],
+  ["ten trening", "te zajęcia"],
+  ["na treningu", "na zajęciach"],
+  ["po treningu", "po zajęciach"],
+  ["o treningu", "o zajęciach"],
+  ["w treningu", "w zajęciach"],
+
+  // WYDARZENIE -> ZAJĘCIA
+  ["bieżące wydarzenia", "bieżące zajęcia"],
+  ["archiwalne wydarzenia", "archiwalne zajęcia"],
+  ["twoje wydarzenia", "twoje zajęcia"],
+  ["nowe wydarzenia", "nowe zajęcia"],
+  ["wszystkie wydarzenia", "wszystkie zajęcia"],
+  ["wybrane wydarzenia", "wybrane zajęcia"],
+
+  ["data rozpoczęcia wydarzenia", "data rozpoczęcia zajęć"],
+  ["data zakończenia wydarzenia", "data zakończenia zajęć"],
+  ["datę i godzinę wydarzenia", "datę i godzinę zajęć"],
+  ["rodzaj wydarzenia", "rodzaj zajęć"],
+  ["miejsce wydarzenia", "miejsce zajęć"],
+  ["tryb wydarzenia", "tryb zajęć"],
+  ["nazwa wydarzenia", "nazwa zajęć"],
+  ["edycja wydarzenia", "edycja zajęć"],
+  ["szczegóły wydarzenia", "szczegóły zajęć"],
+  ["dane wydarzenia", "dane zajęć"],
+  ["identyfikatora wydarzenia", "identyfikatora zajęć"],
+  ["ładowanie wydarzenia", "ładowanie zajęć"],
+  ["zakończenie wydarzenia", "zakończenie zajęć"],
+  ["rozpoczęcie wydarzenia", "rozpoczęcie zajęć"],
+  ["brak wydarzenia", "brak zajęć"],
+  ["tego wydarzenia", "tych zajęć"],
+  ["to wydarzenie", "te zajęcia"],
+  ["do wydarzenia", "do zajęć"],
+  ["dla wydarzenia", "dla zajęć"],
+  ["z wydarzenia", "z zajęć"],
+  ["bez wydarzenia", "bez zajęć"],
+  ["na wydarzeniu", "na zajęciach"],
+  ["w wydarzeniu", "w zajęciach"],
+  ["o wydarzeniu", "o zajęciach"],
+  ["po wydarzeniu", "po zajęciach"],
+
+  // KLUB -> SZKOŁA
+  // "klub" ma ten sam mianownik i biernik,
+  // a "szkoła" już nie, więc te frazy muszą być przed
+  // ogólną zamianą słowa "klub".
+  ["skonfiguruj klub", "skonfiguruj szkołę"],
+  ["skonfigurować klub", "skonfigurować szkołę"],
+  ["utwórz klub", "utwórz szkołę"],
+  ["utworzyć klub", "utworzyć szkołę"],
+  ["aktywuj klub", "aktywuj szkołę"],
+  ["aktywować klub", "aktywować szkołę"],
+  ["aktywujesz klub", "aktywujesz szkołę"],
+  ["wybierz klub", "wybierz szkołę"],
+  ["dodaj klub", "dodaj szkołę"],
+  ["usuń klub", "usuń szkołę"],
+  ["edytuj klub", "edytuj szkołę"],
+  ["zmień klub", "zmień szkołę"],
+
+  // zmiana rodzaju zaimków/przymiotników
+  ["swojego klubu", "swojej szkoły"],
+  ["twojego klubu", "twojej szkoły"],
+  ["tego klubu", "tej szkoły"],
+  ["danego klubu", "danej szkoły"],
+  ["wybranego klubu", "wybranej szkoły"],
+  ["nowego klubu", "nowej szkoły"],
+  ["każdego klubu", "każdej szkoły"],
+
+
+  // ======================================================
+  // WYDARZENIE -> ZAJĘCIA
+  // ======================================================
+
+  ["wydarzeniami", "zajęciami"],
+  ["wydarzeniach", "zajęciach"],
+  ["wydarzeniom", "zajęciom"],
+  ["wydarzeniem", "zajęciami"],
+  ["wydarzeń", "zajęć"],
+  ["wydarzenia", "zajęcia"],
+  ["wydarzenie", "zajęcia"],
+
+
+  // ======================================================
+  // TRENING -> ZAJĘCIA
+  // ======================================================
+
+  ["treningami", "zajęciami"],
+  ["treningach", "zajęciach"],
+  ["treningowi", "zajęciom"],
+  ["treningiem", "zajęciami"],
+  ["treningów", "zajęć"],
+  ["treningom", "zajęciom"],
+  ["treningi", "zajęcia"],
+  ["treningu", "zajęć"],
+  ["trening", "zajęcia"],
+
+
+  // ======================================================
+  // SKŁADKA -> ABONAMENT
+  // ======================================================
+
+  ["składkami", "abonamentami"],
+  ["składkach", "abonamentach"],
+  ["składkom", "abonamentom"],
+  ["składek", "abonamentów"],
+  ["składką", "abonamentem"],
+  ["składce", "abonamencie"],
+  ["składkę", "abonament"],
+  ["składki", "abonamenty"],
+  ["składka", "abonament"],
+
+
+  // ======================================================
+  // SEZON -> ROK SZKOLNY
+  // ======================================================
+
+  ["sezonami", "latami szkolnymi"],
+  ["sezonach", "latach szkolnych"],
+  ["sezonów", "lat szkolnych"],
+  ["sezonom", "latom szkolnym"],
+  ["sezonowi", "rokowi szkolnemu"],
+  ["sezonem", "rokiem szkolnym"],
+  ["sezonie", "roku szkolnym"],
+  ["sezonu", "roku szkolnego"],
+  ["sezony", "lata szkolne"],
+  ["sezon", "rok szkolny"],
+
+
+  // ======================================================
+  // KLUB -> SZKOŁA
+  // ======================================================
+
+  ["klubami", "szkołami"],
+  ["klubach", "szkołach"],
+  ["klubowi", "szkole"],
+  ["klubem", "szkołą"],
+  ["klubów", "szkół"],
+  ["klubom", "szkołom"],
+  ["kluby", "szkoły"],
+  ["klubu", "szkoły"],
+  ["klubie", "szkole"],
+  ["klub", "szkoła"],
+
+
+  // ======================================================
+  // ZAWODNIK -> UCZEŃ
+  // ======================================================
+
   ["zawodnikami", "uczniami"],
   ["zawodnikach", "uczniach"],
   ["zawodnikowi", "uczniowi"],
@@ -5140,6 +5312,11 @@ const SCHOOL_ROLE_RULES_ = Object.freeze([
   ["zawodniku", "uczniu"],
   ["zawodnik", "uczeń"],
 
+
+  // ======================================================
+  // TRENER -> LEKTOR
+  // ======================================================
+
   ["trenerami", "lektorami"],
   ["trenerach", "lektorach"],
   ["trenerowi", "lektorowi"],
@@ -5150,6 +5327,7 @@ const SCHOOL_ROLE_RULES_ = Object.freeze([
   ["trenera", "lektora"],
   ["trenerze", "lektorze"],
   ["trener", "lektor"]
+
 ]);
 
 
