@@ -1397,7 +1397,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.24';
+  window.APP_BUILD = 'APP v3.25';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -5759,7 +5759,9 @@ function applyOrganizationType_(value) {
       document.body
     );
   }
-  let __orgFeatures_ = {};
+}
+
+let __orgFeatures_ = {};;
 
 function normalizeOrgFeatureBool_(value) {
   return (
@@ -5813,7 +5815,6 @@ function isOrgFeatureEnabled_(key) {
       String(key || "").trim()
     ] === true
   );
-}
 }
 
 // Inicjalizacja clubId z URL lub hash  
