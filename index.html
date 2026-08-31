@@ -5759,6 +5759,61 @@ function applyOrganizationType_(value) {
       document.body
     );
   }
+  let __orgFeatures_ = {};
+
+function normalizeOrgFeatureBool_(value) {
+  return (
+    value === true ||
+    value === 1 ||
+    String(value || "").trim() === "1" ||
+    String(value || "").trim().toUpperCase() === "TRUE"
+  );
+}
+
+function applyOrgFeatures_(features) {
+  const next = {};
+
+  if (
+    features &&
+    typeof features === "object" &&
+    !Array.isArray(features)
+  ) {
+    for (const [key, value] of Object.entries(features)) {
+      const cleanKey = String(key || "").trim();
+
+      if (!cleanKey) {
+        continue;
+      }
+
+      next[cleanKey] =
+        normalizeOrgFeatureBool_(value);
+    }
+  }
+
+  __orgFeatures_ = next;
+}
+
+function setOrgFeatureEnabled_(key, enabled) {
+  const cleanKey =
+    String(key || "").trim();
+
+  if (!cleanKey) {
+    return;
+  }
+
+  __orgFeatures_ = {
+    ...__orgFeatures_,
+    [cleanKey]: !!enabled
+  };
+}
+
+function isOrgFeatureEnabled_(key) {
+  return (
+    __orgFeatures_[
+      String(key || "").trim()
+    ] === true
+  );
+}
 }
 
 // Inicjalizacja clubId z URL lub hash  
@@ -5855,6 +5910,10 @@ function applyTheme_(theme) {
     theme?.organization_type ||
     "sports_club"
   );
+
+    applyOrgFeatures_(
+      theme?.features || {}
+    );
     
     if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
 
@@ -7002,7 +7061,14 @@ async function startApp_() {
       organizationType:
         boot?.organizationType ||
         boot?.organization_type ||
-        "sports_club"
+        "sports_club",
+      
+      features:
+        boot?.features &&
+        typeof boot.features === "object" &&
+        !Array.isArray(boot.features)
+          ? boot.features
+          : {}
     };
 
       saveTheme_(bootTheme);
@@ -7062,7 +7128,14 @@ async function startApp_() {
           boot?.organizationType ||
           boot?.organization_type ||
           localTheme?.organizationType ||
-          "sports_club"
+          "sports_club",
+        
+        features:
+          boot?.features &&
+          typeof boot.features === "object" &&
+          !Array.isArray(boot.features)
+            ? boot.features
+            : (localTheme?.features || {})
       };
 
       saveTheme_(freshTheme);
@@ -13032,7 +13105,9 @@ function renderTreningi(lista) {
         </button>
       `;
       const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
-      const hasLineup = playerHasLineupFromEvent_(t);
+      const hasLineup =
+        isOrgFeatureEnabled_("event_lineups") &&
+        playerHasLineupFromEvent_(t);
       
       return `
       <div class="card">
@@ -13113,10 +13188,14 @@ function renderTreningi(lista) {
       );
   
       if (!button) return;
+
+      const hasLineup =
+        isOrgFeatureEnabled_("event_lineups") &&
+        playerHasLineupFromEvent_(event);
   
       button.classList.toggle(
         "hidden",
-        !playerHasLineupFromEvent_(event)
+        !hasLineup
       );
     });
   }
@@ -13542,6 +13621,9 @@ function playerRenderLineup_() {
 async function playerOpenLineup_(
   treningId
 ) {
+  if (!isOrgFeatureEnabled_("event_lineups")) {
+  return;
+}
   const id = String(
     treningId || ""
   ).trim();
@@ -17116,7 +17198,7 @@ function renderTreningiTrainer(lista) {
                     : `
 
                       <button
-                        class="btn"
+                        cclass="btn ${isOrgFeatureEnabled_("event_lineups") ? "" : "hidden"}"
                         type="button"
                         data-lineup-event-id="${trainerEscHtml_(listId)}"
                         onclick="trainerOpenLineupEditor_('${trainerEscJsArg_(listId)}')"
@@ -19402,6 +19484,9 @@ function trainerLineupResolveSlot_(slotId) {
 }
     
 async function trainerOpenLineupEditor_(eventId) {
+  if (!isOrgFeatureEnabled_("event_lineups")) {
+  return;
+}
   const id = String(eventId || "").trim();
 
   const event =
@@ -33076,6 +33161,11 @@ function renderAdminFeaturesStatic_() {
       key: "document_flow",
       label: "Obieg dokumentów",
       description: "Elektroniczny obieg dokumentów, wersjonowanie i potwierdzenia."
+    },
+    {
+      key: "event_lineups",
+      label: "Lineupy wydarzeń",
+      description: "Tworzenie, edycja i udostępnianie składów wydarzeń."
     }
   ];
 
@@ -33136,6 +33226,8 @@ function applyAdminFeaturesState_(features) {
       String(f.enabled || "").trim() === "1" ||
       String(f.enabled || "").trim().toUpperCase() === "TRUE";
 
+    setOrgFeatureEnabled_(key, enabled);
+
     const checkbox = document.getElementById("featureCheck_" + key);
     const textEl = document.getElementById("featureEnabledText_" + key);
 
@@ -33182,6 +33274,8 @@ async function adminToggleFeature_(featureKey, enabled) {
       if (textEl) textEl.textContent = !enabled ? "Włączone" : "Wyłączone";
       return;
     }
+
+    setOrgFeatureEnabled_(key, enabled);
 
     // Aktualizacja pamięci bez przebudowy widoku.
     try {
