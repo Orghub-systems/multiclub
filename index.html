@@ -8310,10 +8310,14 @@ function goToConfig2() {
     email: String(cfgDraft?.email || "").trim()
   };
 
-  renderSetupUI_();
-  goToView("clubSetupView");
-  updateSetupPaymentsState_();
-}
+    renderSetupUI_();
+    goToView("clubSetupView");
+    updateSetupPaymentsState_();
+    
+    applyOrganizationTermsToTree_(
+      document.getElementById("clubSetupView")
+    );
+    }
   
   function renderSetupUI_() {
   // Minimalny renderer: tylko odświeża etykiety na przyciskach panelu 2
