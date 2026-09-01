@@ -8240,7 +8240,13 @@ try {
     const theme = {
       bgColor: r.bgColor || cfgDraft.bgColor,
       logoUrl: r.logoUrl || cfgDraft.logoDataUrl,
-      clubName: r.clubName || cfgDraft.clubName
+      clubName: r.clubName || cfgDraft.clubName,
+    
+      organizationType:
+        r.organizationType ||
+        r.organization_type ||
+        cfgDraft.organizationType ||
+        "sports_club"
     };
 
     saveTheme_(theme);
