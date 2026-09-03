@@ -23678,17 +23678,6 @@ async function adminToggleTrainerAccessFromInfo(checked) {
       const idx = window.__adminTrainerList.findIndex(x => Number(x?.row || 0) === row);
       if (idx >= 0) window.__adminTrainerList[idx].access = !!checked;
  
-      try {
-        const cached = orgCacheRead_("adminTrainersList", { list: "all" });
-        if (cached) {
-          const updated = { ...cached.data };
-          if (updated.trenerzy && Array.isArray(updated.trenerzy)) {
-            const tidx = updated.trenerzy.findIndex(x => Number(x?.row || 0) === row);
-            if (tidx >= 0) updated.trenerzy[tidx].access = !!checked;
-          }
-          orgCacheWrite_("adminTrainersList", { list: "all" }, updated);
-        }
-      } catch (e) {}
     }
  
     if (msg) {
@@ -23827,18 +23816,6 @@ async function adminSaveTrainerGroupsLocal() {
       const idx = window.__adminTrainerList.findIndex(x => Number(x?.row || 0) === row);
       if (idx >= 0) window.__adminTrainerList[idx].grupy = grupyCsv;
  
-      try {
-        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admintrainerslist.list-all";
-        const cached = orgCacheRead_("adminTrainersList", { list: "all" });
-        if (cached) {
-          const updated = { ...cached.data };
-          if (updated.trenerzy && Array.isArray(updated.trenerzy)) {
-            const tidx = updated.trenerzy.findIndex(x => Number(x?.row || 0) === row);
-            if (tidx >= 0) updated.trenerzy[tidx].grupy = grupyCsv;
-          }
-          orgCacheWrite_("adminTrainersList", { list: "all" }, updated);
-        }
-      } catch (e) {}
     }
  
     const infoEl = document.getElementById("adminTrenerInfoGrupy");
@@ -23907,16 +23884,6 @@ async function adminDoDeleteTrainer_() {
     if (Array.isArray(window.__adminTrainerList)) {
       window.__adminTrainerList = window.__adminTrainerList.filter(t => Number(t?.row || 0) !== rowNum);
 
-      try {
-        const cached = orgCacheRead_("adminTrainersList", { list: "all" });
-        if (cached) {
-          const updated = { ...cached.data };
-          if (updated.trenerzy && Array.isArray(updated.trenerzy)) {
-            updated.trenerzy = updated.trenerzy.filter(t => Number(t?.row || 0) !== rowNum);
-          }
-          orgCacheWrite_("adminTrainersList", { list: "all" }, updated);
-        }
-      } catch (e) {}
     }
 
     if (window.__adminSelectedTrainer && Number(window.__adminSelectedTrainer.row || 0) === rowNum) {
