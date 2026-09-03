@@ -27256,48 +27256,6 @@ async function adminDoConfirmPayment() {
       if (el) el.textContent = "";
     });
  
-    // Aktualizuj cache płatności zawodnika
-    try {
-      const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerpayments.numer-" + nr + ".default";
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        if (entry && entry.data && entry.data.payments && Array.isArray(entry.data.payments.items)) {
-          entry.data.payments.items = entry.data.payments.items.map(item => {
-            if (Number(item.col || 0) === col) return { ...item, zaplacono: true };
-            return item;
-          });
-          entry.savedAt = new Date().toISOString();
-          localStorage.setItem(cacheKey, JSON.stringify(entry));
-        }
-      }
-    } catch (e) {}
- 
-    // Aktualizuj cache zaległości (lista płatności zawodników)
-    const now = new Date();
-    const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-    try {
-      const debtCacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
-      const raw = localStorage.getItem(debtCacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        if (entry && entry.data && Array.isArray(entry.data.items)) {
-          entry.data.items = entry.data.items.map(player => {
-            if (String(player.numer || "").trim() !== nr) return player;
-            const newDebts = (player.zaleglosci || []).filter(item => {
-            const itemCol = Number(item.col || 0);
-            const itemSourceSheet = String(item.sourceSheet || "Kartoteka").trim();
-          
-            return !(itemCol === col && itemSourceSheet === sourceSheet);
-          });
-            return { ...player, zaleglosci: newDebts, suma: newDebts.reduce((a, i) => a + Number(i.brakuje || 0), 0) };
-          }).filter(player => (player.zaleglosci || []).length > 0);
-          entry.savedAt = new Date().toISOString();
-          localStorage.setItem(debtCacheKey, JSON.stringify(entry));
-        }
-      }
-    } catch (e) {}
- 
     // Aktualizuj UI zaległości
     const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
       ? window.__adminPlatnosciZawodnikowCache : [];
@@ -27380,31 +27338,6 @@ async function adminMarkPaymentAsZW() {
       const el = document.getElementById(id);
       if (el) { el.classList.add("hidden"); el.style.display = "none"; }
     });
- 
-    // Aktualizuj cache zaległości
-    const now = new Date();
-    const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-    try {
-      const debtCacheKey = "orghub.cache.v2." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
-      const raw = localStorage.getItem(debtCacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        if (entry && entry.data && Array.isArray(entry.data.items)) {
-          entry.data.items = entry.data.items.map(player => {
-            if (String(player.numer || "").trim() !== nr) return player;
-            const newDebts = (player.zaleglosci || []).filter(item => {
-            const itemCol = Number(item.col || 0);
-            const itemSourceSheet = String(item.sourceSheet || "Kartoteka").trim();
-          
-            return !(itemCol === col && itemSourceSheet === sourceSheet);
-          });
-            return { ...player, zaleglosci: newDebts, suma: newDebts.reduce((a, i) => a + Number(i.brakuje || 0), 0) };
-          }).filter(player => (player.zaleglosci || []).length > 0);
-          entry.savedAt = new Date().toISOString();
-          localStorage.setItem(debtCacheKey, JSON.stringify(entry));
-        }
-      }
-    } catch (e) {}
  
     const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
       ? window.__adminPlatnosciZawodnikowCache : [];
