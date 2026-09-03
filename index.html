@@ -23409,14 +23409,6 @@ async function adminDoDeletePlayer() {
       window.__adminPlayersListCache = window.__adminPlayersListCache.filter(z =>
         String(z?.nr || "").trim() !== numer
       );
- 
-      try {
-        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerslist.groups-all";
-        localStorage.setItem(cacheKey, JSON.stringify({
-          savedAt: new Date().toISOString(),
-          data: window.__adminPlayersListCache
-        }));
-      } catch (e) {}
     }
  
     // Aktualizuj cache listy zawodników trenera
@@ -24233,14 +24225,6 @@ async function adminToggleAccessFromInfo(checked) {
     if (Array.isArray(window.__adminPlayersListCache)) {
       const idx = window.__adminPlayersListCache.findIndex(z => String(z?.nr || "").trim() === nr);
       if (idx >= 0) window.__adminPlayersListCache[idx].dostepDoApki = !!checked;
- 
-      try {
-        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerslist.groups-all";
-        localStorage.setItem(cacheKey, JSON.stringify({
-          savedAt: new Date().toISOString(),
-          data: window.__adminPlayersListCache
-        }));
-      } catch (e) {}
     }
  
     if (msg) {
@@ -24479,14 +24463,7 @@ async function adminSaveGrupyLocal() {
     if (Array.isArray(window.__adminPlayersListCache)) {
       const idx = window.__adminPlayersListCache.findIndex(z => String(z?.nr || "").trim() === nr);
       if (idx >= 0) window.__adminPlayersListCache[idx].grupy = grupyCsv;
- 
-      try {
-        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".adminplayerslist.groups-all";
-        localStorage.setItem(cacheKey, JSON.stringify({
-          savedAt: new Date().toISOString(),
-          data: window.__adminPlayersListCache
-        }));
-      } catch (e) {}
+
     }
  
     trainerUpdateSelectedGroupsLabel_(grupyCsv);
