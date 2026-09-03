@@ -13887,21 +13887,26 @@ async function loadStatystykiCached_(numer, hooks = {}) {
     }
   }
 
-  return await orgCachedApiGet_({
-    scope: "playerStatsSeasonsV1",
-    parts: {
-      numer: nr
-    },
-    action: "statystykiSezony",
-    params: {
-      numer: nr
-    },
-    maxAgeMs: 0,
-    useStale: true,
-    backgroundRefresh: true,
-    onCached: hooks.onCached,
-    onFresh: hooks.onFresh
-  });
+    const fresh = await apiClubGet(
+      "statystykiSezony",
+      {
+        numer: nr,
+        _ts: Date.now()
+      }
+    );
+    
+    if (fresh && fresh.success === false) {
+      throw new Error(
+        fresh.error ||
+        "Nie udało się pobrać statystyk."
+      );
+    }
+    
+    if (typeof hooks.onFresh === "function") {
+      hooks.onFresh(fresh);
+    }
+    
+    return fresh;
 }
   
 async function pokazStatystyki() {
@@ -29128,19 +29133,12 @@ async function adminLoadRaportWydarzenia_() {
   if (sumEl) sumEl.textContent = "";
 
   try {
-    // NOWE: backend zwraca gotową siatkę zakładki "Wydarzenia"
-    const res = await orgCachedApiGet_({
-      scope: "adminReportEvents",
-      parts: {
-        report: "wydarzenia"
-      },
-      action: "raportWydarzenia",
-      params: {
+    const res = await apiClubGet(
+      "raportWydarzenia",
+      {
         _ts: Date.now()
-      },
-      maxAgeMs: 24 * 60 * 60 * 1000,
-      useStale: true
-    });
+      }
+    );
 
     if (!res || res.success !== true || !Array.isArray(res.grid)) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu (albo brak zakładki/endpointu).</div>`;
@@ -29323,19 +29321,12 @@ async function adminLoadRaportTrenerzy_() {
   if (sumEl) sumEl.textContent = "";
 
   try {
-    // NOWE: backend zwraca siatkę zakładki "Trenerzy"
-    const res = await orgCachedApiGet_({
-      scope: "adminReportTrainers",
-      parts: {
-        report: "trenerzy"
-      },
-      action: "raportTrenerzy",
-      params: {
+    const res = await apiClubGet(
+      "raportTrenerzy",
+      {
         _ts: Date.now()
-      },
-      maxAgeMs: 24 * 60 * 60 * 1000,
-      useStale: true
-    });
+      }
+    );
 
     if (!res || res.success !== true || !Array.isArray(res.grid)) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu trenerów (albo brak zakładki/endpointu).</div>`;
@@ -29500,19 +29491,12 @@ async function adminLoadRaportRezerwacja_() {
   if (sumEl) sumEl.textContent = "";
 
   try {
-    // NOWE: backend zwraca siatkę zakładki "Rezerwacja obiektu"
-    const res = await orgCachedApiGet_({
-      scope: "adminReportReservation",
-      parts: {
-        report: "rezerwacja"
-      },
-      action: "raportRezerwacja",
-      params: {
+    const res = await apiClubGet(
+      "raportRezerwacja",
+      {
         _ts: Date.now()
-      },
-      maxAgeMs: 24 * 60 * 60 * 1000,
-      useStale: true
-    });
+      }
+    );
 
     if (!res || res.success !== true || !Array.isArray(res.grid)) {
       if (body) body.innerHTML = `<div class="card" style="background:#222;">Brak danych raportu rezerwacji (albo brak zakładki/endpointu).</div>`;
