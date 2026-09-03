@@ -19945,9 +19945,6 @@ async function trainerSaveLineupDraftLocal_() {
   
 /* --- dodawanie wydarzenia --- */
 async function zaladujListeTrenerow() {
-  const CACHE_SCOPE = "clubTrainers";
-  const CACHE_PARTS = { role: "trainerEvents" };
-
   function esc_(value) {
     return String(value || "")
       .replace(/&/g, "&amp;")
@@ -19984,31 +19981,26 @@ async function zaladujListeTrenerow() {
     if (t4) t4.innerHTML = optionalHtml;
   }
 
-  // 1. Najpierw pokazujemy cache, jeśli istnieje
-  const cached = orgCacheRead_(CACHE_SCOPE, CACHE_PARTS);
-  if (cached && Array.isArray(cached.data)) {
-    renderTrenerzyOptions_(cached.data);
-  }
-
-  // 2. W tle pobieramy aktualną listę z API
   try {
     const fresh = await apiClubGet("getTrenerzy", {
       _ts: Date.now()
     });
 
     if (fresh && fresh.success === false) {
-      throw new Error(fresh.error || "Błąd pobierania trenerów");
+      throw new Error(
+        fresh.error || "Błąd pobierania trenerów"
+      );
     }
 
-    const lista = Array.isArray(fresh) ? fresh : [];
-
-    orgCacheWrite_(CACHE_SCOPE, CACHE_PARTS, lista);
-    renderTrenerzyOptions_(lista);
+    renderTrenerzyOptions_(
+      Array.isArray(fresh) ? fresh : []
+    );
 
   } catch (e) {
-    // Jeśli API padnie, a cache był — użytkownik dalej ma listę z pamięci.
-    // Jeśli cache nie było, zostawiamy dotychczasowy stan selectów.
-    console.warn("zaladujListeTrenerow cache/API error:", e);
+    console.warn(
+      "zaladujListeTrenerow error:",
+      e
+    );
   }
 }
 
