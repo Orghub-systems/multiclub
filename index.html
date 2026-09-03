@@ -12084,12 +12084,7 @@ async function pokazPlatnosciZakonczoneSezony() {
   const div = document.getElementById("listaPlatnosciZakonczoneSezony");
   if (!div) return;
 
-  const cacheKey =
-    "orghub.cache.v3." +
-    String(clubId || "").toLowerCase() +
-    ".playerPayments.numer-" +
-    String(numerZalogowanego || "") +
-    ".seasons";
+  div.innerHTML = "<p>⏳ Ładowanie zakończonych sezonów...</p>";
 
   function renderArchivePaidFromPayload_(payload) {
     const data = normalizePlayerPaymentsPayload_(payload);
@@ -12101,30 +12096,14 @@ async function pokazPlatnosciZakonczoneSezony() {
     renderPlatnosciListInto_(
       "listaPlatnosciZakonczoneSezony",
       archivePaid,
-      archivePaid.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+      archivePaid.reduce(
+        (acc, p) => acc + Number(p?.kwota || 0),
+        0
+      ),
       "zakonczone"
     );
   }
 
-  let hadCache = false;
-
-  // 1. Cache natychmiast
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        renderArchivePaidFromPayload_(entry.data);
-        hadCache = true;
-      }
-    }
-  } catch (e) {}
-
-  if (!hadCache) {
-    div.innerHTML = "<p>⏳ Ładowanie zakończonych sezonów...</p>";
-  }
-
-  // 2. Świeże dane
   try {
     const fresh = await apiClubGet("platnosci", {
       numer: numerZalogowanego,
@@ -12133,20 +12112,15 @@ async function pokazPlatnosciZakonczoneSezony() {
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: payload
-      }));
-    } catch (e) {}
-
     window.__playerPaymentsPayload = payload;
+
     renderArchivePaidFromPayload_(payload);
 
   } catch (e) {
-    if (!hadCache) {
-      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
-    }
+    console.error("pokazPlatnosciZakonczoneSezony error:", e);
+
+    div.innerHTML =
+      "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
   }
 }
 
