@@ -16203,31 +16203,14 @@ async function selectTrainerArchiveMonth_(key, label) {
   }
 
   try {
-    const lista = await orgCachedApiGet_({
-      scope: "trainerArchiveEventsV2",
-      parts: {
-        month: window.__trainerArchiveSelectedMonth,
-        groups: window.grupyTrenera || ""
-      },
-      action: "treningiTrenerArchiwalne",
-      params: {
+    const lista = await apiClubGet(
+      "treningiTrenerArchiwalne",
+      {
         grupa: window.grupyTrenera || "",
         miesiac: window.__trainerArchiveSelectedMonth,
         _ts: Date.now()
-      },
-    
-      // Archiwum jest historyczne, więc cache może być długi.
-      // Na razie 31 dni; później możemy zrobić sezonowy albo wersjonowany.
-      maxAgeMs:
-        window.__trainerArchiveSelectedMonth ===
-        trainerCurrentMonthKey_()
-          ? 5 * 60 * 1000
-          : 31 * 24 * 60 * 60 * 1000,
-      
-      useStale:
-        window.__trainerArchiveSelectedMonth !==
-        trainerCurrentMonthKey_()
-    });
+      }
+    );
 
     if (lista && lista.success === false) {
       throw new Error(lista.error || "Błąd pobierania wydarzeń archiwalnych");
