@@ -16027,6 +16027,7 @@ function trainerSetAddEventButtonLoaded_(loaded) {
     btn.disabled = true;
   }
 }
+  
 async function trainerShowCurrentEvents_() {
   window.__trainerEventsMode = "current";
   window.__trainerEventsRenderTarget = "trainerCurrentListaWydarzen";
@@ -16034,158 +16035,45 @@ async function trainerShowCurrentEvents_() {
   goToView("trainerWydarzeniaCurrentView");
   trainerSetAddEventButtonLoaded_(false);
 
-  const div = document.getElementById("trainerCurrentListaWydarzen");
-  const groupsKey = String(window.grupyTrenera || "").trim();
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".trainerCurrentEvents.groups-" + (groupsKey || "all");
+  const div =
+    document.getElementById("trainerCurrentListaWydarzen");
 
-  // 1. Zawsze pokaż cache natychmiast z zablokowanymi przyciskami
-  let hadCache = false;
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        renderTreningiTrainer(entry.data);
-        hadCache = true;
+  const groupsKey =
+    String(window.grupyTrenera || "").trim();
 
-        // Zablokuj przyciski edycji i usunięcia do czasu świeżych danych
-        div.querySelectorAll("button").forEach(btn => {
-        const txt = String(btn.textContent || "").trim();
-        const txtLower = txt.toLowerCase();
-    
-        if (
-          txt.includes("Edytuj") ||
-          txt.includes("Usuń") ||
-          txt.includes("Dodaj") ||
-          txtLower.includes("lineup")
-        ) {
-            btn.disabled = true;
-            btn.style.opacity = "0.45";
-            btn.dataset.lockedByCache = "1";
-          }
-        });
-      }
-    }
-  } catch (e) {}
+  if (div) {
+    div.innerHTML =
+      "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
+  }
 
-  if (!hadCache && div) {
-    div.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie bieżących wydarzeń...</div>";
-  }
-  
-  /*
-   * Jeżeli trwa fizyczne usuwanie wydarzenia,
-   * pozostawiamy lokalny widok zapisany już bez tego wydarzenia.
-   * Nie pobieramy danych z GAS i nie nadpisujemy cache.
-   */
-  const pendingDeleteKey =
-    "orghub.pendingDelete.v1." +
-    String(clubId || "").toLowerCase();
-  
-  let pendingDeleteActive = false;
-  
-  try {
-    const rawPendingDelete = localStorage.getItem(pendingDeleteKey);
-  
-    if (rawPendingDelete) {
-      const pendingDelete = JSON.parse(rawPendingDelete);
-      const startedAt = Number(pendingDelete?.startedAt || 0);
-  
-      /*
-       * Zabezpieczenie na wypadek zamknięcia aplikacji
-       * przed zakończeniem requestu.
-       * Po 5 minutach znacznik uznajemy za nieaktualny.
-       */
-      if (
-        startedAt > 0 &&
-        Date.now() - startedAt < 5 * 60 * 1000
-      ) {
-        pendingDeleteActive = true;
-      } else {
-        localStorage.removeItem(pendingDeleteKey);
-      }
-    }
-  } catch (e) {
-    try {
-      localStorage.removeItem(pendingDeleteKey);
-    } catch (ignore) {}
-  }
-  
-  const pendingAddActive =
-    typeof trainerGetPendingAdd_ === "function" &&
-    !!trainerGetPendingAdd_();
-  
-  if (
-    hadCache &&
-    (
-      pendingDeleteActive ||
-      pendingAddActive
-    )
-  ) {
-    /*
-     * Podczas optymistycznego dodawania lub usuwania
-     * pozostawiamy lokalny widok i nie pobieramy starej listy z GAS.
-     */
-    if (div) {
-      div.querySelectorAll(
-        "button[data-locked-by-cache='1']"
-      ).forEach(btn => {
-        btn.disabled = false;
-        btn.style.opacity = "";
-        delete btn.dataset.lockedByCache;
-      });
-    }
-  
-    trainerSetAddEventButtonLoaded_(true);
-    return;
-  }
-  
-  // 2. Sprawdź GAS w tle tylko wtedy,
-  // gdy nie trwa optymistyczne usuwanie.
   try {
     const fresh = await apiClubGet("treningiTrener", {
-      grupa: groupsKey
+      grupa: groupsKey,
+      _ts: Date.now()
     });
 
     if (fresh && fresh.success === false) {
-      throw new Error(fresh.error || "Błąd pobierania bieżących wydarzeń");
+      throw new Error(
+        fresh.error ||
+        "Błąd pobierania bieżących wydarzeń"
+      );
     }
 
-    let changed = true;
-    try {
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
-      }
-    } catch (e) {}
-
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: fresh
-      }));
-    } catch (e) {}
-
-    if (changed) {
-      renderTreningiTrainer(fresh);
+    if (!Array.isArray(fresh)) {
+      throw new Error(
+        "Backend nie zwrócił listy wydarzeń."
+      );
     }
 
+    renderTreningiTrainer(fresh);
     trainerSetAddEventButtonLoaded_(true);
 
   } catch (e) {
     trainerSetAddEventButtonLoaded_(false);
 
-    if (!hadCache && div) {
-      div.innerHTML = `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
-    }
-  } finally {
-    // Odblokuj przyciski
     if (div) {
-      div.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
-        btn.disabled = false;
-        btn.style.opacity = "";
-        delete btn.dataset.lockedByCache;
-      });
+      div.innerHTML =
+        `<div class="card" style="background:#700;">❌ Błąd: ${e?.message || e}</div>`;
     }
   }
 }
