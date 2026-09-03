@@ -11988,46 +11988,8 @@ async function pokazPlatnosciBiezace() {
   const div = document.getElementById("listaPlatnosciBiezace");
   if (!div) return;
 
-  const cacheKey =
-    "orghub.cache.v3." +
-    String(clubId || "").toLowerCase() +
-    ".playerPayments.numer-" +
-    String(numerZalogowanego || "") +
-    ".seasons";
+  div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
 
-  let hadCache = false;
-
-  // 1. Cache natychmiast
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        const data = normalizePlayerPaymentsPayload_(entry.data);
-
-        renderPlatnosciListInto_(
-          "listaPlatnosciBiezace",
-          data.biezace,
-          data.biezace.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
-          "biezace"
-        );
-
-        hadCache = true;
-
-        div.querySelectorAll("button.playerPayBtn").forEach(btn => {
-          btn.disabled = true;
-          btn.style.opacity = "0.45";
-          btn.dataset.lockedByCache = "1";
-        });
-      }
-    }
-  } catch (e) {}
-
-  if (!hadCache) {
-    div.innerHTML = "<p>⏳ Ładowanie płatności bieżących...</p>";
-  }
-
-  // 2. Świeże dane
   try {
     const fresh = await apiClubGet("platnosci", {
       numer: numerZalogowanego,
@@ -12036,32 +11998,23 @@ async function pokazPlatnosciBiezace() {
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: payload
-      }));
-    } catch (e) {}
-
     window.__playerPaymentsPayload = payload;
 
     renderPlatnosciListInto_(
       "listaPlatnosciBiezace",
       payload.biezace,
-      payload.biezace.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+      payload.biezace.reduce(
+        (acc, p) => acc + Number(p?.kwota || 0),
+        0
+      ),
       "biezace"
     );
 
   } catch (e) {
-    if (!hadCache) {
-      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
-    }
-  } finally {
-    div.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
-      btn.disabled = false;
-      btn.style.opacity = "";
-      delete btn.dataset.lockedByCache;
-    });
+    console.error("pokazPlatnosciBiezace error:", e);
+
+    div.innerHTML =
+      "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
   }
 }
 
