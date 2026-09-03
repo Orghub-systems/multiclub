@@ -11960,40 +11960,8 @@ async function pokazPlatnosci() {
   const div = document.getElementById("platnosciSummaryBox");
   if (!div) return;
 
-  const cacheKey =
-    "orghub.cache.v3." +
-    String(clubId || "").toLowerCase() +
-    ".playerPayments.numer-" +
-    String(numerZalogowanego || "") +
-    ".seasons";
+  div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
 
-  let hadCache = false;
-
-  // 1. Cache natychmiast
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        const cachedPayload = normalizePlayerPaymentsPayload_(entry.data);
-        window.__playerPaymentsPayload = cachedPayload;
-        renderPlatnosciMenu(cachedPayload);
-        hadCache = true;
-
-        document.querySelectorAll("#platnosciView button.full-btn:not(.alt)").forEach(btn => {
-          btn.disabled = true;
-          btn.style.opacity = "0.45";
-          btn.dataset.lockedByCache = "1";
-        });
-      }
-    }
-  } catch (e) {}
-
-  if (!hadCache) {
-    div.innerHTML = "<p>⏳ Ładowanie płatności...</p>";
-  }
-
-  // 2. Świeże dane w tle
   try {
     const fresh = await apiClubGet("platnosci", {
       numer: numerZalogowanego,
@@ -12002,26 +11970,15 @@ async function pokazPlatnosci() {
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: payload
-      }));
-    } catch (e) {}
-
     window.__playerPaymentsPayload = payload;
+
     renderPlatnosciMenu(payload);
 
   } catch (e) {
-    if (!hadCache) {
-      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
-    }
-  } finally {
-    document.querySelectorAll("#platnosciView button[data-locked-by-cache='1']").forEach(btn => {
-      btn.disabled = false;
-      btn.style.opacity = "";
-      delete btn.dataset.lockedByCache;
-    });
+    console.error("pokazPlatnosci error:", e);
+
+    div.innerHTML =
+      "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
   }
 }
 
