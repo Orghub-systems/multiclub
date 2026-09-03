@@ -13725,46 +13725,12 @@ async function zapiszSie(id) {
       if (isPowolanie || r.accepted === true) {
         updatePowolanieUiLocal_(id, true);
  
-        // Aktualizuj cache wydarzeń zawodnika
-        try {
-          const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
-          const raw = localStorage.getItem(cacheKey);
-          if (raw) {
-            const entry = JSON.parse(raw);
-            if (entry && Array.isArray(entry.data)) {
-              entry.data = entry.data.map(t => {
-                if (String(t.id || "") !== String(id)) return t;
-                return { ...t, zaakceptowalPowolanie: true };
-              });
-              entry.savedAt = new Date().toISOString();
-              localStorage.setItem(cacheKey, JSON.stringify(entry));
-            }
-          }
-        } catch (e) {}
- 
         return;
       }
  
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
- 
-      // Aktualizuj cache wydarzeń zawodnika
-      try {
-        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
-        const raw = localStorage.getItem(cacheKey);
-        if (raw) {
-          const entry = JSON.parse(raw);
-          if (entry && Array.isArray(entry.data)) {
-            entry.data = entry.data.map(t => {
-              if (String(t.id || "") !== String(id)) return t;
-              return { ...t, zapisany: true, zapisanych: Number(t.zapisanych || 0) + 1 };
-            });
-            entry.savedAt = new Date().toISOString();
-            localStorage.setItem(cacheKey, JSON.stringify(entry));
-          }
-        }
-      } catch (e) {}
  
       const lista = await apiClubGet(
         "treningi",
@@ -13809,45 +13775,11 @@ async function wypiszSie(id) {
       if (isPowolanie || r.resigned === true) {
         updatePowolanieUiLocal_(id, false);
  
-        // Aktualizuj cache wydarzeń zawodnika
-        try {
-          const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
-          const raw = localStorage.getItem(cacheKey);
-          if (raw) {
-            const entry = JSON.parse(raw);
-            if (entry && Array.isArray(entry.data)) {
-              entry.data = entry.data.map(t => {
-                if (String(t.id || "") !== String(id)) return t;
-                return { ...t, zaakceptowalPowolanie: false };
-              });
-              entry.savedAt = new Date().toISOString();
-              localStorage.setItem(cacheKey, JSON.stringify(entry));
-            }
-          }
-        } catch (e) {}
- 
         return;
       }
  
       if (zapiszBtn) { zapiszBtn.innerText = "Zapisz się"; zapiszBtn.disabled = false; }
       if (btn && btn.id && btn.id.startsWith("wypisz-")) btn.disabled = true;
- 
-      // Aktualizuj cache wydarzeń zawodnika
-      try {
-        const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".playerevents.numer-" + String(numerZalogowanego || "") + ".default";
-        const raw = localStorage.getItem(cacheKey);
-        if (raw) {
-          const entry = JSON.parse(raw);
-          if (entry && Array.isArray(entry.data)) {
-            entry.data = entry.data.map(t => {
-              if (String(t.id || "") !== String(id)) return t;
-              return { ...t, zapisany: false, zapisanych: Math.max(0, Number(t.zapisanych || 0) - 1) };
-            });
-            entry.savedAt = new Date().toISOString();
-            localStorage.setItem(cacheKey, JSON.stringify(entry));
-          }
-        }
-      } catch (e) {}
  
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
