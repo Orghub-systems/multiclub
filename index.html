@@ -27513,88 +27513,53 @@ function adminCancelConfirmPayment() {
 async function adminOpenPlatnosciZawodnikowView() {
   goToView("adminPlatnosciZawodnikowView");
 
-  const body = document.getElementById("adminPlatnosciZawodnikowBody");
-  const msg = document.getElementById("adminPlatnosciZawodnikowMsg");
-  if (msg) msg.textContent = "";
+  const body =
+    document.getElementById("adminPlatnosciZawodnikowBody");
 
-  const now = new Date();
-  const monthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-  const cacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".admindebtlist.month-" + monthKey + ".default";
+  const msg =
+    document.getElementById("adminPlatnosciZawodnikowMsg");
 
-  // 1. Zawsze pokaż cache natychmiast
-  let hadCache = false;
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        window.__adminPlatnosciZawodnikowCache = Array.isArray(entry.data.items) ? entry.data.items : [];
-        renderAdminPlatnosciZawodnikow_(entry.data);
-        hadCache = true;
-
-        // Zablokuj przyciski potwierdzeń i ponagleń
-        body.querySelectorAll("button").forEach(btn => {
-          const txt = String(btn.textContent || "").trim();
-          if (txt.includes("Zatwierdź") || txt.includes("Wyślij ponaglenie") || txt.includes("Przypisz")) {
-            btn.disabled = true;
-            btn.style.opacity = "0.45";
-            btn.dataset.lockedByCache = "1";
-          }
-        });
-      }
-    }
-  } catch (e) {}
-
-  if (!hadCache && body) {
-    body.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+  if (msg) {
+    msg.textContent = "";
   }
 
-  // 2. Zawsze sprawdź GAS w tle
+  if (body) {
+    body.innerHTML =
+      "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+  }
+
   try {
-    const fresh = await apiClubGet("adminListaZaleglosciPlatnosci", { t: Date.now() });
+    const fresh =
+      await apiClubGet(
+        "adminListaZaleglosciPlatnosci",
+        {
+          t: Date.now()
+        }
+      );
 
-    let changed = true;
-    try {
-      const raw = localStorage.getItem(cacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        changed = JSON.stringify(entry.data) !== JSON.stringify(fresh);
-      }
-    } catch (e) {}
-
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: fresh
-      }));
-    } catch (e) {}
-
-    if (fresh && fresh.success === true) {
-      window.__adminPlatnosciZawodnikowCache = Array.isArray(fresh.items) ? fresh.items : [];
+    if (!fresh || fresh.success !== true) {
+      throw new Error(
+        fresh?.error ||
+        "Nie udało się pobrać zaległości."
+      );
     }
 
-    if (changed) {
-      renderAdminPlatnosciZawodnikow_(fresh);
-    }
+    // Tylko bieżący stan w pamięci JS.
+    window.__adminPlatnosciZawodnikowCache =
+      Array.isArray(fresh.items)
+        ? fresh.items
+        : [];
 
-    if (fresh && fresh.success === true) {
-      setTimeout(() => {
-        adminAskCloseArchivePaymentsIfNeeded_(fresh);
-      }, 0);
-    }
+    renderAdminPlatnosciZawodnikow_(fresh);
+
+    setTimeout(() => {
+      adminAskCloseArchivePaymentsIfNeeded_(fresh);
+    }, 0);
 
   } catch (e) {
-    if (!hadCache && body) {
-      body.innerHTML = `<div class="card" style="background:#700;">❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</div>`;
-    }
-  } finally {
-    // Odblokuj przyciski
     if (body) {
-      body.querySelectorAll("button[data-locked-by-cache='1']").forEach(btn => {
-        btn.disabled = false;
-        btn.style.opacity = "";
-        delete btn.dataset.lockedByCache;
-      });
+      body.innerHTML =
+        `<div class="card" style="background:#700;">❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</div>`;
     }
   }
 }
