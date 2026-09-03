@@ -12024,12 +12024,7 @@ async function pokazPlatnosciWplacone() {
   const div = document.getElementById("listaPlatnosciWplacone");
   if (!div) return;
 
-  const cacheKey =
-    "orghub.cache.v3." +
-    String(clubId || "").toLowerCase() +
-    ".playerPayments.numer-" +
-    String(numerZalogowanego || "") +
-    ".seasons";
+  div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
 
   function renderPaidScreenFromPayload_(payload) {
     const data = normalizePlayerPaymentsPayload_(payload);
@@ -12045,7 +12040,10 @@ async function pokazPlatnosciWplacone() {
     renderPlatnosciListInto_(
       "listaPlatnosciWplacone",
       currentPaid,
-      currentPaid.reduce((acc, p) => acc + Number(p?.kwota || 0), 0),
+      currentPaid.reduce(
+        (acc, p) => acc + Number(p?.kwota || 0),
+        0
+      ),
       "wplacone"
     );
 
@@ -12060,25 +12058,6 @@ async function pokazPlatnosciWplacone() {
     }
   }
 
-  let hadCache = false;
-
-  // 1. Cache natychmiast
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      const entry = JSON.parse(raw);
-      if (entry && entry.data) {
-        renderPaidScreenFromPayload_(entry.data);
-        hadCache = true;
-      }
-    }
-  } catch (e) {}
-
-  if (!hadCache) {
-    div.innerHTML = "<p>⏳ Ładowanie płatności wpłaconych...</p>";
-  }
-
-  // 2. Świeże dane
   try {
     const fresh = await apiClubGet("platnosci", {
       numer: numerZalogowanego,
@@ -12087,20 +12066,15 @@ async function pokazPlatnosciWplacone() {
 
     const payload = normalizePlayerPaymentsPayload_(fresh);
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        data: payload
-      }));
-    } catch (e) {}
-
     window.__playerPaymentsPayload = payload;
+
     renderPaidScreenFromPayload_(payload);
 
   } catch (e) {
-    if (!hadCache) {
-      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
-    }
+    console.error("pokazPlatnosciWplacone error:", e);
+
+    div.innerHTML =
+      "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
   }
 }
 
