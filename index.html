@@ -20363,11 +20363,7 @@ let selectedPowolaniAdd = new Set();
 let selectedPowolaniEdit = new Set();
 window.__powolaniPlayersCache = [];
 window.__powolaniPopupTarget = "add";
-
 async function ensurePowolaniPlayersLoaded_() {
-  const CACHE_SCOPE = "clubPlayersForPowolania";
-  const CACHE_PARTS = { role: "trainerEvents" };
-
   function normalizePlayers_(lista) {
     return (Array.isArray(lista) ? lista : [])
       .map(z => ({
@@ -20378,58 +20374,36 @@ async function ensurePowolaniPlayersLoaded_() {
       .sort((a, b) => Number(a.nr) - Number(b.nr));
   }
 
-  async function refreshPlayersInBackground_() {
-    if (window.__powolaniPlayersRefreshLoading) {
-      return window.__powolaniPlayersRefreshLoading;
-    }
+  if (window.__powolaniPlayersRefreshLoading) {
+    return await window.__powolaniPlayersRefreshLoading;
+  }
 
-    window.__powolaniPlayersRefreshLoading = (async () => {
-      try {
-        const fresh = await apiClubGet("listaZawodnikow", {
-          grupy: "",
-          _ts: Date.now()
-        });
+  window.__powolaniPlayersRefreshLoading = (async () => {
+    try {
+      const fresh = await apiClubGet("listaZawodnikow", {
+        grupy: "",
+        _ts: Date.now()
+      });
 
-        if (fresh && fresh.success === false) {
-          throw new Error(fresh.error || "Błąd pobierania zawodników");
-        }
-
-        const rows = normalizePlayers_(fresh);
-
-        window.__powolaniPlayersCache = rows;
-        orgCacheWrite_(CACHE_SCOPE, CACHE_PARTS, rows);
-
-        // Jeżeli popup powołań jest aktualnie otwarty, podmień listę na świeżą.
-        if (typeof isPowolaniPopupOpen_ === "function" && isPowolaniPopupOpen_()) {
-          renderPowolaniPopupList_();
-        }
-
-        return rows;
-
-      } finally {
-        window.__powolaniPlayersRefreshLoading = null;
+      if (fresh && fresh.success === false) {
+        throw new Error(
+          fresh.error || "Błąd pobierania zawodników"
+        );
       }
-    })();
 
-    return window.__powolaniPlayersRefreshLoading;
-  }
+      const rows = normalizePlayers_(fresh);
 
-  // 1. Cache w pamięci — najszybszy.
-  if (Array.isArray(window.__powolaniPlayersCache) && window.__powolaniPlayersCache.length) {
-    refreshPlayersInBackground_();
-    return window.__powolaniPlayersCache;
-  }
+      // Tylko bieżący stan w pamięci JS.
+      window.__powolaniPlayersCache = rows;
 
-  // 2. Cache z localStorage — pokazujemy od razu.
-  const cached = orgCacheRead_(CACHE_SCOPE, CACHE_PARTS);
-  if (cached && Array.isArray(cached.data) && cached.data.length) {
-    window.__powolaniPlayersCache = cached.data;
-    refreshPlayersInBackground_();
-    return cached.data;
-  }
+      return rows;
 
-  // 3. Brak cache — musimy poczekać na API.
-  return await refreshPlayersInBackground_();
+    } finally {
+      window.__powolaniPlayersRefreshLoading = null;
+    }
+  })();
+
+  return await window.__powolaniPlayersRefreshLoading;
 }
 
 function getPowolaniSetByTarget_(target) {
