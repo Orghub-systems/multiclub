@@ -12514,7 +12514,6 @@ async function refreshCurrentPlayerGroupsForEvents_() {
     };
   }
 }
-
 async function pokazTreningi() {
   goToView("homeView");
 
@@ -12524,252 +12523,27 @@ async function pokazTreningi() {
     div.innerHTML = "<p>⏳ Ładowanie wydarzeń...</p>";
   }
 
-  let hadCache = false;
-
   try {
-    // Grupa w aktywnej sesji mogła się zmienić już po rejestracji.
-    // Zawsze sprawdzamy aktualną wartość z Panelu administracyjnego.
-    const groupRefresh = await refreshCurrentPlayerGroupsForEvents_();
+    // Grupy zawodnika również pobieramy na świeżo,
+    // bo wpływają na widoczność wydarzeń.
+    await refreshCurrentPlayerGroupsForEvents_();
 
-    const cacheEntry = readPlayerEventsCache_();
-
-    if (cacheEntry && Array.isArray(cacheEntry.data)) {
-      renderTreningi(cacheEntry.data);
-      hadCache = true;
-      setTreningiButtonsLocked_(true);
-    }
-
-    const oldMeta = readPlayerEventsMeta_();
-
-    const meta = await apiClubGet("treningiMeta", {
+    const fresh = await apiClubGet("treningi", {
+      grupa: grupaZalogowanego,
+      numer: numerZalogowanego,
       t: Date.now()
     });
 
-    if (!meta || meta.success !== true) {
-      const fresh = await apiClubGet("treningi", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego,
-        t: Date.now()
-      });
-
-      writePlayerEventsCache_(fresh);
-      renderTreningi(fresh);
-      return;
-    }
-
-    const oldStaticVersion = String(oldMeta.staticVersion || "");
-    const oldSignupsVersion = String(oldMeta.signupsVersion || "");
-
-    const newStaticVersion = String(meta.staticVersion || "");
-    const newSignupsVersion = String(meta.signupsVersion || "");
-
-    const staticChanged =
-      groupRefresh.changed ||
-      !hadCache ||
-      !oldStaticVersion ||
-      oldStaticVersion !== newStaticVersion;
-
-    const signupsChanged =
-      !oldSignupsVersion ||
-      oldSignupsVersion !== newSignupsVersion;
-
-    // Zmiana grupy zawodnika zawsze wymaga pełnego ponownego filtrowania wydarzeń.
-    if (staticChanged) {
-      const fresh = await apiClubGet("treningi", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego,
-        t: Date.now()
-      });
-
-      let changed = true;
-
-      try {
-        const current = readPlayerEventsCache_();
-        if (current && Array.isArray(current.data)) {
-          changed = JSON.stringify(current.data) !== JSON.stringify(fresh);
-        }
-      } catch (e) {}
-
-      writePlayerEventsCache_(fresh);
-      writePlayerEventsMeta_(meta);
-
-      if (changed || !hadCache || groupRefresh.changed) {
-        renderTreningi(fresh);
-      }
-
-      return;
-    }
-
-    if (signupsChanged) {
-      const zapisyRes = await apiClubGet("treningiZapisy", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego,
-        t: Date.now()
-      });
-
-      if (zapisyRes && zapisyRes.success === true && Array.isArray(zapisyRes.items)) {
-        applyPlayerEventsSignupsDelta_(zapisyRes.items);
-
-        writePlayerEventsMeta_(
-          zapisyRes.meta && zapisyRes.meta.success === true
-            ? zapisyRes.meta
-            : meta
-        );
-      }
-
-      return;
-    }
-
-    console.log("[treningi] brak zmian — pomijam pełne odświeżenie");
+    renderTreningi(Array.isArray(fresh) ? fresh : []);
 
   } catch (e) {
-    console.warn("pokazTreningi smart refresh error:", e);
+    console.warn("pokazTreningi refresh error:", e);
 
-    if (!hadCache && div) {
-      div.innerHTML = "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
-    }
-
-  } finally {
-    setTreningiButtonsLocked_(false);
-
-    /*
-     * Lista została już ostatecznie wyrenderowana
-     * z cache lub ze świeżych danych.
-     *
-     * Dopiero teraz wykonujemy jedno zbiorcze
-     * sprawdzenie lineupów.
-     */
-    if (
-      String(currentView || "") ===
-      "homeView"
-    ) {
-      playerRefreshCurrentLineupAvailability_();
+    if (div) {
+      div.innerHTML =
+        "<p>❌ Brak połączenia. Sprawdź internet i spróbuj ponownie.</p>";
     }
   }
-}
-
-function getPlayerEventsGroupsKey_() {
-  const groups = String(grupaZalogowanego || "")
-    .split(/[\s,;|\/]+/g)
-    .map(x => String(x || "").trim().toUpperCase())
-    .filter(Boolean)
-    .sort();
-
-  return groups.length ? groups.join("_") : "no_groups";
-}
-
-function getPlayerEventsCacheKey_() {
-  return "orghub.cache.v2." +
-    String(clubId || "").toLowerCase() +
-    ".playerevents.numer-" +
-    String(numerZalogowanego || "") +
-    ".groups-" +
-    getPlayerEventsGroupsKey_();
-}
-
-function getPlayerEventsMetaKey_() {
-  return "orghub.cache.v2." +
-    String(clubId || "").toLowerCase() +
-    ".playerevents.meta.numer-" +
-    String(numerZalogowanego || "") +
-    ".groups-" +
-    getPlayerEventsGroupsKey_();
-}
-
-function readPlayerEventsCache_() {
-  try {
-    const raw = localStorage.getItem(getPlayerEventsCacheKey_());
-    if (!raw) return null;
-
-    const entry = JSON.parse(raw);
-    if (!entry || !Array.isArray(entry.data)) return null;
-
-    return entry;
-  } catch (e) {
-    return null;
-  }
-}
-
-function writePlayerEventsCache_(data) {
-  try {
-    localStorage.setItem(getPlayerEventsCacheKey_(), JSON.stringify({
-      savedAt: new Date().toISOString(),
-      data: Array.isArray(data) ? data : []
-    }));
-  } catch (e) {}
-}
-
-function readPlayerEventsMeta_() {
-  try {
-    const raw = localStorage.getItem(getPlayerEventsMetaKey_());
-    return raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    return {};
-  }
-}
-
-function writePlayerEventsMeta_(meta) {
-  try {
-    localStorage.setItem(getPlayerEventsMetaKey_(), JSON.stringify({
-      staticVersion: String(meta?.staticVersion || ""),
-      signupsVersion: String(meta?.signupsVersion || ""),
-      savedAt: new Date().toISOString()
-    }));
-  } catch (e) {}
-}
-
-function applyPlayerEventsSignupsDelta_(items) {
-  if (!Array.isArray(items)) return false;
-
-  const entry = readPlayerEventsCache_();
-  if (!entry || !Array.isArray(entry.data)) return false;
-
-  const byId = {};
-  items.forEach(item => {
-    const id = String(item?.id || item?.eventId || "").trim();
-    if (id) byId[id] = item;
-  });
-
-  let changed = false;
-
-  const nextData = entry.data
-    .map(t => {
-      const id = String(t?.id || "").trim();
-      const delta = byId[id];
-
-      if (!delta) return t;
-
-      changed = true;
-
-      return {
-        ...t,
-        zapisanych: Number(delta.zapisanych ?? t.zapisanych ?? 0),
-        zapisany: delta.zapisany === true,
-        powolaniaMode: delta.powolaniaMode === true,
-        powolany: delta.powolany === true,
-        zaakceptowalPowolanie: delta.zaakceptowalPowolanie === true
-      };
-    })
-    .filter(t => {
-      const id = String(t?.id || "").trim();
-      const delta = byId[id];
-
-      if (!delta) return true;
-
-      if (delta.visibleForPlayer === false) {
-        changed = true;
-        return false;
-      }
-
-      return true;
-    });
-
-  if (!changed) return false;
-
-  writePlayerEventsCache_(nextData);
-  renderTreningi(nextData);
-
-  return true;
 }
 
 function setTreningiButtonsLocked_(locked) {
