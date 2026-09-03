@@ -23411,37 +23411,6 @@ async function adminDoDeletePlayer() {
       );
     }
  
-    // Aktualizuj cache listy zawodników trenera
-    try {
-      const trainerCacheKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".trainerplayerslist.groups-all";
-      const raw = localStorage.getItem(trainerCacheKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        if (entry && Array.isArray(entry.data)) {
-          entry.data = entry.data.filter(z => String(z?.nr || "").trim() !== numer);
-          entry.savedAt = new Date().toISOString();
-          localStorage.setItem(trainerCacheKey, JSON.stringify(entry));
-        }
-      }
-    } catch (e) {}
- 
-    // Aktualizuj cache powołań
-    window.__powolaniPlayersCache = (window.__powolaniPlayersCache || []).filter(p =>
-      String(p?.nr || "").trim() !== numer
-    );
-    try {
-      const powolaniKey = "orghub.cache.v1." + String(clubId || "").toLowerCase() + ".clubplayersforpowolania.role-trainerevents";
-      const raw = localStorage.getItem(powolaniKey);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        if (entry && Array.isArray(entry.data)) {
-          entry.data = entry.data.filter(p => String(p?.nr || "").trim() !== numer);
-          entry.savedAt = new Date().toISOString();
-          localStorage.setItem(powolaniKey, JSON.stringify(entry));
-        }
-      }
-    } catch (e) {}
- 
     // Usuń z DOM
     const rowEl = document.querySelector(`[data-admin-player-nr="${numer}"]`);
     if (rowEl) rowEl.remove();
