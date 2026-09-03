@@ -6428,73 +6428,27 @@ function orgCacheIsFresh_(entry, maxAgeMs) {
 
 async function orgCachedApiGet_(config) {
   const {
-    scope,
-    parts = {},
     action,
     params = {},
-    maxAgeMs = 0,
-    useStale = true,
-    backgroundRefresh = false,
-    onCached,
     onFresh
   } = config || {};
 
-  if (!scope || !action) {
-    throw new Error("orgCachedApiGet_: brak scope albo action");
+  if (!action) {
+    throw new Error("orgCachedApiGet_: brak action");
   }
 
-  const cached = orgCacheRead_(scope, parts);
-
-  if (cached && useStale && typeof onCached === "function") {
-    onCached(cached.data, cached);
-  }
-
-  // Nowy tryb:
-  // jeśli mamy cache i backgroundRefresh=true,
-  // zwracamy cache od razu, a świeże dane pobieramy w tle.
-  if (cached && useStale && backgroundRefresh) {
-    apiClubGet(action, params)
-      .then(fresh => {
-        if (fresh && fresh.success === false) {
-          throw new Error(fresh.error || "Błąd API: " + action);
-        }
-
-        const oldJson = JSON.stringify(cached.data);
-        const newJson = JSON.stringify(fresh);
-
-        // Jeśli dane są identyczne, nie podmieniamy UI.
-        if (oldJson === newJson) {
-          return;
-        }
-
-        orgCacheWrite_(scope, parts, fresh);
-
-        if (typeof onFresh === "function") {
-          onFresh(fresh);
-        }
-      })
-      .catch(e => {
-        console.warn("orgCachedApiGet_ backgroundRefresh error:", {
-          scope,
-          action,
-          error: e?.message || e
-        });
-      });
-
-    return cached.data;
-  }
-
-  if (cached && orgCacheIsFresh_(cached, maxAgeMs)) {
-    return cached.data;
-  }
-
-  const fresh = await apiClubGet(action, params);
+  const fresh = await apiClubGet(action, {
+    ...params,
+    _ts: Date.now()
+  });
 
   if (fresh && fresh.success === false) {
-    throw new Error(fresh.error || "Błąd API: " + action);
+    throw new Error(
+      fresh.error ||
+      fresh.message ||
+      ("Błąd API: " + action)
+    );
   }
-
-  orgCacheWrite_(scope, parts, fresh);
 
   if (typeof onFresh === "function") {
     onFresh(fresh);
