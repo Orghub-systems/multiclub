@@ -16119,22 +16119,21 @@ function trainerCurrentMonthKey_() {
 }
   
 async function trainerEnsureArchiveMonthsLoaded_() {
-  const now = new Date();
-  const cacheMonthKey =
-    now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-
-  return await orgCachedApiGet_({
-    scope: "trainerArchiveMonthsV2",
-    parts: {
-      month: cacheMonthKey
-    },
-    action: "treningiTrenerArchiwalneMiesiace",
-    params: {
+  const fresh = await apiClubGet(
+    "treningiTrenerArchiwalneMiesiace",
+    {
       _ts: Date.now()
-    },
-    maxAgeMs: 31 * 24 * 60 * 60 * 1000,
-    useStale: true
-  });
+    }
+  );
+
+  if (fresh && fresh.success === false) {
+    throw new Error(
+      fresh.error ||
+      "Nie udało się pobrać miesięcy archiwalnych."
+    );
+  }
+
+  return fresh;
 }
   
 function trainerEscHtml_(value) {
