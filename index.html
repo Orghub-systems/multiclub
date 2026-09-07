@@ -3698,7 +3698,7 @@ if (buildChanged) {
       <option value="all">Wszyscy</option>
     </select>
   </div>
-  <button id="adminPaymentListCreateBtn" class="full-btn" type="button">💾 Zapisz</button>
+  <button id="adminPaymentListCreateBtn" class="full-btn" type="button" onclick="adminCreatePaymentList_()">💾 Zapisz</button>
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
@@ -27435,6 +27435,53 @@ function adminCancelConfirmPayment() {
   }
 }
 
+  async function adminCreatePaymentList_() {
+  const title = String(document.getElementById("adminPaymentListTitle")?.value || "").trim();
+  const arbitrary = !!document.getElementById("adminPaymentListArbitraryAmount")?.checked;
+  const amountRaw = String(document.getElementById("adminPaymentListAmount")?.value || "").replace(",", ".").trim();
+  const scopeValue = String(document.getElementById("adminPaymentListScope")?.value || "manual");
+  const btn = document.getElementById("adminPaymentListCreateBtn");
+
+  if (!title) return alert("Wpisz tytuł płatności.");
+
+  let defaultAmount = null;
+  if (!arbitrary) {
+    defaultAmount = Number(amountRaw);
+    if (!Number.isFinite(defaultAmount) || defaultAmount <= 0) return alert("Wpisz poprawną oczekiwaną kwotę.");
+  }
+
+  let scopeMode = "manual";
+  let groupId = null;
+
+  if (scopeValue === "all") scopeMode = "all";
+  else if (scopeValue.startsWith("group:")) {
+    scopeMode = "group";
+    groupId = scopeValue.slice(6);
+  }
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = "Zapisywanie..."; }
+
+    const res = await apiClubPost({
+      action: "adminPaymentListCreate",
+      title,
+      amountMode: arbitrary ? "arbitrary" : "fixed",
+      defaultAmount,
+      scopeMode,
+      groupId
+    });
+
+    if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się utworzyć listy płatności.");
+
+    alert("Lista płatności została utworzona.");
+    goToView("adminPaymentListsView");
+  } catch (e) {
+    console.error("adminCreatePaymentList_:", e);
+    alert(e?.message || "Nie udało się utworzyć listy płatności.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "💾 Zapisz"; }
+  }
+}
   
   
 /* =================== KONIEC SEKTORA 170 =================== */
