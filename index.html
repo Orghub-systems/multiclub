@@ -3684,6 +3684,24 @@ if (buildChanged) {
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
+  <div id="adminPaymentListCreateView" class="container hidden">
+  <h1>Dodaj listę płatności</h1>
+  <div class="card" style="text-align:left;">
+    <label for="adminPaymentListTitle">Tytuł płatności</label>
+    <input id="adminPaymentListTitle" class="select-like-input" type="text" maxlength="120" placeholder="np. Wpisowe na turniej">
+    <label for="adminPaymentListAmount">Oczekiwana kwota</label>
+    <input id="adminPaymentListAmount" class="select-like-input" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="np. 120,00">
+    <label style="display:flex;align-items:center;gap:10px;margin:12px 0;"><input id="adminPaymentListArbitraryAmount" type="checkbox" style="width:22px;height:22px;"><span>Kwota dowolna</span></label>
+    <label for="adminPaymentListScope">Zawodnicy</label>
+    <select id="adminPaymentListScope" class="select-like-input">
+      <option value="manual">Wybór zawodników ręcznie</option>
+      <option value="all">Wszyscy</option>
+    </select>
+  </div>
+  <button id="adminPaymentListCreateBtn" class="full-btn" type="button">💾 Zapisz</button>
+  <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
+</div>
+
 <!-- ADMIN PLATNOSCI ZAWODNIKÓW VIEW
      Ekran płatnoścI zawodników panel admina -->
   
