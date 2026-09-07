@@ -3734,6 +3734,7 @@ if (buildChanged) {
     <select id="adminPaymentListMemberSelect" class="select-like-input" onchange="adminPaymentListAddSelectedMember_()"><option value="">Wybierz zawodnika...</option></select>
   </div>
   <div id="adminPaymentListEntries"></div>
+  <button id="adminPaymentListDeleteBtn" class="full-btn alt" type="button" onclick="adminDeletePaymentList_()" style="border-color:#ff2b2b;color:#ff6b6b;">🗑 Usuń listę</button>
   <button class="full-btn alt" type="button" onclick="adminOpenPaymentListsView()">⬅ Powrót do list</button>
 </div>
 
@@ -27800,6 +27801,68 @@ async function adminConfirmPaymentListEntry_(entryId, amountMode) {
   }
 }
 
+async function adminDeletePaymentList_() {
+  const listId = String(
+    window.__adminPaymentListId || ""
+  ).trim();
+
+  if (!listId) {
+    return;
+  }
+
+  const confirmed = confirm(
+    "Czy na pewno usunąć tę listę płatności?\n\n" +
+    "Jeżeli lista utworzyła nieopłacone należności, również zostaną usunięte.\n\n" +
+    "Jeżeli jest to lista bazowa płatności powtarzalnej, przyszłe powtórzenia zostaną anulowane."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const btn = document.getElementById(
+    "adminPaymentListDeleteBtn"
+  );
+
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Usuwanie...";
+    }
+
+    const res = await adminPaymentListPost_({
+      action: "adminPaymentListDelete",
+      listId
+    });
+
+    if (!res || res.success !== true) {
+      throw new Error(
+        res?.error || "Nie udało się usunąć listy płatności."
+      );
+    }
+
+    window.__adminPaymentListId = "";
+
+    await adminOpenPaymentListsView();
+
+  } catch (e) {
+    console.error(
+      "adminDeletePaymentList_:",
+      e
+    );
+
+    alert(
+      e?.message || "Nie udało się usunąć listy płatności."
+    );
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "🗑 Usuń listę";
+    }
+  }
+}
+  
 function adminPaymentListMoney_(value) {
   const n = Number(value || 0);
   return (Number.isFinite(n) ? n : 0).toFixed(2).replace(".", ",");
