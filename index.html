@@ -27810,11 +27810,12 @@ async function adminDeletePaymentList_() {
     return;
   }
 
-  const confirmed = confirm(
-    "Czy na pewno usunąć tę listę płatności?\n\n" +
-    "Jeżeli lista utworzyła nieopłacone należności, również zostaną usunięte.\n\n" +
-    "Jeżeli jest to lista bazowa płatności powtarzalnej, przyszłe powtórzenia zostaną anulowane."
-  );
+const confirmed = confirm(
+  "Czy na pewno usunąć tę listę płatności?\n\n" +
+  "UWAGA: lista zostanie usunięta w całości razem z należnościami i wpłatami powiązanymi z tą listą.\n\n" +
+  "Jeżeli jest to lista bazowa płatności powtarzalnej, przyszłe powtórzenia również zostaną anulowane.\n\n" +
+  "Tej operacji nie można cofnąć."
+);
 
   if (!confirmed) {
     return;
