@@ -3697,6 +3697,30 @@ if (buildChanged) {
       <option value="manual">Wybór zawodników ręcznie</option>
       <option value="all">Wszyscy</option>
     </select>
+
+    <label style="display:flex;align-items:center;gap:10px;margin:16px 0 10px 0;"><input id="adminPaymentListRecurring" type="checkbox" style="width:22px;height:22px;" onchange="adminPaymentListToggleRecurring_()"><span>Płatność powtarzalna</span></label>
+
+<div id="adminPaymentListRecurringFields" class="hidden">
+  <label for="adminPaymentListIntervalValue">Co ile</label>
+
+  <div style="display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;">
+    <input id="adminPaymentListIntervalValue" class="select-like-input" type="number" min="1" max="365" step="1" value="1" style="margin:10px 0;">
+
+    <select id="adminPaymentListIntervalUnit" class="select-like-input" style="margin:10px 0;">
+      <option value="day">dzień / dni</option>
+      <option value="week">tydzień / tygodnie</option>
+      <option value="month" selected>miesiąc / miesiące</option>
+    </select>
+  </div>
+
+  <label for="adminPaymentListRepeatCount">Ile kolejnych list utworzyć</label>
+
+  <input id="adminPaymentListRepeatCount" class="select-like-input" type="number" min="1" max="120" step="1" value="1">
+
+  <div style="font-size:12px;opacity:.65;margin-top:6px;">
+    Np. co 1 miesiąc, 5 kolejnych list = obecna lista + 5 przyszłych list.
+  </div>
+</div>
   </div>
   <button id="adminPaymentListCreateBtn" class="full-btn" type="button" onclick="adminCreatePaymentList_()">💾 Zapisz</button>
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
@@ -27416,6 +27440,15 @@ function adminPaymentListToggleAmountMode_() {
   if (chk.checked) input.value = "";
 }
 
+function adminPaymentListToggleRecurring_() {
+  const checkbox = document.getElementById("adminPaymentListRecurring");
+  const fields = document.getElementById("adminPaymentListRecurringFields");
+
+  if (!checkbox || !fields) return;
+
+  fields.classList.toggle("hidden", !checkbox.checked);
+}
+  
 async function adminOpenPaymentListCreateView() {
   goToView("adminPaymentListCreateView");
 
@@ -27427,6 +27460,29 @@ async function adminOpenPaymentListCreateView() {
   if (title) title.value = "";
   if (amount) { amount.value = ""; amount.disabled = false; }
   if (arbitrary) arbitrary.checked = false;
+
+  const recurring = document.getElementById("adminPaymentListRecurring");
+const intervalValue = document.getElementById("adminPaymentListIntervalValue");
+const intervalUnit = document.getElementById("adminPaymentListIntervalUnit");
+const repeatCount = document.getElementById("adminPaymentListRepeatCount");
+
+if (recurring) {
+  recurring.checked = false;
+}
+
+if (intervalValue) {
+  intervalValue.value = "1";
+}
+
+if (intervalUnit) {
+  intervalUnit.value = "month";
+}
+
+if (repeatCount) {
+  repeatCount.value = "1";
+}
+
+adminPaymentListToggleRecurring_();
 
   if (!scope) return;
 
@@ -27456,7 +27512,46 @@ async function adminCreatePaymentList_() {
   const scopeValue = String(document.getElementById("adminPaymentListScope")?.value || "manual");
   const btn = document.getElementById("adminPaymentListCreateBtn");
 
+  const recurring =
+  !!document.getElementById("adminPaymentListRecurring")?.checked;
+
+const intervalValue = recurring
+  ? Number(document.getElementById("adminPaymentListIntervalValue")?.value)
+  : null;
+
+const intervalUnit = recurring
+  ? String(
+      document.getElementById("adminPaymentListIntervalUnit")?.value || ""
+    ).trim()
+  : null;
+
+const repeatCount = recurring
+  ? Number(document.getElementById("adminPaymentListRepeatCount")?.value)
+  : null;
+
   if (!title) return alert("Wpisz tytuł płatności.");
+
+  if (recurring) {
+  if (
+    !Number.isInteger(intervalValue) ||
+    intervalValue < 1 ||
+    intervalValue > 365
+  ) {
+    return alert('Pole "Co ile" musi być liczbą od 1 do 365.');
+  }
+
+  if (!["day", "week", "month"].includes(intervalUnit)) {
+    return alert("Wybierz dzień, tydzień albo miesiąc.");
+  }
+
+  if (
+    !Number.isInteger(repeatCount) ||
+    repeatCount < 1 ||
+    repeatCount > 120
+  ) {
+    return alert("Liczba kolejnych list musi być od 1 do 120.");
+  }
+}
 
   let defaultAmount = null;
 
@@ -27484,7 +27579,12 @@ async function adminCreatePaymentList_() {
       amountMode: arbitrary ? "arbitrary" : "fixed",
       defaultAmount,
       scopeMode,
-      groupId
+      groupId,
+    
+      recurring,
+      intervalUnit,
+      intervalValue,
+      repeatCount
     });
 
     if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się utworzyć listy płatności.");
