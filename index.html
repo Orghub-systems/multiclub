@@ -3671,6 +3671,16 @@ if (buildChanged) {
 
   <button class="full-btn" type="button" onclick="adminOpenSystemPrzelewy()">🏦 System przelewy</button>
   <button class="full-btn" type="button" onclick="adminOpenPlatnosciZawodnikowView()">📩 Płatności zawodników</button>
+  <button class="full-btn" type="button" onclick="goToView('adminPaymentListsView')">📋 Listy płatności</button>
+  <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
+</div>
+
+  <!-- ADMIN - LISTY PŁATNOŚCI -->
+
+<div id="adminPaymentListsView" class="container hidden">
+  <h1>Listy płatności</h1>
+  <button class="full-btn" type="button" onclick="goToView('adminPaymentListCreateView')">➕ Dodaj listę płatności</button>
+  <div id="adminPaymentListsBody"><div class="card">Brak utworzonych list płatności.</div></div>
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
