@@ -27404,6 +27404,10 @@ function adminCancelConfirmPayment() {
 
 window.__adminPaymentListId = "";
 
+  function adminPaymentListSessionToken_(){const token=String(loadAppSession_()?.sessionToken||"").trim();if(!token)throw new Error("Sesja administratora wygasła. Zaloguj się ponownie.");return token;}
+function adminPaymentListGet_(action,params={}){return apiClubGet(action,{...params,sessionToken:adminPaymentListSessionToken_()});}
+function adminPaymentListPost_(payload={}){return apiClubPost({...payload,sessionToken:adminPaymentListSessionToken_()});}
+
 function adminPaymentListToggleAmountMode_() {
   const chk = document.getElementById("adminPaymentListArbitraryAmount");
   const input = document.getElementById("adminPaymentListAmount");
@@ -27431,7 +27435,7 @@ async function adminOpenPaymentListCreateView() {
   scope.add(new Option("Wszyscy", "all"));
 
   try {
-    const res = await apiClubGet("adminPaymentListOptions", {_ts: Date.now()});
+    const res = await adminPaymentListGet_("adminPaymentListOptions", {_ts: Date.now()});
     if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się pobrać grup.");
 
     const groups = Array.isArray(res.groups) ? res.groups : [];
@@ -27474,7 +27478,7 @@ async function adminCreatePaymentList_() {
   try {
     if (btn) { btn.disabled = true; btn.textContent = "Zapisywanie..."; }
 
-    const res = await apiClubPost({
+    const res = await adminPaymentListPost_({
       action: "adminPaymentListCreate",
       title,
       amountMode: arbitrary ? "arbitrary" : "fixed",
@@ -27505,7 +27509,7 @@ async function adminOpenPaymentListsView() {
   box.innerHTML = '<div class="card">⏳ Ładowanie...</div>';
 
   try {
-    const res = await apiClubGet("adminPaymentLists", {_ts: Date.now()});
+    const res = await adminPaymentListGet_("adminPaymentLists", {_ts: Date.now()});
     if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się pobrać list płatności.");
 
     const items = Array.isArray(res.items) ? res.items : [];
@@ -27551,7 +27555,7 @@ async function adminOpenPaymentListDetail_(listId, navigate = true) {
   if (manualEl) manualEl.classList.add("hidden");
 
   try {
-    const res = await apiClubGet("adminPaymentListDetail", {listId: id, _ts: Date.now()});
+    const res = await adminPaymentListGet_("adminPaymentListDetail", {listId: id, _ts: Date.now()});
     if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się pobrać listy płatności.");
 
     adminRenderPaymentListDetail_(res);
