@@ -3679,7 +3679,7 @@ if (buildChanged) {
 
 <div id="adminPaymentListsView" class="container hidden">
   <h1>Listy płatności</h1>
-  <button class="full-btn" type="button" onclick="goToView('adminPaymentListCreateView')">➕ Dodaj listę płatności</button>
+  <button class="full-btn" type="button" onclick="adminOpenPaymentListCreateView()">➕ Dodaj listę płatności</button>
   <div id="adminPaymentListsBody"><div class="card">Brak utworzonych list płatności.</div></div>
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
@@ -3691,7 +3691,7 @@ if (buildChanged) {
     <input id="adminPaymentListTitle" class="select-like-input" type="text" maxlength="120" placeholder="np. Wpisowe na turniej">
     <label for="adminPaymentListAmount">Oczekiwana kwota</label>
     <input id="adminPaymentListAmount" class="select-like-input" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="np. 120,00">
-    <label style="display:flex;align-items:center;gap:10px;margin:12px 0;"><input id="adminPaymentListArbitraryAmount" type="checkbox" style="width:22px;height:22px;"><span>Kwota dowolna</span></label>
+    <label style="display:flex;align-items:center;gap:10px;margin:12px 0;"><input id="adminPaymentListArbitraryAmount" type="checkbox" style="width:22px;height:22px;" onchange="adminPaymentListToggleAmountMode_()"><span>Kwota dowolna</span></label>
     <label for="adminPaymentListScope">Zawodnicy</label>
     <select id="adminPaymentListScope" class="select-like-input">
       <option value="manual">Wybór zawodników ręcznie</option>
@@ -27389,6 +27389,54 @@ function adminCancelConfirmPayment() {
   window.__adminActivePayModal = "";
 }
 
+/* =================== ADMIN LISTY PŁATNOSCI  =================== */ 
+
+  function adminPaymentListToggleAmountMode_() {
+  const chk = document.getElementById("adminPaymentListArbitraryAmount");
+  const input = document.getElementById("adminPaymentListAmount");
+  if (!chk || !input) return;
+  input.disabled = chk.checked;
+  if (chk.checked) input.value = "";
+}
+
+  async function adminOpenPaymentListCreateView() {
+  goToView("adminPaymentListCreateView");
+
+  const title = document.getElementById("adminPaymentListTitle");
+  const amount = document.getElementById("adminPaymentListAmount");
+  const arbitrary = document.getElementById("adminPaymentListArbitraryAmount");
+  const scope = document.getElementById("adminPaymentListScope");
+
+  if (title) title.value = "";
+  if (amount) { amount.value = ""; amount.disabled = false; }
+  if (arbitrary) arbitrary.checked = false;
+
+  if (!scope) return;
+
+  scope.innerHTML = "";
+  scope.add(new Option("Wybór zawodników ręcznie", "manual"));
+  scope.add(new Option("Wszyscy", "all"));
+
+  try {
+    const res = await apiClubGet("adminPaymentListOptions", {_ts: Date.now()});
+
+    if (!res || res.success !== true) {
+      throw new Error(res?.error || "Nie udało się pobrać grup.");
+    }
+
+    const groups = Array.isArray(res.groups) ? res.groups : [];
+
+    groups.forEach(g => {
+      scope.add(new Option(`${g.code} – ${g.label}`, `group:${g.id}`));
+    });
+  } catch (e) {
+    console.warn("adminOpenPaymentListCreateView:", e);
+    alert("Nie udało się pobrać grup klubu.");
+  }
+}
+
+  
+  
 /* =================== KONIEC SEKTORA 170 =================== */
 
 /* =================== 171 ADMIN PŁATNOSCI ZAWODNIKÓW KLUBU =================== */  
