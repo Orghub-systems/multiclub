@@ -3671,7 +3671,7 @@ if (buildChanged) {
 
   <button class="full-btn" type="button" onclick="adminOpenSystemPrzelewy()">🏦 System przelewy</button>
   <button class="full-btn" type="button" onclick="adminOpenPlatnosciZawodnikowView()">📩 Płatności zawodników</button>
-  <button class="full-btn" type="button" onclick="goToView('adminPaymentListsView')">📋 Listy płatności</button>
+  <button class="full-btn" type="button" onclick="adminOpenPaymentListsView()">📋 Listy płatności</button>
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
@@ -27474,7 +27474,7 @@ function adminCancelConfirmPayment() {
     if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się utworzyć listy płatności.");
 
     alert("Lista płatności została utworzona.");
-    goToView("adminPaymentListsView");
+    await adminOpenPaymentListsView();
   } catch (e) {
     console.error("adminCreatePaymentList_:", e);
     alert(e?.message || "Nie udało się utworzyć listy płatności.");
@@ -27482,7 +27482,43 @@ function adminCancelConfirmPayment() {
     if (btn) { btn.disabled = false; btn.textContent = "💾 Zapisz"; }
   }
 }
-  
+
+  async function adminOpenPaymentListsView() {
+  goToView("adminPaymentListsView");
+  const box = document.getElementById("adminPaymentListsBody");
+  if (!box) return;
+
+  box.innerHTML = '<div class="card">⏳ Ładowanie...</div>';
+
+  try {
+    const res = await apiClubGet("adminPaymentLists", {_ts: Date.now()});
+    if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się pobrać list płatności.");
+
+    const items = Array.isArray(res.items) ? res.items : [];
+
+    if (!items.length) {
+      box.innerHTML = '<div class="card">Brak utworzonych list płatności.</div>';
+      return;
+    }
+
+    box.innerHTML = items.map(item => {
+      const title = adminPaymentListEscape_(item.title || "Lista płatności");
+      const group = item.scope_mode === "all" ? "Wszyscy" : item.scope_mode === "manual" ? "Wybór ręczny" : adminPaymentListEscape_(item.group_label || "Grupa");
+      const amount = item.amount_mode === "arbitrary" ? "Kwota dowolna" : `${Number(item.default_amount || 0).toFixed(2).replace(".", ",")} zł`;
+      const players = Number(item.players_count || 0);
+      const paid = Number(item.paid_count || 0);
+
+      return `<button class="card" type="button" onclick="adminOpenPaymentListDetail_('${item.id}')" style="display:block;width:calc(100% - 20px);text-align:left;color:#fff;cursor:pointer;"><div style="font-size:17px;font-weight:900;">${title}</div><div style="margin-top:7px;opacity:.8;">${group} • ${amount}</div><div style="margin-top:7px;">Wpłaty: <b>${paid}/${players}</b></div></button>`;
+    }).join("");
+  } catch (e) {
+    console.error("adminOpenPaymentListsView:", e);
+    box.innerHTML = `<div class="card">❌ ${adminPaymentListEscape_(e?.message || "Nie udało się pobrać list płatności.")}</div>`;
+  }
+}
+
+function adminPaymentListEscape_(value) {
+  return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
   
 /* =================== KONIEC SEKTORA 170 =================== */
 
