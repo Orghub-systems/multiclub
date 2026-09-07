@@ -3702,6 +3702,17 @@ if (buildChanged) {
   <button class="full-btn alt" type="button" onclick="appBack()">⬅ Powrót</button>
 </div>
 
+  <div id="adminPaymentListDetailView" class="container hidden">
+  <h1 id="adminPaymentListDetailTitle">Lista płatności</h1>
+  <div id="adminPaymentListDetailMeta" class="card"></div>
+  <div id="adminPaymentListManualAdd" class="card hidden" style="text-align:left;">
+    <label for="adminPaymentListMemberSelect">Dodaj zawodnika</label>
+    <select id="adminPaymentListMemberSelect" class="select-like-input" onchange="adminPaymentListAddSelectedMember_()"><option value="">Wybierz zawodnika...</option></select>
+  </div>
+  <div id="adminPaymentListEntries"></div>
+  <button class="full-btn alt" type="button" onclick="adminOpenPaymentListsView()">⬅ Powrót do list</button>
+</div>
+
 <!-- ADMIN PLATNOSCI ZAWODNIKÓW VIEW
      Ekran płatnoścI zawodników panel admina -->
   
@@ -27389,9 +27400,11 @@ function adminCancelConfirmPayment() {
   window.__adminActivePayModal = "";
 }
 
-/* =================== ADMIN LISTY PŁATNOSCI  =================== */ 
+/* =================== ADMIN LISTY PŁATNOSCI =================== */
 
-  function adminPaymentListToggleAmountMode_() {
+window.__adminPaymentListId = "";
+
+function adminPaymentListToggleAmountMode_() {
   const chk = document.getElementById("adminPaymentListArbitraryAmount");
   const input = document.getElementById("adminPaymentListAmount");
   if (!chk || !input) return;
@@ -27399,7 +27412,7 @@ function adminCancelConfirmPayment() {
   if (chk.checked) input.value = "";
 }
 
-  async function adminOpenPaymentListCreateView() {
+async function adminOpenPaymentListCreateView() {
   goToView("adminPaymentListCreateView");
 
   const title = document.getElementById("adminPaymentListTitle");
@@ -27419,10 +27432,7 @@ function adminCancelConfirmPayment() {
 
   try {
     const res = await apiClubGet("adminPaymentListOptions", {_ts: Date.now()});
-
-    if (!res || res.success !== true) {
-      throw new Error(res?.error || "Nie udało się pobrać grup.");
-    }
+    if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się pobrać grup.");
 
     const groups = Array.isArray(res.groups) ? res.groups : [];
 
@@ -27431,11 +27441,11 @@ function adminCancelConfirmPayment() {
     });
   } catch (e) {
     console.warn("adminOpenPaymentListCreateView:", e);
-    alert("Nie udało się pobrać grup klubu.");
+    alert(e?.message || "Nie udało się pobrać grup klubu.");
   }
 }
 
-  async function adminCreatePaymentList_() {
+async function adminCreatePaymentList_() {
   const title = String(document.getElementById("adminPaymentListTitle")?.value || "").trim();
   const arbitrary = !!document.getElementById("adminPaymentListArbitraryAmount")?.checked;
   const amountRaw = String(document.getElementById("adminPaymentListAmount")?.value || "").replace(",", ".").trim();
@@ -27445,6 +27455,7 @@ function adminCancelConfirmPayment() {
   if (!title) return alert("Wpisz tytuł płatności.");
 
   let defaultAmount = null;
+
   if (!arbitrary) {
     defaultAmount = Number(amountRaw);
     if (!Number.isFinite(defaultAmount) || defaultAmount <= 0) return alert("Wpisz poprawną oczekiwaną kwotę.");
@@ -27453,8 +27464,9 @@ function adminCancelConfirmPayment() {
   let scopeMode = "manual";
   let groupId = null;
 
-  if (scopeValue === "all") scopeMode = "all";
-  else if (scopeValue.startsWith("group:")) {
+  if (scopeValue === "all") {
+    scopeMode = "all";
+  } else if (scopeValue.startsWith("group:")) {
     scopeMode = "group";
     groupId = scopeValue.slice(6);
   }
@@ -27473,8 +27485,9 @@ function adminCancelConfirmPayment() {
 
     if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się utworzyć listy płatności.");
 
-    alert("Lista płatności została utworzona.");
-    await adminOpenPaymentListsView();
+    if (!res.id) throw new Error("Lista została utworzona, ale backend nie zwrócił jej identyfikatora.");
+
+    await adminOpenPaymentListDetail_(res.id);
   } catch (e) {
     console.error("adminCreatePaymentList_:", e);
     alert(e?.message || "Nie udało się utworzyć listy płatności.");
@@ -27483,8 +27496,9 @@ function adminCancelConfirmPayment() {
   }
 }
 
-  async function adminOpenPaymentListsView() {
+async function adminOpenPaymentListsView() {
   goToView("adminPaymentListsView");
+
   const box = document.getElementById("adminPaymentListsBody");
   if (!box) return;
 
@@ -27502,18 +27516,189 @@ function adminCancelConfirmPayment() {
     }
 
     box.innerHTML = items.map(item => {
+      const id = String(item.id || "");
       const title = adminPaymentListEscape_(item.title || "Lista płatności");
       const group = item.scope_mode === "all" ? "Wszyscy" : item.scope_mode === "manual" ? "Wybór ręczny" : adminPaymentListEscape_(item.group_label || "Grupa");
-      const amount = item.amount_mode === "arbitrary" ? "Kwota dowolna" : `${Number(item.default_amount || 0).toFixed(2).replace(".", ",")} zł`;
+      const amount = item.amount_mode === "arbitrary" ? "Kwota dowolna" : `${adminPaymentListMoney_(item.default_amount)} zł`;
       const players = Number(item.players_count || 0);
       const paid = Number(item.paid_count || 0);
+      const paidTotal = adminPaymentListMoney_(item.paid_total || 0);
 
-      return `<button class="card" type="button" onclick="adminOpenPaymentListDetail_('${item.id}')" style="display:block;width:calc(100% - 20px);text-align:left;color:#fff;cursor:pointer;"><div style="font-size:17px;font-weight:900;">${title}</div><div style="margin-top:7px;opacity:.8;">${group} • ${amount}</div><div style="margin-top:7px;">Wpłaty: <b>${paid}/${players}</b></div></button>`;
+      return `<button class="card" type="button" onclick="adminOpenPaymentListDetail_('${id}')" style="display:block;width:calc(100% - 20px);text-align:left;color:#fff;cursor:pointer;"><div style="font-size:17px;font-weight:900;">${title}</div><div style="margin-top:7px;opacity:.8;">${group} • ${amount}</div><div style="margin-top:7px;">Wpłaty: <b>${paid}/${players}</b> • ${paidTotal} zł</div></button>`;
     }).join("");
   } catch (e) {
     console.error("adminOpenPaymentListsView:", e);
     box.innerHTML = `<div class="card">❌ ${adminPaymentListEscape_(e?.message || "Nie udało się pobrać list płatności.")}</div>`;
   }
+}
+
+async function adminOpenPaymentListDetail_(listId, navigate = true) {
+  const id = String(listId || "").trim();
+  if (!id) return;
+
+  window.__adminPaymentListId = id;
+
+  if (navigate) goToView("adminPaymentListDetailView");
+
+  const titleEl = document.getElementById("adminPaymentListDetailTitle");
+  const metaEl = document.getElementById("adminPaymentListDetailMeta");
+  const entriesEl = document.getElementById("adminPaymentListEntries");
+  const manualEl = document.getElementById("adminPaymentListManualAdd");
+
+  if (titleEl) titleEl.textContent = "Lista płatności";
+  if (metaEl) metaEl.innerHTML = "⏳ Ładowanie...";
+  if (entriesEl) entriesEl.innerHTML = "";
+  if (manualEl) manualEl.classList.add("hidden");
+
+  try {
+    const res = await apiClubGet("adminPaymentListDetail", {listId: id, _ts: Date.now()});
+    if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się pobrać listy płatności.");
+
+    adminRenderPaymentListDetail_(res);
+  } catch (e) {
+    console.error("adminOpenPaymentListDetail_:", e);
+    if (metaEl) metaEl.innerHTML = `❌ ${adminPaymentListEscape_(e?.message || "Nie udało się pobrać listy płatności.")}`;
+  }
+}
+
+function adminRenderPaymentListDetail_(res) {
+  const list = res?.list || {};
+  const entries = Array.isArray(res?.entries) ? res.entries : [];
+  const available = Array.isArray(res?.available_players) ? res.available_players : [];
+
+  const titleEl = document.getElementById("adminPaymentListDetailTitle");
+  const metaEl = document.getElementById("adminPaymentListDetailMeta");
+  const manualEl = document.getElementById("adminPaymentListManualAdd");
+  const select = document.getElementById("adminPaymentListMemberSelect");
+  const entriesEl = document.getElementById("adminPaymentListEntries");
+
+  const title = String(list.title || "Lista płatności");
+  const amountLabel = list.amount_mode === "arbitrary" ? "Kwota dowolna" : `${adminPaymentListMoney_(list.default_amount)} zł`;
+  const scopeLabel = list.scope_mode === "all" ? "Wszyscy" : list.scope_mode === "manual" ? "Wybór ręczny" : String(list.group_label || "Grupa");
+  const paidCount = entries.filter(e => String(e.status || "") === "paid").length;
+
+  if (titleEl) titleEl.textContent = title;
+
+  if (metaEl) {
+    metaEl.innerHTML = `<div style="font-weight:900;">${adminPaymentListEscape_(title)}</div><div style="margin-top:7px;opacity:.8;">${adminPaymentListEscape_(scopeLabel)} • ${adminPaymentListEscape_(amountLabel)}</div><div style="margin-top:7px;">Wpłaty: <b>${paidCount}/${entries.length}</b></div>`;
+  }
+
+  if (manualEl && select) {
+    if (list.scope_mode === "manual") {
+      manualEl.classList.remove("hidden");
+      select.innerHTML = '<option value="">Wybierz zawodnika...</option>';
+
+      available.forEach(player => {
+        const nr = player.visible_number ? `${player.visible_number} – ` : "";
+        select.add(new Option(`${nr}${player.display_name || "Zawodnik"}`, player.id));
+      });
+
+      select.disabled = available.length === 0;
+
+      if (!available.length) {
+        select.innerHTML = '<option value="">Wszyscy zawodnicy zostali dodani</option>';
+      }
+    } else {
+      manualEl.classList.add("hidden");
+    }
+  }
+
+  if (!entriesEl) return;
+
+  if (!entries.length) {
+    entriesEl.innerHTML = `<div class="card">${list.scope_mode === "manual" ? "Wybierz zawodnika powyżej." : "Brak zawodników na tej liście."}</div>`;
+    return;
+  }
+
+  entriesEl.innerHTML = entries.map(entry => {
+    const id = String(entry.id || "");
+    const name = adminPaymentListEscape_(entry.display_name || "Zawodnik");
+    const nr = entry.visible_number ? ` <span style="opacity:.6;">#${adminPaymentListEscape_(entry.visible_number)}</span>` : "";
+    const status = String(entry.status || "pending");
+    const paid = status === "paid";
+    const expected = Number(entry.expected_amount ?? list.default_amount ?? 0);
+    const paidAmount = Number(entry.confirmed_amount ?? entry.allocated_amount ?? 0);
+
+    if (paid) {
+      return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="margin-top:10px;color:#5ee77a;font-weight:900;">✅ Wpłacono: ${adminPaymentListMoney_(paidAmount)} zł</div></div>`;
+    }
+
+    if (list.amount_mode === "fixed") {
+      return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;"><div>Oczekiwana kwota: <b>${adminPaymentListMoney_(expected)} zł</b></div><button data-payment-list-confirm="${id}" type="button" onclick="adminConfirmPaymentListEntry_('${id}','fixed')">✅ Potwierdź wpłatę</button></div></div>`;
+    }
+
+    return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px;"><input id="adminPaymentListEntryAmount_${id}" class="select-like-input" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Kwota wpłaty" style="margin:0;"><button data-payment-list-confirm="${id}" type="button" onclick="adminConfirmPaymentListEntry_('${id}','arbitrary')">✅ Potwierdź wpłatę</button></div></div>`;
+  }).join("");
+}
+
+async function adminPaymentListAddSelectedMember_() {
+  const select = document.getElementById("adminPaymentListMemberSelect");
+  const listId = String(window.__adminPaymentListId || "");
+  const memberId = String(select?.value || "");
+
+  if (!select || !listId || !memberId) return;
+
+  try {
+    select.disabled = true;
+
+    const res = await apiClubPost({
+      action: "adminPaymentListAddMember",
+      listId,
+      memberId
+    });
+
+    if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się dodać zawodnika.");
+
+    await adminOpenPaymentListDetail_(listId, false);
+  } catch (e) {
+    console.error("adminPaymentListAddSelectedMember_:", e);
+    alert(e?.message || "Nie udało się dodać zawodnika.");
+    select.disabled = false;
+  }
+}
+
+async function adminConfirmPaymentListEntry_(entryId, amountMode) {
+  const id = String(entryId || "");
+  const listId = String(window.__adminPaymentListId || "");
+  if (!id || !listId) return;
+
+  let amount = null;
+
+  if (amountMode === "arbitrary") {
+    const input = document.getElementById(`adminPaymentListEntryAmount_${id}`);
+    const raw = String(input?.value || "").replace(",", ".").trim();
+    amount = Number(raw);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("Wpisz poprawną kwotę wpłaty.");
+      return;
+    }
+  }
+
+  const btn = document.querySelector(`[data-payment-list-confirm="${id}"]`);
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = "Zapisywanie..."; }
+
+    const res = await apiClubPost({
+      action: "adminPaymentListConfirm",
+      entryId: id,
+      amount
+    });
+
+    if (!res || res.success !== true) throw new Error(res?.error || "Nie udało się potwierdzić wpłaty.");
+
+    await adminOpenPaymentListDetail_(listId, false);
+  } catch (e) {
+    console.error("adminConfirmPaymentListEntry_:", e);
+    alert(e?.message || "Nie udało się potwierdzić wpłaty.");
+    if (btn) { btn.disabled = false; btn.textContent = "✅ Potwierdź wpłatę"; }
+  }
+}
+
+function adminPaymentListMoney_(value) {
+  const n = Number(value || 0);
+  return (Number.isFinite(n) ? n : 0).toFixed(2).replace(".", ",");
 }
 
 function adminPaymentListEscape_(value) {
