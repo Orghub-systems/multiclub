@@ -27686,7 +27686,9 @@ function adminRenderPaymentListDetail_(res) {
   if (titleEl) titleEl.textContent = title;
 
   if (metaEl) {
-    metaEl.innerHTML = `<div style="font-weight:900;">${adminPaymentListEscape_(title)}</div><div style="margin-top:7px;opacity:.8;">${adminPaymentListEscape_(scopeLabel)} • ${adminPaymentListEscape_(amountLabel)}</div><div style="margin-top:7px;">Wpłaty: <b>${paidCount}/${entries.length}</b></div>`;
+    metaEl.innerHTML = `<div style="font-weight:900;">${adminPaymentListEscape_(title)}
+    </div><div style="margin-top:7px;opacity:.8;">${adminPaymentListEscape_(scopeLabel)} • ${adminPaymentListEscape_(amountLabel)}</div>
+    <div style="margin-top:7px;">Wpłaty: <b>${paidCount}/${entries.length}</b></div>`;
   }
 
   if (manualEl && select) {
@@ -27724,16 +27726,66 @@ function adminRenderPaymentListDetail_(res) {
     const paid = status === "paid";
     const expected = Number(entry.expected_amount ?? list.default_amount ?? 0);
     const paidAmount = Number(entry.confirmed_amount ?? entry.allocated_amount ?? 0);
-
+  
     if (paid) {
-      return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="margin-top:10px;color:#5ee77a;font-weight:900;">✅ Wpłacono: ${adminPaymentListMoney_(paidAmount)} zł</div></div>`;
+      return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;"><div style="color:#5ee77a;font-weight:900;">✅ Wpłacono: ${adminPaymentListMoney_(paidAmount)} zł</div><button data-payment-list-remove="${id}" type="button" onclick="adminRemovePaymentListEntry_('${id}')">🗑 Usuń z listy</button></div></div>`;
     }
 
     if (list.amount_mode === "fixed") {
-      return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;"><div>Oczekiwana kwota: <b>${adminPaymentListMoney_(expected)} zł</b></div><button data-payment-list-confirm="${id}" type="button" onclick="adminConfirmPaymentListEntry_('${id}','fixed')">✅ Potwierdź wpłatę</button></div></div>`;
+      return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;"><div>Oczekiwana kwota: <b>${adminPaymentListMoney_(expected)} zł</b></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button data-payment-list-confirm="${id}" type="button" onclick="adminConfirmPaymentListEntry_('${id}','fixed')">✅ Potwierdź wpłatę</button><button data-payment-list-remove="${id}" type="button" onclick="adminRemovePaymentListEntry_('${id}')">🗑 Usuń z listy</button></div></div></div>`;
     }
 
-    return `<div class="card" style="text-align:left;"><div style="font-size:16px;font-weight:900;">${name}${nr}</div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px;"><input id="adminPaymentListEntryAmount_${id}" class="select-like-input" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Kwota wpłaty" style="margin:0;"><button data-payment-list-confirm="${id}" type="button" onclick="adminConfirmPaymentListEntry_('${id}','arbitrary')">✅ Potwierdź wpłatę</button></div></div>`;
+return `
+  <div
+    class="card"
+    style="text-align:left;"
+  >
+    <div
+      style="
+        font-size:16px;
+        font-weight:900;
+      "
+    >
+      ${name}${nr}
+    </div>
+
+    <div
+      style="
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto auto;
+        gap:8px;
+        margin-top:10px;
+      "
+    >
+      <input
+        id="adminPaymentListEntryAmount_${id}"
+        class="select-like-input"
+        type="number"
+        min="0.01"
+        step="0.01"
+        inputmode="decimal"
+        placeholder="Kwota wpłaty"
+        style="margin:0;"
+      >
+
+      <button
+        data-payment-list-confirm="${id}"
+        type="button"
+        onclick="adminConfirmPaymentListEntry_('${id}','arbitrary')"
+      >
+        ✅ Potwierdź wpłatę
+      </button>
+
+      <button
+        data-payment-list-remove="${id}"
+        type="button"
+        onclick="adminRemovePaymentListEntry_('${id}')"
+      >
+        🗑 Usuń z listy
+      </button>
+    </div>
+  </div>
+`;
   }).join("");
 }
 
@@ -27802,6 +27854,83 @@ async function adminConfirmPaymentListEntry_(entryId, amountMode) {
   }
 }
 
+async function adminRemovePaymentListEntry_(entryId) {
+  const id = String(entryId || "").trim();
+  const listId = String(
+    window.__adminPaymentListId || ""
+  ).trim();
+
+  if (!id || !listId) {
+    return;
+  }
+
+  const confirmed = confirm(
+    "Czy na pewno usunąć tego zawodnika z listy?\n\n" +
+    "Zostanie usunięta jego należność z tej listy oraz wpłata, jeżeli została już zaksięgowana.\n\n" +
+    "Tej operacji nie można cofnąć."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const removeBtn = document.querySelector(
+    `[data-payment-list-remove="${id}"]`
+  );
+
+  const confirmBtn = document.querySelector(
+    `[data-payment-list-confirm="${id}"]`
+  );
+
+  try {
+    if (removeBtn) {
+      removeBtn.disabled = true;
+      removeBtn.textContent = "Usuwanie...";
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+    }
+
+    const res = await adminPaymentListPost_({
+      action: "adminPaymentListRemoveMember",
+      entryId: id
+    });
+
+    if (!res || res.success !== true) {
+      throw new Error(
+        res?.error ||
+        "Nie udało się usunąć zawodnika z listy."
+      );
+    }
+
+    await adminOpenPaymentListDetail_(
+      listId,
+      false
+    );
+
+  } catch (e) {
+    console.error(
+      "adminRemovePaymentListEntry_:",
+      e
+    );
+
+    alert(
+      e?.message ||
+      "Nie udało się usunąć zawodnika z listy."
+    );
+
+    if (removeBtn) {
+      removeBtn.disabled = false;
+      removeBtn.textContent = "🗑 Usuń z listy";
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+    }
+  }
+}
+  
 async function adminDeletePaymentList_() {
   const listId = String(
     window.__adminPaymentListId || ""
