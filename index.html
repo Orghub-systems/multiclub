@@ -11691,13 +11691,29 @@ function hidePlayerPaymentPopup_() {
   }
 }
   
-async function playerPayNow(nazwa, kwota) {
+async function playerPayNow(
+  nazwa,
+  kwota,
+  transferType,
+  transferRef
+) {
   const popup = document.getElementById("playerPaymentPopup");
   if (!popup) return;
 
   const decodedName = decodeURIComponent(String(nazwa || ""));
   const safeKwota = Number(kwota || 0);
-  const titleCode = generateTransferCode(decodedName);
+  const titleCode = generateTransferCode(
+  transferType,
+  transferRef
+);
+
+if (!titleCode) {
+  alert(
+    "Nie udało się przygotować poprawnego tytułu przelewu. " +
+    "Odśwież płatności i spróbuj ponownie."
+  );
+  return;
+}
 
   const nameEl = document.getElementById("playerPaymentPopupName");
   const amountEl = document.getElementById("playerPaymentPopupAmount");
@@ -11894,48 +11910,40 @@ function updatePlayerPaymentQr({ receiver, accountRaw, amount, title, loading = 
   qrImg.src = qrUrl;
 }
 
-function generateTransferCode(nazwaPlatnosci) {
-  const klub = String(clubId || "").trim().toUpperCase();
-  const numer = String(parseInt(String(numerZalogowanego || "").trim(), 10) || "").trim();
+function generateTransferCode(transferType, transferRef) {
+  const klub = String(clubId || "")
+    .trim()
+    .toUpperCase();
 
-  const txt = String(nazwaPlatnosci || "").toLowerCase();
+  const numer = String(
+    parseInt(
+      String(numerZalogowanego || "").trim(),
+      10
+    ) || ""
+  ).trim();
 
-  const typ =
-    txt.startsWith("składka") || txt.startsWith("skladka")
-      ? "S"
-      : "Z";
+  const typ = String(transferType || "")
+    .trim()
+    .toUpperCase();
 
-  const miesiace = {
-    "styczeń": "01",
-    "styczen": "01",
-    "luty": "02",
-    "marzec": "03",
-    "kwiecień": "04",
-    "kwiecien": "04",
-    "maj": "05",
-    "czerwiec": "06",
-    "lipiec": "07",
-    "sierpień": "08",
-    "sierpien": "08",
-    "wrzesień": "09",
-    "wrzesien": "09",
-    "październik": "10",
-    "pazdziernik": "10",
-    "listopad": "11",
-    "grudzień": "12",
-    "grudzien": "12"
-  };
+  const ref = String(transferRef || "")
+    .replace(/\D/g, "")
+    .trim();
 
-  const rokMatch = txt.match(/20\d{2}/);
-  const rok = rokMatch ? rokMatch[0] : "";
-
-  let miesiac = "01";
-  for (const m in miesiace) {
-    if (txt.includes(m)) {
-      miesiac = miesiace[m];
-      break;
-    }
+  if (!klub || !numer) {
+    return "";
   }
+
+  if (!["S", "Z", "L"].includes(typ)) {
+    return "";
+  }
+
+  if (!ref) {
+    return "";
+  }
+
+  return `${klub}-${numer}-${typ}-${ref}`;
+}
 
   const period = rok + miesiac;
 
@@ -12411,7 +12419,7 @@ function renderPlatnosciListInto_(containerId, lista, suma, mode) {
     const payBtn = isCurrentDebtMode
       ? `<button class="full-btn playerPayBtn"
             style="margin-top:10px;"
-            onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)})">
+            onclick="playerPayNow('${encodeURIComponent(p?.nazwa || "")}', ${Number(p?.kwota || 0)}, '${String(p?.transferType || "")}', '${String(p?.transferRef || "")}')">
             Zapłać teraz
          </button>`
       : "";
