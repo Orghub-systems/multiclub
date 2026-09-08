@@ -11943,13 +11943,6 @@ function generateTransferCode(transferType, transferRef) {
   }
 
   return `${klub}-${numer}-${typ}-${ref}`;
-}
-
-  const period = rok + miesiac;
-
-  // WAŻNE: separator "|" rozwala tytuł w QR,
-  // więc używamy "-" zamiast "|"
-  return `${klub}-${numer}-${typ}-${period}`;
 } 
 
 function closePlayerPaymentPopup() {
