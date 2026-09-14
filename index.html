@@ -29032,7 +29032,8 @@ function adminUpdateSystemPrzelewyCount_(statusText) {
       const sourceType = String(item.sourceType || "current");
       const outstanding = roundMoney_(item.outstandingAmount || 0);
       const partialAllowed = item.partialAllowed === true;
-      const typeLabel = String(item.typ || "") === "skladka" ? "Składka" : "Zajęcia dodatkowe";
+      const itemType = String(item.typ || "").trim();
+      const typeLabel = itemType === "skladka" ? "Składka" : itemType === "lista" ? "Lista płatności" : "Zajęcia dodatkowe";
       const archive = sourceType === "archive";
 
       return `
