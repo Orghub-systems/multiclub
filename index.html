@@ -23008,6 +23008,7 @@ async function adminPokazZawodnikow() {
 
     box.innerHTML = lista.map(z => {
       const nr = String(z.nr || "").trim();
+      const memberId = String(z.member_id || z.memberId || "").trim();
       const nazwSafe = String(z.nazwisko || "").replace(/'/g, "\\'");
       const nazw = String(z.nazwisko || "");
       const joinDate = String(z.joinDate || "");
@@ -23016,6 +23017,7 @@ async function adminPokazZawodnikow() {
       return `
         <div class="card"
              data-admin-player-nr="${nr}"
+             data-admin-player-id="${memberId}"
              style="text-align:left; cursor:pointer;"
              onclick="adminOpenZawodnik('${nr}','${nazwSafe}','${joinDateSafe}')">
 
@@ -23029,7 +23031,7 @@ async function adminPokazZawodnikow() {
             
               <button
                 style="background:#700; border:1px solid #a00; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer;"
-                onclick="event.stopPropagation(); adminOpenDeletePopup('${nr}','${nazwSafe}')">
+                onclick="event.stopPropagation(); adminOpenDeletePopup('${memberId}','${nr}','${nazwSafe}')">
                 Usuń zawodnika
               </button>
             
@@ -23379,20 +23381,42 @@ async function trainerSavePlayerVisibleNumber_() {
 }
   
   // ===== ADMIN: USUWANIE ZAWODNIKA (POPUP TAK/NIE) =====
-function adminOpenDeletePopup(nr, nazwisko) {
+function adminOpenDeletePopup(
+  memberId,
+  nr,
+  nazwisko
+) {
+  const id = String(memberId || "").trim();
   const numer = String(nr || "").trim();
-  if (!numer) return;
+  const nazwa = String(nazwisko || "").trim();
 
+  if (!id) {
+    alert(
+      "Brak jednoznacznego identyfikatora zawodnika. " +
+      "Odśwież listę i spróbuj ponownie."
+    );
+    return;
+  }
+
+  window.__adminDeleteMemberId = id;
   window.__adminDeleteNr = numer;
-  window.__adminDeleteNazw = String(nazwisko || "").trim();
+  window.__adminDeleteNazw = nazwa;
 
-  const txt = document.getElementById("adminDeletePopupText");
+  const txt = document.getElementById(
+    "adminDeletePopupText"
+  );
+
   if (txt) {
-    txt.textContent = "Czy napewno chcesz usunąć zawodnika ?";
+    txt.textContent =
+      "Czy na pewno chcesz usunąć zawodnika " +
+      (nazwa || numer) +
+      "?";
   }
 
   showModal("adminDeletePopup");
-  pushPaymentModalHistoryState_("adminDeletePopup");
+  pushPaymentModalHistoryState_(
+    "adminDeletePopup"
+  );
 }
 
 function adminCloseDeletePopup() {
@@ -23407,7 +23431,31 @@ function adminCloseDeletePopup() {
 }
   
 async function adminDoDeletePlayer() {
-  const numer = String(window.__adminDeleteNr || "").trim();
+  const memberId = String(
+  window.__adminDeleteMemberId || ""
+).trim();
+
+const numer = String(
+  window.__adminDeleteNr || ""
+).trim();
+
+const nazwisko = String(
+  window.__adminDeleteNazw || ""
+).trim();
+
+if (!memberId) {
+  hideModal("adminDeletePopup");
+
+  window.__adminDeleteMemberId = "";
+  window.__adminDeleteNr = "";
+  window.__adminDeleteNazw = "";
+
+  alert(
+    "Usuwanie zatrzymane: brak jednoznacznego ID zawodnika."
+  );
+
+  return;
+}
   if (!numer) {
     hideModal("adminDeletePopup");
     window.__adminDeleteNr = "";
@@ -23423,7 +23471,12 @@ async function adminDoDeletePlayer() {
   }
  
   try {
-    const r = await apiClubPost({ action: "adminDeletePlayer", numer });
+    const r = await apiClubPost({
+  action: "adminDeletePlayer",
+  memberId,
+  numer,
+  nazwisko
+});
  
     if (!r || !(r.success || r.ok)) {
       alert("❌ Nie udało się usunąć: " + (r?.error || r?.message || JSON.stringify(r)));
@@ -23431,18 +23484,27 @@ async function adminDoDeletePlayer() {
     }
  
     hideModal("adminDeletePopup");
+    window.__adminDeleteMemberId = "";
     window.__adminDeleteNr = "";
     window.__adminDeleteNazw = "";
  
     // Aktualizuj cache listy zawodników bez usuniętego zawodnika
     if (Array.isArray(window.__adminPlayersListCache)) {
-      window.__adminPlayersListCache = window.__adminPlayersListCache.filter(z =>
-        String(z?.nr || "").trim() !== numer
+    window.__adminPlayersListCache =
+      window.__adminPlayersListCache.filter(
+        z =>
+          String(
+            z?.member_id ||
+            z?.memberId ||
+            ""
+          ).trim() !== memberId
       );
     }
  
     // Usuń z DOM
-    const rowEl = document.querySelector(`[data-admin-player-nr="${numer}"]`);
+        const rowEl = document.querySelector(
+      `[data-admin-player-id="${memberId}"]`
+    );
     if (rowEl) rowEl.remove();
  
     const box = document.getElementById("adminListaZawodnikow");
