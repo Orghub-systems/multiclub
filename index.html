@@ -26985,6 +26985,7 @@ function renderAdminPayments_(res) {
 
   const skladki = items.filter(x => x.typ === "skladka");
   const zajecia = items.filter(x => x.typ === "zajecia");
+  const listy = items.filter(x => x.typ === "lista");
 
   const emptyInfo = items.length === 0
     ? `<div class="card" style="background:#111; margin-top:12px;">
@@ -26997,6 +26998,7 @@ function renderAdminPayments_(res) {
 
     ${items.length ? renderPaymentsSection_("Składki", skladki) : ""}
     ${items.length ? renderPaymentsSection_("Zajęcia dodatkowe", zajecia) : ""}
+    ${items.length ? renderPaymentsSection_("Listy płatności", listy) : ""}
   `;
 
   if (msg) msg.textContent = "";
@@ -27061,6 +27063,13 @@ function renderPaymentTile_(p) {
 
   const typTxt = String(p.typ || "").trim();
 
+  const paymentTypeLabel =
+  p.typ === "skladka"
+    ? "Składka"
+    : p.typ === "lista"
+      ? "Lista płatności"
+      : "Zajęcia dodatkowe";
+
   // Bezpieczny tekst do HTML
   const labelTxt = String(p.label || p.nazwa || "");
   const labelHtml = labelTxt
@@ -27089,7 +27098,7 @@ function renderPaymentTile_(p) {
     <div class="card" style="background:${bg}; text-align:left; margin-top:10px;">
       <div style="display:flex; justify-content:space-between; gap:10px;">
         <div>
-          <div style="opacity:.9; font-size:14px;">${p.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe"}</div>
+          <div style="opacity:.9; font-size:14px;">${paymentTypeLabel}</div>
           <div style="font-size:18px; font-weight:800;">${labelHtml}</div>
           ${partialInfo}
         </div>
@@ -27147,7 +27156,11 @@ function adminConfirmPayment(colNum, label, typ) {
     return;
   }
 
-  if (payType !== "skladka" && payType !== "zajecia") {
+  if (
+    payType !== "skladka" &&
+    payType !== "zajecia" &&
+    payType !== "lista"
+  ) {
     alert("❌ Nieznany typ płatności.");
     return;
   }
@@ -28257,7 +28270,12 @@ function renderAdminDebtTile_(p) {
   const zaleglosci = Array.isArray(p.zaleglosci) ? p.zaleglosci : [];
   
   const detailsHtml = zaleglosci.map(z => {
-    const typ = z.typ === "skladka" ? "Składka" : "Zajęcia dodatkowe";
+    const typ =
+  z.typ === "skladka"
+    ? "Składka"
+    : z.typ === "lista"
+      ? "Lista płatności"
+      : "Zajęcia dodatkowe";
     const labelTxt = String(z.label || "");
     const label = escapeHtml_(labelTxt);
     const brakuje = Number(z.brakuje || 0);
