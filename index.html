@@ -14460,7 +14460,6 @@ if (!nr) {
   }
 }
 
-
 function renderPlayerStatsMonthCalendar_(
   payload,
   options = {}
@@ -14502,6 +14501,11 @@ function renderPlayerStatsMonthCalendar_(
   const dayDataAvailable =
     payload?.dayDataAvailable === true;
 
+  const totalAttendanceCount =
+  dayDataAvailable
+    ? calculatedAttendanceCount
+    : attendanceCount;
+
   const parts =
     monthStart.split("-").map(Number);
 
@@ -14526,13 +14530,29 @@ function renderPlayerStatsMonthCalendar_(
 
   if (meta) {
     meta.textContent =
-      `Sezon ${seasonLabel} • ${attendanceCount} treningów`;
+      `Sezon ${seasonLabel} • Odbyte treningi: ${totalAttendanceCount}`;
   }
 
   const days =
     Array.isArray(payload?.days)
       ? payload.days
       : [];
+
+  const billableAttendanceCount =
+  days.reduce(
+    (sum, row) =>
+      sum +
+      (Number(row?.billableEventCount) || 0),
+    0
+  );
+
+const nonBillableAttendanceCount =
+  days.reduce(
+    (sum, row) =>
+      sum +
+      (Number(row?.nonBillableEventCount) || 0),
+    0
+  );
 
 const attendanceByDate = new Map();
 
@@ -14692,19 +14712,21 @@ for (const row of days) {
       `
       : "";
 
-  const consistencyHtml =
-    dayDataAvailable &&
-    calculatedAttendanceCount !==
-      attendanceCount
-      ? `
-        <div class="player-stats-calendar-info">
-          ⚠ Dane dzienne:
-          ${calculatedAttendanceCount},
-          wynik miesięczny:
-          ${attendanceCount}.
-        </div>
-      `
-      : "";
+    const attendanceSummaryHtml =
+      dayDataAvailable
+        ? `
+          <div class="player-stats-calendar-info">
+            Odbyte treningi:
+            <b>${totalAttendanceCount}</b>
+            <br>
+            Rozliczane:
+            <b>${billableAttendanceCount}</b>
+            •
+            Poza rozliczeniem:
+            <b>${nonBillableAttendanceCount}</b>
+          </div>
+        `
+        : "";
 
   calendar.innerHTML = `
     <div class="player-stats-calendar-wrap">
@@ -14728,7 +14750,7 @@ for (const row of days) {
           : ""
       }
 
-      ${consistencyHtml}
+      ${attendanceSummaryHtml}
 
     </div>
   `;
