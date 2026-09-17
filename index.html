@@ -14712,21 +14712,18 @@ for (const row of days) {
       `
       : "";
 
-    const attendanceSummaryHtml =
-      dayDataAvailable
-        ? `
-          <div class="player-stats-calendar-info">
-            Odbyte treningi:
-            <b>${totalAttendanceCount}</b>
-            <br>
-            Rozliczane:
-            <b>${billableAttendanceCount}</b>
-            •
-            Poza rozliczeniem:
-            <b>${nonBillableAttendanceCount}</b>
-          </div>
-        `
-        : "";
+  const attendanceSummaryHtml =
+    dayDataAvailable
+      ? `
+        <div class="player-stats-calendar-info">
+          Treningi:
+          <b>${totalAttendanceCount}</b>
+          <br>
+          Rozliczane:
+          <b>${billableAttendanceCount}</b>
+        </div>
+      `
+      : "";
 
   calendar.innerHTML = `
     <div class="player-stats-calendar-wrap">
