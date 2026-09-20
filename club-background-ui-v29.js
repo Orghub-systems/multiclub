@@ -268,11 +268,11 @@
         '<div style="text-align:left;margin-top:14px;font-size:13px;font-weight:800;">Pozycja zdjęcia</div>' +
         '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px;">' +
           '<button type="button" class="full-btn alt" data-admin-background-position="top" ' +
-            'onclick="adminVisualBackgroundPosition_(\\'top\\')" style="margin:0;padding:10px 4px;">Góra</button>' +
+            'onclick="adminVisualBackgroundPosition_(&quot;top&quot;)" style="margin:0;padding:10px 4px;">Góra</button>' +
           '<button type="button" class="full-btn alt" data-admin-background-position="center" ' +
-            'onclick="adminVisualBackgroundPosition_(\\'center\\')" style="margin:0;padding:10px 4px;">Środek</button>' +
+            'onclick="adminVisualBackgroundPosition_(&quot;center&quot;)" style="margin:0;padding:10px 4px;">Środek</button>' +
           '<button type="button" class="full-btn alt" data-admin-background-position="bottom" ' +
-            'onclick="adminVisualBackgroundPosition_(\\'bottom\\')" style="margin:0;padding:10px 4px;">Dół</button>' +
+            'onclick="adminVisualBackgroundPosition_(&quot;bottom&quot;)" style="margin:0;padding:10px 4px;">Dół</button>' +
         '</div>' +
         '<button id="adminVisualBackgroundSaveBtn" class="full-btn" type="button" style="margin-top:16px;" ' +
           'onclick="adminSaveClubBackground_()" disabled>Zapisz tło</button>' +
