@@ -34664,158 +34664,218 @@ async function sendManualPush() {
     }
   }
 
-  window.adminSaveClubBackground_ =
-    async function () {
-      var d = draft();
+window.adminSaveClubBackground_ =
+  async function () {
 
-      if (!d) return;
+    var d = draft();
+    if (!d) return;
+
+    if (
+      !clean(d.currentUrl) &&
+      !d.imageChanged
+    ) {
+      alert(
+        "❌ Najpierw wybierz zdjęcie tła."
+      );
+      return;
+    }
+
+    // ==============================
+    // SESJA ADMINA
+    // ==============================
+
+    var session =
+      typeof loadAppSession_ === "function"
+        ? loadAppSession_()
+        : null;
+
+    var sessionToken =
+      String(
+        session?.sessionToken || ""
+      ).trim();
+
+    if (!sessionToken) {
+      alert(
+        "❌ Brak aktywnej sesji administratora. Zaloguj się ponownie."
+      );
+      return;
+    }
+
+    busy(
+      true,
+      "⏳ Zapisuję tło..."
+    );
+
+    try {
+
+      var res =
+        await window.apiClubPost({
+
+          action:
+            "adminSaveClubBackground",
+
+          sessionToken:
+            sessionToken,
+
+          imageData:
+            d.imageChanged
+              ? d.imageData
+              : "",
+
+          backgroundOverlay:
+            overlay(
+              d.overlay
+            ),
+
+          backgroundPosition:
+            position(
+              d.position
+            )
+        });
 
       if (
-        !clean(d.currentUrl) &&
-        !d.imageChanged
+        !res ||
+        res.success !== true
       ) {
-        alert(
-          "❌ Najpierw wybierz zdjęcie tła."
+        throw new Error(
+          (
+            res &&
+            res.error
+          ) ||
+          "Nie udało się zapisać tła."
         );
-
-        return;
       }
 
-      busy(
-        true,
-        "⏳ Zapisuję tło..."
+      var bg =
+        norm(res);
+
+      saveCache(bg);
+      applyBg(bg);
+
+      alert(
+        "✅ Zdjęcie tła zostało zapisane dla całego klubu."
       );
 
-      try {
-        var res =
-          await window.apiClubPost({
-            action:
-              "adminSaveClubBackground",
+      await window
+        .adminOpenClubVisualSettingsView();
 
-            imageData:
-              d.imageChanged
-                ? d.imageData
-                : "",
+    } catch (e) {
 
-            backgroundOverlay:
-              overlay(
-                d.overlay
-              ),
-
-            backgroundPosition:
-              position(
-                d.position
-              )
-          });
-
-        if (
-          !res ||
-          res.success !== true
-        ) {
-          throw new Error(
-            (
-              res &&
-              res.error
-            ) ||
-            "Nie udało się zapisać tła."
-          );
-        }
-
-        var bg =
-          norm(res);
-
-        saveCache(bg);
-        applyBg(bg);
-
-        alert(
-          "✅ Zdjęcie tła zostało zapisane dla całego klubu."
-        );
-
-        await window
-          .adminOpenClubVisualSettingsView();
-
-      } catch (e) {
-        alert(
-          "❌ " +
-          clean(
-            e.message || e
-          )
-        );
-      } finally {
-        busy(false);
-      }
-    };
-
-  window.adminDeleteClubBackground_ =
-    async function () {
-      var d = draft();
-
-      if (
-        !d ||
-        !clean(
-          d.currentUrl
+      alert(
+        "❌ " +
+        clean(
+          e.message || e
         )
-      ) {
-        return;
-      }
-
-      if (
-        !confirm(
-          "Usunąć zdjęcie tła aplikacji dla całego klubu?"
-        )
-      ) {
-        return;
-      }
-
-      busy(
-        true,
-        "⏳ Usuwam..."
       );
 
-      try {
-        var res =
-          await window.apiClubPost({
-            action:
-              "adminDeleteClubBackground"
-          });
+    } finally {
 
-        if (
-          !res ||
-          res.success !== true
-        ) {
-          throw new Error(
-            (
-              res &&
-              res.error
-            ) ||
-            "Nie udało się usunąć tła."
-          );
-        }
+      busy(false);
 
-        var bg =
-          norm(res);
+    }
+  };
 
-        saveCache(bg);
-        applyBg(bg);
+window.adminDeleteClubBackground_ =
+  async function () {
 
-        alert(
-          "✅ Zdjęcie tła zostało usunięte."
+    var d = draft();
+
+    if (
+      !d ||
+      !clean(
+        d.currentUrl
+      )
+    ) {
+      return;
+    }
+
+    if (
+      !confirm(
+        "Usunąć zdjęcie tła aplikacji dla całego klubu?"
+      )
+    ) {
+      return;
+    }
+
+    // ==============================
+    // SESJA ADMINA
+    // ==============================
+
+    var session =
+      typeof loadAppSession_ === "function"
+        ? loadAppSession_()
+        : null;
+
+    var sessionToken =
+      String(
+        session?.sessionToken || ""
+      ).trim();
+
+    if (!sessionToken) {
+      alert(
+        "❌ Brak aktywnej sesji administratora. Zaloguj się ponownie."
+      );
+      return;
+    }
+
+    busy(
+      true,
+      "⏳ Usuwam..."
+    );
+
+    try {
+
+      var res =
+        await window.apiClubPost({
+
+          action:
+            "adminDeleteClubBackground",
+
+          sessionToken:
+            sessionToken
+        });
+
+      if (
+        !res ||
+        res.success !== true
+      ) {
+        throw new Error(
+          (
+            res &&
+            res.error
+          ) ||
+          "Nie udało się usunąć tła."
         );
-
-        await window
-          .adminOpenClubVisualSettingsView();
-
-      } catch (e) {
-        alert(
-          "❌ " +
-          clean(
-            e.message || e
-          )
-        );
-      } finally {
-        busy(false);
       }
-    };
+
+      var bg =
+        norm(res);
+
+      saveCache(bg);
+      applyBg(bg);
+
+      alert(
+        "✅ Zdjęcie tła zostało usunięte."
+      );
+
+      await window
+        .adminOpenClubVisualSettingsView();
+
+    } catch (e) {
+
+      alert(
+        "❌ " +
+        clean(
+          e.message || e
+        )
+      );
+
+    } finally {
+
+      busy(false);
+
+    }
+  };
 
   function updateDescription() {
     var view =
