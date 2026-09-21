@@ -1393,6 +1393,430 @@ input[type="number"] {
   font-weight: 800;
   text-align: left;
 }
+
+    /* =========================================================
+   ROLE DASHBOARD V1
+   Nowy ekran startowy zawodnika i trenera
+========================================================= */
+
+#playerMenuView.hub-dashboard,
+#trainerPanelView.hub-dashboard {
+  margin-top: 0 !important;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    16px
+    calc(104px + env(safe-area-inset-bottom));
+  text-align: left;
+}
+
+.hub-dashboard-inner {
+  width: min(540px, 100%);
+  margin: 0 auto;
+}
+
+
+/* =================== HEADER =================== */
+
+.hub-topbar {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) 54px;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.hub-club-logo {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  display: block;
+}
+
+.hub-topbar-text {
+  min-width: 0;
+}
+
+.hub-club-name {
+  font-size: 27px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-role-name {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 750;
+  color: rgba(255,255,255,.72);
+}
+
+.hub-header-bell {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  margin: 0;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(12,19,30,.78);
+  border: 1px solid rgba(255,255,255,.17);
+  color: #fff;
+
+  font-size: 25px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+
+.hub-bell-badge {
+  position: absolute;
+  right: -4px;
+  top: -5px;
+
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 2px solid #111;
+
+  background: #e53935;
+  color: #fff;
+
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+
+/* =================== NEXT EVENT =================== */
+
+.hub-next-card {
+  position: relative;
+  overflow: hidden;
+
+  margin: 0 0 18px 0;
+  padding: 19px 20px 18px 24px;
+
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.16);
+
+  background: rgba(9,18,31,.88);
+  box-shadow: 0 14px 38px rgba(0,0,0,.28);
+
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hub-next-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: #f3c748;
+}
+
+.hub-next-eyebrow {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.62);
+  margin-bottom: 7px;
+}
+
+.hub-next-title {
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.15;
+  margin-bottom: 15px;
+}
+
+.hub-event-row {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+
+  margin-top: 10px;
+
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.hub-event-icon {
+  font-size: 21px;
+  width: 26px;
+  text-align: center;
+}
+
+.hub-event-separator {
+  height: 1px;
+  background: rgba(255,255,255,.13);
+  margin: 16px 0 12px 0;
+}
+
+.hub-event-count {
+  font-size: 15px;
+  font-weight: 750;
+  color: rgba(255,255,255,.86);
+}
+
+.hub-event-cta {
+  width: 100%;
+  margin: 17px 0 0 0;
+  padding: 14px 12px;
+
+  border: none;
+  border-radius: 15px;
+
+  background: #f3c748;
+  color: #101010;
+
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.hub-event-cta.ok {
+  background: #f3c748;
+  color: #101010;
+}
+
+.hub-event-cta.warn {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.20);
+}
+
+.hub-next-card.is-empty {
+  opacity: .78;
+}
+
+
+/* =================== TILE GRID =================== */
+
+.hub-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hub-tile {
+  min-width: 0;
+  min-height: 128px;
+
+  margin: 0;
+  padding: 17px;
+
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  text-align: left;
+
+  border-radius: 19px;
+  border: 1px solid rgba(255,255,255,.16);
+
+  background: rgba(11,20,33,.86);
+  color: #fff;
+
+  box-shadow: 0 10px 28px rgba(0,0,0,.20);
+
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.hub-tile:active {
+  transform: scale(.985);
+}
+
+.hub-tile-top {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hub-tile-icon {
+  font-size: 31px;
+  line-height: 1;
+}
+
+.hub-tile-arrow {
+  font-size: 27px;
+  line-height: 1;
+  color: rgba(255,255,255,.45);
+}
+
+.hub-tile-title {
+  font-size: 18px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.hub-tile-meta {
+  margin-top: 5px;
+  min-height: 18px;
+
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 750;
+
+  color: rgba(255,255,255,.54);
+}
+
+.hub-tile-meta.ok {
+  color: #4bd77c;
+}
+
+.hub-tile-meta.warn {
+  color: #ffb15c;
+}
+
+.hub-tile-meta.danger {
+  color: #ff7373;
+}
+
+
+/* =================== BOTTOM BAR =================== */
+
+.hub-bottom-nav {
+  position: fixed;
+  z-index: 70;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  min-height: 78px;
+  padding:
+    8px
+    max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+
+  box-sizing: border-box;
+
+  background: rgba(5,12,22,.95);
+  border-top: 1px solid rgba(255,255,255,.13);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.hub-bottom-item {
+  height: 62px;
+  margin: 0;
+  padding: 5px 2px;
+
+  border: 0;
+  border-radius: 12px;
+
+  background: transparent;
+  color: rgba(255,255,255,.62);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: 800;
+  gap: 3px;
+}
+
+.hub-bottom-item .hub-bottom-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hub-bottom-item.active {
+  color: #f3c748;
+}
+
+.hub-bottom-item.active::after {
+  content: "";
+  width: 42px;
+  height: 3px;
+  border-radius: 999px;
+  background: #f3c748;
+  margin-top: 2px;
+}
+
+
+/* =================== ALERTY =================== */
+
+#playerMenuView #playerMedicalExamAlertBox {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 14px 0 !important;
+  border-radius: 17px !important;
+}
+
+#playerMenuView #playerMenuPushAlertWrap {
+  margin: 0 0 14px 0 !important;
+}
+
+
+/* =================== PARTNER =================== */
+
+#playerMenuView #clubAdContainer {
+  margin-top: 18px !important;
+  margin-bottom: 8px;
+}
+
+
+/* =================== SMALL PHONE =================== */
+
+@media (max-width: 380px) {
+
+  .hub-topbar {
+    grid-template-columns: 58px minmax(0,1fr) 48px;
+    gap: 10px;
+  }
+
+  .hub-club-logo {
+    width: 58px;
+    height: 58px;
+  }
+
+  .hub-club-name {
+    font-size: 23px;
+  }
+
+  .hub-tile {
+    padding: 14px;
+    min-height: 118px;
+  }
+
+  .hub-tile-title {
+    font-size: 16px;
+  }
+
+}
     
 </style>
   
@@ -2013,51 +2437,162 @@ if (buildChanged) {
 <!-- PLAYER MENU VIEW
      Główne menu zawodnika po zalogowaniu -->
     
-<div id="playerMenuView" class="container hidden">
-  
-  <div style="width:220px; margin:0 auto 25px auto; text-align:center;">
-    <div id="clubIdBadge_menu" style="font-size:32px; font-weight:900; letter-spacing:3px; line-height:1.1;"></div>
-  </div>
+<div id="playerMenuView" class="container hidden hub-dashboard">
 
-  <h1>
-  Panel zawodnika
-  <span
-    id="playerMedicalAlertBeacon"
-    style="
-      display:none;
-      margin-left:8px;
-      color:#ff1f1f;
-      filter:drop-shadow(0 0 8px rgba(255,0,0,.85));
-    "
-    title="Kończy się ważność badań lekarskich"
+  <!-- kompatybilność ze starą logiką -->
+  <div id="clubIdBadge_menu" class="hidden"></div>
+  <div id="playerNumerLabel" class="hidden"></div>
+
+  <!-- stary mechanizm powiadomień nadal ma swój element -->
+  <button
+    id="playerMenuNotificationsBtn"
+    class="hidden"
+    type="button"
+    onclick="openPlayerNotificationsView_()"
   >
-    🚨
-  </span>
-</h1>
+    Powiadomienia
+  </button>
 
-<div
-  id="playerMedicalExamAlertBox"
-  class="card"
-  style="
-    display:none;
-    background:#3a1414;
-    border:2px solid #ff5c5c;
-    box-shadow:0 0 18px rgba(255,92,92,.18);
-    color:#fff;
-    text-align:left;
-    margin-top:10px;
-    margin-bottom:14px;
-  "
-></div>
+  <div class="hub-dashboard-inner">
 
-  <div class="login-box">
-    <button class="full-btn" onclick="pokazPlatnosci()">💳 Płatności</button>
-    <button class="full-btn" onclick="pokazTreningi()">📅 Wydarzenia</button>
-    <button class="full-btn" onclick="pokazStatystyki()">📊 Statystyki</button>
+    <!-- ================= HEADER ================= -->
 
-    <button id="playerMenuNotificationsBtn" class="full-btn" onclick="openPlayerNotificationsView_()">🔔 Powiadomienia</button>
+    <header class="hub-topbar">
 
-    <div id="playerMenuPushAlertWrap" class="hidden" style="margin-top:12px; margin-bottom:8px;">
+      <img
+        id="hubPlayerClubLogo"
+        class="hub-club-logo"
+        src="icon-512.png"
+        alt="Logo klubu"
+      >
+
+      <div class="hub-topbar-text">
+
+        <div
+          id="hubPlayerClubName"
+          class="hub-club-name"
+        >
+          ORG HUB
+        </div>
+
+        <div class="hub-role-name">
+          Panel zawodnika
+
+          <span
+            id="playerMedicalAlertBeacon"
+            style="
+              display:none;
+              margin-left:5px;
+              color:#ff1f1f;
+              filter:drop-shadow(0 0 8px rgba(255,0,0,.85));
+            "
+            title="Kończy się ważność badań lekarskich"
+          >
+            🚨
+          </span>
+
+        </div>
+
+      </div>
+
+      <button
+        id="hubPlayerBellBtn"
+        class="hub-header-bell"
+        type="button"
+        onclick="openPlayerNotificationsView_()"
+        aria-label="Powiadomienia"
+      >
+        🔔
+
+        <span
+          id="hubPlayerNotificationBadge"
+          class="hub-bell-badge hidden"
+        >
+          0
+        </span>
+
+      </button>
+
+    </header>
+
+
+    <!-- ================= BADANIA ================= -->
+
+    <div
+      id="playerMedicalExamAlertBox"
+      class="card"
+      style="
+        display:none;
+        background:#3a1414;
+        border:2px solid #ff5c5c;
+        box-shadow:0 0 18px rgba(255,92,92,.18);
+        color:#fff;
+        text-align:left;
+      "
+    ></div>
+
+
+    <!-- ================= NEXT EVENT ================= -->
+
+    <section
+      id="hubPlayerNextEventCard"
+      class="hub-next-card"
+      onclick="pokazTreningi()"
+    >
+
+      <div class="hub-next-eyebrow">
+        Najbliższe wydarzenie
+      </div>
+
+      <div
+        id="hubPlayerNextTitle"
+        class="hub-next-title"
+      >
+        Ładowanie...
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">📅</div>
+        <div id="hubPlayerNextDate">—</div>
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">🕒</div>
+        <div id="hubPlayerNextTime">—</div>
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">📍</div>
+        <div id="hubPlayerNextPlace">—</div>
+      </div>
+
+      <div class="hub-event-separator"></div>
+
+      <div
+        id="hubPlayerNextCount"
+        class="hub-event-count"
+      >
+        —
+      </div>
+
+      <button
+        id="hubPlayerNextStatus"
+        class="hub-event-cta warn"
+        type="button"
+        onclick="event.stopPropagation(); pokazTreningi();"
+      >
+        Otwórz wydarzenia
+      </button>
+
+    </section>
+
+
+    <!-- ================= PUSH ALERT ================= -->
+
+    <div
+      id="playerMenuPushAlertWrap"
+      class="hidden"
+    >
       <div
         id="playerMenuPushAlertText"
         style="
@@ -2070,68 +2605,261 @@ if (buildChanged) {
           line-height:1.35;
           font-weight:800;
           text-align:center;
-          box-shadow:0 0 0 rgba(255,43,43,0);
         "
       >
         Subskrypcja powiadomień push wygasła, włącz ją ponownie.
       </div>
     </div>
 
-    <button class="full-btn alt" onclick="logoutAppSession_()" style="margin-top:10px;"> ⬅ Wyloguj</button>
-  </div>
 
-  <!-- REKLAMA / PARTNER KLUBU -->
-  <div id="clubAdContainer" style="display:none; margin-top:18px;">
-    <div style="width:100%; max-width:360px; margin:0 auto;">
+    <!-- ================= TILES ================= -->
 
-      <a id="clubAdLink" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:block;">
-        <div
-          id="clubAdBox"
-          style="
-            width:100%;
-            height:310px;
-            border-radius:18px;
-            overflow:hidden;
-            background:
-              linear-gradient(180deg,#232323 0%, #171717 100%);
-            background-size:cover;
-            background-position:center;
-            background-repeat:no-repeat;
-            box-shadow:0 10px 28px rgba(0,0,0,.45);
-            position:relative;
-          "
-        >
+    <div class="hub-tile-grid">
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="pokazPlatnosci()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">💳</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Płatności
+          </div>
+
           <div
-            id="clubAdFallbackText"
-            style="
-              position:absolute;
-              inset:0;
-              display:flex;
-              align-items:flex-start;
-              justify-content:center;
-              padding-top:16px;
-              color:#fff;
-              font-size:14px;
-              font-weight:700;
-              text-align:center;
-            "
+            id="hubPlayerPaymentsMeta"
+            class="hub-tile-meta"
           >
-            Partner klubu
+            Sprawdzam...
           </div>
         </div>
-      </a>
 
-      <div style="
-        font-size:12px;
-        opacity:.55;
-        margin-top:8px;
-        text-align:center;
-      ">
-        Partner klubu
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="pokazTreningi()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">📅</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Kalendarz
+          </div>
+
+          <div class="hub-tile-meta">
+            Treningi i mecze
+          </div>
+        </div>
+
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="pokazStatystyki()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">📊</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Statystyki
+          </div>
+
+          <div class="hub-tile-meta">
+            Obecności
+          </div>
+        </div>
+
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="openPlayerNotificationsView_()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">🔔</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Powiadomienia
+          </div>
+
+          <div
+            id="hubPlayerNotificationsMeta"
+            class="hub-tile-meta"
+          >
+            Sprawdzam...
+          </div>
+        </div>
+
+      </button>
+
+    </div>
+
+
+    <!-- ================= REKLAMA / PARTNER ================= -->
+
+    <div
+      id="clubAdContainer"
+      style="display:none;"
+    >
+
+      <div
+        style="
+          width:100%;
+          max-width:360px;
+          margin:0 auto;
+        "
+      >
+
+        <a
+          id="clubAdLink"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="
+            text-decoration:none;
+            display:block;
+          "
+        >
+
+          <div
+            id="clubAdBox"
+            style="
+              width:100%;
+              height:310px;
+              border-radius:18px;
+              overflow:hidden;
+
+              background:
+                linear-gradient(
+                  180deg,
+                  #232323 0%,
+                  #171717 100%
+                );
+
+              background-size:cover;
+              background-position:center;
+              background-repeat:no-repeat;
+
+              box-shadow:
+                0 10px 28px
+                rgba(0,0,0,.45);
+
+              position:relative;
+            "
+          >
+
+            <div
+              id="clubAdFallbackText"
+              style="
+                position:absolute;
+                inset:0;
+
+                display:flex;
+                align-items:flex-start;
+                justify-content:center;
+
+                padding-top:16px;
+
+                color:#fff;
+                font-size:14px;
+                font-weight:700;
+                text-align:center;
+              "
+            >
+              Partner klubu
+            </div>
+
+          </div>
+
+        </a>
+
+        <div
+          style="
+            font-size:12px;
+            opacity:.55;
+            margin-top:8px;
+            text-align:center;
+          "
+        >
+          Partner klubu
+        </div>
+
       </div>
 
     </div>
+
   </div>
+
+
+  <!-- ================= BOTTOM NAV ================= -->
+
+  <nav class="hub-bottom-nav">
+
+    <button
+      class="hub-bottom-item active"
+      type="button"
+      onclick="goToView('playerMenuView', { replace:true })"
+    >
+      <span class="hub-bottom-icon">⌂</span>
+      <span>Start</span>
+    </button>
+
+
+    <button
+      class="hub-bottom-item"
+      type="button"
+      onclick="pokazTreningi()"
+    >
+      <span class="hub-bottom-icon">📅</span>
+      <span>Kalendarz</span>
+    </button>
+
+
+    <button
+      class="hub-bottom-item"
+      type="button"
+      onclick="pokazStatystyki()"
+    >
+      <span class="hub-bottom-icon">📊</span>
+      <span>Statystyki</span>
+    </button>
+
+
+    <button
+      class="hub-bottom-item"
+      type="button"
+      onclick="logoutAppSession_()"
+    >
+      <span class="hub-bottom-icon">⏻</span>
+      <span>Wyloguj</span>
+    </button>
+
+  </nav>
 
 </div>
     
@@ -2417,28 +3145,271 @@ if (buildChanged) {
 <!-- TRAINER PANEL VIEW
      Główne menu trenera -->
     
-    <div id="trainerPanelView" class="container hidden">
-      <h1>
-        Panel trenera
-        <span
-          id="trainerMedicalAlertBeacon"
-          style="
-            display:none;
-            margin-left:8px;
-            color:#ff1f1f;
-            filter:drop-shadow(0 0 8px rgba(255,0,0,.85));
-          "
-          title="Zawodnikom kończy się ważność badań lekarskich"
+<div id="trainerPanelView" class="container hidden hub-dashboard">
+
+  <div class="hub-dashboard-inner">
+
+    <!-- ================= HEADER ================= -->
+
+    <header class="hub-topbar">
+
+      <img
+        id="hubTrainerClubLogo"
+        class="hub-club-logo"
+        src="icon-512.png"
+        alt="Logo klubu"
+      >
+
+      <div class="hub-topbar-text">
+
+        <div
+          id="hubTrainerClubName"
+          class="hub-club-name"
         >
-          🚨
-        </span>
-      </h1>
-      <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
-      <button class="full-btn" onclick="goToView('trainerWydarzeniaView')">🏒 Wydarzenia</button>
-      <button class="full-btn" onclick="openManualPushView('trainer')">🔔 Powiadomienia</button>
-      <button class="full-btn" onclick="trainerPokazRaportObecnosci()">📋 Raport obecności</button>
-      <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
+          ORG HUB
+        </div>
+
+        <div class="hub-role-name">
+          Panel trenera
+
+          <span
+            id="trainerMedicalAlertBeacon"
+            style="
+              display:none;
+              margin-left:5px;
+              color:#ff1f1f;
+              filter:drop-shadow(0 0 8px rgba(255,0,0,.85));
+            "
+            title="Zawodnikom kończy się ważność badań lekarskich"
+          >
+            🚨
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <button
+        class="hub-header-bell"
+        type="button"
+        onclick="openManualPushView('trainer')"
+        aria-label="Powiadomienia"
+      >
+        🔔
+      </button>
+
+    </header>
+
+
+    <!-- ================= NEXT EVENT ================= -->
+
+    <section
+      id="hubTrainerNextEventCard"
+      class="hub-next-card"
+      onclick="trainerShowCurrentEvents_()"
+    >
+
+      <div class="hub-next-eyebrow">
+        Najbliższe wydarzenie
+      </div>
+
+      <div
+        id="hubTrainerNextTitle"
+        class="hub-next-title"
+      >
+        Ładowanie...
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">📅</div>
+        <div id="hubTrainerNextDate">—</div>
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">🕒</div>
+        <div id="hubTrainerNextTime">—</div>
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">📍</div>
+        <div id="hubTrainerNextPlace">—</div>
+      </div>
+
+      <div class="hub-event-separator"></div>
+
+      <div
+        id="hubTrainerNextCount"
+        class="hub-event-count"
+      >
+        —
+      </div>
+
+      <button
+        class="hub-event-cta"
+        type="button"
+        onclick="
+          event.stopPropagation();
+          trainerShowCurrentEvents_();
+        "
+      >
+        Otwórz wydarzenia
+      </button>
+
+    </section>
+
+
+    <!-- ================= TILES ================= -->
+
+    <div class="hub-tile-grid">
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="trainerPokazZawodnicy()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">👥</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Zawodnicy
+          </div>
+
+          <div class="hub-tile-meta">
+            Lista zawodników
+          </div>
+        </div>
+
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="trainerPokazWydarzenia()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">🏒</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Wydarzenia
+          </div>
+
+          <div class="hub-tile-meta">
+            Bieżące i archiwalne
+          </div>
+        </div>
+
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="openManualPushView('trainer')"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">🔔</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Powiadomienia
+          </div>
+
+          <div class="hub-tile-meta">
+            Wyślij wiadomość
+          </div>
+        </div>
+
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="trainerPokazRaportObecnosci()"
+      >
+
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">📋</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+
+        <div>
+          <div class="hub-tile-title">
+            Raport obecności
+          </div>
+
+          <div class="hub-tile-meta">
+            Twoje treningi
+          </div>
+        </div>
+
+      </button>
+
     </div>
+
+  </div>
+
+
+  <!-- ================= BOTTOM NAV ================= -->
+
+  <nav class="hub-bottom-nav">
+
+    <button
+      class="hub-bottom-item active"
+      type="button"
+      onclick="goToView('trainerPanelView', { replace:true })"
+    >
+      <span class="hub-bottom-icon">⌂</span>
+      <span>Start</span>
+    </button>
+
+
+    <button
+      class="hub-bottom-item"
+      type="button"
+      onclick="trainerPokazWydarzenia()"
+    >
+      <span class="hub-bottom-icon">📅</span>
+      <span>Wydarzenia</span>
+    </button>
+
+
+    <button
+      class="hub-bottom-item"
+      type="button"
+      onclick="trainerPokazZawodnicy()"
+    >
+      <span class="hub-bottom-icon">👥</span>
+      <span>Zawodnicy</span>
+    </button>
+
+
+    <button
+      class="hub-bottom-item"
+      type="button"
+      onclick="logoutAppSession_()"
+    >
+      <span class="hub-bottom-icon">⏻</span>
+      <span>Wyloguj</span>
+    </button>
+
+  </nav>
+
+</div>v>
 
 <!-- TRAINER PLAYERS VIEW
      Lista zawodników dostępna dla trenera -->
@@ -34937,6 +35908,1472 @@ window.adminDeleteClubBackground_ =
 
 })();
 
+/* =========================================================
+   ROLE DASHBOARD V1
+   Panel zawodnika + panel trenera
+========================================================= */
+
+
+function hubSetText_(id, value) {
+  const el = document.getElementById(id);
+
+  if (el) {
+    el.textContent =
+      String(
+        value == null
+          ? ""
+          : value
+      );
+  }
+}
+
+
+function hubSetTileMeta_(
+  id,
+  text,
+  state
+) {
+  const el =
+    document.getElementById(id);
+
+  if (!el) return;
+
+  el.textContent =
+    String(text || "");
+
+  el.classList.remove(
+    "ok",
+    "warn",
+    "danger"
+  );
+
+  if (state) {
+    el.classList.add(state);
+  }
+}
+
+
+/* =========================================================
+   IDENTYFIKACJA KLUBU
+========================================================= */
+
+function hubApplyClubIdentity_() {
+
+  let theme = null;
+
+  try {
+    theme =
+      typeof loadTheme_ === "function"
+        ? loadTheme_()
+        : null;
+  } catch (e) {
+    theme = null;
+  }
+
+  const clubKey =
+    String(
+      window.clubId ||
+      (
+        typeof clubId !== "undefined"
+          ? clubId
+          : ""
+      ) ||
+      ""
+    )
+      .trim()
+      .replace(/_/g, " ");
+
+  const clubName =
+    String(
+      theme?.clubName ||
+      clubKey ||
+      "ORG HUB"
+    ).trim();
+
+  const logoUrl =
+    String(
+      theme?.logoUrl ||
+      "icon-512.png"
+    ).trim();
+
+
+  [
+    "hubPlayerClubName",
+    "hubTrainerClubName"
+  ].forEach(function (id) {
+
+    const el =
+      document.getElementById(id);
+
+    if (el) {
+      el.textContent =
+        clubName.toUpperCase();
+    }
+
+  });
+
+
+  [
+    "hubPlayerClubLogo",
+    "hubTrainerClubLogo"
+  ].forEach(function (id) {
+
+    const img =
+      document.getElementById(id);
+
+    if (!img) return;
+
+    img.style.visibility =
+      "visible";
+
+    img.onerror = function () {
+      this.src = "icon-512.png";
+      this.onerror = null;
+    };
+
+    img.src =
+      logoUrl || "icon-512.png";
+
+  });
+}
+
+
+/* =========================================================
+   DATA WYDARZENIA
+========================================================= */
+
+function hubParseDateYmd_(value) {
+
+  let raw =
+    String(value || "").trim();
+
+  if (!raw) return "";
+
+  /*
+   * Jeśli dostaniemy zakres:
+   * 22.09.2026 - 23.09.2026
+   * interesuje nas pierwsza data.
+   */
+  if (raw.includes(" - ")) {
+    raw =
+      String(
+        raw.split(" - ")[0] || ""
+      ).trim();
+  }
+
+
+  if (
+    /^\d{4}-\d{2}-\d{2}$/.test(raw)
+  ) {
+    return raw;
+  }
+
+
+  let match =
+    raw.match(
+      /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/
+    );
+
+  if (match) {
+    return (
+      match[3] +
+      "-" +
+      String(match[2]).padStart(2, "0") +
+      "-" +
+      String(match[1]).padStart(2, "0")
+    );
+  }
+
+
+  return "";
+}
+
+
+function hubNormalizeTime_(value) {
+
+  const raw =
+    String(value || "").trim();
+
+  const match =
+    raw.match(
+      /^(\d{1,2})[:.](\d{2})/
+    );
+
+  if (!match) {
+    return "";
+  }
+
+  return (
+    String(match[1]).padStart(2, "0") +
+    ":" +
+    match[2]
+  );
+}
+
+
+function hubDateTimeTs_(
+  dateValue,
+  timeValue
+) {
+
+  const ymd =
+    hubParseDateYmd_(dateValue);
+
+  if (!ymd) {
+    return NaN;
+  }
+
+  const parts =
+    ymd.split("-").map(Number);
+
+  const time =
+    hubNormalizeTime_(timeValue);
+
+  let hour = 0;
+  let minute = 0;
+
+  if (time) {
+    const tp =
+      time.split(":").map(Number);
+
+    hour = tp[0] || 0;
+    minute = tp[1] || 0;
+  }
+
+  return new Date(
+    parts[0],
+    parts[1] - 1,
+    parts[2],
+    hour,
+    minute,
+    0,
+    0
+  ).getTime();
+}
+
+
+function hubEventStartTs_(event) {
+
+  return hubDateTimeTs_(
+    event?.data,
+    event?.godzStart || "00:00"
+  );
+}
+
+
+function hubEventEndTs_(event) {
+
+  const startTs =
+    hubEventStartTs_(event);
+
+  const endDate =
+    event?.dataKoniec ||
+    event?.data;
+
+  let endTs =
+    hubDateTimeTs_(
+      endDate,
+      event?.godzKoniec ||
+      event?.godzStart ||
+      "23:59"
+    );
+
+  /*
+   * Wydarzenie przez północ.
+   */
+  if (
+    Number.isFinite(startTs) &&
+    Number.isFinite(endTs) &&
+    endTs < startTs
+  ) {
+    endTs += 24 * 60 * 60 * 1000;
+  }
+
+  return endTs;
+}
+
+
+function hubEventVisible_(event) {
+
+  const value =
+    event?.widocznoscWApce ??
+    event?.widocznyWApce ??
+    event?.visible ??
+    event?.appVisible;
+
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return true;
+  }
+
+  if (value === true || value === 1) {
+    return true;
+  }
+
+  const txt =
+    String(value)
+      .trim()
+      .toLowerCase();
+
+  return ![
+    "0",
+    "false",
+    "no",
+    "nie"
+  ].includes(txt);
+}
+
+
+function hubFindNextEvent_(list) {
+
+  const now =
+    Date.now();
+
+  return (
+    Array.isArray(list)
+      ? list
+      : []
+  )
+    .filter(function (event) {
+
+      if (
+        !hubEventVisible_(event)
+      ) {
+        return false;
+      }
+
+      const endTs =
+        hubEventEndTs_(event);
+
+      if (
+        Number.isFinite(endTs)
+      ) {
+        return endTs >= now;
+      }
+
+      const startTs =
+        hubEventStartTs_(event);
+
+      return (
+        Number.isFinite(startTs) &&
+        startTs >= now
+      );
+    })
+    .sort(function (a, b) {
+
+      const aTs =
+        hubEventStartTs_(a);
+
+      const bTs =
+        hubEventStartTs_(b);
+
+      return (
+        (
+          Number.isFinite(aTs)
+            ? aTs
+            : Number.MAX_SAFE_INTEGER
+        ) -
+        (
+          Number.isFinite(bTs)
+            ? bTs
+            : Number.MAX_SAFE_INTEGER
+        )
+      );
+
+    })[0] || null;
+}
+
+
+function hubFormatEventDate_(event) {
+
+  const ymd =
+    hubParseDateYmd_(
+      event?.data
+    );
+
+  if (!ymd) {
+
+    return [
+      event?.dzien,
+      event?.data
+    ]
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  const p =
+    ymd.split("-").map(Number);
+
+  const date =
+    new Date(
+      p[0],
+      p[1] - 1,
+      p[2]
+    );
+
+  let label =
+    new Intl.DateTimeFormat(
+      "pl-PL",
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      }
+    ).format(date);
+
+  if (label) {
+    label =
+      label.charAt(0).toUpperCase() +
+      label.slice(1);
+  }
+
+  return label;
+}
+
+
+/* =========================================================
+   PLAYER NEXT EVENT
+========================================================= */
+
+function hubRenderPlayerNextEvent_(event) {
+
+  const card =
+    document.getElementById(
+      "hubPlayerNextEventCard"
+    );
+
+  const status =
+    document.getElementById(
+      "hubPlayerNextStatus"
+    );
+
+  if (!card || !status) {
+    return;
+  }
+
+
+  if (!event) {
+
+    card.classList.add(
+      "is-empty"
+    );
+
+    hubSetText_(
+      "hubPlayerNextTitle",
+      "Brak nadchodzących wydarzeń"
+    );
+
+    hubSetText_(
+      "hubPlayerNextDate",
+      "—"
+    );
+
+    hubSetText_(
+      "hubPlayerNextTime",
+      "—"
+    );
+
+    hubSetText_(
+      "hubPlayerNextPlace",
+      "—"
+    );
+
+    hubSetText_(
+      "hubPlayerNextCount",
+      "Sprawdź kalendarz klubu"
+    );
+
+    status.textContent =
+      "Otwórz kalendarz";
+
+    status.className =
+      "hub-event-cta warn";
+
+    return;
+  }
+
+
+  card.classList.remove(
+    "is-empty"
+  );
+
+
+  const isCallUp =
+    !!(
+      event?.powolaniaMode ||
+      event?.powolanieMode ||
+      event?.trybPowolania ||
+      String(event?.tryb || "")
+        .toLowerCase()
+        .includes("powo")
+    );
+
+
+  const accepted =
+    event?.zaakceptowalPowolanie === true ||
+    event?.accepted === true;
+
+
+  const registered =
+    event?.zapisany === true ||
+    event?.zapisany === 1 ||
+    String(event?.zapisany || "")
+      .toLowerCase() === "true";
+
+
+  const count =
+    Number(
+      isCallUp
+        ? (
+            event?.powolanych ??
+            event?.zapisanych ??
+            0
+          )
+        : (
+            event?.zapisanych ??
+            0
+          )
+    );
+
+
+  hubSetText_(
+    "hubPlayerNextTitle",
+    event?.rodzaj ||
+    "Wydarzenie"
+  );
+
+
+  hubSetText_(
+    "hubPlayerNextDate",
+    hubFormatEventDate_(event)
+  );
+
+
+  hubSetText_(
+    "hubPlayerNextTime",
+    [
+      event?.godzStart,
+      event?.godzKoniec
+    ]
+      .filter(Boolean)
+      .join(" – ") ||
+    "—"
+  );
+
+
+  hubSetText_(
+    "hubPlayerNextPlace",
+    event?.miejsce ||
+    "Miejsce nie podane"
+  );
+
+
+  hubSetText_(
+    "hubPlayerNextCount",
+
+    isCallUp
+      ? (
+          count +
+          " powołanych"
+        )
+      : (
+          count +
+          " zapisanych"
+        )
+  );
+
+
+  if (isCallUp) {
+
+    if (accepted) {
+
+      status.textContent =
+        "✓ Powołanie zaakceptowane";
+
+      status.className =
+        "hub-event-cta ok";
+
+    } else {
+
+      status.textContent =
+        "Odpowiedz na powołanie";
+
+      status.className =
+        "hub-event-cta warn";
+
+    }
+
+    return;
+  }
+
+
+  if (registered) {
+
+    status.textContent =
+      "✓ Jesteś zapisany";
+
+    status.className =
+      "hub-event-cta ok";
+
+  } else {
+
+    status.textContent =
+      "Przejdź do zapisów";
+
+    status.className =
+      "hub-event-cta warn";
+
+  }
+}
+
+
+/* =========================================================
+   TRAINER NEXT EVENT
+========================================================= */
+
+function hubRenderTrainerNextEvent_(event) {
+
+  const card =
+    document.getElementById(
+      "hubTrainerNextEventCard"
+    );
+
+  if (!card) {
+    return;
+  }
+
+
+  if (!event) {
+
+    card.classList.add(
+      "is-empty"
+    );
+
+    hubSetText_(
+      "hubTrainerNextTitle",
+      "Brak nadchodzących wydarzeń"
+    );
+
+    hubSetText_(
+      "hubTrainerNextDate",
+      "—"
+    );
+
+    hubSetText_(
+      "hubTrainerNextTime",
+      "—"
+    );
+
+    hubSetText_(
+      "hubTrainerNextPlace",
+      "—"
+    );
+
+    hubSetText_(
+      "hubTrainerNextCount",
+      "Otwórz listę wydarzeń"
+    );
+
+    return;
+  }
+
+
+  card.classList.remove(
+    "is-empty"
+  );
+
+
+  const isCallUp =
+    !!(
+      event?.powolaniaMode ||
+      event?.powolanieMode ||
+      event?.trybPowolania ||
+      String(event?.tryb || "")
+        .toLowerCase()
+        .includes("powo")
+    );
+
+
+  const count =
+    Number(
+      isCallUp
+        ? (
+            event?.powolanych ??
+            event?.zapisanych ??
+            0
+          )
+        : (
+            event?.zapisanych ??
+            0
+          )
+    );
+
+
+  const accepted =
+    Number(
+      event?.zaakceptowalo ??
+      0
+    );
+
+
+  hubSetText_(
+    "hubTrainerNextTitle",
+    event?.rodzaj ||
+    "Wydarzenie"
+  );
+
+
+  hubSetText_(
+    "hubTrainerNextDate",
+    hubFormatEventDate_(event)
+  );
+
+
+  hubSetText_(
+    "hubTrainerNextTime",
+    [
+      event?.godzStart,
+      event?.godzKoniec
+    ]
+      .filter(Boolean)
+      .join(" – ") ||
+    "—"
+  );
+
+
+  hubSetText_(
+    "hubTrainerNextPlace",
+    event?.miejsce ||
+    "Miejsce nie podane"
+  );
+
+
+  hubSetText_(
+    "hubTrainerNextCount",
+
+    isCallUp
+      ? (
+          count +
+          " powołanych • " +
+          accepted +
+          " zaakceptowało"
+        )
+      : (
+          count +
+          " zapisanych"
+        )
+  );
+}
+
+
+/* =========================================================
+   PLAYER DATA
+========================================================= */
+
+async function playerDashboardLoadNextEvent_() {
+
+  try {
+
+    if (
+      typeof refreshCurrentPlayerGroupsForEvents_ ===
+      "function"
+    ) {
+      await refreshCurrentPlayerGroupsForEvents_();
+    }
+
+  } catch (e) {
+    console.warn(
+      "playerDashboard groups refresh",
+      e
+    );
+  }
+
+
+  const fresh =
+    await apiClubGet(
+      "treningi",
+      {
+        grupa:
+          window.grupaZalogowanego ||
+          (
+            typeof grupaZalogowanego !==
+            "undefined"
+              ? grupaZalogowanego
+              : ""
+          ),
+
+        numer:
+          window.numerZalogowanego ||
+          (
+            typeof numerZalogowanego !==
+            "undefined"
+              ? numerZalogowanego
+              : ""
+          ),
+
+        t:
+          Date.now()
+      }
+    );
+
+
+  if (
+    fresh &&
+    fresh.success === false
+  ) {
+    throw new Error(
+      fresh.error ||
+      "Nie udało się pobrać wydarzeń."
+    );
+  }
+
+
+  const list =
+    Array.isArray(fresh)
+      ? fresh
+      : [];
+
+
+  const next =
+    hubFindNextEvent_(list);
+
+
+  window.__hubPlayerNextEvent =
+    next;
+
+
+  hubRenderPlayerNextEvent_(
+    next
+  );
+}
+
+
+async function playerDashboardLoadPayments_() {
+
+  const numer =
+    String(
+      window.numerZalogowanego ||
+      (
+        typeof numerZalogowanego !==
+        "undefined"
+          ? numerZalogowanego
+          : ""
+      ) ||
+      ""
+    ).trim();
+
+
+  if (!numer) {
+
+    hubSetTileMeta_(
+      "hubPlayerPaymentsMeta",
+      "Brak danych",
+      ""
+    );
+
+    return;
+  }
+
+
+  const fresh =
+    await apiClubGet(
+      "platnosci",
+      {
+        numer,
+        t:
+          Date.now()
+      }
+    );
+
+
+  if (
+    fresh &&
+    fresh.success === false
+  ) {
+    throw new Error(
+      fresh.error ||
+      "Błąd płatności"
+    );
+  }
+
+
+  const payload =
+    typeof normalizePlayerPaymentsPayload_ ===
+      "function"
+      ? normalizePlayerPaymentsPayload_(fresh)
+      : fresh;
+
+
+  window.__playerPaymentsPayload =
+    payload;
+
+
+  const amount =
+    Number(
+      payload?.sumaBiezace ??
+      0
+    );
+
+
+  if (amount > 0) {
+
+    const formatted =
+      new Intl.NumberFormat(
+        "pl-PL",
+        {
+          maximumFractionDigits: 2
+        }
+      ).format(amount);
+
+    hubSetTileMeta_(
+      "hubPlayerPaymentsMeta",
+      "Do zapłaty: " +
+      formatted +
+      " zł",
+      "danger"
+    );
+
+  } else {
+
+    hubSetTileMeta_(
+      "hubPlayerPaymentsMeta",
+      "✓ Brak zaległości",
+      "ok"
+    );
+
+  }
+}
+
+
+function hubNotificationCountLabel_(count) {
+
+  const n =
+    Math.max(
+      0,
+      Number(count || 0)
+    );
+
+  if (n === 0) {
+    return "Brak nowych";
+  }
+
+  if (n === 1) {
+    return "1 nowe powiadomienie";
+  }
+
+  if (
+    n >= 2 &&
+    n <= 4
+  ) {
+    return (
+      n +
+      " nowe powiadomienia"
+    );
+  }
+
+  return (
+    n +
+    " nowych powiadomień"
+  );
+}
+
+
+async function playerDashboardLoadNotifications_() {
+
+  let unread = 0;
+
+  if (
+    typeof fetchAndStorePlayerNotificationsUnread_ ===
+    "function"
+  ) {
+
+    unread =
+      await fetchAndStorePlayerNotificationsUnread_();
+
+  } else if (
+    typeof fetchPlayerNotificationsUnreadSummary_ ===
+    "function"
+  ) {
+
+    const res =
+      await fetchPlayerNotificationsUnreadSummary_();
+
+    unread =
+      Number(
+        res?.unreadCount ||
+        0
+      );
+
+  }
+
+
+  unread =
+    Math.max(
+      0,
+      Number(unread || 0)
+    );
+
+
+  const badge =
+    document.getElementById(
+      "hubPlayerNotificationBadge"
+    );
+
+
+  if (badge) {
+
+    if (unread > 0) {
+
+      badge.textContent =
+        unread > 99
+          ? "99+"
+          : String(unread);
+
+      badge.classList.remove(
+        "hidden"
+      );
+
+    } else {
+
+      badge.classList.add(
+        "hidden"
+      );
+
+      badge.textContent =
+        "0";
+
+    }
+  }
+
+
+  hubSetTileMeta_(
+    "hubPlayerNotificationsMeta",
+    hubNotificationCountLabel_(unread),
+    unread > 0
+      ? "warn"
+      : ""
+  );
+}
+
+
+/* =========================================================
+   PLAYER DASHBOARD REFRESH
+========================================================= */
+
+async function playerDashboardRefresh_() {
+
+  if (
+    window.__hubPlayerDashboardLoading
+  ) {
+    return window.__hubPlayerDashboardLoading;
+  }
+
+
+  const task =
+    (async function () {
+
+      hubApplyClubIdentity_();
+
+      if (
+        typeof loadClubAd ===
+        "function"
+      ) {
+        loadClubAd();
+      }
+
+
+      const results =
+        await Promise.allSettled([
+
+          playerDashboardLoadNextEvent_(),
+
+          playerDashboardLoadPayments_(),
+
+          playerDashboardLoadNotifications_(),
+
+          typeof refreshPlayerMenuPushAlert_ ===
+            "function"
+            ? refreshPlayerMenuPushAlert_()
+            : Promise.resolve()
+
+        ]);
+
+
+      if (
+        results[0].status ===
+        "rejected"
+      ) {
+
+        console.warn(
+          "Player dashboard event error",
+          results[0].reason
+        );
+
+        hubRenderPlayerNextEvent_(
+          null
+        );
+      }
+
+
+      if (
+        results[1].status ===
+        "rejected"
+      ) {
+
+        console.warn(
+          "Player dashboard payment error",
+          results[1].reason
+        );
+
+        hubSetTileMeta_(
+          "hubPlayerPaymentsMeta",
+          "Nie udało się sprawdzić",
+          ""
+        );
+      }
+
+
+      if (
+        results[2].status ===
+        "rejected"
+      ) {
+
+        console.warn(
+          "Player dashboard notification error",
+          results[2].reason
+        );
+
+        hubSetTileMeta_(
+          "hubPlayerNotificationsMeta",
+          "Nie udało się sprawdzić",
+          ""
+        );
+      }
+
+    })();
+
+
+  window.__hubPlayerDashboardLoading =
+    task;
+
+
+  try {
+    return await task;
+
+  } finally {
+
+    window.__hubPlayerDashboardLoading =
+      null;
+  }
+}
+
+
+/* =========================================================
+   TRAINER DATA
+========================================================= */
+
+async function trainerDashboardLoadNextEvent_() {
+
+  const groups =
+    String(
+      window.grupyTrenera ||
+      ""
+    ).trim();
+
+
+  const fresh =
+    await apiClubGet(
+      "treningiTrener",
+      {
+        grupa:
+          groups,
+
+        _ts:
+          Date.now()
+      }
+    );
+
+
+  if (
+    fresh &&
+    fresh.success === false
+  ) {
+
+    throw new Error(
+      fresh.error ||
+      "Nie udało się pobrać wydarzeń."
+    );
+  }
+
+
+  if (
+    !Array.isArray(fresh)
+  ) {
+
+    throw new Error(
+      "Backend nie zwrócił listy wydarzeń."
+    );
+  }
+
+
+  const next =
+    hubFindNextEvent_(fresh);
+
+
+  window.__hubTrainerNextEvent =
+    next;
+
+
+  hubRenderTrainerNextEvent_(
+    next
+  );
+}
+
+
+async function trainerDashboardRefresh_() {
+
+  if (
+    window.__hubTrainerDashboardLoading
+  ) {
+    return window.__hubTrainerDashboardLoading;
+  }
+
+
+  const task =
+    (async function () {
+
+      hubApplyClubIdentity_();
+
+      try {
+
+        await trainerDashboardLoadNextEvent_();
+
+      } catch (e) {
+
+        console.warn(
+          "Trainer dashboard event error",
+          e
+        );
+
+        hubRenderTrainerNextEvent_(
+          null
+        );
+      }
+
+    })();
+
+
+  window.__hubTrainerDashboardLoading =
+    task;
+
+
+  try {
+    return await task;
+
+  } finally {
+
+    window.__hubTrainerDashboardLoading =
+      null;
+  }
+}
+
+
+/* =========================================================
+   AUTOMATYCZNE ODŚWIEŻANIE PO WEJŚCIU NA PANEL
+========================================================= */
+
+let __hubDashboardRefreshTimer =
+  null;
+
+
+function hubScheduleDashboardRefresh_(
+  viewId
+) {
+
+  clearTimeout(
+    __hubDashboardRefreshTimer
+  );
+
+
+  __hubDashboardRefreshTimer =
+    setTimeout(
+      function () {
+
+        const view =
+          document.getElementById(
+            viewId
+          );
+
+
+        if (
+          !view ||
+          view.classList.contains(
+            "hidden"
+          )
+        ) {
+          return;
+        }
+
+
+        if (
+          viewId ===
+          "playerMenuView"
+        ) {
+
+          playerDashboardRefresh_()
+            .catch(function (e) {
+
+              console.warn(
+                "playerDashboardRefresh_",
+                e
+              );
+
+            });
+
+        }
+
+
+        if (
+          viewId ===
+          "trainerPanelView"
+        ) {
+
+          trainerDashboardRefresh_()
+            .catch(function (e) {
+
+              console.warn(
+                "trainerDashboardRefresh_",
+                e
+              );
+
+            });
+
+        }
+
+      },
+      30
+    );
+}
+
+
+/* =========================================================
+   HOOK ROUTERA
+========================================================= */
+
+(function hubInstallDashboardNavigationHooks_() {
+
+  /*
+   * GO TO VIEW
+   */
+
+  if (
+    typeof window.goToView ===
+      "function" &&
+    !window.goToView.__hubDashboardV1
+  ) {
+
+    const originalGoToView =
+      window.goToView;
+
+
+    const wrappedGoToView =
+      function (viewId) {
+
+        const result =
+          originalGoToView.apply(
+            this,
+            arguments
+          );
+
+
+        if (
+          viewId ===
+            "playerMenuView" ||
+          viewId ===
+            "trainerPanelView"
+        ) {
+
+          hubScheduleDashboardRefresh_(
+            viewId
+          );
+        }
+
+
+        return result;
+      };
+
+
+    wrappedGoToView.__hubDashboardV1 =
+      true;
+
+
+    if (
+      originalGoToView.__orghubInstallHooked
+    ) {
+      wrappedGoToView.__orghubInstallHooked =
+        true;
+    }
+
+
+    window.goToView =
+      wrappedGoToView;
+  }
+
+
+  /*
+   * HISTORY BACK
+   */
+
+  if (
+    typeof window.showViewFromHistory ===
+      "function" &&
+    !window.showViewFromHistory.__hubDashboardV1
+  ) {
+
+    const originalShowView =
+      window.showViewFromHistory;
+
+
+    const wrappedShowView =
+      function (viewId) {
+
+        const result =
+          originalShowView.apply(
+            this,
+            arguments
+          );
+
+
+        if (
+          viewId ===
+            "playerMenuView" ||
+          viewId ===
+            "trainerPanelView"
+        ) {
+
+          hubScheduleDashboardRefresh_(
+            viewId
+          );
+        }
+
+
+        return result;
+      };
+
+
+    wrappedShowView.__hubDashboardV1 =
+      true;
+
+
+    window.showViewFromHistory =
+      wrappedShowView;
+  }
+
+})();
+      
 /* =================== 999 APP START / LOAD =================== */
   
 window.addEventListener('load', () => {
