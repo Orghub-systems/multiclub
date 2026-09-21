@@ -2786,7 +2786,35 @@ if (buildChanged) {
 
       </div>
 
+         </div>
+
     </div>
+
+
+    <!-- ================= WYLOGUJ ================= -->
+
+    <button
+      class="hub-logout-tile"
+      type="button"
+      onclick="logoutAppSession_()"
+    >
+      <div class="hub-logout-left">
+
+        <div class="hub-logout-icon">
+          ⏻
+        </div>
+
+        <div class="hub-logout-title">
+          Wyloguj
+        </div>
+
+      </div>
+
+      <div class="hub-logout-arrow">
+        ›
+      </div>
+    </button>
+
 
   </div>
 
@@ -3290,55 +3318,35 @@ if (buildChanged) {
 
     </div>
 
-  </div>
 
-
-  <!-- ================= BOTTOM NAV ================= -->
-
-  <nav class="hub-bottom-nav">
+    <!-- ================= WYLOGUJ ================= -->
 
     <button
-      class="hub-bottom-item active"
-      type="button"
-      onclick="goToView('trainerPanelView', { replace:true })"
-    >
-      <span class="hub-bottom-icon">⌂</span>
-      <span>Start</span>
-    </button>
-
-
-    <button
-      class="hub-bottom-item"
-      type="button"
-      onclick="trainerPokazWydarzenia()"
-    >
-      <span class="hub-bottom-icon">📅</span>
-      <span>Wydarzenia</span>
-    </button>
-
-
-    <button
-      class="hub-bottom-item"
-      type="button"
-      onclick="trainerPokazZawodnicy()"
-    >
-      <span class="hub-bottom-icon">👥</span>
-      <span>Zawodnicy</span>
-    </button>
-
-
-    <button
-      class="hub-bottom-item"
+      class="hub-logout-tile"
       type="button"
       onclick="logoutAppSession_()"
     >
-      <span class="hub-bottom-icon">⏻</span>
-      <span>Wyloguj</span>
+      <div class="hub-logout-left">
+
+        <div class="hub-logout-icon">
+          ⏻
+        </div>
+
+        <div class="hub-logout-title">
+          Wyloguj
+        </div>
+
+      </div>
+
+      <div class="hub-logout-arrow">
+        ›
+      </div>
     </button>
 
-  </nav>
 
-</div>v>
+  </div>
+
+</div>
 
 <!-- TRAINER PLAYERS VIEW
      Lista zawodników dostępna dla trenera -->
