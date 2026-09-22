@@ -28660,32 +28660,42 @@ function adminRenderPaymentListDetail_(res) {
     <div style="margin-top:7px;">Wpłaty: <b>${paidCount}/${entries.length}</b></div>`;
   }
 
-  if (manualEl && select) {
-    if (list.scope_mode === "manual") {
-      manualEl.classList.remove("hidden");
-      select.innerHTML = '<option value="">Wybierz zawodnika...</option>';
+if (manualEl && select) {
+  manualEl.classList.remove("hidden");
 
-      available.forEach(player => {
-        const nr = player.visible_number ? `${player.visible_number} – ` : "";
-        select.add(new Option(`${nr}${player.display_name || "Zawodnik"}`, player.id));
-      });
+  select.innerHTML =
+    '<option value="">Wybierz zawodnika...</option>';
 
-      select.disabled = available.length === 0;
+  available.forEach(player => {
+    const nr =
+      player.visible_number
+        ? `${player.visible_number} – `
+        : "";
 
-      if (!available.length) {
-        select.innerHTML = '<option value="">Wszyscy zawodnicy zostali dodani</option>';
-      }
-    } else {
-      manualEl.classList.add("hidden");
-    }
+    select.add(
+      new Option(
+        `${nr}${player.display_name || "Zawodnik"}`,
+        player.id
+      )
+    );
+  });
+
+  select.disabled =
+    available.length === 0;
+
+  if (!available.length) {
+    select.innerHTML =
+      '<option value="">Wszyscy zawodnicy zostali dodani</option>';
   }
+}
 
   if (!entriesEl) return;
-
+  
   if (!entries.length) {
-    entriesEl.innerHTML = `<div class="card">${list.scope_mode === "manual" ? "Wybierz zawodnika powyżej." : "Brak zawodników na tej liście."}</div>`;
+    entriesEl.innerHTML =
+      `<div class="card">Wybierz zawodnika powyżej.</div>`;
     return;
-  }
+  }}
 
   entriesEl.innerHTML = entries.map(entry => {
     const id = String(entry.id || "");
