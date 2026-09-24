@@ -13607,36 +13607,94 @@ function renderTreningi(lista) {
     
     div.innerHTML = listaPoFiltrowaniu.map(t => {
     const isPowolanie = !!t.powolaniaMode;
-    const acceptedPowolanie = !!t.zaakceptowalPowolanie;
+
+    const powolanieStatus =
+      String(
+        t.statusPowolania ||
+        (t.zaakceptowalPowolanie ? "accepted" : "invited")
+      )
+        .trim()
+        .toLowerCase();
+
+    const acceptedPowolanie =
+      isPowolanie &&
+      powolanieStatus === "accepted";
+
+    const declinedPowolanie =
+      isPowolanie &&
+      powolanieStatus === "declined";
 
     const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
     const countValue = t.zapisanych ?? 0;
 
     const mainBtnDisabled = isPowolanie ? false : !!t.zapisany;
-    
+
     const mainBtnText = isPowolanie
-      ? (acceptedPowolanie ? "Rezygnuję z powołania" : "Akceptuję powołanie")
-      : (t.zapisany ? "Zapisano ✅" : "Zapisz się");
-    
+      ? (
+          acceptedPowolanie
+            ? "Rezygnuję z powołania"
+            : "Akceptuję powołanie"
+        )
+      : (
+          t.zapisany
+            ? "Zapisano ✅"
+            : "Zapisz się"
+        );
+
     const mainBtnBg = isPowolanie
-      ? (acceptedPowolanie ? "#8b0000" : "#1565c0")
-      : (t.zapisany ? "#2e7d32" : "#c62828");
-    
-    const mainBtnAction = isPowolanie && acceptedPowolanie
-      ? `wypiszSie('${t.id}')`
-      : `zapiszSie('${t.id}')`;
+      ? (
+          acceptedPowolanie
+            ? "#8b0000"
+            : "#1565c0"
+        )
+      : (
+          t.zapisany
+            ? "#2e7d32"
+            : "#c62828"
+        );
+
+    const mainBtnAction =
+      isPowolanie && acceptedPowolanie
+        ? `wypiszSie('${t.id}')`
+        : `zapiszSie('${t.id}')`;
+
+    const powolanieStatusText =
+      acceptedPowolanie
+        ? "Zaakceptowano"
+        : declinedPowolanie
+          ? "Odrzucono"
+          : "Oczekuje na odpowiedź";
+
+    const powolanieStatusColor =
+      acceptedPowolanie
+        ? "#81c784"
+        : declinedPowolanie
+          ? "#ef9a9a"
+          : "#90caf9";
 
     const statusLine = isPowolanie
-      ? `<span id="powolanie-status-${t.id}" style="display:inline-block;margin-top:4px;color:${acceptedPowolanie ? "#81c784" : "#90caf9"};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${acceptedPowolanie ? "Zaakceptowano" : "Oczekuje na akceptację"}</span><br>`
+      ? `<span id="powolanie-status-${t.id}" style="display:inline-block;margin-top:4px;color:${powolanieStatusColor};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${powolanieStatusText}</span><br>`
       : "";
 
     const secondBtnHtml = isPowolanie
-      ? ""
+      ? (
+          acceptedPowolanie || declinedPowolanie
+            ? ""
+            : `
+              <button
+                id="odrzuc-${t.id}"
+                type="button"
+                style="background:#8b0000;color:white;border:none;"
+                onclick="odrzucPowolanie_('${t.id}')">
+                Odrzucam powołanie
+              </button>
+            `
+        )
       : `
-        <button 
-          id="wypisz-${t.id}" 
-          ${t.zapisany ? '' : 'disabled'} 
-          style="background:#444;" 
+        <button
+          id="wypisz-${t.id}"
+          ${t.zapisany ? '' : 'disabled'}
+          style="background:#444;"
           onclick="wypiszSie('${t.id}')">
           Wypisz się
         </button>
@@ -14399,40 +14457,142 @@ function playerCloseLineup_() {
   );
 }
   
-function updatePowolanieUiLocal_(id, accepted) {
-  const btn = document.getElementById(`btn-${id}`);
-  const statusEl = document.getElementById(`powolanie-status-${id}`);
+function updatePowolanieUiLocal_(id, status) {
+  const btn =
+    document.getElementById(`btn-${id}`);
+
+  const rejectBtn =
+    document.getElementById(`odrzuc-${id}`);
+
+  const statusEl =
+    document.getElementById(
+      `powolanie-status-${id}`
+    );
+
+  const normalizedStatus =
+    String(status || "invited")
+      .trim()
+      .toLowerCase();
+
+  const accepted =
+    normalizedStatus === "accepted";
+
+  const declined =
+    normalizedStatus === "declined";
 
   if (btn) {
     btn.disabled = false;
     btn.classList.remove("loading");
 
     btn.dataset.powolanie = "1";
-    btn.dataset.accepted = accepted ? "1" : "0";
+    btn.dataset.accepted =
+      accepted ? "1" : "0";
 
     if (accepted) {
-      btn.textContent = "Rezygnuję z powołania";
-      btn.style.background = "#8b0000";
-      btn.style.color = "white";
-      btn.style.border = "none";
-      btn.setAttribute("onclick", `wypiszSie('${id}')`);
+      btn.textContent =
+        "Rezygnuję z powołania";
+
+      btn.style.background =
+        "#8b0000";
+
+      btn.setAttribute(
+        "onclick",
+        `wypiszSie('${id}')`
+      );
+
     } else {
-      btn.textContent = "Akceptuję powołanie";
-      btn.style.background = "#1565c0";
-      btn.style.color = "white";
-      btn.style.border = "none";
-      btn.setAttribute("onclick", `zapiszSie('${id}')`);
+      btn.textContent =
+        "Akceptuję powołanie";
+
+      btn.style.background =
+        "#1565c0";
+
+      btn.setAttribute(
+        "onclick",
+        `zapiszSie('${id}')`
+      );
     }
+
+    btn.style.color = "white";
+    btn.style.border = "none";
+  }
+
+  if (rejectBtn) {
+    rejectBtn.classList.toggle(
+      "hidden",
+      accepted || declined
+    );
   }
 
   if (statusEl) {
-    statusEl.style.color = accepted ? "#81c784" : "#90caf9";
-    statusEl.innerHTML = accepted
-      ? "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Zaakceptowano"
-      : "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Oczekuje na akceptację";
+    statusEl.style.color =
+      accepted
+        ? "#81c784"
+        : declined
+          ? "#ef9a9a"
+          : "#90caf9";
+
+    statusEl.innerHTML =
+      accepted
+        ? "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Zaakceptowano"
+        : declined
+          ? "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Odrzucono"
+          : "<b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> Oczekuje na odpowiedź";
   }
 
-  updatePowolanyNaLiscieLocal_(id, numerZalogowanego, accepted);
+  updatePowolanyNaLiscieLocal_(
+    id,
+    numerZalogowanego,
+    normalizedStatus
+  );
+}
+
+
+async function odrzucPowolanie_(id) {
+  const btn =
+    document.getElementById(
+      `odrzuc-${id}`
+    );
+
+  if (btn) {
+    btn.classList.add("loading");
+  }
+
+  try {
+    const r =
+      await apiClubGet(
+        "wypisz",
+        {
+          numer: numerZalogowanego,
+          treningId: id
+        }
+      );
+
+    if (r && r.ok) {
+      updatePowolanieUiLocal_(
+        id,
+        "declined"
+      );
+
+      return;
+    }
+
+    alert(
+      (r && r.message)
+        ? r.message
+        : "Nie udało się odrzucić powołania."
+    );
+
+  } catch (err) {
+    alert(
+      "Błąd połączenia: " + err
+    );
+
+  } finally {
+    if (btn) {
+      btn.classList.remove("loading");
+    }
+  }
 }
 
   function isPowolanieEventLocal_(id) {
@@ -14492,68 +14652,59 @@ async function toggleZapisani(id) {
                 ""
               ).trim();
 
-            const hasAccepted =
-              typeof p?.accepted === "boolean";
+            const invitationStatus =
+              String(
+                p?.status ||
+                (p?.accepted ? "accepted" : "invited")
+              )
+                .trim()
+                .toLowerCase();
 
-            if (!hasAccepted) {
-              return `
-                <li
-                  data-player-no="${nr}"
-                  style="display:flex;align-items:center;"
-                >
-                  <span
-                    class="powolany-name"
-                    style="display:inline-block;min-width:230px;color:#fff;"
-                  >
-                    ${nazwisko}
-                  </span>
+            const accepted =
+              invitationStatus === "accepted";
 
-                  <span class="powolany-check"></span>
-                </li>
-              `;
-            }
+            const declined =
+              invitationStatus === "declined";
 
-            if (p.accepted) {
-              return `
-                <li
-                  data-player-no="${nr}"
-                  data-accepted="1"
-                  style="display:flex;align-items:center;"
-                >
-                  <span
-                    class="powolany-name"
-                    style="display:inline-block;min-width:230px;color:#fff;font-weight:700;"
-                  >
-                    ${nazwisko}
-                  </span>
+            const nameColor =
+              accepted
+                ? "#fff"
+                : "rgba(255,255,255,.42)";
 
-                  <span
-                    class="powolany-check"
-                    style="color:#81c784;font-weight:700;"
-                  >
-                    ✅
-                  </span>
-                </li>
-              `;
-            }
+            const nameWeight =
+              accepted ? "700" : "400";
+
+            const marker =
+              accepted
+                ? "✅"
+                : declined
+                  ? "❌"
+                  : "";
+
+            const markerColor =
+              declined
+                ? "#ef5350"
+                : "#81c784";
 
             return `
               <li
                 data-player-no="${nr}"
-                data-accepted="0"
+                data-invitation-status="${invitationStatus}"
                 style="display:flex;align-items:center;"
               >
                 <span
                   class="powolany-name"
-                  style="display:inline-block;min-width:230px;color:rgba(255,255,255,.42);"
+                  style="display:inline-block;min-width:230px;color:${nameColor};font-weight:${nameWeight};"
                 >
                   ${nazwisko}
                 </span>
 
                 <span
                   class="powolany-check"
-                  style="color:#81c784;font-weight:700;"
-                ></span>
+                  style="color:${markerColor};font-weight:700;"
+                >
+                  ${marker}
+                </span>
               </li>
             `;
           }).join('')}
@@ -14728,7 +14879,7 @@ async function zapiszSie(id) {
  
     if (r && r.ok) {
       if (isPowolanie || r.accepted === true) {
-        updatePowolanieUiLocal_(id, true);
+        updatePowolanieUiLocal_(id, "accepted");
  
         return;
       }
@@ -14778,7 +14929,7 @@ async function wypiszSie(id) {
  
     if (r && r.ok) {
       if (isPowolanie || r.resigned === true) {
-        updatePowolanieUiLocal_(id, false);
+        updatePowolanieUiLocal_(id, "declined");
  
         return;
       }
@@ -14824,34 +14975,82 @@ async function odswiezListeZapisanych(id) {
   }
 }
 
- function updatePowolanyNaLiscieLocal_(treningId, numer, accepted) {
-  const box = document.getElementById(`zapisani-${treningId}`);
-  if (!box || box.classList.contains("hidden")) return;
+ function updatePowolanyNaLiscieLocal_(
+  treningId,
+  numer,
+  status
+) {
+  const box =
+    document.getElementById(
+      `zapisani-${treningId}`
+    );
 
-  const nr = String(numer || "").trim();
+  if (
+    !box ||
+    box.classList.contains("hidden")
+  ) {
+    return;
+  }
+
+  const nr =
+    String(numer || "").trim();
+
   if (!nr) return;
 
-  const row = box.querySelector(`[data-player-no="${CSS.escape(nr)}"]`);
+  const row =
+    box.querySelector(
+      `[data-player-no="${CSS.escape(nr)}"]`
+    );
+
   if (!row) return;
 
-  const nameEl = row.querySelector(".powolany-name");
-  const checkEl = row.querySelector(".powolany-check");
+  const normalizedStatus =
+    String(status || "invited")
+      .trim()
+      .toLowerCase();
+
+  const accepted =
+    normalizedStatus === "accepted";
+
+  const declined =
+    normalizedStatus === "declined";
+
+  const nameEl =
+    row.querySelector(
+      ".powolany-name"
+    );
+
+  const checkEl =
+    row.querySelector(
+      ".powolany-check"
+    );
 
   if (nameEl) {
-    if (accepted) {
-      nameEl.style.color = "#fff";
-      nameEl.style.fontWeight = "700";
-    } else {
-      nameEl.style.color = "rgba(255,255,255,.42)";
-      nameEl.style.fontWeight = "";
-    }
+    nameEl.style.color =
+      accepted
+        ? "#fff"
+        : "rgba(255,255,255,.42)";
+
+    nameEl.style.fontWeight =
+      accepted ? "700" : "400";
   }
 
   if (checkEl) {
-    checkEl.textContent = accepted ? "✅" : "";
+    checkEl.textContent =
+      accepted
+        ? "✅"
+        : declined
+          ? "❌"
+          : "";
+
+    checkEl.style.color =
+      declined
+        ? "#ef5350"
+        : "#81c784";
   }
 
-  row.dataset.accepted = accepted ? "1" : "0";
+  row.dataset.invitationStatus =
+    normalizedStatus;
 } 
 async function loadStatystykiCached_(numer, hooks = {}) {
   const nr = String(numer || "").trim();
