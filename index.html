@@ -14652,6 +14652,21 @@ async function toggleZapisani(id) {
                 ""
               ).trim();
 
+            if (!isPowolanie) {
+              return `
+                <li
+                  data-player-no="${nr}"
+                  style="display:flex;align-items:center;"
+                >
+                  <span
+                    style="display:inline-block;min-width:230px;color:#fff;font-weight:400;"
+                  >
+                    ${nazwisko}
+                  </span>
+                </li>
+              `;
+            }
+
             const invitationStatus =
               String(
                 p?.status ||
