@@ -2124,10 +2124,435 @@ input[type="number"] {
   }
 }
 
+
+/* =========================================================
+   LOGIN VIEW V2
+   Nowy ekran logowania klubu
+========================================================= */
+
+#loginView.login-v2 {
+  position: relative;
+  isolation: isolate;
+
+  min-height: 100vh;
+  margin-top: 0 !important;
+
+  box-sizing: border-box;
+  padding:
+    max(26px, env(safe-area-inset-top))
+    18px
+    max(24px, env(safe-area-inset-bottom));
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  overflow: hidden;
+}
+
+#loginView.login-v2::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,.34) 0%,
+      rgba(0,0,0,.26) 34%,
+      rgba(0,0,0,.48) 100%
+    );
+}
+
+#loginView .login-v2-inner {
+  width: min(520px, 100%);
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#loginView .login-brand {
+  width: 100%;
+  text-align: center;
+}
+
+#loginView .login-club-logo {
+  display: block;
+
+  width: 154px;
+  height: 154px;
+  object-fit: contain;
+
+  box-sizing: border-box;
+  margin: 0 auto 18px auto;
+  padding: 0;
+
+  border-radius: 18px;
+
+  background: rgba(0,0,0,.16);
+  box-shadow: 0 16px 42px rgba(0,0,0,.34);
+}
+
+#loginView #clubIdBadge.login-club-name {
+  max-width: 100%;
+  margin: 0 auto;
+
+  color: #fff;
+
+  font-size: clamp(34px, 9vw, 48px);
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: 2px;
+
+  text-transform: uppercase;
+  text-align: center;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  text-shadow: 0 3px 18px rgba(0,0,0,.42);
+}
+
+#loginView .login-club-subtitle {
+  margin-top: 9px;
+
+  color: rgba(255,255,255,.68);
+
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: 4px;
+
+  text-align: center;
+}
+
+#loginView .login-card {
+  width: 100%;
+  max-width: 470px;
+
+  box-sizing: border-box;
+
+  margin: 32px auto 0 auto;
+  padding: 24px 22px 22px 22px;
+
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,.30);
+
+  background: rgba(12,12,12,.78);
+
+  box-shadow:
+    0 22px 60px rgba(0,0,0,.40),
+    inset 0 1px 0 rgba(255,255,255,.05);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  text-align: left;
+}
+
+#loginView .login-card-title {
+  margin: 0 0 20px 0;
+
+  color: #fff;
+
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: -.5px;
+}
+
+#loginView .login-field {
+  position: relative;
+  width: 100%;
+  margin: 0 0 12px 0;
+}
+
+#loginView .login-field-icon {
+  position: absolute;
+  left: 17px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 23px;
+  height: 23px;
+
+  color: rgba(255,255,255,.58);
+
+  pointer-events: none;
+  z-index: 2;
+}
+
+#loginView .login-field-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#loginView .login-card .login-field input {
+  display: block;
+
+  width: 100%;
+  height: 58px;
+
+  box-sizing: border-box;
+  margin: 0;
+
+  padding: 0 52px 0 54px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.34);
+
+  outline: none;
+
+  background: rgba(7,7,7,.72);
+  color: #fff;
+
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 650;
+
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+
+  transition:
+    border-color .16s ease,
+    box-shadow .16s ease,
+    background .16s ease;
+}
+
+#loginView .login-card .login-field input::placeholder {
+  color: rgba(255,255,255,.58);
+}
+
+#loginView .login-card .login-field input:focus {
+  border-color: rgba(255,255,255,.90);
+  background: rgba(10,10,10,.90);
+
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.12),
+    0 8px 24px rgba(0,0,0,.18);
+}
+
+#loginView .login-password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 42px;
+  height: 42px;
+
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 12px;
+
+  background: transparent;
+  color: rgba(255,255,255,.70);
+
+  box-shadow: none;
+
+  z-index: 3;
+}
+
+#loginView .login-password-toggle:active {
+  transform: translateY(-50%) scale(.96);
+}
+
+#loginView .login-password-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+#loginView .login-card .login-primary-btn,
+#loginView .login-card .login-secondary-btn {
+  width: 100%;
+  min-height: 56px;
+
+  box-sizing: border-box;
+  margin: 12px 0 0 0;
+
+  border-radius: 18px;
+
+  font-size: 17px;
+  line-height: 1.15;
+  font-weight: 950;
+}
+
+#loginView .login-card .login-primary-btn {
+  background:
+    linear-gradient(
+      180deg,
+      #c20a0a 0%,
+      #9d0000 100%
+    );
+
+  border: 1px solid #ff2b2b;
+
+  box-shadow:
+    0 10px 26px rgba(160,0,0,.24),
+    inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+#loginView .login-card .login-secondary-btn {
+  background: rgba(20,20,20,.82);
+  border: 1px solid rgba(255,255,255,.34);
+  color: #fff;
+}
+
+#loginView .login-forgot-link {
+  display: block;
+
+  width: auto;
+
+  margin: 19px auto 0 auto;
+  padding: 7px 4px;
+
+  border: none;
+  border-radius: 0;
+
+  background: transparent;
+  color: rgba(255,255,255,.72);
+
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 650;
+
+  text-decoration: underline;
+  text-underline-offset: 4px;
+
+  box-shadow: none;
+}
+
+#loginView .login-forgot-link:active {
+  transform: none;
+  color: #fff;
+}
+
+#loginView #komunikat.login-message {
+  width: min(470px, 100%);
+  min-height: 20px;
+
+  margin: 12px auto 0 auto;
+
+  color: #fff;
+
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 750;
+
+  text-align: center;
+}
+
+#loginView .login-footer {
+  width: min(430px, 84%);
+
+  margin: auto auto 4px auto;
+  padding-top: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+
+  color: rgba(255,255,255,.55);
+
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 4px;
+
+  white-space: nowrap;
+}
+
+#loginView .login-footer::before,
+#loginView .login-footer::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255,255,255,.32);
+}
+
+@media (max-height: 740px) {
+  #loginView.login-v2 {
+    padding-top:
+      max(16px, env(safe-area-inset-top));
+  }
+
+  #loginView .login-club-logo {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 12px;
+  }
+
+  #loginView #clubIdBadge.login-club-name {
+    font-size: 32px;
+  }
+
+  #loginView .login-club-subtitle {
+    margin-top: 6px;
+  }
+
+  #loginView .login-card {
+    margin-top: 22px;
+    padding-top: 20px;
+  }
+
+  #loginView .login-card-title {
+    font-size: 26px;
+    margin-bottom: 16px;
+  }
+
+  #loginView .login-card .login-field input {
+    height: 54px;
+  }
+
+  #loginView .login-card .login-primary-btn,
+  #loginView .login-card .login-secondary-btn {
+    min-height: 52px;
+  }
+
+  #loginView .login-footer {
+    padding-top: 20px;
+  }
+}
+
+@media (max-width: 380px) {
+  #loginView.login-v2 {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  #loginView .login-card {
+    padding-left: 17px;
+    padding-right: 17px;
+    border-radius: 22px;
+  }
+
+  #loginView #clubIdBadge.login-club-name {
+    font-size: 32px;
+  }
+
+  #loginView .login-footer {
+    width: 92%;
+    gap: 10px;
+    letter-spacing: 3px;
+  }
+}
+
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.29';
+  window.APP_BUILD = 'APP v3.30';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2662,44 +3087,172 @@ if (buildChanged) {
 <!-- LOGIN VIEW
      Główny ekran logowania zawodnika, trenera i administratora -->
     
-      <div id="loginView" class="container hidden">
-      <img
-        src="icon-512.png"
-        class="logo"
-        style="
-          width:200px;
-          margin-bottom:15px;
-          border-radius:8px;
-        "
-        alt="Logo"
-      >
-      
-      <div style="max-width:90%; margin:0 auto 40px auto; text-align:center;">
-        <div id="clubIdBadge"
-             style="
-               font-size:32px;
-               font-weight:900;
-               letter-spacing:3px;
-               line-height:1.1;
-               white-space:normal;
-               overflow-wrap:anywhere;
-               word-break:break-word;
-             ">
+      <div id="loginView" class="container hidden login-v2">
+
+        <div class="login-v2-inner">
+
+          <!-- ================= BRAND ================= -->
+
+          <div class="login-brand">
+
+            <img
+              src="icon-512.png"
+              class="logo login-club-logo"
+              alt="Logo klubu"
+            >
+
+            <div
+              id="clubIdBadge"
+              class="login-club-name"
+            ></div>
+
+            <div class="login-club-subtitle">
+              Panel klubu
+            </div>
+
+          </div>
+
+
+          <!-- ================= LOGIN CARD ================= -->
+
+          <form
+            class="login-box login-card"
+            onsubmit="zaloguj(); return false;"
+          >
+
+            <div class="login-card-title">
+              Logowanie
+            </div>
+
+
+            <div class="login-field">
+
+              <span
+                class="login-field-icon"
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 21a8 8 0 0 0-16 0"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </span>
+
+              <input
+                id="numer"
+                type="text"
+                placeholder="Login"
+                autocomplete="username"
+                aria-label="Login"
+              >
+
+            </div>
+
+
+            <div class="login-field">
+
+              <span
+                class="login-field-icon"
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect
+                    x="5"
+                    y="10"
+                    width="14"
+                    height="11"
+                    rx="2"
+                  ></rect>
+                  <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                </svg>
+              </span>
+
+              <input
+                id="haslo"
+                type="password"
+                placeholder="Hasło"
+                autocomplete="current-password"
+                aria-label="Hasło"
+              >
+
+              <button
+                id="loginPasswordToggle"
+                class="login-password-toggle"
+                type="button"
+                onclick="toggleLoginPasswordVisibility_()"
+                aria-label="Pokaż hasło"
+                title="Pokaż hasło"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
+                  <circle cx="12" cy="12" r="2.8"></circle>
+                </svg>
+              </button>
+
+            </div>
+
+
+            <button
+              type="submit"
+              class="full-btn login-primary-btn"
+            >
+              Zaloguj
+            </button>
+
+
+            <button
+              type="button"
+              class="full-btn alt login-secondary-btn"
+              onclick="pokazRejestracjaSelect()"
+            >
+              Rejestracja
+            </button>
+
+
+            <button
+              type="button"
+              class="login-forgot-link"
+              onclick="openResetPasswordPopup()"
+            >
+              Nie pamiętasz hasła?
+            </button>
+
+          </form>
+
+
+          <p
+            id="komunikat"
+            class="login-message"
+          ></p>
+
         </div>
-      </div>
-      
-      <h1 style="margin:0 0 40px 0;">Logowanie</h1>
-      
-      <form class="login-box" onsubmit="zaloguj(); return false;">
-        <input id="numer" type="text" placeholder="Login" autocomplete="username">
-        <input id="haslo" type="password" placeholder="Hasło" autocomplete="current-password">
-      
-        <button type="submit" class="full-btn">Zaloguj</button>
-        <button type="button" class="full-btn alt" onclick="pokazRejestracjaSelect()">Rejestracja</button>
-        <button type="button" class="full-btn alt" onclick="openResetPasswordPopup()">Nie pamiętam hasła</button>
-      </form>
-      
-      <p id="komunikat"></p>
+
+
+        <div class="login-footer">
+          ORG HUB SYSTEMS
+        </div>
+
       </div>
 
 <!-- REGISTER SELECT VIEW
@@ -12296,6 +12849,63 @@ async function zaloguj() {
     komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
   }
 }
+
+/* =========================================================
+   LOGIN PASSWORD VISIBILITY
+========================================================= */
+
+function toggleLoginPasswordVisibility_() {
+  const input =
+    document.getElementById(
+      "haslo"
+    );
+
+  const btn =
+    document.getElementById(
+      "loginPasswordToggle"
+    );
+
+  if (!input) return;
+
+  const show =
+    input.type === "password";
+
+  input.type =
+    show
+      ? "text"
+      : "password";
+
+  if (btn) {
+    const label =
+      show
+        ? "Ukryj hasło"
+        : "Pokaż hasło";
+
+    btn.setAttribute(
+      "aria-label",
+      label
+    );
+
+    btn.setAttribute(
+      "title",
+      label
+    );
+
+    btn.style.color =
+      show
+        ? "#ffffff"
+        : "";
+  }
+
+  try {
+    input.focus({
+      preventScroll: true
+    });
+  } catch (e) {
+    input.focus();
+  }
+}
+
 
 /* =================== 91 REJESTRACJA =================== */
   
