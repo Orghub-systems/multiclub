@@ -2127,7 +2127,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.27';
+  window.APP_BUILD = 'APP v3.28';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4417,63 +4417,6 @@ if (buildChanged) {
     ></div>
 
 
-    <!-- ================= NEXT EVENT ================= -->
-
-    <section
-      id="hubAdminNextEventCard"
-      class="hub-next-card"
-      onclick="adminOpenEventsView_()"
-    >
-
-      <div class="hub-next-eyebrow">
-        Najbliższe wydarzenie
-      </div>
-
-      <div
-        id="hubAdminNextTitle"
-        class="hub-next-title"
-      >
-        Ładowanie...
-      </div>
-
-      <div class="hub-event-row">
-        <div class="hub-event-icon">📅</div>
-        <div id="hubAdminNextDate">—</div>
-      </div>
-
-      <div class="hub-event-row">
-        <div class="hub-event-icon">🕒</div>
-        <div id="hubAdminNextTime">—</div>
-      </div>
-
-      <div class="hub-event-row">
-        <div class="hub-event-icon">📍</div>
-        <div id="hubAdminNextPlace">—</div>
-      </div>
-
-      <div class="hub-event-separator"></div>
-
-      <div
-        id="hubAdminNextCount"
-        class="hub-event-count"
-      >
-        —
-      </div>
-
-      <button
-        class="hub-event-cta"
-        type="button"
-        onclick="
-          event.stopPropagation();
-          adminOpenEventsView_();
-        "
-      >
-        Otwórz wydarzenia
-      </button>
-
-    </section>
-
-
     <!-- ================= TILES ================= -->
 
     <div class="hub-tile-grid">
@@ -4570,27 +4513,6 @@ if (buildChanged) {
         <div>
           <div class="hub-tile-title">Płatności</div>
           <div class="hub-tile-meta">Rozliczenia i przelewy</div>
-        </div>
-      </button>
-
-
-      <button
-        class="hub-tile"
-        type="button"
-        onclick="openAdminNotificationsView_()"
-      >
-        <div class="hub-tile-top">
-          <div class="hub-tile-icon">🔔</div>
-          <div class="hub-tile-arrow">›</div>
-        </div>
-        <div>
-          <div class="hub-tile-title">Powiadomienia</div>
-          <div
-            id="hubAdminNotificationsMeta"
-            class="hub-tile-meta"
-          >
-            Sprawdzam...
-          </div>
         </div>
       </button>
 
@@ -11751,65 +11673,57 @@ function ensureAdminNotificationsButtonStyle_() {
 
 
 function setAdminNotificationsButtonState_(count, checking) {
-  const btn = document.getElementById("adminNotificationsBtn");
+  const btn =
+    document.getElementById(
+      "adminNotificationsBtn"
+    );
 
   ensureAdminNotificationsButtonStyle_();
 
-  const itemsCount = Math.max(0, Number(count || 0));
+  const itemsCount =
+    Math.max(
+      0,
+      Number(count || 0)
+    );
 
   const badge =
     document.getElementById(
       "hubAdminNotificationBadge"
     );
 
-  const meta =
-    document.getElementById(
-      "hubAdminNotificationsMeta"
-    );
-
   if (badge) {
-    if (!checking && itemsCount > 0) {
+    if (
+      checking !== true &&
+      itemsCount > 0
+    ) {
       badge.textContent =
         itemsCount > 99
           ? "99+"
           : String(itemsCount);
 
-      badge.classList.remove("hidden");
+      badge.classList.remove(
+        "hidden"
+      );
     } else {
       badge.textContent = "0";
-      badge.classList.add("hidden");
-    }
-  }
-
-  if (meta) {
-    meta.classList.remove(
-      "ok",
-      "warn",
-      "danger"
-    );
-
-    if (checking === true) {
-      meta.textContent = "Sprawdzam...";
-    } else if (itemsCount > 0) {
-      meta.textContent =
-        hubNotificationCountLabel_(
-          itemsCount
-        );
-
-      meta.classList.add("warn");
-    } else {
-      meta.textContent = "Brak nowych";
+      badge.classList.add(
+        "hidden"
+      );
     }
   }
 
   /*
    * Ukryty przycisk zostaje dla kompatybilności
-   * ze starszą logiką powiadomień.
+   * ze starszą logiką skrzynki powiadomień.
    */
   if (!btn) return;
 
-  btn.classList.remove("admin-notifications-has-items");
-  btn.classList.remove("admin-notifications-checking");
+  btn.classList.remove(
+    "admin-notifications-has-items"
+  );
+  btn.classList.remove(
+    "admin-notifications-checking"
+  );
 
   btn.style.background = "";
   btn.style.backgroundColor = "";
@@ -11820,18 +11734,27 @@ function setAdminNotificationsButtonState_(count, checking) {
   btn.style.opacity = "";
 
   if (checking === true) {
-    btn.textContent = "🔔 Powiadomienia — sprawdzam...";
-    btn.classList.add("admin-notifications-checking");
+    btn.textContent =
+      "🔔 Powiadomienia — sprawdzam...";
+
+    btn.classList.add(
+      "admin-notifications-checking"
+    );
     return;
   }
 
   if (itemsCount > 0) {
-    btn.textContent = `🔔 Powiadomienia (${itemsCount})`;
-    btn.classList.add("admin-notifications-has-items");
+    btn.textContent =
+      `🔔 Powiadomienia (${itemsCount})`;
+
+    btn.classList.add(
+      "admin-notifications-has-items"
+    );
     return;
   }
 
-  btn.textContent = "🔔 Powiadomienia";
+  btn.textContent =
+    "🔔 Powiadomienia";
 }
 
 
@@ -38297,272 +38220,8 @@ async function trainerDashboardRefresh_() {
 
 
 /* =========================================================
-   ADMIN NEXT EVENT
+   ADMIN DASHBOARD
 ========================================================= */
-
-function hubFindNextAdminEvent_(seasons) {
-  const now = Date.now();
-
-  const events = (
-    Array.isArray(seasons)
-      ? seasons
-      : []
-  ).flatMap(function (season) {
-    return Array.isArray(season?.events)
-      ? season.events
-      : [];
-  });
-
-  return events
-    .filter(function (event) {
-      if (event?.cancelled === true) {
-        return false;
-      }
-
-      const startTs =
-        new Date(
-          event?.startsAt || ""
-        ).getTime();
-
-      const endTs =
-        new Date(
-          event?.endsAt ||
-          event?.startsAt ||
-          ""
-        ).getTime();
-
-      if (Number.isFinite(endTs)) {
-        return endTs >= now;
-      }
-
-      return (
-        Number.isFinite(startTs) &&
-        startTs >= now
-      );
-    })
-    .sort(function (a, b) {
-      const aTs =
-        new Date(
-          a?.startsAt || ""
-        ).getTime();
-
-      const bTs =
-        new Date(
-          b?.startsAt || ""
-        ).getTime();
-
-      return (
-        (
-          Number.isFinite(aTs)
-            ? aTs
-            : Number.MAX_SAFE_INTEGER
-        ) -
-        (
-          Number.isFinite(bTs)
-            ? bTs
-            : Number.MAX_SAFE_INTEGER
-        )
-      );
-    })[0] || null;
-}
-
-
-function hubFormatAdminEventDate_(event) {
-  const date =
-    new Date(
-      event?.startsAt || ""
-    );
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "—";
-  }
-
-  let label =
-    new Intl.DateTimeFormat(
-      "pl-PL",
-      {
-        timeZone: "Europe/Warsaw",
-        weekday: "long",
-        day: "numeric",
-        month: "long"
-      }
-    ).format(date);
-
-  if (label) {
-    label =
-      label.charAt(0).toUpperCase() +
-      label.slice(1);
-  }
-
-  return label || "—";
-}
-
-
-function hubFormatAdminEventTime_(event) {
-  const start =
-    new Date(
-      event?.startsAt || ""
-    );
-
-  const end =
-    new Date(
-      event?.endsAt || ""
-    );
-
-  const formatTime =
-    function (date) {
-      if (
-        Number.isNaN(
-          date.getTime()
-        )
-      ) {
-        return "";
-      }
-
-      return new Intl.DateTimeFormat(
-        "pl-PL",
-        {
-          timeZone: "Europe/Warsaw",
-          hour: "2-digit",
-          minute: "2-digit"
-        }
-      ).format(date);
-    };
-
-  const startLabel =
-    formatTime(start);
-
-  const endLabel =
-    formatTime(end);
-
-  return [
-    startLabel,
-    endLabel
-  ]
-    .filter(Boolean)
-    .join(" – ") || "—";
-}
-
-
-function hubRenderAdminNextEvent_(event) {
-  const card =
-    document.getElementById(
-      "hubAdminNextEventCard"
-    );
-
-  if (!card) return;
-
-  if (!event) {
-    card.classList.add(
-      "is-empty"
-    );
-
-    hubSetText_(
-      "hubAdminNextTitle",
-      "Brak nadchodzących wydarzeń"
-    );
-
-    hubSetText_(
-      "hubAdminNextDate",
-      "—"
-    );
-
-    hubSetText_(
-      "hubAdminNextTime",
-      "—"
-    );
-
-    hubSetText_(
-      "hubAdminNextPlace",
-      "—"
-    );
-
-    hubSetText_(
-      "hubAdminNextCount",
-      "Otwórz kalendarz klubu"
-    );
-
-    return;
-  }
-
-  card.classList.remove(
-    "is-empty"
-  );
-
-  hubSetText_(
-    "hubAdminNextTitle",
-    event?.eventType ||
-    "Wydarzenie"
-  );
-
-  hubSetText_(
-    "hubAdminNextDate",
-    hubFormatAdminEventDate_(
-      event
-    )
-  );
-
-  hubSetText_(
-    "hubAdminNextTime",
-    hubFormatAdminEventTime_(
-      event
-    )
-  );
-
-  hubSetText_(
-    "hubAdminNextPlace",
-    event?.location ||
-    "Miejsce nie podane"
-  );
-
-  const participants =
-    Math.max(
-      0,
-      Number(
-        event?.participantCount ||
-        0
-      )
-    );
-
-  hubSetText_(
-    "hubAdminNextCount",
-    "Zapisanych: " +
-    participants
-  );
-}
-
-
-async function adminDashboardLoadNextEvent_() {
-  const data =
-    await adminEventsApi_(
-      "events"
-    );
-
-  const seasons =
-    Array.isArray(data?.seasons)
-      ? data.seasons
-      : [];
-
-  adminEventsState_.seasons =
-    seasons;
-
-  const next =
-    hubFindNextAdminEvent_(
-      seasons
-    );
-
-  window.__hubAdminNextEvent =
-    next;
-
-  hubRenderAdminNextEvent_(
-    next
-  );
-}
-
 
 async function adminDashboardRefresh_() {
   if (
@@ -38588,25 +38247,12 @@ async function adminDashboardRefresh_() {
           typeof refreshAdminNotificationsBell_ ===
           "function"
         ) {
-          refreshAdminNotificationsBell_();
+          await refreshAdminNotificationsBell_();
         }
       } catch (e) {
         console.warn(
           "Admin dashboard notifications error",
           e
-        );
-      }
-
-      try {
-        await adminDashboardLoadNextEvent_();
-      } catch (e) {
-        console.warn(
-          "Admin dashboard event error",
-          e
-        );
-
-        hubRenderAdminNextEvent_(
-          null
         );
       }
 
