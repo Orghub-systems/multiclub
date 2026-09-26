@@ -1400,7 +1400,8 @@ input[type="number"] {
 ========================================================= */
 
 #playerMenuView.hub-dashboard,
-#trainerPanelView.hub-dashboard {
+#trainerPanelView.hub-dashboard,
+#adminPanelView.hub-dashboard {
   margin-top: 0 !important;
   min-height: 100vh;
   box-sizing: border-box;
@@ -1726,6 +1727,40 @@ input[type="number"] {
 
 .hub-logout-tile:active {
   transform: scale(.985);
+}
+
+
+/* =================== ADMIN DASHBOARD =================== */
+
+.admin-trial-badge {
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  margin: -6px 0 18px auto;
+  padding: 8px 12px;
+
+  border-radius: 999px;
+  border: 1px solid #2d8a40;
+
+  background: #1f5f2b;
+  color: #fff;
+
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+
+.hub-wide-tile {
+  width: 100%;
+  min-height: 90px;
+  margin-top: 12px;
+}
+
+#adminPanelView .hub-header-bell {
+  flex: 0 0 auto;
 }
 
 /* =================== ALERTY =================== */
@@ -2092,7 +2127,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.26';
+  window.APP_BUILD = 'APP v3.27';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4315,42 +4350,319 @@ if (buildChanged) {
     
 <!-- ADMIN PANEL VIEW
      Główne menu administratora -->
-<div id="adminPanelView" class="container hidden" style="position:relative;">
-  <div
-    id="adminTrialBadge"
+<div id="adminPanelView" class="container hidden hub-dashboard">
+
+  <!-- kompatybilność ze starą logiką licznika powiadomień -->
+  <button
+    id="adminNotificationsBtn"
     class="hidden"
-    style="
-      position:absolute;
-      top:10px;
-      right:10px;
-      padding:8px 12px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:900;
-      background:#1f5f2b;
-      color:#fff;
-      border:1px solid #2d8a40;
-      z-index:5;
-      box-shadow:0 4px 12px rgba(0,0,0,.25);
-    "
-  ></div>
+    type="button"
+    onclick="openAdminNotificationsView_()"
+  >
+    Powiadomienia
+  </button>
 
-  <h1>Panel administratora</h1>
+  <div class="hub-dashboard-inner">
 
-  <button class="full-btn" onclick="adminPokazZawodnikow()">👥 Zawodnicy</button>
-  <button class="full-btn" onclick="adminPokazTrenerow()">👨‍🏫 Trenerzy</button>
-  <button class="full-btn" onclick="openAdminClubGroupsView()">🧩 Grupy klubu</button>
-  <button class="full-btn"type="button"onclick="adminOpenEventsView_()">📅 Wydarzenia</button>
-  <button class="full-btn" onclick="goToView('adminRaportyView')">📊 Raporty</button>
-  <button id="adminNotificationsBtn" class="full-btn" onclick="openAdminNotificationsView_()">🔔 Powiadomienia</button>
-  <button class="full-btn" type="button" onclick="goToView('adminObslugaPlatnosciView')">💳 Obsługa płatności</button>
-  <button id="adminDocumentsBtn" class="full-btn hidden" type="button"onclick="adminOpenDocumentsView_()">📄 Obsługa dokumentów</button>
-  <button class="full-btn" type="button" onclick="adminOpenClubSeasonSettingsView()">⚙️ Ustawienia klubu / sezonu</button>
-  <button class="full-btn" onclick="adminPokazFunkcjeDodatkowe()">Funkcje dodatkowe</button>
-  <button class="full-btn alt" onclick="logoutAppSession_()">⬅ Wyloguj</button>
+    <!-- ================= HEADER ================= -->
+
+    <header class="hub-topbar">
+
+      <img
+        id="hubAdminClubLogo"
+        class="hub-club-logo"
+        src="icon-512.png"
+        alt="Logo klubu"
+      >
+
+      <div class="hub-topbar-text">
+
+        <div
+          id="hubAdminClubName"
+          class="hub-club-name"
+        >
+          ORG HUB
+        </div>
+
+        <div class="hub-role-name">
+          Panel administratora
+        </div>
+
+      </div>
+
+      <button
+        class="hub-header-bell"
+        type="button"
+        onclick="openAdminNotificationsView_()"
+        aria-label="Powiadomienia"
+      >
+        🔔
+
+        <span
+          id="hubAdminNotificationBadge"
+          class="hub-bell-badge hidden"
+        >
+          0
+        </span>
+      </button>
+
+    </header>
+
+
+    <!-- ================= OKRES TESTOWY ================= -->
+
+    <div
+      id="adminTrialBadge"
+      class="hidden admin-trial-badge"
+    ></div>
+
+
+    <!-- ================= NEXT EVENT ================= -->
+
+    <section
+      id="hubAdminNextEventCard"
+      class="hub-next-card"
+      onclick="adminOpenEventsView_()"
+    >
+
+      <div class="hub-next-eyebrow">
+        Najbliższe wydarzenie
+      </div>
+
+      <div
+        id="hubAdminNextTitle"
+        class="hub-next-title"
+      >
+        Ładowanie...
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">📅</div>
+        <div id="hubAdminNextDate">—</div>
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">🕒</div>
+        <div id="hubAdminNextTime">—</div>
+      </div>
+
+      <div class="hub-event-row">
+        <div class="hub-event-icon">📍</div>
+        <div id="hubAdminNextPlace">—</div>
+      </div>
+
+      <div class="hub-event-separator"></div>
+
+      <div
+        id="hubAdminNextCount"
+        class="hub-event-count"
+      >
+        —
+      </div>
+
+      <button
+        class="hub-event-cta"
+        type="button"
+        onclick="
+          event.stopPropagation();
+          adminOpenEventsView_();
+        "
+      >
+        Otwórz wydarzenia
+      </button>
+
+    </section>
+
+
+    <!-- ================= TILES ================= -->
+
+    <div class="hub-tile-grid">
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="adminPokazZawodnikow()"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">👥</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Zawodnicy</div>
+          <div class="hub-tile-meta">Kartoteka i dane</div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="adminPokazTrenerow()"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">👨‍🏫</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Trenerzy</div>
+          <div class="hub-tile-meta">Konta i przypisania</div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="openAdminClubGroupsView()"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">🧩</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Grupy</div>
+          <div class="hub-tile-meta">Struktura klubu</div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="adminOpenEventsView_()"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">📅</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Wydarzenia</div>
+          <div class="hub-tile-meta">Sezony i kalendarz</div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="goToView('adminRaportyView')"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">📊</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Raporty</div>
+          <div class="hub-tile-meta">Obecności i zestawienia</div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="goToView('adminObslugaPlatnosciView')"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">💳</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Płatności</div>
+          <div class="hub-tile-meta">Rozliczenia i przelewy</div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="openAdminNotificationsView_()"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">🔔</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Powiadomienia</div>
+          <div
+            id="hubAdminNotificationsMeta"
+            class="hub-tile-meta"
+          >
+            Sprawdzam...
+          </div>
+        </div>
+      </button>
+
+
+      <button
+        class="hub-tile"
+        type="button"
+        onclick="adminOpenClubSeasonSettingsView()"
+      >
+        <div class="hub-tile-top">
+          <div class="hub-tile-icon">⚙️</div>
+          <div class="hub-tile-arrow">›</div>
+        </div>
+        <div>
+          <div class="hub-tile-title">Ustawienia</div>
+          <div class="hub-tile-meta">Klub i sezon</div>
+        </div>
+      </button>
+
+    </div>
+
+
+    <!-- ================= DODATKOWE ================= -->
+
+    <button
+      id="adminDocumentsBtn"
+      class="hub-tile hub-wide-tile hidden"
+      type="button"
+      onclick="adminOpenDocumentsView_()"
+    >
+      <div class="hub-tile-top">
+        <div class="hub-tile-icon">📄</div>
+        <div class="hub-tile-arrow">›</div>
+      </div>
+      <div>
+        <div class="hub-tile-title">Obsługa dokumentów</div>
+        <div class="hub-tile-meta">Dokumenty klubu</div>
+      </div>
+    </button>
+
+
+    <button
+      class="hub-tile hub-wide-tile"
+      type="button"
+      onclick="adminPokazFunkcjeDodatkowe()"
+    >
+      <div class="hub-tile-top">
+        <div class="hub-tile-icon">•••</div>
+        <div class="hub-tile-arrow">›</div>
+      </div>
+      <div>
+        <div class="hub-tile-title">Funkcje dodatkowe</div>
+        <div class="hub-tile-meta">Pozostałe narzędzia administratora</div>
+      </div>
+    </button>
+
+
+    <!-- ================= WYLOGUJ ================= -->
+
+    <button
+      class="hub-logout-tile"
+      type="button"
+      onclick="logoutAppSession_()"
+    >
+      Wyloguj
+    </button>
+
+  </div>
+
 </div>
 
-  <!-- =========================================================
+<!-- =========================================================
      ADMIN EVENTS
      Centralne zarządzanie wydarzeniami
 ========================================================= -->
@@ -11440,16 +11752,65 @@ function ensureAdminNotificationsButtonStyle_() {
 
 function setAdminNotificationsButtonState_(count, checking) {
   const btn = document.getElementById("adminNotificationsBtn");
-  if (!btn) return;
 
   ensureAdminNotificationsButtonStyle_();
 
   const itemsCount = Math.max(0, Number(count || 0));
 
+  const badge =
+    document.getElementById(
+      "hubAdminNotificationBadge"
+    );
+
+  const meta =
+    document.getElementById(
+      "hubAdminNotificationsMeta"
+    );
+
+  if (badge) {
+    if (!checking && itemsCount > 0) {
+      badge.textContent =
+        itemsCount > 99
+          ? "99+"
+          : String(itemsCount);
+
+      badge.classList.remove("hidden");
+    } else {
+      badge.textContent = "0";
+      badge.classList.add("hidden");
+    }
+  }
+
+  if (meta) {
+    meta.classList.remove(
+      "ok",
+      "warn",
+      "danger"
+    );
+
+    if (checking === true) {
+      meta.textContent = "Sprawdzam...";
+    } else if (itemsCount > 0) {
+      meta.textContent =
+        hubNotificationCountLabel_(
+          itemsCount
+        );
+
+      meta.classList.add("warn");
+    } else {
+      meta.textContent = "Brak nowych";
+    }
+  }
+
+  /*
+   * Ukryty przycisk zostaje dla kompatybilności
+   * ze starszą logiką powiadomień.
+   */
+  if (!btn) return;
+
   btn.classList.remove("admin-notifications-has-items");
   btn.classList.remove("admin-notifications-checking");
 
-  // Przy pustej skrzynce wracamy do oryginalnego czerwonego full-btn.
   btn.style.background = "";
   btn.style.backgroundColor = "";
   btn.style.borderColor = "";
@@ -36751,7 +37112,8 @@ function hubApplyClubIdentity_() {
 
   [
     "hubPlayerClubName",
-    "hubTrainerClubName"
+    "hubTrainerClubName",
+    "hubAdminClubName"
   ].forEach(function (id) {
 
     const el =
@@ -36767,7 +37129,8 @@ function hubApplyClubIdentity_() {
 
   [
     "hubPlayerClubLogo",
-    "hubTrainerClubLogo"
+    "hubTrainerClubLogo",
+    "hubAdminClubLogo"
   ].forEach(function (id) {
 
     const img =
@@ -37934,6 +38297,334 @@ async function trainerDashboardRefresh_() {
 
 
 /* =========================================================
+   ADMIN NEXT EVENT
+========================================================= */
+
+function hubFindNextAdminEvent_(seasons) {
+  const now = Date.now();
+
+  const events = (
+    Array.isArray(seasons)
+      ? seasons
+      : []
+  ).flatMap(function (season) {
+    return Array.isArray(season?.events)
+      ? season.events
+      : [];
+  });
+
+  return events
+    .filter(function (event) {
+      if (event?.cancelled === true) {
+        return false;
+      }
+
+      const startTs =
+        new Date(
+          event?.startsAt || ""
+        ).getTime();
+
+      const endTs =
+        new Date(
+          event?.endsAt ||
+          event?.startsAt ||
+          ""
+        ).getTime();
+
+      if (Number.isFinite(endTs)) {
+        return endTs >= now;
+      }
+
+      return (
+        Number.isFinite(startTs) &&
+        startTs >= now
+      );
+    })
+    .sort(function (a, b) {
+      const aTs =
+        new Date(
+          a?.startsAt || ""
+        ).getTime();
+
+      const bTs =
+        new Date(
+          b?.startsAt || ""
+        ).getTime();
+
+      return (
+        (
+          Number.isFinite(aTs)
+            ? aTs
+            : Number.MAX_SAFE_INTEGER
+        ) -
+        (
+          Number.isFinite(bTs)
+            ? bTs
+            : Number.MAX_SAFE_INTEGER
+        )
+      );
+    })[0] || null;
+}
+
+
+function hubFormatAdminEventDate_(event) {
+  const date =
+    new Date(
+      event?.startsAt || ""
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "—";
+  }
+
+  let label =
+    new Intl.DateTimeFormat(
+      "pl-PL",
+      {
+        timeZone: "Europe/Warsaw",
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      }
+    ).format(date);
+
+  if (label) {
+    label =
+      label.charAt(0).toUpperCase() +
+      label.slice(1);
+  }
+
+  return label || "—";
+}
+
+
+function hubFormatAdminEventTime_(event) {
+  const start =
+    new Date(
+      event?.startsAt || ""
+    );
+
+  const end =
+    new Date(
+      event?.endsAt || ""
+    );
+
+  const formatTime =
+    function (date) {
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return "";
+      }
+
+      return new Intl.DateTimeFormat(
+        "pl-PL",
+        {
+          timeZone: "Europe/Warsaw",
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      ).format(date);
+    };
+
+  const startLabel =
+    formatTime(start);
+
+  const endLabel =
+    formatTime(end);
+
+  return [
+    startLabel,
+    endLabel
+  ]
+    .filter(Boolean)
+    .join(" – ") || "—";
+}
+
+
+function hubRenderAdminNextEvent_(event) {
+  const card =
+    document.getElementById(
+      "hubAdminNextEventCard"
+    );
+
+  if (!card) return;
+
+  if (!event) {
+    card.classList.add(
+      "is-empty"
+    );
+
+    hubSetText_(
+      "hubAdminNextTitle",
+      "Brak nadchodzących wydarzeń"
+    );
+
+    hubSetText_(
+      "hubAdminNextDate",
+      "—"
+    );
+
+    hubSetText_(
+      "hubAdminNextTime",
+      "—"
+    );
+
+    hubSetText_(
+      "hubAdminNextPlace",
+      "—"
+    );
+
+    hubSetText_(
+      "hubAdminNextCount",
+      "Otwórz kalendarz klubu"
+    );
+
+    return;
+  }
+
+  card.classList.remove(
+    "is-empty"
+  );
+
+  hubSetText_(
+    "hubAdminNextTitle",
+    event?.eventType ||
+    "Wydarzenie"
+  );
+
+  hubSetText_(
+    "hubAdminNextDate",
+    hubFormatAdminEventDate_(
+      event
+    )
+  );
+
+  hubSetText_(
+    "hubAdminNextTime",
+    hubFormatAdminEventTime_(
+      event
+    )
+  );
+
+  hubSetText_(
+    "hubAdminNextPlace",
+    event?.location ||
+    "Miejsce nie podane"
+  );
+
+  const participants =
+    Math.max(
+      0,
+      Number(
+        event?.participantCount ||
+        0
+      )
+    );
+
+  hubSetText_(
+    "hubAdminNextCount",
+    "Zapisanych: " +
+    participants
+  );
+}
+
+
+async function adminDashboardLoadNextEvent_() {
+  const data =
+    await adminEventsApi_(
+      "events"
+    );
+
+  const seasons =
+    Array.isArray(data?.seasons)
+      ? data.seasons
+      : [];
+
+  adminEventsState_.seasons =
+    seasons;
+
+  const next =
+    hubFindNextAdminEvent_(
+      seasons
+    );
+
+  window.__hubAdminNextEvent =
+    next;
+
+  hubRenderAdminNextEvent_(
+    next
+  );
+}
+
+
+async function adminDashboardRefresh_() {
+  if (
+    window.__hubAdminDashboardLoading
+  ) {
+    return window.__hubAdminDashboardLoading;
+  }
+
+  const task =
+    (async function () {
+
+      hubApplyClubIdentity_();
+
+      try {
+        if (
+          typeof applyCachedAdminNotificationsBell_ ===
+          "function"
+        ) {
+          applyCachedAdminNotificationsBell_();
+        }
+
+        if (
+          typeof refreshAdminNotificationsBell_ ===
+          "function"
+        ) {
+          refreshAdminNotificationsBell_();
+        }
+      } catch (e) {
+        console.warn(
+          "Admin dashboard notifications error",
+          e
+        );
+      }
+
+      try {
+        await adminDashboardLoadNextEvent_();
+      } catch (e) {
+        console.warn(
+          "Admin dashboard event error",
+          e
+        );
+
+        hubRenderAdminNextEvent_(
+          null
+        );
+      }
+
+    })();
+
+  window.__hubAdminDashboardLoading =
+    task;
+
+  try {
+    return await task;
+  } finally {
+    window.__hubAdminDashboardLoading =
+      null;
+  }
+}
+
+
+/* =========================================================
    AUTOMATYCZNE ODŚWIEŻANIE PO WEJŚCIU NA PANEL
 ========================================================= */
 
@@ -37949,7 +38640,6 @@ function hubScheduleDashboardRefresh_(
     __hubDashboardRefreshTimer
   );
 
-
   __hubDashboardRefreshTimer =
     setTimeout(
       function () {
@@ -37958,7 +38648,6 @@ function hubScheduleDashboardRefresh_(
           document.getElementById(
             viewId
           );
-
 
         if (
           !view ||
@@ -37969,40 +38658,43 @@ function hubScheduleDashboardRefresh_(
           return;
         }
 
-
         if (
           viewId ===
           "playerMenuView"
         ) {
-
           playerDashboardRefresh_()
             .catch(function (e) {
-
               console.warn(
                 "playerDashboardRefresh_",
                 e
               );
-
             });
-
         }
-
 
         if (
           viewId ===
           "trainerPanelView"
         ) {
-
           trainerDashboardRefresh_()
             .catch(function (e) {
-
               console.warn(
                 "trainerDashboardRefresh_",
                 e
               );
-
             });
+        }
 
+        if (
+          viewId ===
+          "adminPanelView"
+        ) {
+          adminDashboardRefresh_()
+            .catch(function (e) {
+              console.warn(
+                "adminDashboardRefresh_",
+                e
+              );
+            });
         }
 
       },
@@ -38045,7 +38737,9 @@ function hubScheduleDashboardRefresh_(
           viewId ===
             "playerMenuView" ||
           viewId ===
-            "trainerPanelView"
+            "trainerPanelView" ||
+          viewId ===
+            "adminPanelView"
         ) {
 
           hubScheduleDashboardRefresh_(
@@ -38103,7 +38797,9 @@ function hubScheduleDashboardRefresh_(
           viewId ===
             "playerMenuView" ||
           viewId ===
-            "trainerPanelView"
+            "trainerPanelView" ||
+          viewId ===
+            "adminPanelView"
         ) {
 
           hubScheduleDashboardRefresh_(
