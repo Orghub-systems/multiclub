@@ -1779,10 +1779,320 @@ input[type="number"] {
 
 }
     
+
+
+/* =========================================================
+   PLAYER EVENTS V2
+   Nowy ekran wydarzeń zawodnika
+========================================================= */
+
+#homeView.player-events-view {
+  margin-top: 0 !important;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    16px
+    max(24px, env(safe-area-inset-bottom));
+  text-align: left;
+}
+
+#homeView .player-events-inner {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+#homeView .player-events-header {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 18px 0;
+}
+
+#homeView .player-events-back {
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.17);
+  background: #111;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#homeView .player-events-title {
+  margin: 0;
+  color: #fff;
+  text-align: left;
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+#homeView .player-events-list {
+  display: grid;
+  gap: 16px;
+}
+
+#homeView .player-event-card {
+  margin: 0;
+  padding: 19px 20px 18px 20px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: #111;
+  color: #fff;
+  box-shadow: 0 14px 38px rgba(0,0,0,.28);
+  text-align: left;
+  overflow: hidden;
+}
+
+#homeView .player-event-eyebrow {
+  margin-bottom: 6px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+#homeView .player-event-title {
+  margin: 0 0 15px 0;
+  color: #fff;
+  font-size: 23px;
+  line-height: 1.15;
+  font-weight: 950;
+}
+
+#homeView .player-event-meta {
+  display: grid;
+  gap: 9px;
+}
+
+#homeView .player-event-meta-row {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  color: rgba(255,255,255,.94);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+#homeView .player-event-meta-icon {
+  width: 26px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+#homeView .player-event-count {
+  margin-top: 3px;
+  font-weight: 850;
+}
+
+#homeView .player-event-status {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.045);
+}
+
+#homeView .player-event-status-label {
+  margin-bottom: 4px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+
+#homeView .player-event-status-value {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+#homeView .player-event-status.is-accepted .player-event-status-value {
+  color: #81c784;
+}
+
+#homeView .player-event-status.is-declined .player-event-status-value {
+  color: #ef9a9a;
+}
+
+#homeView .player-event-status.is-pending .player-event-status-value {
+  color: #90caf9;
+}
+
+#homeView .player-event-primary {
+  width: 100%;
+  min-height: 54px;
+  margin: 16px 0 0 0;
+  padding: 13px 14px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: #1f63b9;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+#homeView .player-event-primary.is-danger {
+  background: #7d1515;
+}
+
+#homeView .player-event-reject {
+  width: 100%;
+  min-height: 50px;
+  margin: 8px 0 0 0;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: #7d1515;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+#homeView .player-event-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+#homeView .player-event-action {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  margin: 0;
+  padding: 10px 7px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: #2b2b2b;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.15;
+  font-weight: 900;
+  text-align: center;
+}
+
+#homeView .player-event-action:disabled {
+  opacity: .52;
+}
+
+#homeView .player-event-action:active,
+#homeView .player-event-primary:active,
+#homeView .player-event-reject:active,
+#homeView .player-events-back:active {
+  transform: scale(.985);
+}
+
+#homeView .player-event-actions.invitation-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#homeView .player-event-actions.invitation-actions.two-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#homeView .lista-zapisanych {
+  margin-top: 17px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255,255,255,.14);
+}
+
+#homeView .lista-zapisanych > .card {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+#homeView .lista-zapisanych > .card > b {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+#homeView .lista-zapisanych ul {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#homeView .lista-zapisanych li {
+  min-height: 30px;
+  padding: 6px 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+
+#homeView .lista-zapisanych li:last-child {
+  border-bottom: none;
+}
+
+#homeView .player-events-empty {
+  padding: 22px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: #111;
+  color: rgba(255,255,255,.72);
+  text-align: center;
+  font-weight: 750;
+}
+
+#homeView .player-events-menu-btn {
+  margin-top: 16px;
+}
+
+@media (max-width: 430px) {
+  #homeView .player-events-title {
+    font-size: 28px;
+  }
+
+  #homeView .player-event-card {
+    padding: 17px 16px 16px;
+  }
+
+  #homeView .player-event-action {
+    font-size: 13px;
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}
+
+@media (max-width: 355px) {
+  #homeView .player-event-actions {
+    grid-template-columns: 1fr;
+  }
+
+  #homeView .player-event-actions.invitation-actions,
+  #homeView .player-event-actions.invitation-actions.two-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.25';
+  window.APP_BUILD = 'APP v3.26';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -2850,11 +3160,46 @@ if (buildChanged) {
 <!-- PLAYER EVENTS VIEW
      Lista wydarzeń i treningów zawodnika -->
     
-    <div id="homeView" class="container hidden">
-      <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
-      <div id="listaTreningow">Ładowanie...</div>
-     <button class="full-btn alt" onclick="goToView('playerMenuView', { replace: true })" style="margin-top:10px;"> ⬅ Powrót do menu </button>
+    <div id="homeView" class="container hidden player-events-view">
+  <div class="player-events-inner">
+
+    <div class="player-events-header">
+      <button
+        class="player-events-back"
+        type="button"
+        onclick="goToView('playerMenuView', { replace: true })"
+        aria-label="Wróć do menu"
+      >
+        ←
+      </button>
+
+      <h1
+        id="tytulTreningow"
+        class="player-events-title"
+      >
+        Wydarzenia
+      </h1>
+
+      <div></div>
     </div>
+
+    <div
+      id="listaTreningow"
+      class="player-events-list"
+    >
+      Ładowanie...
+    </div>
+
+    <button
+      class="hub-logout-tile player-events-menu-btn"
+      type="button"
+      onclick="goToView('playerMenuView', { replace: true })"
+    >
+      Wróć do menu
+    </button>
+
+  </div>
+</div>
 
   <!-- PLAYER LINEUP VIEW -->
 <div id="playerLineupView" class="container hidden">
@@ -13554,23 +13899,23 @@ function renderTreningi(lista) {
   }
 
   function parseEventEndDateTime_(t) {
-  const explicitEndDate = String(t?.dataKoniec || "").trim();
-  const rawDate = String(t?.data || "").trim();
+    const explicitEndDate = String(t?.dataKoniec || "").trim();
+    const rawDate = String(t?.data || "").trim();
 
-  let endDate = explicitEndDate;
+    let endDate = explicitEndDate;
 
-  if (!endDate && rawDate) {
-    const parts = rawDate.split(/\s+-\s+/);
-    endDate = String(parts[1] || parts[0] || "").trim();
+    if (!endDate && rawDate) {
+      const parts = rawDate.split(/\s+-\s+/);
+      endDate = String(parts[1] || parts[0] || "").trim();
+    }
+
+    return parseEventDateTime_({
+      ...t,
+      data: endDate,
+      godzStart: String(t?.godzKoniec || t?.godzStart || "23:59").trim()
+    });
   }
 
-  return parseEventDateTime_({
-    ...t,
-    data: endDate,
-    godzStart: String(t?.godzKoniec || t?.godzStart || "23:59").trim()
-  });
-}
-  
   function isVisibleInApp_(t) {
     if (typeof t?.widocznoscWApce !== "undefined") return !!t.widocznoscWApce;
     if (typeof t?.widocznyWApce !== "undefined") return !!t.widocznyWApce;
@@ -13579,186 +13924,394 @@ function renderTreningi(lista) {
     return true;
   }
 
-  const terazTs = Date.now();
+  function formatPlayerEventDate_(t) {
+    const raw =
+      String(t?.data || "").trim();
 
-  const listaPoFiltrowaniu = (Array.isArray(lista) ? lista : [])
-    .filter(t => {
-      if (!isVisibleInApp_(t)) return false;
-      
-    const endTs = parseEventEndDateTime_(t);
-    if (!Number.isFinite(endTs)) return false;
-    if (endTs < terazTs) return false;
+    let y = 0;
+    let m = 0;
+    let d = 0;
 
-      return true;
-    })
-    .sort((a, b) => parseEventDateTime_(a) - parseEventDateTime_(b));
-
-    window.__playerEventsById = {};
-    
-    listaPoFiltrowaniu.forEach(t => {
-      const eid = String(t?.id || "").trim();
-      if (eid) window.__playerEventsById[eid] = t;
-    });
-    
-    if (!listaPoFiltrowaniu.length) {
-      div.innerHTML = "<p>Brak wydarzeń</p>";
-      return;
+    if (/^\d{4}[-.]\d{2}[-.]\d{2}$/.test(raw)) {
+      const parts = raw.split(/[-.]/);
+      y = Number(parts[0]);
+      m = Number(parts[1]);
+      d = Number(parts[2]);
+    } else if (/^\d{2}[.-]\d{2}[.-]\d{4}$/.test(raw)) {
+      const parts = raw.split(/[.-]/);
+      d = Number(parts[0]);
+      m = Number(parts[1]);
+      y = Number(parts[2]);
     }
-    
-    div.innerHTML = listaPoFiltrowaniu.map(t => {
-    const isPowolanie = !!t.powolaniaMode;
 
-    const powolanieStatus =
-      String(
-        t.statusPowolania ||
-        (t.zaakceptowalPowolanie ? "accepted" : "invited")
-      )
+    if (!y || !m || !d) {
+      return [
+        String(t?.dzien || "").trim(),
+        raw
+      ].filter(Boolean).join(", ");
+    }
+
+    const date =
+      new Date(y, m - 1, d, 12, 0, 0);
+
+    const label =
+      new Intl.DateTimeFormat(
+        "pl-PL",
+        {
+          weekday: "long",
+          day: "numeric",
+          month: "long"
+        }
+      ).format(date);
+
+    return label
+      ? label.charAt(0).toUpperCase() + label.slice(1)
+      : raw;
+  }
+
+  function playerEventEyebrow_(t, isPowolanie) {
+    const type =
+      String(t?.rodzaj || "")
         .trim()
         .toLowerCase();
 
-    const acceptedPowolanie =
-      isPowolanie &&
-      powolanieStatus === "accepted";
+    if (type.includes("trening")) {
+      return "Trening";
+    }
 
-    const declinedPowolanie =
-      isPowolanie &&
-      powolanieStatus === "declined";
+    if (
+      isPowolanie ||
+      type.includes("mecz") ||
+      type.includes("vs") ||
+      type.includes("sparing")
+    ) {
+      return "Mecz";
+    }
 
-    const countLabel = isPowolanie ? "Powołanych" : "Zapisanych";
-    const countValue = t.zapisanych ?? 0;
+    return "Wydarzenie";
+  }
 
-    const mainBtnDisabled = isPowolanie ? false : !!t.zapisany;
+  const terazTs = Date.now();
 
-    const mainBtnText = isPowolanie
-      ? (
-          acceptedPowolanie
-            ? "Rezygnuję z powołania"
-            : "Akceptuję powołanie"
+  const listaPoFiltrowaniu =
+    (Array.isArray(lista) ? lista : [])
+      .filter(t => {
+        if (!isVisibleInApp_(t)) return false;
+
+        const endTs =
+          parseEventEndDateTime_(t);
+
+        if (!Number.isFinite(endTs)) {
+          return false;
+        }
+
+        return endTs >= terazTs;
+      })
+      .sort(
+        (a, b) =>
+          parseEventDateTime_(a) -
+          parseEventDateTime_(b)
+      );
+
+  window.__playerEventsById = {};
+
+  listaPoFiltrowaniu.forEach(t => {
+    const eid =
+      String(t?.id || "").trim();
+
+    if (eid) {
+      window.__playerEventsById[eid] = t;
+    }
+  });
+
+  if (!listaPoFiltrowaniu.length) {
+    div.innerHTML =
+      '<div class="player-events-empty">Brak wydarzeń</div>';
+
+    return;
+  }
+
+  div.innerHTML =
+    listaPoFiltrowaniu.map(t => {
+      const isPowolanie =
+        !!t.powolaniaMode;
+
+      const powolanieStatus =
+        String(
+          t.statusPowolania ||
+          (
+            t.zaakceptowalPowolanie
+              ? "accepted"
+              : "invited"
+          )
         )
-      : (
-          t.zapisany
-            ? "Zapisano ✅"
-            : "Zapisz się"
-        );
+          .trim()
+          .toLowerCase();
 
-    const mainBtnBg = isPowolanie
-      ? (
-          acceptedPowolanie
-            ? "#8b0000"
-            : "#1565c0"
-        )
-      : (
-          t.zapisany
-            ? "#2e7d32"
-            : "#c62828"
-        );
+      const acceptedPowolanie =
+        isPowolanie &&
+        powolanieStatus === "accepted";
 
-    const mainBtnAction =
-      isPowolanie && acceptedPowolanie
-        ? `wypiszSie('${t.id}')`
-        : `zapiszSie('${t.id}')`;
+      const declinedPowolanie =
+        isPowolanie &&
+        powolanieStatus === "declined";
 
-    const powolanieStatusText =
-      acceptedPowolanie
-        ? "Zaakceptowano"
-        : declinedPowolanie
-          ? "Odrzucono"
-          : "Oczekuje na odpowiedź";
+      const powolanieStatusText =
+        acceptedPowolanie
+          ? "Zaakceptowano"
+          : declinedPowolanie
+            ? "Odrzucono"
+            : "Oczekuje na odpowiedź";
 
-    const powolanieStatusColor =
-      acceptedPowolanie
-        ? "#81c784"
-        : declinedPowolanie
-          ? "#ef9a9a"
-          : "#90caf9";
+      const powolanieStatusClass =
+        acceptedPowolanie
+          ? "is-accepted"
+          : declinedPowolanie
+            ? "is-declined"
+            : "is-pending";
 
-    const statusLine = isPowolanie
-      ? `<span id="powolanie-status-${t.id}" style="display:inline-block;margin-top:4px;color:${powolanieStatusColor};"><b>Tryb:</b> Powołania &nbsp;&nbsp; <b>Status:</b> ${powolanieStatusText}</span><br>`
-      : "";
+      const countLabel =
+        isPowolanie
+          ? "powołanych"
+          : "zapisanych";
 
-    const secondBtnHtml = isPowolanie
-      ? (
-          acceptedPowolanie || declinedPowolanie
-            ? ""
-            : `
-              <button
-                id="odrzuc-${t.id}"
-                type="button"
-                style="background:#8b0000;color:white;border:none;"
-                onclick="odrzucPowolanie_('${t.id}')">
-                Odrzucam powołanie
-              </button>
-            `
-        )
-      : `
-        <button
-          id="wypisz-${t.id}"
-          ${t.zapisany ? '' : 'disabled'}
-          style="background:#444;"
-          onclick="wypiszSie('${t.id}')">
-          Wypisz się
-        </button>
-      `;
-      const toggleLabel = isPowolanie ? "👥 Powołani" : "👥 Zapisani";
+      const countValue =
+        t.zapisanych ?? 0;
+
       const hasLineup =
-        isOrgFeatureEnabled_("event_lineups") &&
+        isOrgFeatureEnabled_(
+          "event_lineups"
+        ) &&
         playerHasLineupFromEvent_(t);
-      
-      return `
-      <div class="card">
-        <p>
-          <b>${t.rodzaj || ""}</b> &nbsp;&nbsp; ${t.data || ""} (${t.dzien || ""})<br>
-          ${t.dataKoniec && t.dataKoniec !== t.data ? `Do: <b>${t.dataKoniec}</b><br>` : ""}
-          Godzina: <b>${t.godzStart || ""}</b> – <b>${t.godzKoniec || ""}</b><br>
-          ${t.miejsce ? `Miejsce: <b>${t.miejsce}</b><br>` : ""}
-          Trener: <b>${t.trener || ""}</b> &nbsp;&nbsp; ${countLabel}: ${countValue}<br>
-          ${statusLine}
-        </p>
 
-        <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-          <button 
-            id="btn-${t.id}" 
-            data-powolanie="${isPowolanie ? "1" : "0"}"
-            data-accepted="${acceptedPowolanie ? "1" : "0"}"
-            ${mainBtnDisabled ? 'disabled' : ''} 
-            style="background:${mainBtnBg};color:white;border:none;"
-            onclick="${mainBtnAction}">
-            ${mainBtnText}
+      const eventDateLabel =
+        formatPlayerEventDate_(t);
+
+      const eyebrow =
+        playerEventEyebrow_(
+          t,
+          isPowolanie
+        );
+
+      const title =
+        String(
+          t?.rodzaj ||
+          "Wydarzenie"
+        ).trim();
+
+      const regularActionText =
+        t.zapisany
+          ? "Wypisz się"
+          : "Zapisz się";
+
+      const regularAction =
+        t.zapisany
+          ? `wypiszSie('${t.id}')`
+          : `zapiszSie('${t.id}')`;
+
+      const invitationMainText =
+        acceptedPowolanie
+          ? "Rezygnuję z powołania"
+          : "Akceptuję powołanie";
+
+      const invitationMainAction =
+        acceptedPowolanie
+          ? `wypiszSie('${t.id}')`
+          : `zapiszSie('${t.id}')`;
+
+      const rejectButton =
+        isPowolanie &&
+        !acceptedPowolanie &&
+        !declinedPowolanie
+          ? `
+            <button
+              id="odrzuc-${t.id}"
+              class="player-event-reject"
+              type="button"
+              onclick="odrzucPowolanie_('${t.id}')"
+            >
+              Odrzucam powołanie
+            </button>
+          `
+          : "";
+
+      const invitationActions = [
+        `
+          <button
+            class="player-event-action"
+            type="button"
+            onclick="toggleZapisani('${t.id}')"
+          >
+            👥 Powołani
           </button>
-
-          ${secondBtnHtml}
-
-          <button 
-            style="background:#333;" 
-            onclick="toggleZapisani('${t.id}')">
-            ${toggleLabel}
-          </button>
-
+        `,
+        `
           <button
             id="calendar-${t.id}"
+            class="player-event-action"
             type="button"
-            style="background:#1f4f8f;color:white;border:none;"
-            onclick="playerAddEventToGoogleCalendar('${t.id}')">
+            onclick="playerAddEventToGoogleCalendar('${t.id}')"
+          >
             📅 Kalendarz
           </button>
+        `,
+        hasLineup
+          ? `
+            <button
+              id="player-lineup-${t.id}"
+              class="player-event-action"
+              type="button"
+              onclick="playerOpenLineup_('${t.id}')"
+            >
+              🏒 Lineup
+            </button>
+          `
+          : ""
+      ].filter(Boolean);
 
-          <button
-            id="player-lineup-${t.id}"
-            type="button"
-            class="${hasLineup ? "" : "hidden"}"
-            style="background:#1565c0;color:white;border:none;"
-            onclick="playerOpenLineup_('${t.id}')">
-            🏒 Zobacz lineup
-          </button>
-  
-        </div>
+      const invitationActionClass =
+        invitationActions.length === 2
+          ? " two-actions"
+          : "";
 
-        <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
-      </div>
-    `;
-  }).join('');
+      const actionsHtml =
+        isPowolanie
+          ? `
+            <button
+              id="btn-${t.id}"
+              class="player-event-primary ${acceptedPowolanie ? "is-danger" : ""}"
+              type="button"
+              data-powolanie="1"
+              data-accepted="${acceptedPowolanie ? "1" : "0"}"
+              onclick="${invitationMainAction}"
+            >
+              ${invitationMainText}
+            </button>
+
+            ${rejectButton}
+
+            <div class="player-event-actions invitation-actions${invitationActionClass}">
+              ${invitationActions.join("")}
+            </div>
+          `
+          : `
+            <div class="player-event-actions">
+              <button
+                id="btn-${t.id}"
+                class="player-event-action"
+                type="button"
+                data-powolanie="0"
+                data-accepted="0"
+                onclick="${regularAction}"
+              >
+                ${regularActionText}
+              </button>
+
+              <button
+                class="player-event-action"
+                type="button"
+                onclick="toggleZapisani('${t.id}')"
+              >
+                👥 Zapisani
+              </button>
+
+              <button
+                id="calendar-${t.id}"
+                class="player-event-action"
+                type="button"
+                onclick="playerAddEventToGoogleCalendar('${t.id}')"
+              >
+                📅 Kalendarz
+              </button>
+            </div>
+          `;
+
+      return `
+        <section class="player-event-card">
+
+          <div class="player-event-eyebrow">
+            ${eyebrow}
+          </div>
+
+          <div class="player-event-title">
+            ${title}
+          </div>
+
+          <div class="player-event-meta">
+
+            <div class="player-event-meta-row">
+              <div class="player-event-meta-icon">📅</div>
+              <div>${eventDateLabel}</div>
+            </div>
+
+            <div class="player-event-meta-row">
+              <div class="player-event-meta-icon">🕒</div>
+              <div>
+                ${t.godzStart || "—"}
+                –
+                ${t.godzKoniec || "—"}
+              </div>
+            </div>
+
+            ${t.miejsce
+              ? `
+                <div class="player-event-meta-row">
+                  <div class="player-event-meta-icon">📍</div>
+                  <div>${t.miejsce}</div>
+                </div>
+              `
+              : ""
+            }
+
+            ${t.trener && t.trener !== "—"
+              ? `
+                <div class="player-event-meta-row">
+                  <div class="player-event-meta-icon">👥</div>
+                  <div>${t.trener}</div>
+                </div>
+              `
+              : ""
+            }
+
+            <div class="player-event-meta-row player-event-count">
+              <div class="player-event-meta-icon">👥</div>
+              <div>
+                ${countValue} ${countLabel}
+              </div>
+            </div>
+
+          </div>
+
+          ${isPowolanie
+            ? `
+              <div
+                id="powolanie-status-${t.id}"
+                class="player-event-status ${powolanieStatusClass}"
+              >
+                <div class="player-event-status-label">
+                  Status powołania
+                </div>
+
+                <div class="player-event-status-value">
+                  ${powolanieStatusText}
+                </div>
+              </div>
+            `
+            : ""
+          }
+
+          ${actionsHtml}
+
+          <div
+            id="zapisani-${t.id}"
+            class="hidden lista-zapisanych"
+          ></div>
+
+        </section>
+      `;
+    })
+    .join('');
 }
-
   function playerHasLineupFromEvent_(event) {
   return (
     event?.hasLineup === true ||
@@ -14949,13 +15502,19 @@ async function wypiszSie(id) {
         return;
       }
  
-      if (zapiszBtn) { zapiszBtn.innerText = "Zapisz się"; zapiszBtn.disabled = false; }
-      if (btn && btn.id && btn.id.startsWith("wypisz-")) btn.disabled = true;
- 
+      if (zapiszBtn) {
+        zapiszBtn.innerText = "Zapisz się";
+        zapiszBtn.disabled = false;
+        zapiszBtn.setAttribute(
+          "onclick",
+          `zapiszSie('${id}')`
+        );
+      }
+
       if (box && !box.classList.contains("hidden")) {
         await odswiezListeZapisanych(id);
       }
- 
+
       return;
     }
  
