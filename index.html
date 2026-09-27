@@ -2636,7 +2636,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.31';
+  window.APP_BUILD = 'APP v3.32';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -18825,6 +18825,209 @@ function trainerSetAddEventButtonLoaded_(loaded) {
   }
 }
   
+
+function trainerEventDateIso_(value) {
+  let raw =
+    String(value || "").trim();
+
+  if (!raw) return "";
+
+  if (raw.includes(" - ")) {
+    raw =
+      String(
+        raw.split(" - ")[0] || ""
+      ).trim();
+  }
+
+  if (
+    /^\d{4}-\d{2}-\d{2}$/.test(raw)
+  ) {
+    return raw;
+  }
+
+  const match =
+    raw.match(
+      /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/
+    );
+
+  if (!match) return "";
+
+  return (
+    match[3] +
+    "-" +
+    String(match[2]).padStart(2, "0") +
+    "-" +
+    String(match[1]).padStart(2, "0")
+  );
+}
+
+
+function trainerEventTimeHm_(value) {
+  const raw =
+    String(value || "").trim();
+
+  if (!raw) return "";
+
+  const match =
+    raw.match(
+      /^(\d{1,2})[:.](\d{2})/
+    );
+
+  if (!match) return "";
+
+  return (
+    String(match[1]).padStart(2, "0") +
+    ":" +
+    match[2]
+  );
+}
+
+
+function trainerWarsawNowKey_() {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Europe/Warsaw",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      }
+    ).formatToParts(
+      new Date()
+    );
+
+  const get =
+    function (type) {
+      return (
+        parts.find(
+          part => part.type === type
+        )?.value || ""
+      );
+    };
+
+  return (
+    get("year") +
+    "-" +
+    get("month") +
+    "-" +
+    get("day") +
+    "T" +
+    get("hour") +
+    ":" +
+    get("minute")
+  );
+}
+
+
+function trainerEventEndKey_(event) {
+  const endDate =
+    trainerEventDateIso_(
+      event?.dataKoniec ||
+      event?.data
+    );
+
+  if (!endDate) return "";
+
+  const endTime =
+    trainerEventTimeHm_(
+      event?.godzKoniec ||
+      event?.godzStart
+    ) ||
+    "23:59";
+
+  return (
+    endDate +
+    "T" +
+    endTime
+  );
+}
+
+
+function trainerEventIsFinished_(
+  event,
+  nowKey = ""
+) {
+  const endKey =
+    trainerEventEndKey_(
+      event
+    );
+
+  if (!endKey) {
+    return false;
+  }
+
+  const currentKey =
+    String(
+      nowKey ||
+      trainerWarsawNowKey_()
+    );
+
+  return endKey < currentKey;
+}
+
+
+function trainerFilterUpcomingEvents_(list) {
+  const nowKey =
+    trainerWarsawNowKey_();
+
+  return (
+    Array.isArray(list)
+      ? list
+      : []
+  ).filter(
+    event =>
+      !trainerEventIsFinished_(
+        event,
+        nowKey
+      )
+  );
+}
+
+
+function trainerFilterArchivedEvents_(list) {
+  const nowKey =
+    trainerWarsawNowKey_();
+
+  return (
+    Array.isArray(list)
+      ? list
+      : []
+  ).filter(
+    event =>
+      trainerEventIsFinished_(
+        event,
+        nowKey
+      )
+  );
+}
+
+
+function trainerCurrentMonthLabel_() {
+  const label =
+    new Intl.DateTimeFormat(
+      "pl-PL",
+      {
+        timeZone: "Europe/Warsaw",
+        month: "long",
+        year: "numeric"
+      }
+    ).format(
+      new Date()
+    );
+
+  if (!label) return "";
+
+  return (
+    label.charAt(0).toUpperCase() +
+    label.slice(1)
+  );
+}
+
+
 async function trainerShowCurrentEvents_() {
   window.__trainerEventsMode = "current";
   window.__trainerEventsRenderTarget = "trainerCurrentListaWydarzen";
@@ -18862,7 +19065,15 @@ async function trainerShowCurrentEvents_() {
       );
     }
 
-    renderTreningiTrainer(fresh);
+    const upcoming =
+      trainerFilterUpcomingEvents_(
+        fresh
+      );
+
+    renderTreningiTrainer(
+      upcoming
+    );
+
     trainerSetAddEventButtonLoaded_(true);
 
   } catch (e) {
@@ -18894,8 +19105,68 @@ async function trainerShowArchiveEventsMode_() {
   }
 
   try {
-    const months = await trainerEnsureArchiveMonthsLoaded_();
-    renderTrainerArchiveMonthsInline_(months);
+    const groupsKey =
+      String(
+        window.grupyTrenera || ""
+      ).trim();
+
+    const results =
+      await Promise.allSettled([
+        trainerEnsureArchiveMonthsLoaded_(),
+
+        apiClubGet(
+          "treningiTrener",
+          {
+            grupa: groupsKey,
+            _ts: Date.now()
+          }
+        )
+      ]);
+
+    const months =
+      results[0].status === "fulfilled" &&
+      Array.isArray(results[0].value)
+        ? results[0].value
+        : [];
+
+    const currentEvents =
+      results[1].status === "fulfilled" &&
+      Array.isArray(results[1].value)
+        ? results[1].value
+        : [];
+
+    window.__trainerCurrentMonthArchivedEvents =
+      trainerFilterArchivedEvents_(
+        currentEvents
+      );
+
+    const currentMonthKey =
+      trainerCurrentMonthKey_();
+
+    const currentMonthLabel =
+      trainerCurrentMonthLabel_();
+
+    const mergedMonths =
+      [...months];
+
+    if (
+      window.__trainerCurrentMonthArchivedEvents.length > 0 &&
+      currentMonthKey &&
+      !mergedMonths.some(
+        item =>
+          String(item?.key || "") ===
+          currentMonthKey
+      )
+    ) {
+      mergedMonths.unshift({
+        key: currentMonthKey,
+        label: currentMonthLabel
+      });
+    }
+
+    renderTrainerArchiveMonthsInline_(
+      mergedMonths
+    );
 
   } catch (e) {
     if (monthsBox) {
@@ -19010,21 +19281,53 @@ async function selectTrainerArchiveMonth_(key, label) {
   }
 
   try {
-    const lista = await apiClubGet(
-      "treningiTrenerArchiwalne",
-      {
-        grupa: window.grupyTrenera || "",
-        miesiac: window.__trainerArchiveSelectedMonth,
-        _ts: Date.now()
-      }
-    );
+    let lista = null;
 
-    if (lista && lista.success === false) {
-      throw new Error(lista.error || "Błąd pobierania wydarzeń archiwalnych");
+    if (
+      window.__trainerArchiveSelectedMonth ===
+      trainerCurrentMonthKey_()
+    ) {
+      lista =
+        Array.isArray(
+          window.__trainerCurrentMonthArchivedEvents
+        )
+          ? window.__trainerCurrentMonthArchivedEvents
+          : [];
+    } else {
+      lista =
+        await apiClubGet(
+          "treningiTrenerArchiwalne",
+          {
+            grupa:
+              window.grupyTrenera || "",
+            miesiac:
+              window.__trainerArchiveSelectedMonth,
+            _ts:
+              Date.now()
+          }
+        );
     }
 
+    if (
+      lista &&
+      lista.success === false
+    ) {
+      throw new Error(
+        lista.error ||
+        "Błąd pobierania wydarzeń archiwalnych"
+      );
+    }
+
+    lista =
+      trainerFilterArchivedEvents_(
+        lista
+      );
+
     if (selectedMonth) {
-      selectedMonth.innerHTML = trainerArchiveSummaryHtml_(lista);
+      selectedMonth.innerHTML =
+        trainerArchiveSummaryHtml_(
+          lista
+        );
     }
     
     if (!Array.isArray(lista) || !lista.length) {
