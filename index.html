@@ -2636,7 +2636,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.33';
+  window.APP_BUILD = 'APP v3.34';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -4889,7 +4889,34 @@ if (buildChanged) {
     <div class="login-box" style="margin-top:10px;">
 
       <div style="font-size:13px; opacity:.8; margin-bottom:4px;">Data rozpoczęcia wydarzenia</div>
-      <input id="eventData" type="date" autocomplete="off">
+      <input
+        id="eventData"
+        type="date"
+        autocomplete="off"
+        onchange="trainerUpdatePastEventWarning_()"
+        oninput="trainerUpdatePastEventWarning_()"
+      >
+
+      <div
+        id="eventPastDateWarning"
+        class="hidden"
+        style="
+          margin:10px 0 4px 0;
+          padding:13px 14px;
+          border-radius:14px;
+          border:2px solid #ff5a36;
+          background:rgba(120,28,0,.92);
+          color:#fff;
+          font-size:14px;
+          line-height:1.4;
+          font-weight:900;
+          box-shadow:0 0 18px rgba(255,90,54,.26);
+        "
+      >
+        ⚠️ UWAGA — data wydarzenia jest w przeszłości.
+        Dodanie takiego wydarzenia może wpłynąć na statystyki
+        i rozliczenia za wcześniejszy okres.
+      </div>
       
       <div style="font-size:13px; opacity:.8; margin:10px 0 4px 0;">Data zakończenia wydarzenia</div>
       <input id="eventDataEnd" type="date" autocomplete="off" data-autofill="1">
@@ -23199,6 +23226,106 @@ function applyAddTrenerzyPopup() {
   closeAddTrenerzyPopup();
 }
     
+function trainerWarsawTodayIso_() {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Europe/Warsaw",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }
+    ).formatToParts(
+      new Date()
+    );
+
+  const get =
+    function (type) {
+      return (
+        parts.find(
+          part => part.type === type
+        )?.value || ""
+      );
+    };
+
+  return (
+    get("year") +
+    "-" +
+    get("month") +
+    "-" +
+    get("day")
+  );
+}
+
+
+function trainerIsPastEventDate_(value) {
+  const date =
+    String(value || "").trim();
+
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      date
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    date <
+    trainerWarsawTodayIso_()
+  );
+}
+
+
+function trainerFormatWarningDate_(value) {
+  const raw =
+    String(value || "").trim();
+
+  const match =
+    raw.match(
+      /^(\d{4})-(\d{2})-(\d{2})$/
+    );
+
+  if (!match) {
+    return raw;
+  }
+
+  return (
+    match[3] +
+    "." +
+    match[2] +
+    "." +
+    match[1]
+  );
+}
+
+
+function trainerUpdatePastEventWarning_() {
+  const input =
+    document.getElementById(
+      "eventData"
+    );
+
+  const warning =
+    document.getElementById(
+      "eventPastDateWarning"
+    );
+
+  if (!warning) return;
+
+  const isPast =
+    trainerIsPastEventDate_(
+      input?.value || ""
+    );
+
+  warning.classList.toggle(
+    "hidden",
+    !isPast
+  );
+}
+
+
 function pokazDodajWydarzenie() {
   goToView("trainerDodajWydarzenieView");
 
@@ -23226,6 +23353,8 @@ function pokazDodajWydarzenie() {
     endDateEl.dataset.autofill = "1";
   }
   if (miejsceEl) miejsceEl.value = "";
+
+  trainerUpdatePastEventWarning_();
 
   setAddPowolaniNums_("");
   updateAddTrenerzySummary_();
@@ -24244,6 +24373,33 @@ const msg =
   }
 
   /*
+   * Data w przeszłości jest dozwolona,
+   * ale wymaga świadomego potwierdzenia.
+   */
+  if (
+    trainerIsPastEventDate_(
+      data
+    )
+  ) {
+    trainerUpdatePastEventWarning_();
+
+    const accepted =
+      window.confirm(
+        "⚠️ UWAGA!\n\n" +
+        "Dodajesz wydarzenie z datą " +
+        trainerFormatWarningDate_(data) +
+        ", czyli z przeszłości.\n\n" +
+        "Takie wydarzenie może zmienić statystyki " +
+        "i rozliczenia za wcześniejszy okres.\n\n" +
+        "Czy na pewno chcesz je dodać?"
+      );
+
+    if (!accepted) {
+      return;
+    }
+  }
+
+  /*
    * Blokujemy przycisk bez wyświetlania
    * napisu „Dodawanie...”.
    */
@@ -24546,6 +24702,8 @@ const msg =
     if (endDateEl) {
       endDateEl.dataset.autofill = "1";
     }
+
+    trainerUpdatePastEventWarning_();
 
     if (rodzajEl) {
       rodzajEl.value = "";
@@ -25027,6 +25185,8 @@ function initEventPickers_() {
         if (autoFill || !endEl.value) {
           endEl.value = dateStr;
         }
+
+        trainerUpdatePastEventWarning_();
       }
     });
   }
