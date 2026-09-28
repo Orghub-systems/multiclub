@@ -2636,7 +2636,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.32';
+  window.APP_BUILD = 'APP v3.33';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -18924,13 +18924,44 @@ function trainerWarsawNowKey_() {
 
 
 function trainerEventEndKey_(event) {
+  const explicitEndDate =
+    String(
+      event?.dataKoniec || ""
+    ).trim();
+
+  const rawDate =
+    String(
+      event?.data || ""
+    ).trim();
+
+  let endDateRaw =
+    explicitEndDate;
+
+  if (
+    !endDateRaw &&
+    rawDate
+  ) {
+    const parts =
+      rawDate.split(
+        /\s+-\s+/
+      );
+
+    endDateRaw =
+      String(
+        parts[1] ||
+        parts[0] ||
+        ""
+      ).trim();
+  }
+
   const endDate =
     trainerEventDateIso_(
-      event?.dataKoniec ||
-      event?.data
+      endDateRaw
     );
 
-  if (!endDate) return "";
+  if (!endDate) {
+    return "";
+  }
 
   const endTime =
     trainerEventTimeHm_(
@@ -19093,84 +19124,46 @@ async function trainerShowArchiveEventsMode_() {
 
   goToView("trainerWydarzeniaArchiveView");
 
-  const monthsBox = document.getElementById("trainerArchiveMonthsInline");
-  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
-  const listDiv = document.getElementById("trainerArchiveListaWydarzen");
+  const monthsBox =
+    document.getElementById(
+      "trainerArchiveMonthsInline"
+    );
 
-  if (selectedMonth) selectedMonth.textContent = "";
-  if (listDiv) listDiv.innerHTML = "";
+  const selectedMonth =
+    document.getElementById(
+      "trainerArchiveSelectedMonth"
+    );
+
+  const listDiv =
+    document.getElementById(
+      "trainerArchiveListaWydarzen"
+    );
+
+  if (selectedMonth) {
+    selectedMonth.textContent = "";
+  }
+
+  if (listDiv) {
+    listDiv.innerHTML = "";
+  }
 
   if (monthsBox) {
-    monthsBox.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy archiwalnych...</div>";
+    monthsBox.innerHTML =
+      "<div class='card' style='background:#222;'>⏳ Ładowanie miesięcy archiwalnych...</div>";
   }
 
   try {
-    const groupsKey =
-      String(
-        window.grupyTrenera || ""
-      ).trim();
-
-    const results =
-      await Promise.allSettled([
-        trainerEnsureArchiveMonthsLoaded_(),
-
-        apiClubGet(
-          "treningiTrener",
-          {
-            grupa: groupsKey,
-            _ts: Date.now()
-          }
-        )
-      ]);
-
     const months =
-      results[0].status === "fulfilled" &&
-      Array.isArray(results[0].value)
-        ? results[0].value
-        : [];
-
-    const currentEvents =
-      results[1].status === "fulfilled" &&
-      Array.isArray(results[1].value)
-        ? results[1].value
-        : [];
-
-    window.__trainerCurrentMonthArchivedEvents =
-      trainerFilterArchivedEvents_(
-        currentEvents
-      );
-
-    const currentMonthKey =
-      trainerCurrentMonthKey_();
-
-    const currentMonthLabel =
-      trainerCurrentMonthLabel_();
-
-    const mergedMonths =
-      [...months];
-
-    if (
-      window.__trainerCurrentMonthArchivedEvents.length > 0 &&
-      currentMonthKey &&
-      !mergedMonths.some(
-        item =>
-          String(item?.key || "") ===
-          currentMonthKey
-      )
-    ) {
-      mergedMonths.unshift({
-        key: currentMonthKey,
-        label: currentMonthLabel
-      });
-    }
+      await trainerEnsureArchiveMonthsLoaded_();
 
     renderTrainerArchiveMonthsInline_(
-      mergedMonths
+      months
     );
 
   } catch (e) {
     if (monthsBox) {
-      monthsBox.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
+      monthsBox.innerHTML =
+        `<div class="card" style="background:#700;">❌ Błąd ładowania miesięcy: ${e?.message || e}</div>`;
     }
   }
 }
@@ -19258,55 +19251,67 @@ function renderTrainerArchiveMonthsInline_(months) {
 async function selectTrainerArchiveMonth_(key, label) {
   window.__trainerEventsMode = "archive";
   window.__trainerEventsRenderTarget = "trainerArchiveListaWydarzen";
-  window.__trainerArchiveSelectedMonth = String(key || "").trim();
+  window.__trainerArchiveSelectedMonth =
+    String(key || "").trim();
 
-  const labelTxt = String(label || key || "").trim();
+  const labelTxt =
+    String(
+      label ||
+      key ||
+      ""
+    ).trim();
 
-  goToView("trainerWydarzeniaArchiveMonthView");
+  goToView(
+    "trainerWydarzeniaArchiveMonthView"
+  );
 
-  const title = document.getElementById("trainerArchiveMonthTitle");
-  const selectedMonth = document.getElementById("trainerArchiveSelectedMonth");
-  const listDiv = document.getElementById("trainerArchiveListaWydarzen");
+  const title =
+    document.getElementById(
+      "trainerArchiveMonthTitle"
+    );
+
+  const selectedMonth =
+    document.getElementById(
+      "trainerArchiveSelectedMonth"
+    );
+
+  const listDiv =
+    document.getElementById(
+      "trainerArchiveListaWydarzen"
+    );
 
   if (title) {
-    title.textContent = labelTxt ? `Archiwum: ${labelTxt}` : "Archiwalne wydarzenia";
+    title.textContent =
+      labelTxt
+        ? `Archiwum: ${labelTxt}`
+        : "Archiwalne wydarzenia";
   }
 
   if (selectedMonth) {
-    selectedMonth.innerHTML = "⏳ Liczenie podsumowania...";
+    selectedMonth.innerHTML =
+      "⏳ Liczenie podsumowania...";
   }
 
   if (listDiv) {
-    listDiv.innerHTML = `<div class="card" style="background:#222;">⏳ Ładowanie wydarzeń z miesiąca: <b>${trainerEscHtml_(labelTxt)}</b>...</div>`;
+    listDiv.innerHTML =
+      `<div class="card" style="background:#222;">⏳ Ładowanie wydarzeń z miesiąca: <b>${trainerEscHtml_(labelTxt)}</b>...</div>`;
   }
 
   try {
-    let lista = null;
+    const lista =
+      await apiClubGet(
+        "treningiTrenerArchiwalne",
+        {
+          grupa:
+            window.grupyTrenera || "",
 
-    if (
-      window.__trainerArchiveSelectedMonth ===
-      trainerCurrentMonthKey_()
-    ) {
-      lista =
-        Array.isArray(
-          window.__trainerCurrentMonthArchivedEvents
-        )
-          ? window.__trainerCurrentMonthArchivedEvents
-          : [];
-    } else {
-      lista =
-        await apiClubGet(
-          "treningiTrenerArchiwalne",
-          {
-            grupa:
-              window.grupyTrenera || "",
-            miesiac:
-              window.__trainerArchiveSelectedMonth,
-            _ts:
-              Date.now()
-          }
-        );
-    }
+          miesiac:
+            window.__trainerArchiveSelectedMonth,
+
+          _ts:
+            Date.now()
+        }
+      );
 
     if (
       lista &&
@@ -19318,34 +19323,37 @@ async function selectTrainerArchiveMonth_(key, label) {
       );
     }
 
-    lista =
-      trainerFilterArchivedEvents_(
-        lista
-      );
-
     if (selectedMonth) {
       selectedMonth.innerHTML =
         trainerArchiveSummaryHtml_(
           lista
         );
     }
-    
-    if (!Array.isArray(lista) || !lista.length) {
+
+    if (
+      !Array.isArray(lista) ||
+      !lista.length
+    ) {
       if (listDiv) {
         listDiv.innerHTML = `
           <div class="card" style="background:#111;">
-            Brak wydarzeń archiwalnych w miesiącu: <b>${trainerEscHtml_(labelTxt)}</b>.
+            Brak wydarzeń archiwalnych w miesiącu:
+            <b>${trainerEscHtml_(labelTxt)}</b>.
           </div>
         `;
       }
+
       return;
     }
 
-    renderTreningiTrainer(lista);
+    renderTreningiTrainer(
+      lista
+    );
 
   } catch (e) {
     if (listDiv) {
-      listDiv.innerHTML = `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
+      listDiv.innerHTML =
+        `<div class="card" style="background:#700;">❌ Błąd ładowania wydarzeń archiwalnych: ${e?.message || e}</div>`;
     }
   }
 }
