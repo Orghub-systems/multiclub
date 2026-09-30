@@ -647,15 +647,24 @@
   align-items:flex-end;
   justify-content:center;
   padding:16px;
+  overflow:hidden;
   background:rgba(0,6,13,.74);
   backdrop-filter:blur(8px);
+}
+
+.onb-tutorial-overlay *,
+.onb-editor-overlay *{
+  box-sizing:border-box;
+  min-width:0;
 }
 
 .onb-tutorial-sheet,
 .onb-editor-sheet{
   width:min(520px,100%);
+  max-width:520px;
   max-height:min(82svh,720px);
-  overflow:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
   padding:18px;
   border:1px solid rgba(134,190,235,.28);
   border-radius:24px 24px 18px 18px;
@@ -985,6 +994,14 @@
   backdrop-filter:blur(9px);
   -webkit-backdrop-filter:blur(9px);
   padding:16px!important;
+  overflow-x:hidden!important;
+}
+
+#adminPassPopup *,
+#paymentsPopup *,
+#bankDataPopup *{
+  box-sizing:border-box;
+  min-width:0;
 }
 
 #adminPassPopup,
@@ -1155,14 +1172,41 @@
 }
 
 @media(min-width:700px){
+  .onb-tutorial-overlay,
+  .onb-editor-overlay{
+    align-items:center;
+    padding:24px;
+  }
+
+  .onb-tutorial-sheet,
+  .onb-editor-sheet{
+    max-height:min(78vh,720px);
+    border-radius:22px;
+  }
+
   #adminPassPopup,
+  #paymentsPopup,
   #bankDataPopup{
     align-items:center!important;
+    padding:24px!important;
   }
 
   #adminPassPopup > .card,
+  #paymentsPopup > .card,
   #bankDataPopup > .popup-card{
+    max-height:calc(100vh - 48px);
+    overflow-y:auto;
+    overflow-x:hidden;
     border-radius:22px!important;
+  }
+
+  #paymentsPopup{
+    padding-top:24px!important;
+    padding-bottom:24px!important;
+  }
+
+  #paymentsPopup > .card{
+    margin:auto!important;
   }
 }
 
