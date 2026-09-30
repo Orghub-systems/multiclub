@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   
 <link id="pwaManifestLink" rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/onboarding-v2.css?v=3.37">
+<link rel="stylesheet" href="/onboarding-v2.css?v=3.38">
                                                  
   <style>
     :root {
@@ -2637,7 +2637,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.37';
+  window.APP_BUILD = 'APP v3.38';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8982,6 +8982,66 @@ window.addEventListener("popstate", (event) => {
   const state = event.state;
   const fallbackView = getRootViewId_();
 
+  // Najpierw obsługujemy popupy onboardingu/setupu.
+  // Cofajka ma zgasić popup i NIE ruszać ekranu pod spodem.
+  const setupPopups = [
+    {
+      id: "paymentsPopup",
+      isOpen: (el) => !!el && !el.classList.contains("hidden") && getComputedStyle(el).display !== "none",
+      close: (el) => {
+        el.classList.add("hidden");
+        el.style.display = "none";
+        const msg = document.getElementById("paymentsMsg");
+        if (msg) msg.textContent = "";
+      }
+    },
+    {
+      id: "adminPassPopup",
+      isOpen: (el) => !!el && !el.classList.contains("hidden"),
+      close: (el) => {
+        el.classList.add("hidden");
+        const msg = document.getElementById("adminPassMsg");
+        if (msg) msg.textContent = "";
+      }
+    },
+    {
+      id: "bankDataPopup",
+      isOpen: (el) => !!el && getComputedStyle(el).display !== "none",
+      close: (el) => {
+        el.style.display = "none";
+        const msg = document.getElementById("bankDataPopupMsg");
+        if (msg) msg.textContent = "";
+      }
+    },
+    {
+      id: "onbTutorialOverlay",
+      isOpen: (el) => !!el && !el.classList.contains("hidden"),
+      close: (el) => {
+        el.classList.add("hidden");
+        el.innerHTML = "";
+      }
+    },
+    {
+      id: "onbEditorOverlay",
+      isOpen: (el) => !!el && !el.classList.contains("hidden"),
+      close: (el) => {
+        el.classList.add("hidden");
+        el.innerHTML = "";
+      }
+    }
+  ];
+
+  for (const popup of setupPopups) {
+    const el = document.getElementById(popup.id);
+    if (
+      popup.isOpen(el) &&
+      !(state && state.modal === popup.id)
+    ) {
+      popup.close(el);
+      return;
+    }
+  }
+
   if (state && state.view) {
     showViewFromHistory(state.view, state);
   } else {
@@ -10849,9 +10909,18 @@ function openAdminPassPopup() {
     inp.focus();
   }
   if (pop) pop.classList.remove("hidden");
+
+  if (!isHistoryModal_("adminPassPopup")) {
+    pushAppModalHistoryState_("adminPassPopup");
+  }
 }
 
 function closeAdminPassPopup() {
+  if (isHistoryModal_("adminPassPopup")) {
+    history.back();
+    return;
+  }
+
   const pop = document.getElementById("adminPassPopup");
   const msg = document.getElementById("adminPassMsg");
   if (msg) msg.textContent = "";
@@ -10939,9 +11008,18 @@ function openBankDataPopup() {
   if (msg) msg.textContent = "";
 
   pop.style.display = "flex";
+
+  if (!isHistoryModal_("bankDataPopup")) {
+    pushAppModalHistoryState_("bankDataPopup");
+  }
 }
 
 function closeBankDataPopup() {
+  if (isHistoryModal_("bankDataPopup")) {
+    history.back();
+    return;
+  }
+
   const pop = document.getElementById("bankDataPopup");
   if (!pop) return;
 
@@ -39711,8 +39789,8 @@ window.addEventListener('load', () => {
 });
   
 </script>
-<script src="/onboarding-v2.js?v=3.37"></script>
-<script src="/usage-tracking.js?v=3.37"></script>
+<script src="/onboarding-v2.js?v=3.38"></script>
+<script src="/usage-tracking.js?v=3.38"></script>
 
 </body>
 </html>
