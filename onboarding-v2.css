@@ -972,3 +972,196 @@
     grid-template-columns:1fr;
   }
 }
+
+
+/* =========================================================
+   SETUP POPUPS — spójne z onboardingiem v2
+========================================================= */
+
+#adminPassPopup,
+#paymentsPopup,
+#bankDataPopup{
+  background:rgba(0,6,13,.76)!important;
+  backdrop-filter:blur(9px);
+  -webkit-backdrop-filter:blur(9px);
+  padding:16px!important;
+}
+
+#adminPassPopup,
+#bankDataPopup{
+  align-items:flex-end!important;
+}
+
+#paymentsPopup{
+  align-items:flex-start!important;
+  padding-top:max(16px,env(safe-area-inset-top))!important;
+  padding-bottom:max(16px,env(safe-area-inset-bottom))!important;
+}
+
+#adminPassPopup > .card,
+#paymentsPopup > .card,
+#bankDataPopup > .popup-card{
+  position:relative;
+  width:min(520px,100%)!important;
+  max-width:520px!important;
+  margin:0 auto!important;
+  padding:21px 17px 17px!important;
+  border:1px solid rgba(134,190,235,.27)!important;
+  border-radius:24px 24px 18px 18px!important;
+  background:
+    radial-gradient(circle at 96% 0%,rgba(21,132,222,.18),transparent 34%),
+    linear-gradient(180deg,#102238,#091725)!important;
+  color:#fff!important;
+  box-shadow:0 30px 90px rgba(0,0,0,.60)!important;
+  text-align:left!important;
+}
+
+#paymentsPopup > .card{
+  margin:0 auto 18px!important;
+  border-radius:22px!important;
+}
+
+#adminPassPopup > .card::before,
+#paymentsPopup > .card::before,
+#bankDataPopup > .popup-card::before{
+  content:"";
+  display:block;
+  width:48px;
+  height:5px;
+  margin:0 auto 16px;
+  border-radius:999px;
+  background:rgba(255,255,255,.20);
+}
+
+#adminPassPopup > .card > div:first-of-type,
+#paymentsPopup > .card > div:first-of-type,
+#bankDataPopup > .popup-card > p:first-of-type{
+  margin:0 0 15px!important;
+  color:#f8fbff!important;
+  font-size:22px!important;
+  line-height:1.15!important;
+  font-weight:950!important;
+  text-align:left!important;
+}
+
+#adminPassPopup input,
+#paymentsPopup input[type="number"],
+#paymentsPopup input[type="text"],
+#bankDataPopup input{
+  width:100%!important;
+  min-height:49px!important;
+  margin:0!important;
+  padding:12px 13px!important;
+  border:1px solid rgba(138,186,226,.28)!important;
+  border-radius:14px!important;
+  outline:none!important;
+  background:#07131f!important;
+  color:#fff!important;
+  font:inherit!important;
+  font-size:16px!important;
+  box-shadow:none!important;
+}
+
+#adminPassPopup input:focus,
+#paymentsPopup input:focus,
+#bankDataPopup input:focus{
+  border-color:#38aafa!important;
+  box-shadow:0 0 0 3px rgba(34,160,255,.12)!important;
+}
+
+#adminPassPopup .login-box,
+#bankDataPopup .login-box{
+  margin:0!important;
+}
+
+#adminPassPopup .login-box input,
+#bankDataPopup .login-box input{
+  width:100%!important;
+  max-width:none!important;
+}
+
+#adminPassPopup label,
+#paymentsPopup label,
+#bankDataPopup label{
+  color:#d7e5f2!important;
+}
+
+#paymentsPopup #paymentsList{
+  gap:11px!important;
+  margin-bottom:17px!important;
+}
+
+#paymentsPopup #paymentsList > div{
+  padding:11px!important;
+  border:1px solid rgba(133,181,222,.18)!important;
+  border-radius:15px!important;
+  background:rgba(5,17,29,.42)!important;
+}
+
+#paymentsPopup #paymentsList > div > div:first-child{
+  color:#dce9f5!important;
+  font-size:13px!important;
+  font-weight:850!important;
+}
+
+#paymentsPopup input[type="checkbox"]{
+  accent-color:#149cff;
+}
+
+#adminPassPopup .full-btn,
+#paymentsPopup .full-btn,
+#bankDataPopup .full-btn{
+  min-height:49px!important;
+  margin:0!important;
+  border-radius:14px!important;
+  background:linear-gradient(135deg,#16a7ff,#0e72ff)!important;
+  border:1px solid #52baff!important;
+  color:#fff!important;
+  box-shadow:0 10px 28px rgba(14,114,255,.18)!important;
+}
+
+#adminPassPopup .full-btn.alt,
+#paymentsPopup .full-btn.alt,
+#bankDataPopup .full-btn.alt{
+  background:rgba(255,255,255,.045)!important;
+  border-color:rgba(255,255,255,.14)!important;
+  color:#d9e6f2!important;
+  box-shadow:none!important;
+}
+
+#adminPassPopup #adminPassMsg,
+#paymentsPopup #paymentsMsg,
+#bankDataPopup #bankDataPopupMsg{
+  margin:11px 0 0!important;
+  min-height:18px!important;
+  color:#ff98a3!important;
+  font-size:13px!important;
+  line-height:1.4!important;
+  text-align:left!important;
+}
+
+#bankDataPopup .onb-bank-note{
+  margin-top:13px;
+}
+
+#bankDataPopup #onbSkipBankBtn{
+  min-height:46px;
+  margin-top:9px!important;
+  border-radius:14px;
+  background:transparent!important;
+  border:1px solid rgba(153,197,231,.19)!important;
+  color:#a9c7e1!important;
+  box-shadow:none!important;
+}
+
+@media(min-width:700px){
+  #adminPassPopup,
+  #bankDataPopup{
+    align-items:center!important;
+  }
+
+  #adminPassPopup > .card,
+  #bankDataPopup > .popup-card{
+    border-radius:22px!important;
+  }
+}
