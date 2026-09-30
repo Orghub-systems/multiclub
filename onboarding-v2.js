@@ -314,12 +314,60 @@
     overlay.innerHTML = "";
   }
 
+  let onboardingHistoryAfterClose_ = null;
+
+  function onboardingPushModalHistory_(modalId) {
+    const id = String(modalId || "").trim();
+    if (!id) return;
+
+    try {
+      if (history.state && String(history.state.modal || "") === id) return;
+
+      if (typeof pushAppModalHistoryState_ === "function") {
+        pushAppModalHistoryState_(id);
+        return;
+      }
+
+      const baseState =
+        history.state && typeof history.state === "object"
+          ? { ...history.state }
+          : {};
+
+      history.pushState(
+        { ...baseState, modal: id },
+        "",
+        location.pathname + location.search
+      );
+    } catch (e) {
+      console.warn("onboardingPushModalHistory_ error", e);
+    }
+  }
+
+  function onboardingCloseHistoryModal_(modalId, afterClose) {
+    const id = String(modalId || "").trim();
+
+    try {
+      if (history.state && String(history.state.modal || "") === id) {
+        onboardingHistoryAfterClose_ =
+          typeof afterClose === "function" ? afterClose : null;
+        history.back();
+        return;
+      }
+    } catch (e) {}
+
+    closeOverlay(id);
+
+    if (typeof afterClose === "function") {
+      afterClose();
+    }
+  }
+
   window.onboardingCloseTip_ = function () {
-    closeOverlay("onbTutorialOverlay");
+    onboardingCloseHistoryModal_("onbTutorialOverlay");
   };
 
   window.onboardingCloseEditor_ = function () {
-    closeOverlay("onbEditorOverlay");
+    onboardingCloseHistoryModal_("onbEditorOverlay");
   };
 
   window.onboardingShowTip_ = function (key, actionName, force) {
@@ -337,6 +385,7 @@
 
     const overlay = mountOverlay("onbTutorialOverlay", "onb-tutorial-overlay");
     overlay.classList.remove("hidden");
+    onboardingPushModalHistory_("onbTutorialOverlay");
     overlay.onclick = function (event) {
       if (event.target === overlay) onboardingCloseTip_();
     };
@@ -363,8 +412,13 @@
 
   window.saveOnboardingTipAndRun_ = function (key, actionName) {
     saveSeenTip(key);
-    onboardingCloseTip_();
-    onboardingRunAction_(actionName);
+
+    onboardingCloseHistoryModal_(
+      "onbTutorialOverlay",
+      function () {
+        onboardingRunAction_(actionName);
+      }
+    );
   };
 
   window.onboardingTileAction_ = function (key) {
@@ -409,6 +463,7 @@
   function openEditor(content) {
     const overlay = mountOverlay("onbEditorOverlay", "onb-editor-overlay");
     overlay.classList.remove("hidden");
+    onboardingPushModalHistory_("onbEditorOverlay");
     overlay.onclick = function (event) {
       if (event.target === overlay) onboardingCloseEditor_();
     };
@@ -755,6 +810,115 @@
     }
   }
 
+
+  function setGlobalFunction_(name, fn) {
+    window[name] = fn;
+
+    try {
+      if (name === "openAdminPassPopup") openAdminPassPopup = fn;
+      if (name === "closeAdminPassPopup") closeAdminPassPopup = fn;
+      if (name === "openBankDataPopup") openBankDataPopup = fn;
+      if (name === "closeBankDataPopup") closeBankDataPopup = fn;
+    } catch (e) {}
+  }
+
+  function wrapSetupPopupHistory_(openName, closeName, modalId) {
+    const originalOpen = window[openName];
+    const originalClose = window[closeName];
+
+    if (
+      typeof originalOpen !== "function" ||
+      typeof originalClose !== "function" ||
+      originalOpen.__onbHistoryWrapped
+    ) {
+      return;
+    }
+
+    const wrappedOpen = function () {
+      const result = originalOpen.apply(this, arguments);
+
+      requestAnimationFrame(function () {
+        const popup = q(modalId);
+        if (!popup) return;
+
+        const visible =
+          !popup.classList.contains("hidden") &&
+          getComputedStyle(popup).display !== "none";
+
+        if (visible) {
+          onboardingPushModalHistory_(modalId);
+        }
+      });
+
+      return result;
+    };
+
+    const wrappedClose = function () {
+      try {
+        if (
+          history.state &&
+          String(history.state.modal || "") === modalId
+        ) {
+          history.back();
+          return;
+        }
+      } catch (e) {}
+
+      return originalClose.apply(this, arguments);
+    };
+
+    wrappedOpen.__onbHistoryWrapped = true;
+    wrappedClose.__onbHistoryWrapped = true;
+
+    setGlobalFunction_(openName, wrappedOpen);
+    setGlobalFunction_(closeName, wrappedClose);
+  }
+
+  function hideSetupPopupDirect_(modalId) {
+    const popup = q(modalId);
+    if (!popup) return;
+
+    if (modalId === "adminPassPopup") {
+      popup.classList.add("hidden");
+      const msg = q("adminPassMsg");
+      if (msg) msg.textContent = "";
+      return;
+    }
+
+    if (modalId === "bankDataPopup") {
+      popup.style.display = "none";
+      const msg = q("bankDataPopupMsg");
+      if (msg) msg.textContent = "";
+      return;
+    }
+  }
+
+  window.addEventListener("popstate", function (event) {
+    const modal = String(event.state?.modal || "");
+
+    if (modal !== "onbTutorialOverlay") {
+      closeOverlay("onbTutorialOverlay");
+    }
+
+    if (modal !== "onbEditorOverlay") {
+      closeOverlay("onbEditorOverlay");
+    }
+
+    if (modal !== "adminPassPopup") {
+      hideSetupPopupDirect_("adminPassPopup");
+    }
+
+    if (modal !== "bankDataPopup") {
+      hideSetupPopupDirect_("bankDataPopup");
+    }
+
+    if (onboardingHistoryAfterClose_) {
+      const callback = onboardingHistoryAfterClose_;
+      onboardingHistoryAfterClose_ = null;
+      setTimeout(callback, 0);
+    }
+  });
+
   function wrapFunction(name, after, isAsync) {
     const original = window[name];
     if (typeof original !== "function" || original.__onbV2Wrapped) return;
@@ -790,6 +954,18 @@
   renderConfig();
   renderSetup();
   enhanceBankPopup();
+
+  wrapSetupPopupHistory_(
+    "openAdminPassPopup",
+    "closeAdminPassPopup",
+    "adminPassPopup"
+  );
+
+  wrapSetupPopupHistory_(
+    "openBankDataPopup",
+    "closeBankDataPopup",
+    "bankDataPopup"
+  );
 
   wrapFunction("goToConfig", function () {
     requestAnimationFrame(onboardingSyncConfig_);
