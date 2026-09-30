@@ -8,7 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   
-<link id="pwaManifestLink" rel="manifest" href="/manifest.webmanifest">
+<link id="pwaManifestLink" rel="manifest" href="/manifest.webmanifest">\n<link rel="stylesheet" href="/onboarding-v2.css?v=3.36">
                                                  
   <style>
     :root {
@@ -2636,7 +2636,7 @@ input[type="number"] {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.35';
+  window.APP_BUILD = 'APP v3.36';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -11028,11 +11028,7 @@ if (datesOk && months.length > 0) {
     adminPass.length >= 6 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail);
 
-  const bankReceiver = String(setupDraft?.bankReceiver || "").trim();
-  const bankAccount = String(setupDraft?.bankAccount || "").replace(/\s+/g, "");
-  const bankOk = !!bankReceiver && /^\d{26}$/.test(bankAccount);
-
-  const allOk = datesOk && paymentsOk && adminOk && bankOk;
+  const allOk = datesOk && paymentsOk && adminOk;
 
   btnSubmit.disabled = !allOk;
 
@@ -11043,8 +11039,6 @@ if (datesOk && months.length > 0) {
       msg.textContent = "Uzupełnij ustawienia płatności.";
     } else if (!adminOk) {
       msg.textContent = "Utwórz dane administratora.";
-    } else if (!bankOk) {
-      msg.textContent = "Uzupełnij dane klubu do odbioru wpłat.";
     }
   } else if (allOk && msg) {
     msg.textContent = "";
@@ -11144,13 +11138,10 @@ async function submitSetupAndActivateClub() {
     const bankReceiver = String(setupDraft?.bankReceiver || "").trim();
     const bankAccount = String(setupDraft?.bankAccount || "").replace(/\s+/g, "");
 
-    if (!bankReceiver) {
-      if (msg) msg.textContent = "❌ Uzupełnij odbiorcę wpłat.";
-      return;
-    }
+    const bankProvided = !!bankReceiver || !!bankAccount;
 
-    if (!/^\d{26}$/.test(bankAccount)) {
-      if (msg) msg.textContent = "❌ Uzupełnij poprawny numer konta klubu.";
+    if (bankProvided && (!bankReceiver || !/^\d{26}$/.test(bankAccount))) {
+      if (msg) msg.textContent = "❌ Uzupełnij zarówno odbiorcę, jak i poprawny 26-cyfrowy numer konta albo pomiń dane do wpłat.";
       return;
     }
 
@@ -39719,7 +39710,7 @@ window.addEventListener('load', () => {
 });
   
 </script>
-<script src="/usage-tracking.js?v=3.35"></script>
+<script src="/onboarding-v2.js?v=3.36"></script>\n<script src="/usage-tracking.js?v=3.36"></script>
 
 </body>
 </html>
