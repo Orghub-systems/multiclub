@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.41';
+  window.APP_BUILD = 'APP v3.42';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -8929,7 +8929,7 @@ function openPanelFromAppSession_(sess) {
   prefetchClubGroupsConfig_();
 
   if (role === "zawodnik") {
-    goToView("playerMenuView", { replace: true });
+    goToView("playerMenuView", { replace: true, resetStack: true });
 
     const numerLabel = document.getElementById("playerNumerLabel");
     if (numerLabel) {
@@ -8959,7 +8959,7 @@ function openPanelFromAppSession_(sess) {
   }
 
     if (role === "trener") {
-      goToView("trainerPanelView", { replace: true });
+      goToView("trainerPanelView", { replace: true, resetStack: true });
     
       if (typeof trainerApplyMedicalExamClubFlag_ === "function") {
         trainerApplyMedicalExamClubFlag_(s.medicalExamClubFlag || null);
@@ -8969,7 +8969,7 @@ function openPanelFromAppSession_(sess) {
     }
 
 if (role === "admin") {
-  goToView("adminPanelView", { replace: true });
+  goToView("adminPanelView", { replace: true, resetStack: true });
 
   if (typeof applyCachedAdminNotificationsBell_ === "function") {
     applyCachedAdminNotificationsBell_();
@@ -9451,13 +9451,33 @@ function ukryjWszystkie() {
 }
 
 // Pobranie widoku głównego zależnie od stanu aplikacji  
-  function getRootViewId_() {
-  return (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView";
+function getRootViewId_() {
+  try {
+    const sess =
+      typeof loadAppSession_ === "function"
+        ? loadAppSession_()
+        : null;
+
+    const role =
+      String(sess?.role || "").trim().toLowerCase();
+
+    if (role === "zawodnik") return "playerMenuView";
+    if (role === "trener") return "trainerPanelView";
+    if (role === "admin") return "adminPanelView";
+  } catch (e) {}
+
+  return (clubId && isCfgLocked_())
+    ? "loginView"
+    : "orgHubLandingView";
 }
 
 // Przełączenie widoku aplikacji i aktualizacja historii  
 function goToView(viewId, options = {}) {
-  const { replace = false, fromHistory = false } = options;
+  const {
+    replace = false,
+    fromHistory = false,
+    resetStack = false
+  } = options;
 
   const prevView = String(currentView || "").trim();
 
@@ -9487,7 +9507,11 @@ function goToView(viewId, options = {}) {
   if (!window.__appViewStack) window.__appViewStack = [];
 
   if (!fromHistory) {
-    if (replace) {
+    if (resetStack) {
+      // Nowy root aplikacji: po logowaniu / wylogowaniu
+      // poprzednie ekrany nie mogą zostać w stosie.
+      window.__appViewStack = [viewId];
+    } else if (replace) {
       if (window.__appViewStack.length === 0) {
         window.__appViewStack = [viewId];
       } else {
@@ -9510,7 +9534,7 @@ function goToView(viewId, options = {}) {
 
     try {
       const urlKeep = location.pathname + location.search; // zostawia ?clubId=...
-      if (replace) history.replaceState(state, "", urlKeep);
+      if (replace || resetStack) history.replaceState(state, "", urlKeep);
       else history.pushState(state, "", urlKeep);
     } catch (e) {}
   }
@@ -9591,7 +9615,13 @@ function appBack() {
   const rootView = getRootViewId_();
 
   if (!window.__appViewStack || window.__appViewStack.length <= 1) {
-    goToView(rootView, { replace: true });
+    // Na rootcie aplikacji nie wracamy do logowania ani do starego ekranu.
+    if (String(currentView || "") !== rootView) {
+      goToView(rootView, {
+        replace: true,
+        resetStack: true
+      });
+    }
     return;
   }
 
@@ -9603,7 +9633,10 @@ function appBack() {
     const prevView = window.__appViewStack[window.__appViewStack.length - 1];
 
     if (!prevView || !document.getElementById(prevView)) {
-      goToView(rootView, { replace: true });
+      goToView(rootView, {
+        replace: true,
+        resetStack: true
+      });
       return;
     }
 
@@ -13525,7 +13558,10 @@ function pokazLogowanie() {
   if (komunikat) komunikat.innerText = "";
 
   refreshClubBadge_();
-  goToView("loginView");
+  goToView("loginView", {
+    replace: true,
+    resetStack: true
+  });
 
   setTimeout(() => {
     injectOrgHubInstallCardIntoLogin_();
@@ -13624,7 +13660,7 @@ async function zaloguj() {
         statystykiP: null
       };
 
-      goToView("playerMenuView");
+      goToView("playerMenuView", { replace: true, resetStack: true });
       loadClubAd();
 
       if (typeof playerScheduleMedicalExamAlertCheck_ === "function") {
@@ -13669,7 +13705,7 @@ async function zaloguj() {
         validatedAt: new Date().toISOString()
       });
 
-      goToView("trainerPanelView");
+      goToView("trainerPanelView", { replace: true, resetStack: true });
 
       if (typeof trainerScheduleMedicalExamAlertsCheck_ === "function") {
         trainerScheduleMedicalExamAlertsCheck_(300);
@@ -13692,7 +13728,7 @@ async function zaloguj() {
         validatedAt: new Date().toISOString()
       });
 
-      goToView("adminPanelView");
+      goToView("adminPanelView", { replace: true, resetStack: true });
 
       const badge = document.getElementById("adminTrialBadge");
       if (badge) {
