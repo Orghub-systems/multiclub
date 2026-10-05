@@ -118,10 +118,78 @@
     }
   }
 
+  /*
+   * Jeżeli zwykłe goToView() wskazuje ekran, który już znajduje się
+   * niżej w stosie aplikacji, jest to powrót, a nie nowe wejście.
+   *
+   * Stare widoki trenera i administratora mają jeszcze przyciski typu:
+   *   goToView("trainerPanelView")
+   *   goToView("trainerWydarzeniaView")
+   *
+   * Bez tego zabezpieczenia taki "Powrót" dopisywał kolejny wpis
+   * do historii i sprzętowa cofajka Androida zachowywała się jak
+   * cofanie po stronach WWW.
+   */
+  function navigationBackToExistingView_(viewId, options) {
+    const target = String(viewId || "").trim();
+    if (!target) return false;
+
+    const opts =
+      options && typeof options === "object"
+        ? options
+        : {};
+
+    // Jawne przejścia routera zachowują dotychczasową semantykę.
+    if (opts.replace || opts.resetStack || opts.fromHistory) {
+      return false;
+    }
+
+    const stack = Array.isArray(window.__appViewStack)
+      ? window.__appViewStack.map(function (id) {
+          return String(id || "").trim();
+        })
+      : [];
+
+    if (stack.length < 2) return false;
+
+    const current = usageCurrentView_();
+    const lastIndex = stack.length - 1;
+
+    // Nie ingerujemy w niesynchronizowany stos.
+    if (!current || stack[lastIndex] !== current) {
+      return false;
+    }
+
+    // Szukamy celu wyłącznie poniżej bieżącego ekranu.
+    let targetIndex = -1;
+    for (let i = lastIndex - 1; i >= 0; i--) {
+      if (stack[i] === target) {
+        targetIndex = i;
+        break;
+      }
+    }
+
+    if (targetIndex < 0) return false;
+
+    const distance = lastIndex - targetIndex;
+    if (distance < 1) return false;
+
+    try {
+      history.go(-distance);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function hookNavigation_() {
     if (typeof window.goToView === "function" && !window.goToView.__usageTrackingHooked) {
       const originalGoToView = window.goToView;
-      window.goToView = function (viewId) {
+      window.goToView = function (viewId, options) {
+        if (navigationBackToExistingView_(viewId, options)) {
+          return;
+        }
+
         const result = originalGoToView.apply(this, arguments);
         usageTrackView_(viewId);
         return result;
