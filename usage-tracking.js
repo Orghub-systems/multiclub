@@ -251,3 +251,17 @@
     }
   }, 0);
 })();
+
+(function loadPaymentTransferRouting_() {
+  "use strict";
+
+  if (document.querySelector('script[data-orghub-payment-transfer-routing="1"]')) {
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = "/payment-transfer-routing.js?v=1";
+  script.async = false;
+  script.dataset.orghubPaymentTransferRouting = "1";
+  document.head.appendChild(script);
+})();
