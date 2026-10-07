@@ -196,8 +196,24 @@
     parent.insertBefore(tile, reference);
   }
 
+  function resetView_() {
+    const result = document.getElementById("adminAssistantResult");
+    const status = document.getElementById("adminAssistantStatus");
+    const input = document.getElementById("adminAssistantInput");
+    const button = document.getElementById("adminAssistantSend");
+
+    if (result) result.innerHTML = "";
+    if (status) status.textContent = "";
+    if (input) input.value = "";
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Zapytaj";
+    }
+  }
+
   function open_() {
     makeView_();
+    resetView_();
     syncBackground_();
     if (typeof window.goToView === "function") {
       window.goToView(VIEW_ID);
