@@ -60,7 +60,7 @@
         min-height:100dvh;
         box-sizing:border-box;
         padding:max(18px,env(safe-area-inset-top)) 14px 40px;
-        background:#087b16;
+        background:transparent;
         color:#fff;
       }
       #${VIEW_ID} .ai-wrap{width:min(620px,100%);margin:0 auto;text-align:left}
@@ -92,6 +92,18 @@
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function syncBackground_() {
+    const view = document.getElementById(VIEW_ID);
+    const panel = document.getElementById("adminPanelView");
+    if (!view || !panel) return;
+    const style = getComputedStyle(panel);
+    view.style.backgroundColor = style.backgroundColor;
+    view.style.backgroundImage = style.backgroundImage;
+    view.style.backgroundSize = style.backgroundSize;
+    view.style.backgroundPosition = style.backgroundPosition;
+    view.style.backgroundRepeat = style.backgroundRepeat;
   }
 
   function makeView_() {
@@ -186,6 +198,7 @@
 
   function open_() {
     makeView_();
+    syncBackground_();
     if (typeof window.goToView === "function") {
       window.goToView(VIEW_ID);
     } else {
@@ -315,7 +328,6 @@
     makeView_();
     injectTile_();
 
-    // Panel administratora może pojawić się po logowaniu, dlatego próbujemy jeszcze kilka razy.
     let attempts = 0;
     const timer = setInterval(function () {
       attempts += 1;
