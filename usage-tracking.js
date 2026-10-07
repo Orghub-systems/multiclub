@@ -55,6 +55,9 @@
     if (/Document/i.test(id)) {
       return "documents";
     }
+    if (/Assistant/i.test(id)) {
+      return "assistant";
+    }
 
     return "";
   }
@@ -263,5 +266,19 @@
   script.src = "/payment-transfer-routing.js?v=1";
   script.async = false;
   script.dataset.orghubPaymentTransferRouting = "1";
+  document.head.appendChild(script);
+})();
+
+(function loadOrghubAssistant_() {
+  "use strict";
+
+  if (document.querySelector('script[data-orghub-assistant="1"]')) {
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = "/assistant-front.js?v=1";
+  script.async = false;
+  script.dataset.orghubAssistant = "1";
   document.head.appendChild(script);
 })();
