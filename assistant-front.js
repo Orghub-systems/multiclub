@@ -431,15 +431,36 @@
     injectPlayerTile_();
   }
 
+  function hookNavigation_() {
+    if (typeof window.goToView !== "function" || window.goToView.__orghubAssistantHooked) return;
+
+    const originalGoToView = window.goToView;
+    const wrappedGoToView = function (viewId) {
+      const result = originalGoToView.apply(this, arguments);
+      if (viewId === "playerMenuView" || viewId === "adminPanelView") {
+        setTimeout(injectTiles_, 0);
+      }
+      return result;
+    };
+
+    wrappedGoToView.__orghubAssistantHooked = true;
+    if (originalGoToView.__usageTrackingHooked) wrappedGoToView.__usageTrackingHooked = true;
+    if (originalGoToView.__hubDashboardV1) wrappedGoToView.__hubDashboardV1 = true;
+    if (originalGoToView.__orghubInstallHooked) wrappedGoToView.__orghubInstallHooked = true;
+    window.goToView = wrappedGoToView;
+  }
+
   function init_() {
     addStyles_();
     makeView_("admin");
     makeView_("player");
+    hookNavigation_();
     injectTiles_();
 
     let attempts = 0;
     const timer = setInterval(function () {
       attempts += 1;
+      hookNavigation_();
       injectTiles_();
       const role = role_();
       const ready =
