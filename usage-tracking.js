@@ -272,7 +272,22 @@
 (function loadOrghubAssistant_() {
   "use strict";
 
-  if (document.querySelector('script[data-orghub-assistant="1"]')) {
+  function loadVoice_() {
+    if (document.querySelector('script[data-orghub-assistant-voice="1"]')) {
+      return;
+    }
+
+    const voiceScript = document.createElement("script");
+    voiceScript.src = "/assistant-voice.js?v=1";
+    voiceScript.async = false;
+    voiceScript.dataset.orghubAssistantVoice = "1";
+    document.head.appendChild(voiceScript);
+  }
+
+  const existing = document.querySelector('script[data-orghub-assistant="1"]');
+  if (existing) {
+    existing.addEventListener("load", loadVoice_, { once: true });
+    setTimeout(loadVoice_, 0);
     return;
   }
 
@@ -280,5 +295,6 @@
   script.src = "/assistant-front.js?v=2";
   script.async = false;
   script.dataset.orghubAssistant = "1";
+  script.addEventListener("load", loadVoice_, { once: true });
   document.head.appendChild(script);
 })();
