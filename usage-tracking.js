@@ -278,7 +278,7 @@
     }
 
     const voiceScript = document.createElement("script");
-    voiceScript.src = "/assistant-voice.js?v=1";
+    voiceScript.src = "/assistant-voice.js?v=2";
     voiceScript.async = false;
     voiceScript.dataset.orghubAssistantVoice = "1";
     document.head.appendChild(voiceScript);
