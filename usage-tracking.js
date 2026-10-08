@@ -277,7 +277,7 @@
   }
 
   const script = document.createElement("script");
-  script.src = "/assistant-front.js?v=1";
+  script.src = "/assistant-front.js?v=2";
   script.async = false;
   script.dataset.orghubAssistant = "1";
   document.head.appendChild(script);
