@@ -75,6 +75,22 @@
     document.head.appendChild(style);
   }
 
+  function removePlayerNotificationsTile_() {
+    const panel = document.getElementById("playerMenuView");
+    if (!panel) return false;
+
+    const title = Array.from(panel.querySelectorAll(".hub-tile-title"))
+      .find(function (el) {
+        return String(el.textContent || "").trim() === "Powiadomienia";
+      });
+
+    const tile = title?.closest("button");
+    if (!tile) return false;
+
+    tile.remove();
+    return true;
+  }
+
   function status_(message) {
     const el = document.getElementById(STATUS_ID);
     if (el) el.textContent = String(message || "");
@@ -327,10 +343,12 @@
 
   function init_() {
     addStyles_();
+    removePlayerNotificationsTile_();
 
     let attempts = 0;
     const timer = setInterval(function () {
       attempts += 1;
+      removePlayerNotificationsTile_();
       if (ensureControls_() || attempts > 40) clearInterval(timer);
     }, 250);
 
