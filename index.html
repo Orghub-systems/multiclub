@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.42';
+  window.APP_BUILD = 'APP v3.43';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -33977,7 +33977,7 @@ function renderAdminRaportWydarzeniaTableHtml_(events) {
       <div style="display:grid;grid-template-columns: 1.2fr .9fr .9fr .7fr .7fr .6fr;gap:8px;
                   padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
         <div>${escapeHtml_(ev.rodzaj || "")}</div>
-        <div>${escapeHtml_(fmtDate_(ev.data))}</div>
+        <div style="white-space:nowrap;">${escapeHtml_(fmtDate_(ev.data))}</div>
         <div>${escapeHtml_(ev.dzien || "")}</div>
         <div>${escapeHtml_(fmtTime_(ev.start))}</div>
         <div>${escapeHtml_(fmtTime_(ev.koniec))}</div>
@@ -34014,7 +34014,7 @@ function renderAdminRaportWydarzeniaTableFromGrid_(headerRow, dataRows) {
       <div style="display:grid;grid-template-columns: 1.2fr .9fr .9fr .7fr .7fr .6fr;gap:8px;
                   padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
         <div>${escapeHtml_(rodzaj)}</div>
-        <div>${escapeHtml_(fmtDate_(data))}</div>
+        <div style="white-space:nowrap;">${escapeHtml_(fmtDate_(data))}</div>
         <div>${escapeHtml_(dzien)}</div>
         <div>${escapeHtml_(fmtTime_(start))}</div>
         <div>${escapeHtml_(fmtTime_(koniec))}</div>
@@ -34036,17 +34036,25 @@ function formatHours_(h) {
 
  function fmtDate_(v) {
   if (!v) return "";
-  // Date object
+
+  // Raporty: krótki, stały format RR-MM-DD, np. 26-10-01.
   if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
-    const y = v.getFullYear();
+    const y = String(v.getFullYear()).slice(-2);
     const m = String(v.getMonth() + 1).padStart(2, "0");
     const d = String(v.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   }
-  // ISO string -> YYYY-MM-DD
-  const s = String(v);
-  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (m) return m[1];
+
+  const s = String(v).trim();
+
+  // ISO / YYYY-MM-DD...
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1].slice(-2)}-${m[2]}-${m[3]}`;
+
+  // DD.MM.YYYY
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return `${m[3].slice(-2)}-${m[2]}-${m[1]}`;
+
   return s;
 }
 
@@ -34217,7 +34225,7 @@ function renderAdminRaportTrenerzyMonth_(trainers) {
           <div style="display:grid;grid-template-columns: 1.3fr 1fr 1fr .7fr;gap:8px;
                       padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
             <div>${escapeHtml_(r.rodzaj || "")}</div>
-            <div>${escapeHtml_(fmtDate_(r.data))}</div>
+            <div style="white-space:nowrap;">${escapeHtml_(fmtDate_(r.data))}</div>
             <div>${escapeHtml_(r.dzien || "")}</div>
             <div>${escapeHtml_(r.czas || "")}</div>
           </div>
@@ -34346,7 +34354,7 @@ async function adminLoadRaportRezerwacja_() {
       <div style="display:grid;grid-template-columns: 1.3fr 1fr 1fr .7fr;gap:8px;
                   padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
         <div>${escapeHtml_(rodzaj)}</div>
-        <div>${escapeHtml_(fmtDate_(data))}</div>
+        <div style="white-space:nowrap;">${escapeHtml_(fmtDate_(data))}</div>
         <div>${escapeHtml_(dzien)}</div>
         <div>${escapeHtml_(czas)}</div>
       </div>
