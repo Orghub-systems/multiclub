@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.43';
+  window.APP_BUILD = 'APP v3.44';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -14764,6 +14764,19 @@ async function playerPayNow(
 
   const decodedName = decodeURIComponent(String(nazwa || ""));
   const safeKwota = Number(kwota || 0);
+
+  const playerNumber = String(
+    parseInt(
+      String(numerZalogowanego || "").trim(),
+      10
+    ) || ""
+  ).trim();
+
+  if (!playerNumber) {
+    alert("Brak numeru zawodnika, zgłoś się do trenera.");
+    return;
+  }
+
   const titleCode = generateTransferCode(
   transferType,
   transferRef
