@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.44';
+  window.APP_BUILD = 'APP v3.45';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -20292,6 +20292,15 @@ function trainerArchiveSummaryHtml_(lista) {
 }
   
 function renderTreningiTrainer(lista) {
+  // W trybie "current" zawsze pokazujemy wyłącznie wydarzenia,
+  // które jeszcze się nie zakończyły. Ten filtr musi działać także
+  // po dodaniu/edycji wydarzenia, gdy lista pochodzi z cache lub
+  // z bezpośredniej odpowiedzi backendu.
+  const visibleLista =
+    String(window.__trainerEventsMode || "") === "current"
+      ? trainerFilterUpcomingEvents_(lista)
+      : (Array.isArray(lista) ? lista : []);
+
   const targetId =
     window.__trainerEventsRenderTarget ||
     "trainerListaWydarzen";
@@ -20302,7 +20311,7 @@ function renderTreningiTrainer(lista) {
 
   if (!div) return;
 
-  if (!Array.isArray(lista) || !lista.length) {
+  if (!visibleLista.length) {
     div.innerHTML = "<p>Brak wydarzeń</p>";
     return;
   }
@@ -20336,7 +20345,7 @@ function renderTreningiTrainer(lista) {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  const sortedLista = [...lista].sort((a, b) => {
+  const sortedLista = [...visibleLista].sort((a, b) => {
     const da = toISO_(a.data);
     const db = toISO_(b.data);
 
