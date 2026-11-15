@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.45';
+  window.APP_BUILD = 'APP v3.46';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -20186,17 +20186,16 @@ async function selectTrainerArchiveMonth_(key, label) {
       );
     }
 
-    if (selectedMonth) {
-      selectedMonth.innerHTML =
-        trainerArchiveSummaryHtml_(
-          lista
-        );
-    }
-
     if (
       !Array.isArray(lista) ||
       !lista.length
     ) {
+      if (selectedMonth) {
+        selectedMonth.innerHTML =
+          trainerArchiveSummaryHtml_(
+            lista
+          );
+      }
       if (listDiv) {
         listDiv.innerHTML = `
           <div class="card" style="background:#111;">
@@ -20207,6 +20206,17 @@ async function selectTrainerArchiveMonth_(key, label) {
       }
 
       return;
+    }
+
+    await trainerEnrichArchiveCounts_(
+      lista
+    );
+
+    if (selectedMonth) {
+      selectedMonth.innerHTML =
+        trainerArchiveSummaryHtml_(
+          lista
+        );
     }
 
     renderTreningiTrainer(
@@ -20261,6 +20271,52 @@ function trainerFormatHours_(hours) {
 
   const rounded = Math.round(n * 100) / 100;
   return String(rounded).replace(".", ",") + " h";
+}
+
+async function trainerEnrichArchiveCounts_(lista) {
+  const arr = Array.isArray(lista) ? lista : [];
+
+  await Promise.all(
+    arr.map(async (event) => {
+      const eventId = String(event?.id || "").trim();
+      if (!eventId) return;
+
+      try {
+        const people = await apiClubGet("zapisani", {
+          treningId: eventId
+        });
+
+        if (!Array.isArray(people)) return;
+
+        const isPowolanie = !!(
+          event?.powolaniaMode ||
+          event?.powolanieMode ||
+          event?.trybPowolania ||
+          String(event?.tryb || "")
+            .toLowerCase()
+            .includes("powo")
+        );
+
+        if (isPowolanie) {
+          event.powolanych = people.length;
+          event.zapisanych = people.length;
+          event.zaakceptowalo = people.filter(
+            p => p?.accepted === true
+          ).length;
+        } else {
+          event.zapisanych = people.length;
+        }
+      } catch (e) {
+        console.warn(
+          "Nie udało się pobrać licznika zapisanych dla archiwalnego wydarzenia:",
+          eventId,
+          e
+        );
+      }
+    })
+  );
+
+  return arr;
 }
 
 function trainerArchiveSummaryHtml_(lista) {
