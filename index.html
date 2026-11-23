@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.47';
+  window.APP_BUILD = 'APP v3.48';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -32220,13 +32220,22 @@ async function adminOpenPlatnosciZawodnikowView() {
   }
 
   try {
-    const fresh =
-      await apiClubGet(
-        "adminListaZaleglosciPlatnosci",
-        {
-          t: Date.now()
-        }
-      );
+    const [fresh, activePlayers] =
+      await Promise.all([
+        apiClubGet(
+          "adminListaZaleglosciPlatnosci",
+          {
+            t: Date.now()
+          }
+        ),
+        apiClubGet(
+          "listaZawodnikow",
+          {
+            grupy: "",
+            _ts: Date.now()
+          }
+        )
+      ]);
 
     if (!fresh || fresh.success !== true) {
       throw new Error(
@@ -32235,16 +32244,31 @@ async function adminOpenPlatnosciZawodnikowView() {
       );
     }
 
-    // Tylko bieżący stan w pamięci JS.
-    window.__adminPlatnosciZawodnikowCache =
-      Array.isArray(fresh.items)
-        ? fresh.items
-        : [];
+    const activeNumbers = new Set(
+      (Array.isArray(activePlayers) ? activePlayers : [])
+        .map(p => String(p?.nr || "").trim())
+        .filter(Boolean)
+    );
 
-    renderAdminPlatnosciZawodnikow_(fresh);
+    const filteredFresh = {
+      ...fresh,
+      items: (Array.isArray(fresh.items) ? fresh.items : [])
+        .filter(item =>
+          activeNumbers.has(
+            String(item?.numer || "").trim()
+          )
+        )
+    };
+
+    // Bieżący panel pokazuje wyłącznie aktywnych zawodników.
+    // Historia finansowa pozostaje w bazie bez zmian.
+    window.__adminPlatnosciZawodnikowCache =
+      filteredFresh.items;
+
+    renderAdminPlatnosciZawodnikow_(filteredFresh);
 
     setTimeout(() => {
-      adminAskCloseArchivePaymentsIfNeeded_(fresh);
+      adminAskCloseArchivePaymentsIfNeeded_(filteredFresh);
     }, 0);
 
   } catch (e) {
