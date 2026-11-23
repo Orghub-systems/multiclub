@@ -3354,7 +3354,7 @@ body {
 </style>
   
 <script>
-  window.APP_BUILD = 'APP v3.48';
+  window.APP_BUILD = 'APP v3.49';
 
   const APP_BUILD_KEY = 'wersjaApki';
 
@@ -32250,25 +32250,28 @@ async function adminOpenPlatnosciZawodnikowView() {
         .filter(Boolean)
     );
 
-    const filteredFresh = {
+    const visibleFresh = {
       ...fresh,
       items: (Array.isArray(fresh.items) ? fresh.items : [])
-        .filter(item =>
-          activeNumbers.has(
-            String(item?.numer || "").trim()
-          )
-        )
+        .map(item => ({
+          ...item,
+          isInactive:
+            item?.isInactive === true ||
+            !activeNumbers.has(
+              String(item?.numer || "").trim()
+            )
+        }))
     };
 
-    // Bieżący panel pokazuje wyłącznie aktywnych zawodników.
-    // Historia finansowa pozostaje w bazie bez zmian.
+    // Nie ukrywamy zaległości po usunięciu/dezaktywacji zawodnika.
+    // Taka pozycja pozostaje dostępna dla administratora do zamknięcia.
     window.__adminPlatnosciZawodnikowCache =
-      filteredFresh.items;
+      visibleFresh.items;
 
-    renderAdminPlatnosciZawodnikow_(filteredFresh);
+    renderAdminPlatnosciZawodnikow_(visibleFresh);
 
     setTimeout(() => {
-      adminAskCloseArchivePaymentsIfNeeded_(filteredFresh);
+      adminAskCloseArchivePaymentsIfNeeded_(visibleFresh);
     }, 0);
 
   } catch (e) {
@@ -32385,6 +32388,7 @@ function renderAdminDebtTile_(p) {
   const nazwisko = escapeHtml_(String(p.nazwisko || ""));
   const email = String(p.email || "").trim();
   const suma = Number(p.suma || 0);
+  const isInactive = p?.isInactive === true;
 
   const rawLastReminder = p.lastReminderAt || p.last_reminder_at || "";
   let lastReminderHtml = "";
@@ -32438,33 +32442,59 @@ function renderAdminDebtTile_(p) {
          </div>`
       : "";
   
+    const chargeId = String(z.chargeId || "").trim();
+    const deleteHtml = isInactive && chargeId
+      ? `
+        <button
+          type="button"
+          data-admin-cancel-charge="${escapeHtml_(chargeId)}"
+          onclick="event.stopPropagation(); adminCancelDebtCharge_('${encodeURIComponent(chargeId)}', '${encodeURIComponent(labelTxt)}', this)"
+          style="
+            flex:0 0 auto;
+            min-height:42px;
+            padding:8px 12px;
+            border-radius:10px;
+            border:1px solid #ff4d4d;
+            background:#3a1111;
+            color:#ff8d8d;
+            font-weight:900;
+            cursor:pointer;
+          ">
+          🗑 Usuń należność
+        </button>
+      `
+      : "";
+
     return `
-      <button
-        type="button"
-        data-col="${Number.isFinite(col) ? col : ""}"
-        data-label="${encodeURIComponent(labelTxt)}"
-        data-typ="${encodeURIComponent(typRaw)}"
-        data-source-sheet="${encodeURIComponent(sourceSheet)}"
-        data-source-type="${encodeURIComponent(sourceType)}"
-        onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
-        style="
-          display:block;
-          width:100%;
-          margin-top:8px;
-          padding:10px 12px;
-          border-radius:12px;
-          border:1px solid #3a3a3a;
-          background:linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
-          color:#fff;
-          text-align:left;
-          font-size:15px;
-          font-weight:600;
-          cursor:pointer;
-        ">
-        ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
-        ${archiveBadgeHtml}
-      </button>
+      <div style="display:flex;gap:8px;align-items:stretch;margin-top:8px;">
+        <button
+          type="button"
+          data-col="${Number.isFinite(col) ? col : ""}"
+          data-label="${encodeURIComponent(labelTxt)}"
+          data-typ="${encodeURIComponent(typRaw)}"
+          data-source-sheet="${encodeURIComponent(sourceSheet)}"
+          data-source-type="${encodeURIComponent(sourceType)}"
+          onclick="adminOpenDebtPaymentPopup('${encodeURIComponent(numer)}', this)"
+          style="
+            display:block;
+            flex:1 1 auto;
+            min-width:0;
+            padding:10px 12px;
+            border-radius:12px;
+            border:1px solid #3a3a3a;
+            background:linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+            color:#fff;
+            text-align:left;
+            font-size:15px;
+            font-weight:600;
+            cursor:pointer;
+          ">
+          ${typ} — ${label}: ${formatMoneyPLN_(brakuje)}
+          ${archiveBadgeHtml}
+        </button>
+        ${deleteHtml}
+      </div>
     `;
   }).join("");
 
@@ -32484,7 +32514,10 @@ function renderAdminDebtTile_(p) {
     <div class="card" style="background:#111; text-align:left; margin-top:12px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
         <div style="flex:1; min-width:240px;">
-          <div style="font-size:20px; font-weight:800;">#${escapeHtml_(numer)} — ${nazwisko}</div>
+          <div style="font-size:20px; font-weight:800;">
+            #${escapeHtml_(numer)} — ${nazwisko}
+            ${isInactive ? '<span style="display:inline-block;margin-left:8px;padding:4px 8px;border-radius:999px;background:#5a1717;border:1px solid #b64242;color:#ffb0b0;font-size:11px;font-weight:950;vertical-align:middle;">NIEAKTYWNY / USUNIĘTY</span>' : ""}
+          </div>
           <div style="opacity:.75; margin-top:4px;">${email ? escapeHtml_(email) : "Brak adresu e-mail"}</div>
           <div style="margin-top:10px;">${detailsHtml}</div>
           <div style="margin-top:12px; font-size:18px; font-weight:800; color:#ff7c7c;">
@@ -32501,6 +32534,96 @@ function renderAdminDebtTile_(p) {
       </div>
     </div>
   `;
+}
+
+async function adminCancelDebtCharge_(chargeIdEncoded, labelEncoded, btnEl) {
+  const chargeId = decodeURIComponent(String(chargeIdEncoded || ""));
+  const label = decodeURIComponent(String(labelEncoded || ""));
+
+  if (!chargeId) {
+    alert("❌ Brak identyfikatora należności.");
+    return;
+  }
+
+  const ok = window.confirm(
+    "Usunąć tę należność z rozliczeń?\n\n" +
+    (label ? label + "\n\n" : "") +
+    "Pozycja zniknie z zaległości zawodnika. W bazie pozostanie jako anulowana."
+  );
+
+  if (!ok) return;
+
+  const sessionToken = String(
+    typeof loadAppSession_ === "function"
+      ? (loadAppSession_()?.sessionToken || "")
+      : ""
+  ).trim();
+
+  if (!sessionToken) {
+    alert("❌ Sesja administratora wygasła. Zaloguj się ponownie.");
+    return;
+  }
+
+  const oldText = btnEl?.textContent || "🗑 Usuń należność";
+
+  try {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.style.opacity = "0.65";
+      btnEl.textContent = "⏳ Usuwam…";
+    }
+
+    const res = await apiClubPost({
+      action: "adminCancelCharge",
+      chargeId,
+      sessionToken
+    });
+
+    if (!res || !(res.success || res.ok)) {
+      throw new Error(res?.error || res?.message || "Nie udało się usunąć należności.");
+    }
+
+    const cache = Array.isArray(window.__adminPlatnosciZawodnikowCache)
+      ? window.__adminPlatnosciZawodnikowCache
+      : [];
+
+    const updated = cache
+      .map(player => {
+        const debts = Array.isArray(player?.zaleglosci)
+          ? player.zaleglosci
+          : [];
+
+        const newDebts = debts.filter(
+          item => String(item?.chargeId || "").trim() !== chargeId
+        );
+
+        return {
+          ...player,
+          zaleglosci: newDebts,
+          suma: newDebts.reduce(
+            (sum, item) => sum + Number(item?.brakuje || 0),
+            0
+          )
+        };
+      })
+      .filter(player => (player.zaleglosci || []).length > 0);
+
+    window.__adminPlatnosciZawodnikowCache = updated;
+
+    renderAdminPlatnosciZawodnikow_({
+      success: true,
+      items: updated
+    });
+
+  } catch (e) {
+    alert("❌ " + (e?.message || e));
+
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.style.opacity = "1";
+      btnEl.textContent = oldText;
+    }
+  }
 }
 
 function adminOpenDebtPaymentPopup(numerEncoded, btnEl) {
