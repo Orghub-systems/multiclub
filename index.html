@@ -32307,6 +32307,107 @@ function renderAdminPlatnosciZawodnikow_(res) {
   body.innerHTML = items.map(renderAdminDebtTile_).join("");
 }
 
+function adminConfirmArchiveClose_(seasonLabel) {
+  return new Promise((resolve) => {
+    if (document.getElementById("adminArchiveCloseModal")) { resolve(false); return; }
+
+    const modal = document.createElement("div");
+    modal.id = "adminArchiveCloseModal";
+    modal.className = "modal";
+
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width:420px;text-align:center;">
+        <div style="font-size:20px;font-weight:900;margin-bottom:10px;">
+          Rozliczenie sezonu ${escapeHtml_(seasonLabel)}
+        </div>
+
+        <div style="opacity:.85;line-height:1.4;margin-bottom:16px;">
+          Czy wszystkie płatności za ten sezon zostały rozliczone?<br><br>Zamknięcie wyłączy skanowanie zaległości archiwalnych.
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="full-btn green" data-action="confirm">
+            TAK – zamknij rozliczenia
+          </button>
+
+          <button type="button" class="full-btn alt" data-action="cancel">
+            NIE – pozostaw otwarte
+          </button>
+        </div>
+      </div>
+    `;
+
+    let finished = false;
+    let requestedResult = false;
+    let closingByButton = false;
+
+    const cleanup = () => {
+      window.removeEventListener("popstate", onPopState, true);
+      document.removeEventListener("keydown", onKeyDown);
+      modal.remove();
+    };
+
+    const finalize = (value) => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      resolve(value);
+    };
+
+    const onPopState = (event) => {
+      if (finished) return;
+
+      event.stopImmediatePropagation();
+
+      if (closingByButton) {
+        finalize(requestedResult);
+      } else {
+        finalize(false);
+      }
+    };
+
+    const closeWithResult = (value) => {
+      if (finished || closingByButton) return;
+
+      requestedResult = value;
+      closingByButton = true;
+
+      history.back();
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeWithResult(false);
+      }
+    };
+
+    window.addEventListener("popstate", onPopState, true);
+    document.addEventListener("keydown", onKeyDown);
+
+    history.pushState(
+      {
+        ...(history.state && typeof history.state === "object" ? history.state : {}),
+        __orghubModal: "archiveClose"
+      },
+      "",
+      location.href
+    );
+
+    modal.querySelector('[data-action="confirm"]')
+      .addEventListener("click", () => closeWithResult(true));
+
+    modal.querySelector('[data-action="cancel"]')
+      .addEventListener("click", () => closeWithResult(false));
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeWithResult(false);
+    });
+
+    document.body.appendChild(modal);
+  });
+}
+
   async function adminAskCloseArchivePaymentsIfNeeded_(res) {
   const archives = Array.isArray(res?.archivesToConfirmClosed)
     ? res.archivesToConfirmClosed
@@ -32334,13 +32435,7 @@ function renderAdminPlatnosciZawodnikow_(res) {
 
     sessionStorage.setItem(promptKey, "1");
 
-    const ok = window.confirm(
-      "Czy płatności w sezonie " +
-      (seasonLabel || sheetName) +
-      " zostały spłacone?\n\n" +
-      "TAK — zamknij sezon i nie skanuj tej Kartoteki więcej.\n" +
-      "NIE — zostaw aktywne skanowanie archiwum."
-    );
+    const ok = await adminConfirmArchiveClose_(seasonLabel || sheetName);
 
     if (!ok) {
       continue;
